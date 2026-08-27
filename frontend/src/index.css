@@ -13,12 +13,16 @@
   --muted: #64748b;
   --focus: #3b82f6;
   --success: #166534;
+  --success-strong: #14532d;
   --success-bg: #edf9f0;
+  --on-success: #ffffff;
   --warning: #a16207;
   --warning-bg: #fff9e6;
   --error: #dc2626;
+  --error-strong: #b91c1c;
   --error-text: #b91c1c;
   --error-bg: #fff1f2;
+  --on-danger: #ffffff;
   --shadow-sm: 0 1px 2px rgb(15 23 42 / 4%);
   --shadow-md: 0 10px 24px rgb(15 23 42 / 7%);
   --sans: 'Inter', 'Segoe UI', Arial, sans-serif;
@@ -63,12 +67,16 @@ textarea {
   --muted: #aab9ce;
   --focus: #93c5fd;
   --success: #86efac;
+  --success-strong: #4ade80;
   --success-bg: #12361f;
+  --on-success: #08111f;
   --warning: #fcd34d;
   --warning-bg: #3b2c0b;
   --error: #f87171;
+  --error-strong: #fca5a5;
   --error-text: #fecaca;
   --error-bg: #421821;
+  --on-danger: #08111f;
   --shadow-sm: 0 1px 2px rgb(0 0 0 / 24%);
   --shadow-md: 0 16px 36px rgb(0 0 0 / 30%);
 

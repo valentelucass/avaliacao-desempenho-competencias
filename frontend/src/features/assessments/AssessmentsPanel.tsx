@@ -618,7 +618,7 @@ export function AssessmentsPanel({
                 </div>
                 <div className="action-row">
                   <button
-                    className="button button--primary"
+                    className="button button--success"
                     type="submit"
                     disabled={
                       !selectedManagerCycleId ||
@@ -679,7 +679,7 @@ export function AssessmentsPanel({
                 </div>
                 <div className="action-row">
                   <button
-                    className="button button--primary"
+                    className="button button--success"
                     type="submit"
                     disabled={isLoadingCycles || isCreating || cycles.length === 0}
                   >

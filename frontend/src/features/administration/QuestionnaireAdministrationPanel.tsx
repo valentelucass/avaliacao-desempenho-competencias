@@ -532,7 +532,7 @@ export function QuestionnaireAdministrationPanel({
 
               <div className="action-row">
                 <button
-                  className="button button--primary"
+                  className="button button--success"
                   type="submit"
                   disabled={isCreating || !draft.templateId}
                 >

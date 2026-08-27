@@ -384,7 +384,7 @@ function Assert-BackendArtifactIsCurrent {
     )
     $newestInput = $inputs | Sort-Object LastWriteTimeUtc -Descending | Select-Object -First 1
     if ($newestInput.LastWriteTimeUtc -gt $Artifact.LastWriteTimeUtc) {
-        throw "O JAR da API está desatualizado em relação a $($newestInput.FullName). O modo de desenvolvimento não compila: gere o artefato pelo fluxo de produção autorizado antes de iniciá-lo."
+        throw "O JAR da API gerado localmente está desatualizado em relação a $($newestInput.FullName); a inicialização foi interrompida."
     }
 }
 

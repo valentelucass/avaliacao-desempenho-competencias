@@ -269,7 +269,11 @@ export function IndicatorsPanel({ api, canExport, onSessionExpired }: Indicators
           <span>Filtros da consulta</span>
         </div>
         {error ? <FeedbackMessage kind="error">{error}</FeedbackMessage> : null}
-        {status ? <FeedbackMessage kind="status">{status}</FeedbackMessage> : null}
+        {status ? (
+          <FeedbackMessage kind={indicator && !isAvailable(indicator) ? 'warning' : 'status'}>
+            {status}
+          </FeedbackMessage>
+        ) : null}
 
         <div className="field">
           <label htmlFor={cycleId}>Ciclo de avaliação</label>

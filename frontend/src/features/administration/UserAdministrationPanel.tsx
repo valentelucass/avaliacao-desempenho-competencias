@@ -587,7 +587,7 @@ export function UserAdministrationPanel({
               <p className="field-hint">{selectedInitialProfile?.hint}</p>
             </div>
             <div className="action-row">
-              <button className="button button--primary" type="submit" disabled={isCreating}>
+              <button className="button button--success" type="submit" disabled={isCreating}>
                 <Plus aria-hidden="true" size={17} strokeWidth={2} />
                 {isCreating ? 'Criando…' : 'Criar conta'}
               </button>
@@ -614,7 +614,7 @@ export function UserAdministrationPanel({
           ) : null}
 
           {!isLoadingUsers && !listError && users.length > 0 ? (
-            <div className="administration-users">
+            <div className="administration-users local-users-table">
               <table>
                 <caption className="visually-hidden">
                   Contas locais disponíveis para administração
@@ -742,7 +742,11 @@ export function UserAdministrationPanel({
                   </p>
                 </div>
                 <div className="action-row">
-                  <button className="button" type="submit" disabled={isResettingPassword}>
+                  <button
+                    className="button button--success"
+                    type="submit"
+                    disabled={isResettingPassword}
+                  >
                     <KeyRound aria-hidden="true" size={17} strokeWidth={2} />
                     {isResettingPassword ? 'Redefinindo…' : 'Definir senha temporária'}
                   </button>
@@ -786,7 +790,7 @@ export function UserAdministrationPanel({
                   </select>
                 </div>
                 <div className="action-row">
-                  <button className="button" type="submit" disabled={isUpdating}>
+                  <button className="button button--success" type="submit" disabled={isUpdating}>
                     <Save aria-hidden="true" size={17} strokeWidth={2} />
                     {isUpdating ? 'Salvando…' : 'Salvar dados da conta'}
                   </button>
@@ -860,7 +864,7 @@ export function UserAdministrationPanel({
 
                 <div className="action-row">
                   <button
-                    className="button button--primary"
+                    className="button button--success"
                     type="submit"
                     disabled={isSavingAccess}
                   >

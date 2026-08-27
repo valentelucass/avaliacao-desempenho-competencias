@@ -268,7 +268,20 @@ BEGIN TRY
       ON pergunta.questionario_competencia_id = competencia.questionario_competencia_id
     JOIN dbo.opcao_resposta AS opcao
       ON opcao.versao_questionario_id = ciclo_questionario.versao_questionario_id
-     AND opcao.pontos = avaliacao.pontos;
+     AND opcao.pontos = CASE
+            -- Os cinco primeiros perfis são propositalmente variados para que o radar
+            -- permita comparar pontos fortes e oportunidades, sem sair da faixa da pessoa.
+            WHEN avaliacao.pontos = 80 THEN
+                CASE WHEN (competencia.ordem - 1) % 5 = 4 THEN 90 ELSE 80 END
+            WHEN avaliacao.pontos = 90 THEN
+                CASE (competencia.ordem - 1) % 5 WHEN 0 THEN 80 WHEN 4 THEN 100 ELSE 90 END
+            WHEN avaliacao.pontos = 100 THEN
+                CASE (competencia.ordem - 1) % 5 WHEN 0 THEN 90 WHEN 4 THEN 110 ELSE 100 END
+            WHEN avaliacao.pontos = 110 THEN
+                CASE (competencia.ordem - 1) % 5 WHEN 0 THEN 100 WHEN 4 THEN 120 ELSE 110 END
+            WHEN avaliacao.pontos = 120 THEN
+                CASE WHEN (competencia.ordem - 1) % 5 = 0 THEN 110 ELSE 120 END
+        END;
 
     INSERT INTO dbo.versao_avaliacao (
         versao_avaliacao_id, avaliacao_id, ciclo_questionario_id, numero, situacao, origem,

@@ -456,7 +456,7 @@ export function MasterDataAdministrationPanel({
             </div>
             <div className="action-row">
               <button
-                className="button button--primary"
+                className="button button--success"
                 type="submit"
                 disabled={isLoading || isWriting}
               >
@@ -511,7 +511,7 @@ export function MasterDataAdministrationPanel({
             </div>
             <div className="action-row">
               <button
-                className="button button--primary"
+                className="button button--success"
                 type="submit"
                 disabled={isLoading || isWriting}
               >
@@ -556,7 +556,7 @@ export function MasterDataAdministrationPanel({
           </div>
           <div className="action-row">
             <button
-              className="button button--primary"
+              className="button button--success"
               type="submit"
               disabled={isLoading || isWriting}
             >
@@ -665,7 +665,7 @@ export function MasterDataAdministrationPanel({
           </div>
           <div className="action-row">
             <button
-              className="button button--primary"
+              className="button button--success"
               type="submit"
               disabled={isLoading || isWriting}
             >
@@ -771,7 +771,7 @@ export function MasterDataAdministrationPanel({
           </div>
           <div className="action-row">
             <button
-              className="button button--primary"
+              className="button button--success"
               type="submit"
               disabled={isLoading || isWriting || assignmentOptions.length === 0}
             >
@@ -872,7 +872,7 @@ export function MasterDataAdministrationPanel({
                 >
                   Cancelar
                 </button>
-                <button className="button button--primary" type="submit" disabled={isWriting}>
+                <button className="button button--danger" type="submit" disabled={isWriting}>
                   <Archive aria-hidden="true" size={17} strokeWidth={2} />
                   {confirmationButtonLabel(pendingAction)}
                 </button>
@@ -947,7 +947,7 @@ function NamedResourcesTable({
                   >
                     <button
                       aria-label={`Desativar ${resourceLabel} ${resource.name}`}
-                      className="button button--quiet"
+                      className="button button--danger button--quiet"
                       type="button"
                       onClick={() => onDeactivate(resource)}
                       disabled={isBusy}
@@ -1041,7 +1041,7 @@ function CollaboratorsTable({
                   >
                     <button
                       aria-label={`Desativar colaborador ${collaborator.displayName}`}
-                      className="button button--quiet"
+                      className="button button--danger button--quiet"
                       type="button"
                       onClick={() => onDeactivate(collaborator)}
                       disabled={isBusy}
@@ -1082,7 +1082,7 @@ function AllocationsTable({
   }
 
   return (
-    <div className="administration-users">
+    <div className="administration-users allocations-table">
       <table>
         <caption className="visually-hidden">Lotações ativas</caption>
         <thead>
@@ -1110,14 +1110,19 @@ function AllocationsTable({
                 <td data-label="Gestor">{allocation.managerText || 'Não informado'}</td>
                 <td data-label="Início">{formatDate(allocation.startsOn)}</td>
                 <td data-label="Ação">
-                  <button
-                    className="button button--quiet"
-                    type="button"
-                    onClick={() => onClose(allocation)}
-                    disabled={isBusy}
-                  >
-                    Encerrar lotação de {collaborator}
-                  </button>
+                  <div className="table-actions">
+                    <button
+                      aria-label={`Encerrar lotação de ${collaborator}`}
+                      className="button button--danger button--quiet table-action-button"
+                      title={`Encerrar lotação de ${collaborator}`}
+                      type="button"
+                      onClick={() => onClose(allocation)}
+                      disabled={isBusy}
+                    >
+                      <Archive aria-hidden="true" size={16} strokeWidth={2} />
+                      Encerrar
+                    </button>
+                  </div>
                 </td>
               </tr>
             )
@@ -1146,7 +1151,7 @@ function QuestionnaireAssignmentsTable({
   }
 
   return (
-    <div className="administration-users">
+    <div className="administration-users questionnaire-assignments-table">
       <table>
         <caption className="visually-hidden">Atribuições de questionário ativas</caption>
         <thead>
@@ -1168,14 +1173,19 @@ function QuestionnaireAssignmentsTable({
                   {formatQuestionnaireAssignment(assignment)}
                 </td>
                 <td data-label="Ação">
-                  <button
-                    className="button button--quiet"
-                    type="button"
-                    onClick={() => onRevoke(assignment)}
-                    disabled={isBusy}
-                  >
-                    Revogar atribuição de {subject}
-                  </button>
+                  <div className="table-actions">
+                    <button
+                      aria-label={`Revogar atribuição de ${subject}`}
+                      className="button button--danger button--quiet table-action-button"
+                      title="Revogar atribuição"
+                      type="button"
+                      onClick={() => onRevoke(assignment)}
+                      disabled={isBusy}
+                    >
+                      <Archive aria-hidden="true" size={16} strokeWidth={2} />
+                      Revogar
+                    </button>
+                  </div>
                 </td>
               </tr>
             )

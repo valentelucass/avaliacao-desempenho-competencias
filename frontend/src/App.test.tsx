@@ -124,9 +124,11 @@ describe('App', () => {
     )
     fireEvent.click(screen.getByRole('button', { name: 'Consultar indicadores' }))
 
-    expect(
-      await screen.findByText('Dados insuficientes para preservar a confidencialidade.'),
-    ).toBeInTheDocument()
+    const insufficientDataMessage = await screen.findByText(
+      'Dados insuficientes para preservar a confidencialidade.',
+    )
+    expect(insufficientDataMessage).toBeInTheDocument()
+    expect(insufficientDataMessage).toHaveClass('feedback--warning')
     expect(screen.queryByRole('heading', { name: 'Resultado agregado' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Exportar CSV agregado' })).not.toBeInTheDocument()
     expect(api.getIndicators).toHaveBeenCalledWith({

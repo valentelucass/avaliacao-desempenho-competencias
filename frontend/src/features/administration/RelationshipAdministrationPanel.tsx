@@ -348,7 +348,7 @@ export function RelationshipAdministrationPanel({
             </div>
             <div className="action-row">
               <button
-                className="button button--primary"
+                className="button button--success"
                 type="submit"
                 disabled={!hasManagerSelectionOptions || isSaving}
               >
@@ -439,7 +439,7 @@ export function RelationshipAdministrationPanel({
             </div>
             <div className="action-row">
               <button
-                className="button button--primary"
+                className="button button--success"
                 type="submit"
                 disabled={!hasUserLinkSelectionOptions || isSaving}
               >
@@ -497,7 +497,7 @@ export function RelationshipAdministrationPanel({
               >
                 Cancelar
               </button>
-              <button className="button button--primary" type="submit" disabled={isSaving}>
+              <button className="button button--danger" type="submit" disabled={isSaving}>
                 <Unlink aria-hidden="true" size={17} strokeWidth={2} />
                 Confirmar encerramento
               </button>
@@ -547,7 +547,11 @@ function RelationshipTable<
               <td>{getCollaboratorName(entry)}</td>
               <td>{entry.startsOn ?? 'Não informado'}</td>
               <td>
-                <button className="button" type="button" onClick={() => onClose(entry)}>
+                <button
+                  className="button button--danger"
+                  type="button"
+                  onClick={() => onClose(entry)}
+                >
                   <Unlink aria-hidden="true" size={16} strokeWidth={2} />
                   Encerrar
                 </button>

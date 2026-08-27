@@ -289,8 +289,6 @@ export function AssessmentEditor({
       ) : null}
       {status ? <FeedbackMessage kind="status">{status}</FeedbackMessage> : null}
 
-      <IndividualAssessmentSummary assessment={assessment} />
-
       <form className="stack-form" onSubmit={handleSubmit} noValidate aria-busy={isSaving}>
         {assessment.questionnaire.competencies.map((competency) => (
           <fieldset
@@ -298,23 +296,31 @@ export function AssessmentEditor({
             key={competency.id}
             disabled={!canEditDraft || isSaving}
           >
-            <legend>{competency.name}</legend>
+            <legend id={`${competency.id}-label`}>{competency.name}</legend>
             {competency.questions.map((question) => {
               const questionError = missingQuestionIds.includes(question.id)
+              const questionTitleIsRedundant =
+                question.text.trim().toLocaleLowerCase('pt-BR') ===
+                competency.name.trim().toLocaleLowerCase('pt-BR')
               const helpId = `question-${question.id}-help`
               const errorId = `question-${question.id}-error`
+              const questionLabelId = questionTitleIsRedundant
+                ? `${competency.id}-label`
+                : `${question.id}-label`
               return (
                 <div className="question" key={question.id}>
-                  <p className="question__text" id={`${question.id}-label`}>
-                    {question.text}
-                  </p>
+                  {!questionTitleIsRedundant ? (
+                    <p className="question__text" id={questionLabelId}>
+                      {question.text}
+                    </p>
+                  ) : null}
                   {question.description ? <p id={helpId}>{question.description}</p> : null}
                   <div
                     aria-describedby={question.description ? helpId : undefined}
                     aria-invalid={questionError || undefined}
                     className="answer-options"
                     role="radiogroup"
-                    aria-labelledby={`${question.id}-label`}
+                    aria-labelledby={questionLabelId}
                     aria-errormessage={questionError ? errorId : undefined}
                   >
                     {question.options.map((option) => {
@@ -348,7 +354,7 @@ export function AssessmentEditor({
           </fieldset>
         ))}
 
-        <div className="field">
+        <div className="field assessment-editor__narrative-field">
           <label htmlFor="assessment-comment">Comentário opcional</label>
           <textarea
             id="assessment-comment"
@@ -359,7 +365,7 @@ export function AssessmentEditor({
           />
         </div>
 
-        <div className="field">
+        <div className="field assessment-editor__narrative-field">
           <label htmlFor="assessment-action-plan">Plano de ação opcional</label>
           <textarea
             id="assessment-action-plan"
@@ -371,12 +377,13 @@ export function AssessmentEditor({
         </div>
 
         {assessment.result ? <ServerCalculatedResult result={assessment.result} /> : null}
+        <IndividualAssessmentSummary assessment={assessment} displayMode="chart" />
 
         {canEditDraft || canSubmitDraft ? (
           <div className="action-row">
             {canEditDraft ? (
               <button
-                className="button"
+                className="button button--success"
                 type="button"
                 onClick={() => void saveDraft()}
                 disabled={isSaving}
@@ -385,7 +392,7 @@ export function AssessmentEditor({
               </button>
             ) : null}
             {canSubmitDraft ? (
-              <button className="button button--primary" type="submit" disabled={isSaving}>
+              <button className="button button--success" type="submit" disabled={isSaving}>
                 Enviar avaliação
               </button>
             ) : null}
@@ -395,7 +402,7 @@ export function AssessmentEditor({
         {assessment.type === 'GESTOR' && assessment.status === 'ENVIADA' && canPublish ? (
           <div className="action-row">
             <button
-              className="button button--primary"
+              className="button button--success"
               type="button"
               onClick={() => void publishAssessment()}
               disabled={isSaving}

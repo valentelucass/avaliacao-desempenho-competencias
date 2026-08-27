@@ -128,7 +128,7 @@ export function PasswordChangeForm({
             />
           </div>
 
-          <button className="button button--primary" type="submit" disabled={isSubmitting}>
+          <button className="button button--success" type="submit" disabled={isSubmitting}>
             {isSubmitting ? 'Alterando…' : 'Alterar senha'}
           </button>
         </form>

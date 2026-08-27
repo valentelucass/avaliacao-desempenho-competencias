@@ -25,8 +25,8 @@ if /i "%~1"=="--no-browser" (
 :usage
 echo Uso: %~nx0 [--open-browser]
 echo Por padrao, o navegador nao e aberto automaticamente.
-echo O modo de desenvolvimento nunca compila nem instala dependencias.
-echo Gere o JAR e atualize dependencias pelo fluxo de producao autorizado antes de iniciar.
+echo O modo de desenvolvimento compila a API localmente antes de iniciar.
+echo Ele nao instala dependencias nem publica em producao.
 exit /b 2
 
 :start

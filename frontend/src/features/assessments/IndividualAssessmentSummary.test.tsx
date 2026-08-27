@@ -9,7 +9,10 @@ describe('IndividualAssessmentSummary', () => {
 
     expect(screen.getByRole('img', { name: /Pontuação por competência/ })).toBeInTheDocument()
     expect(screen.getByRole('table', { name: 'Resultado por competência' })).toBeInTheDocument()
-    expect(screen.getByText('Preza pela segurança')).toBeInTheDocument()
+    expect(screen.getAllByRole('columnheader', { name: 'Competência' })).toHaveLength(2)
+    expect(screen.getAllByRole('columnheader', { name: 'Pontuação' })).toHaveLength(2)
+    expect(screen.getAllByText('Preza pela segurança')).toHaveLength(2)
+    expect(screen.getAllByText('Qualidade do trabalho')).toHaveLength(2)
     expect(screen.getByText('Comentário seguro')).toBeInTheDocument()
     expect(screen.getByText('Plano de desenvolvimento')).toBeInTheDocument()
   })
@@ -22,6 +25,15 @@ describe('IndividualAssessmentSummary', () => {
     )
 
     expect(screen.queryByRole('img', { name: /Pontuação por competência/ })).not.toBeInTheDocument()
+  })
+
+  it('exibe apenas o gráfico e a tabela no detalhe da avaliação', () => {
+    render(<IndividualAssessmentSummary assessment={sampleAssessment()} displayMode="chart" />)
+
+    expect(screen.getByRole('heading', { name: 'Gráfico da avaliação' })).toBeInTheDocument()
+    expect(screen.getByText('80')).toBeInTheDocument()
+    expect(screen.queryByText('Comentário seguro')).not.toBeInTheDocument()
+    expect(screen.queryByText('Plano de desenvolvimento')).not.toBeInTheDocument()
   })
 })
 
@@ -40,6 +52,9 @@ function sampleAssessment(): AssessmentDetail {
       finalScore: 100,
       classification: { label: 'Dentro das expectativas' },
     },
-    competencyScores: [{ id: 'competency-1', name: 'Preza pela segurança', score: 100 }],
+    competencyScores: [
+      { id: 'competency-1', name: 'Preza pela segurança', score: 100 },
+      { id: 'competency-2', name: 'Qualidade do trabalho', score: 110 },
+    ],
   }
 }

@@ -592,7 +592,7 @@ export function CycleAdministrationPanel({
         {selectedCycle?.status === 'RASCUNHO' || !selectedCycle ? (
           <div className="action-row">
             <button
-              className="button button--primary"
+              className="button button--success"
               type="submit"
               disabled={isSaving || isLoadingDraft}
             >
@@ -612,7 +612,7 @@ export function CycleAdministrationPanel({
           </p>
           <div className="action-row">
             <button
-              className="button button--primary"
+              className="button button--success"
               type="button"
               disabled={isTransitioning}
               onClick={() => void transitionCycle('open')}
@@ -631,7 +631,7 @@ export function CycleAdministrationPanel({
           </p>
           <div className="action-row">
             <button
-              className="button"
+              className="button button--danger"
               type="button"
               disabled={isTransitioning}
               onClick={() => void transitionCycle('close')}

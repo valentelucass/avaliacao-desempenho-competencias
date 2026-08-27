@@ -2,16 +2,23 @@ import type { AssessmentDetail } from '../../api/contracts'
 
 type IndividualAssessmentSummaryProps = {
   assessment: AssessmentDetail
+  displayMode?: 'complete' | 'chart'
 }
+
+type CompetencyScore = NonNullable<AssessmentDetail['competencyScores']>[number]
 
 const minimumScore = 80
 const maximumScore = 120
-const chartSize = 360
+const chartSize = 720
 const chartCenter = chartSize / 2
-const chartRadius = 122
+const chartRadius = 190
+const labelRadius = 220
 const rings = [80, 90, 100, 110, 120]
 
-export function IndividualAssessmentSummary({ assessment }: IndividualAssessmentSummaryProps) {
+export function IndividualAssessmentSummary({
+  assessment,
+  displayMode = 'complete',
+}: IndividualAssessmentSummaryProps) {
   const competencyScores = assessment.competencyScores ?? []
   if (
     !assessment.result ||
@@ -24,61 +31,96 @@ export function IndividualAssessmentSummary({ assessment }: IndividualAssessment
   const points = competencyScores.map((competency, index) =>
     polarPoint(index, competencyScores.length, radiusFor(competency.score)),
   )
+  const competencyScorePairs = pairCompetencyScores(competencyScores)
   const shape = points.map(({ x, y }) => `${x},${y}`).join(' ')
   const score = formatScore(assessment.result.finalScore)
 
   return (
     <section
-      className="individual-assessment-summary card"
+      className={`individual-assessment-summary individual-assessment-summary--${displayMode} card`}
       aria-labelledby="individual-summary-title"
     >
-      <div className="section-heading">
-        <div>
-          <p className="eyebrow">Resumo individual</p>
-          <h3 id="individual-summary-title">Resultado de {assessment.evaluated.displayName}</h3>
-          <p className="muted">Ciclo: {assessment.cycle.name}</p>
+      {displayMode === 'complete' ? (
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Resumo individual</p>
+            <h3 id="individual-summary-title">Resultado de {assessment.evaluated.displayName}</h3>
+            <p className="muted">Ciclo: {assessment.cycle.name}</p>
+          </div>
+          <dl className="individual-assessment-summary__result">
+            <div>
+              <dt>Nota final</dt>
+              <dd>{score}</dd>
+            </div>
+            <div>
+              <dt>Classificação</dt>
+              <dd>{assessment.result.classification.label}</dd>
+            </div>
+          </dl>
         </div>
-        <dl className="individual-assessment-summary__result">
-          <div>
-            <dt>Nota final</dt>
-            <dd>{score}</dd>
-          </div>
-          <div>
-            <dt>Classificação</dt>
-            <dd>{assessment.result.classification.label}</dd>
-          </div>
-        </dl>
-      </div>
+      ) : (
+        <div className="individual-assessment-summary__chart-heading">
+          <p className="eyebrow">Resultado por competência</p>
+          <h3 id="individual-summary-title">Gráfico da avaliação</h3>
+        </div>
+      )}
 
       <div className="individual-assessment-summary__content">
         <figure className="competency-radar" aria-describedby="competency-radar-description">
           <svg
+            className="competency-radar__svg"
+            preserveAspectRatio="xMidYMid meet"
             viewBox={`0 0 ${chartSize} ${chartSize}`}
             role="img"
             aria-labelledby="competency-radar-title competency-radar-description"
           >
             <title id="competency-radar-title">Pontuação por competência</title>
             {rings.map((ring) => (
-              <polygon
-                className="competency-radar__ring"
-                key={ring}
-                points={competencyScores
-                  .map((_, index) => polarPoint(index, competencyScores.length, radiusFor(ring)))
-                  .map(({ x, y }) => `${x},${y}`)
-                  .join(' ')}
-              />
+              <g key={ring}>
+                <polygon
+                  className="competency-radar__ring"
+                  points={competencyScores
+                    .map((_, index) => polarPoint(index, competencyScores.length, radiusFor(ring)))
+                    .map(({ x, y }) => `${x},${y}`)
+                    .join(' ')}
+                />
+                <text
+                  aria-hidden="true"
+                  className="competency-radar__ring-label"
+                  x={chartCenter + 8}
+                  y={chartCenter - radiusFor(ring) + 4}
+                >
+                  {ring}
+                </text>
+              </g>
             ))}
             {competencyScores.map((competency, index) => {
               const point = polarPoint(index, competencyScores.length, chartRadius)
+              const labelPoint = polarPoint(index, competencyScores.length, labelRadius)
+              const lines = splitLabel(competency.name, competencyScores.length)
               return (
-                <line
-                  className="competency-radar__axis"
-                  key={competency.id}
-                  x1={chartCenter}
-                  x2={point.x}
-                  y1={chartCenter}
-                  y2={point.y}
-                />
+                <g key={competency.id}>
+                  <line
+                    className="competency-radar__axis"
+                    x1={chartCenter}
+                    x2={point.x}
+                    y1={chartCenter}
+                    y2={point.y}
+                  />
+                  <text
+                    aria-hidden="true"
+                    className="competency-radar__label"
+                    textAnchor={labelAnchor(labelPoint.x)}
+                    x={labelPoint.x}
+                    y={labelPoint.y - (lines.length - 1) * 7}
+                  >
+                    {lines.map((line, lineIndex) => (
+                      <tspan key={line} x={labelPoint.x} dy={lineIndex === 0 ? 0 : '1.15em'}>
+                        {line}
+                      </tspan>
+                    ))}
+                  </text>
+                </g>
               )
             })}
             <polygon className="competency-radar__shape" points={shape} />
@@ -97,18 +139,20 @@ export function IndividualAssessmentSummary({ assessment }: IndividualAssessment
           </figcaption>
         </figure>
 
-        <div className="individual-assessment-summary__notes">
-          <SummaryText
-            label="Comentário"
-            value={assessment.comment}
-            emptyLabel="Nenhum comentário informado."
-          />
-          <SummaryText
-            label="Plano de ação"
-            value={assessment.actionPlan}
-            emptyLabel="Nenhum plano de ação informado."
-          />
-        </div>
+        {displayMode === 'complete' ? (
+          <div className="individual-assessment-summary__notes">
+            <SummaryText
+              label="Comentário"
+              value={assessment.comment}
+              emptyLabel="Nenhum comentário informado."
+            />
+            <SummaryText
+              label="Plano de ação"
+              value={assessment.actionPlan}
+              emptyLabel="Nenhum plano de ação informado."
+            />
+          </div>
+        ) : null}
       </div>
 
       <div className="table-scroll">
@@ -118,13 +162,23 @@ export function IndividualAssessmentSummary({ assessment }: IndividualAssessment
             <tr>
               <th scope="col">Competência</th>
               <th scope="col">Pontuação</th>
+              <th scope="col">Competência</th>
+              <th scope="col">Pontuação</th>
             </tr>
           </thead>
           <tbody>
-            {competencyScores.map((competency) => (
-              <tr key={competency.id}>
-                <td data-label="Competência">{competency.name}</td>
-                <td data-label="Pontuação">{formatScore(competency.score)}</td>
+            {competencyScorePairs.map(([first, second]) => (
+              <tr key={first.id}>
+                <td data-label="Competência">{first.name}</td>
+                <td data-label="Pontuação">{formatScore(first.score)}</td>
+                {second ? (
+                  <>
+                    <td data-label="Competência">{second.name}</td>
+                    <td data-label="Pontuação">{formatScore(second.score)}</td>
+                  </>
+                ) : (
+                  <td aria-hidden="true" colSpan={2} />
+                )}
               </tr>
             ))}
           </tbody>
@@ -161,6 +215,51 @@ function polarPoint(index: number, total: number, radius: number): { x: number; 
     x: Number((chartCenter + Math.cos(angle) * radius).toFixed(2)),
     y: Number((chartCenter + Math.sin(angle) * radius).toFixed(2)),
   }
+}
+
+function labelAnchor(x: number): 'start' | 'middle' | 'end' {
+  if (x < chartCenter - 24) {
+    return 'end'
+  }
+  if (x > chartCenter + 24) {
+    return 'start'
+  }
+  return 'middle'
+}
+
+function splitLabel(label: string, total: number): readonly string[] {
+  const maximumCharacters = total > 14 ? 19 : 25
+  const words = label.trim().split(/\s+/)
+  const lines: string[] = []
+  let line = ''
+
+  for (const word of words) {
+    const next = line ? `${line} ${word}` : word
+    if (line && next.length > maximumCharacters) {
+      lines.push(line)
+      line = word
+    } else {
+      line = next
+    }
+  }
+  if (line) {
+    lines.push(line)
+  }
+  return lines.slice(0, 3)
+}
+
+function pairCompetencyScores(
+  competencyScores: readonly CompetencyScore[],
+): ReadonlyArray<readonly [CompetencyScore, CompetencyScore?]> {
+  return competencyScores.reduce<Array<readonly [CompetencyScore, CompetencyScore?]>>(
+    (pairs, competency, index) => {
+      if (index % 2 === 0) {
+        pairs.push([competency, competencyScores[index + 1]])
+      }
+      return pairs
+    },
+    [],
+  )
 }
 
 function formatScore(score: number): string {
