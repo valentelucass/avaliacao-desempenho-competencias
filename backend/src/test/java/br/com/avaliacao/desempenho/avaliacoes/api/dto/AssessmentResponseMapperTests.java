@@ -46,7 +46,10 @@ class AssessmentResponseMapperTests {
             null,
             null,
             new AssessmentRepository.ResultView(
-                "100.0", "WITHIN_EXPECTATIONS", "Acelerar e desenvolver"));
+                "100.0", "WITHIN_EXPECTATIONS", "Acelerar e desenvolver"),
+            List.of(
+                new AssessmentRepository.CompetencyScoreView(
+                    competencyId, "Liderança", new java.math.BigDecimal("100.0"))));
 
     AssessmentDetailResponse response = new AssessmentResponseMapper().toDetail(view);
 
@@ -76,5 +79,9 @@ class AssessmentResponseMapperTests {
         .isEqualTo(100);
     assertThat(response.result().finalScore()).isEqualByComparingTo("100.0");
     assertThat(response.result().classification().label()).isEqualTo("Dentro das expectativas");
+    assertThat(response.competencyScores())
+        .containsExactly(
+            new AssessmentDetailResponse.CompetencyScoreResponse(
+                competencyId, "Liderança", new java.math.BigDecimal("100.0")));
   }
 }

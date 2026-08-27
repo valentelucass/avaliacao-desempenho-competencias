@@ -18,7 +18,8 @@ public record AssessmentDetailResponse(
     List<AnswerResponse> answers,
     String comment,
     String actionPlan,
-    ResultResponse result) {
+    ResultResponse result,
+    List<CompetencyScoreResponse> competencyScores) {
 
   public record QuestionnaireResponse(String version, List<CompetencyResponse> competencies) {}
 
@@ -32,6 +33,8 @@ public record AssessmentDetailResponse(
   public record AnswerResponse(UUID questionId, UUID optionId) {}
 
   public record ResultResponse(BigDecimal finalScore, ClassificationResponse classification) {}
+
+  public record CompetencyScoreResponse(UUID id, String name, BigDecimal score) {}
 
   public record ClassificationResponse(String label, String guidance) {}
 }

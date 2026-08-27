@@ -26,11 +26,18 @@ public class AssessmentApplicationService {
   }
 
   public AssessmentRepository.AssessmentPageView list(
-      AssessmentAccessContext actor, int limit, AssessmentRepository.AssessmentCursor cursor) {
+      AssessmentAccessContext actor,
+      AssessmentRepository.AssessmentListFilter filter,
+      int limit,
+      AssessmentRepository.AssessmentCursor cursor) {
     if (limit < 1 || limit > 100) {
       throw new AssessmentValidationException("O limite deve estar entre 1 e 100.");
     }
-    return repository.listAccessible(Objects.requireNonNull(actor, "actor"), limit, cursor);
+    return repository.listAccessible(
+        Objects.requireNonNull(actor, "actor"),
+        Objects.requireNonNullElse(filter, AssessmentRepository.AssessmentListFilter.none()),
+        limit,
+        cursor);
   }
 
   public List<AssessmentRepository.ManagerCreationOptionView> listManagerCreationOptions(

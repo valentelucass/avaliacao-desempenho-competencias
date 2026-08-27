@@ -406,6 +406,11 @@ export interface AssessmentDetail extends AssessmentSummary {
   comment?: string
   actionPlan?: string
   result?: AssessmentResult
+  competencyScores?: readonly {
+    id: string
+    name: string
+    score: number
+  }[]
 }
 
 export interface AssessmentDraftInput {
@@ -479,4 +484,9 @@ export interface Page<T> {
 export interface PageRequest {
   limit?: number
   cursor?: string
+}
+
+export interface AssessmentListRequest extends PageRequest {
+  cycleId?: string
+  collaboratorId?: string
 }

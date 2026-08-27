@@ -139,25 +139,56 @@ function App({ api = defaultApiClient }: AppProps) {
     }
   }, [theme])
 
-  const resumeSession = useCallback(async () => {
-    setIsRestoringSession(true)
-    setStartupError(undefined)
-    setNotice(undefined)
-
-    try {
-      // Os cookies de credencial são HttpOnly. A verificação só ocorre por ação
-      // explícita do usuário para não gerar respostas 401 esperadas ao abrir o login.
-      const restoredUser = await api.refreshSession()
-      if (restoredUser) {
-        setUser(restoredUser)
-        return
+  const resumeSession = useCallback(
+    async (showUnavailableNotice = true, showProgress = true) => {
+      if (showProgress) {
+        setIsRestoringSession(true)
       }
+      setStartupError(undefined)
+      setNotice(undefined)
 
-      setNotice('Não há uma sessão ativa para retomar. Entre com seu login e senha.')
-    } catch (requestError) {
-      setStartupError(safeErrorMessage(requestError))
-    } finally {
-      setIsRestoringSession(false)
+      try {
+        // Os cookies de credencial são HttpOnly. A verificação só ocorre por ação
+        // explícita do usuário para não gerar respostas 401 esperadas ao abrir o login.
+        const restoredUser = await api.refreshSession()
+        if (restoredUser) {
+          setUser(restoredUser)
+          return
+        }
+
+        if (showUnavailableNotice) {
+          setNotice('Não há uma sessão ativa para retomar. Entre com seu login e senha.')
+        }
+      } catch (requestError) {
+        setStartupError(safeErrorMessage(requestError))
+      } finally {
+        if (showProgress) {
+          setIsRestoringSession(false)
+        }
+      }
+    },
+    [api],
+  )
+
+  useEffect(() => {
+    let isCurrent = true
+
+    void api
+      .refreshSession()
+      .then((restoredUser) => {
+        if (!isCurrent || !restoredUser) {
+          return
+        }
+        setUser(restoredUser)
+      })
+      .catch((requestError) => {
+        if (isCurrent) {
+          setStartupError(safeErrorMessage(requestError))
+        }
+      })
+
+    return () => {
+      isCurrent = false
     }
   }, [api])
 
@@ -263,6 +294,7 @@ function App({ api = defaultApiClient }: AppProps) {
   const canCreateManagerAssessment = hasAnyPermission(user, ['AVALIACOES.AVALIAR_VINCULADOS'])
   const canPublishAssessments = hasAnyPermission(user, ['AVALIACOES.PUBLICAR'])
   const canReopenAssessments = hasAnyPermission(user, ['AVALIACOES.REABRIR'])
+  const canViewAllAssessments = hasAnyPermission(user, ['AVALIACOES.VISUALIZAR_TODAS'])
   const canViewIndicators = hasAnyPermission(user, ['INDICADORES.VISUALIZAR'])
   const canExportIndicators = hasAnyPermission(user, ['DADOS.EXPORTAR'])
   const canViewAdministration = hasAnyPermission(user, administrationPermissions)
@@ -422,7 +454,9 @@ function App({ api = defaultApiClient }: AppProps) {
                   onClick={() => navigate('assessments')}
                 >
                   <ClipboardCheck aria-hidden="true" size={17} strokeWidth={2} />
-                  Minhas avaliações
+                  {canViewAdministration && canViewAllAssessments
+                    ? 'Avaliações individuais'
+                    : 'Minhas avaliações'}
                 </button>
               ) : null}
               {canCreateManagerAssessment || canCreateSelfAssessment ? (
@@ -508,6 +542,7 @@ function App({ api = defaultApiClient }: AppProps) {
                 canCreateSelfAssessment={canCreateSelfAssessment}
                 canPublishAssessments={canPublishAssessments}
                 canReopenAssessments={canReopenAssessments}
+                isAdministrativeView={canViewAdministration && canViewAllAssessments}
                 journey={assessmentJourney}
                 assessmentId={assessmentId}
                 canSubmitSelfAssessment={canSubmitSelfAssessment}

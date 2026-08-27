@@ -15,6 +15,14 @@ import org.junit.jupiter.api.Test;
 class SqlServerAssessmentRepositoryTests {
 
   @Test
+  void accessibleListKeepsScopeChecksAndUsesParameterizedIndividualFilters() {
+    assertThat(SqlServerAssessmentRepository.accessibleListSql())
+        .contains("assessment.avaliador_usuario_id = ?")
+        .contains("assessment.ciclo_avaliacao_id = ?")
+        .contains("assessment.colaborador_id = ?");
+  }
+
+  @Test
   void creationOptionsRestrictTheSqlPopulationWithoutSelectingAssessmentData() {
     String sql = SqlServerAssessmentRepository.managerCreationOptionsSql();
 

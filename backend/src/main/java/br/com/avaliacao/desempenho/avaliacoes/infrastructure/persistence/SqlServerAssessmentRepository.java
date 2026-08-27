@@ -23,6 +23,7 @@ import br.com.avaliacao.desempenho.avaliacoes.domain.model.PerformanceClassifica
 import br.com.avaliacao.desempenho.identidadeacesso.infrastructure.persistence.ConditionalOnSqlServerPersistence;
 import br.com.avaliacao.desempenho.identidadeacesso.infrastructure.persistence.SqlServerUtcDateTime;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -186,7 +187,9 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
                             OR user_link.fim_vigencia >= CONVERT(date, SYSUTCDATETIME()))
                  ))
              )
-         ))
+          ))
+      AND (? IS NULL OR assessment.ciclo_avaliacao_id = ?)
+      AND (? IS NULL OR assessment.colaborador_id = ?)
       """;
 
   private static final String LIST_ACCESSIBLE_AFTER_CURSOR_SQL =
@@ -202,6 +205,10 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
   private static final String LIST_ACCESSIBLE_FIRST_PAGE_SQL =
       LIST_ACCESSIBLE_SQL
           + "ORDER BY assessment.atualizada_em_utc DESC, assessment.avaliacao_id DESC";
+
+  static String accessibleListSql() {
+    return LIST_ACCESSIBLE_SQL;
+  }
 
   private static final String LIST_MANAGER_CREATION_OPTIONS_SQL =
       """
@@ -256,8 +263,13 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
 
   @Override
   public AssessmentPageView listAccessible(
-      AssessmentAccessContext actor, int limit, AssessmentCursor cursor) {
+      AssessmentAccessContext actor,
+      AssessmentListFilter filter,
+      int limit,
+      AssessmentCursor cursor) {
     AssessmentAccessContext safeActor = Objects.requireNonNull(actor, "actor não pode ser nulo");
+    AssessmentListFilter safeFilter =
+        Objects.requireNonNullElse(filter, AssessmentListFilter.none());
     if (!isActorActive(safeActor.userId())) {
       return new AssessmentPageView(List.of(), null);
     }
@@ -273,7 +285,11 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
                     safeActor.has("AVALIACOES.VISUALIZAR_PROPRIAS_RESPOSTAS") ? 1 : 0,
                     safeActor.userId(),
                     safeActor.has("AUTOAVALIACOES.VISUALIZAR_PROPRIA") ? 1 : 0,
-                    safeActor.userId())
+                    safeActor.userId(),
+                    safeFilter.cycleId(),
+                    safeFilter.cycleId(),
+                    safeFilter.collaboratorId(),
+                    safeFilter.collaboratorId())
                 : jdbcTemplate.query(
                     LIST_ACCESSIBLE_AFTER_CURSOR_SQL,
                     (resultSet, rowNumber) -> mapSummary(resultSet),
@@ -284,6 +300,10 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
                     safeActor.userId(),
                     safeActor.has("AUTOAVALIACOES.VISUALIZAR_PROPRIA") ? 1 : 0,
                     safeActor.userId(),
+                    safeFilter.cycleId(),
+                    safeFilter.cycleId(),
+                    safeFilter.collaboratorId(),
+                    safeFilter.collaboratorId(),
                     SqlServerUtcDateTime.forBinding(cursor.updatedAt()),
                     SqlServerUtcDateTime.forBinding(cursor.updatedAt()),
                     cursor.id()));
@@ -1618,6 +1638,7 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
                     resultSet.getObject("pergunta_questionario_id", UUID.class),
                     resultSet.getObject("opcao_resposta_id", UUID.class)),
             assessment.versionId());
+    ResultView result = loadVisibleResult(assessment.versionId());
     return new AssessmentDetailView(
         summary,
         questionnaireVersion(assessment.cycleQuestionnaireId()),
@@ -1625,7 +1646,8 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
         answers,
         assessment.comment(),
         assessment.actionPlan(),
-        loadVisibleResult(assessment.versionId()));
+        result,
+        result == null ? List.of() : loadCompetencyScores(assessment.versionId()));
   }
 
   private String collaboratorDisplayName(UUID collaboratorId) {
@@ -1737,6 +1759,36 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
           return new ResultView(
               finalScore.toPlainString(), classification.name(), classification.guidance());
         },
+        versionId);
+  }
+
+  private List<CompetencyScoreView> loadCompetencyScores(UUID versionId) {
+    return jdbcTemplate.query(
+        """
+        SELECT competency_version.competencia_id,
+               competency_version.nome AS competency_name,
+               AVG(CAST(option_answer.pontos AS decimal(19, 4))) AS competency_score
+        FROM dbo.resposta_avaliacao AS answer
+        INNER JOIN dbo.pergunta_questionario AS question
+            ON question.pergunta_questionario_id = answer.pergunta_questionario_id
+        INNER JOIN dbo.questionario_competencia AS questionnaire_competency
+            ON questionnaire_competency.questionario_competencia_id
+                = question.questionario_competencia_id
+        INNER JOIN dbo.versao_competencia AS competency_version
+            ON competency_version.versao_competencia_id
+                = questionnaire_competency.versao_competencia_id
+        INNER JOIN dbo.opcao_resposta AS option_answer
+            ON option_answer.opcao_resposta_id = answer.opcao_resposta_id
+        WHERE answer.versao_avaliacao_id = ?
+        GROUP BY competency_version.competencia_id, competency_version.nome,
+                 questionnaire_competency.ordem
+        ORDER BY questionnaire_competency.ordem, competency_version.competencia_id
+        """,
+        (resultSet, rowNumber) ->
+            new CompetencyScoreView(
+                resultSet.getObject("competencia_id", UUID.class),
+                resultSet.getString("competency_name"),
+                resultSet.getBigDecimal("competency_score").setScale(1, RoundingMode.HALF_UP)),
         versionId);
   }
 

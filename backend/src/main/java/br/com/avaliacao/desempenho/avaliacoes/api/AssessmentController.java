@@ -69,9 +69,15 @@ public class AssessmentController {
           @jakarta.validation.constraints.Max(100)
           int limit,
       @RequestParam(required = false) String cursor,
+      @RequestParam(required = false) UUID cycleId,
+      @RequestParam(required = false) UUID collaboratorId,
       @AuthenticationPrincipal AuthenticatedPrincipal principal) {
     AssessmentRepository.AssessmentPageView page =
-        service.list(accessFor(principal), limit, decodeCursor(cursor));
+        service.list(
+            accessFor(principal),
+            new AssessmentRepository.AssessmentListFilter(cycleId, collaboratorId),
+            limit,
+            decodeCursor(cursor));
     List<AssessmentSummaryResponse> items =
         page.items().stream().map(responseMapper::toSummary).toList();
     return new AssessmentPageResponse(

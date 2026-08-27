@@ -10,6 +10,7 @@ import type {
   ApprovedQuestionnaireVersion,
   ApiProblem,
   AssessmentDetail,
+  AssessmentListRequest,
   AssessmentDraftInput,
   AssessmentSummary,
   CloseRecordInput,
@@ -36,7 +37,6 @@ import type {
   ManagerAssignmentOptions,
   NamedResourceInput,
   Page,
-  PageRequest,
   QuestionnaireAssignmentOption,
   ReplaceAdministrationUserAccessGrantsInput,
   ResetAdministrationUserPasswordInput,
@@ -136,7 +136,7 @@ export interface ApiClient {
   replaceEvaluationCycle(cycleId: string, input: ReplaceEvaluationCycleInput): Promise<void>
   openEvaluationCycle(cycleId: string): Promise<void>
   closeEvaluationCycle(cycleId: string): Promise<void>
-  listAssessments(request?: PageRequest): Promise<Page<AssessmentSummary>>
+  listAssessments(request?: AssessmentListRequest): Promise<Page<AssessmentSummary>>
   listManagerAssessmentCreationOptions(
     cycleId: string,
   ): Promise<readonly ManagerAssessmentCreationOption[]>
@@ -161,15 +161,17 @@ type RequestOptions = {
   body?: unknown
   headers?: HeadersInit
   requiresCsrf?: boolean
+  skipSessionRecovery?: boolean
 }
 
 export class HttpApiClient implements ApiClient {
   private csrfToken?: string
   private csrfRequest?: Promise<string>
+  private sessionRefreshRequest?: Promise<boolean>
 
   async currentUser(): Promise<CurrentUser | null> {
     try {
-      return await this.request<CurrentUser>('/auth/me')
+      return await this.request<CurrentUser>('/auth/me', { skipSessionRecovery: true })
     } catch (error) {
       if (isAuthenticationError(error)) {
         return null
@@ -183,6 +185,7 @@ export class HttpApiClient implements ApiClient {
       await this.request<void>('/auth/sessions/refresh', {
         method: 'POST',
         requiresCsrf: true,
+        skipSessionRecovery: true,
       })
       return await this.currentUser()
     } catch (error) {
@@ -199,6 +202,7 @@ export class HttpApiClient implements ApiClient {
         method: 'POST',
         body: { login, password },
         requiresCsrf: true,
+        skipSessionRecovery: true,
       })
     } finally {
       // A transição de autenticação pode renovar o cookie CSRF. Não reutilize o token emitido
@@ -212,6 +216,7 @@ export class HttpApiClient implements ApiClient {
       await this.request<void>('/auth/sessions/current', {
         method: 'DELETE',
         requiresCsrf: true,
+        skipSessionRecovery: true,
       })
     } finally {
       this.csrfToken = undefined
@@ -568,13 +573,19 @@ export class HttpApiClient implements ApiClient {
     })
   }
 
-  listAssessments(request: PageRequest = {}): Promise<Page<AssessmentSummary>> {
+  listAssessments(request: AssessmentListRequest = {}): Promise<Page<AssessmentSummary>> {
     const parameters = new URLSearchParams()
     if (request.limit !== undefined) {
       parameters.set('limit', String(request.limit))
     }
     if (request.cursor) {
       parameters.set('cursor', request.cursor)
+    }
+    if (request.cycleId) {
+      parameters.set('cycleId', request.cycleId)
+    }
+    if (request.collaboratorId) {
+      parameters.set('collaboratorId', request.collaboratorId)
     }
     const query = parameters.size > 0 ? `?${parameters.toString()}` : ''
     return this.request<Page<AssessmentSummary>>(`/assessments${query}`)
@@ -701,6 +712,11 @@ export class HttpApiClient implements ApiClient {
     options: RequestOptions = {},
   ): Promise<ResponseType> {
     let response = await this.send(path, options)
+    if (!response.ok && response.status === 401 && !options.skipSessionRecovery) {
+      if (await this.recoverSession()) {
+        response = await this.send(path, options)
+      }
+    }
     if (!response.ok && response.status === 403 && options.requiresCsrf) {
       // O filtro CSRF rejeita a chamada antes de alcançar controller, serviço, auditoria ou
       // persistência. Uma única repetição com token novo recupera um cookie rotacionado sem
@@ -754,6 +770,18 @@ export class HttpApiClient implements ApiClient {
     }
 
     return this.csrfRequest
+  }
+
+  private recoverSession(): Promise<boolean> {
+    if (!this.sessionRefreshRequest) {
+      this.sessionRefreshRequest = this.refreshSession()
+        .then((user) => user !== null)
+        .finally(() => {
+          this.sessionRefreshRequest = undefined
+        })
+    }
+
+    return this.sessionRefreshRequest
   }
 
   private async loadCsrfToken(): Promise<string> {

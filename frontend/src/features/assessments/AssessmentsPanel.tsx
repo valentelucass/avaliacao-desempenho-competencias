@@ -4,7 +4,9 @@ import type { FormEvent, ReactNode } from 'react'
 import { isAuthenticationError } from '../../api/client'
 import type { ApiClient } from '../../api/client'
 import type {
+  AssessmentDetail,
   AssessmentSummary,
+  AdministrativeCollaborator,
   EvaluationCycle,
   ManagerAssessmentCreationOption,
   Page,
@@ -13,6 +15,7 @@ import { FeedbackMessage } from '../../ui/Feedback'
 import { Pagination } from '../../ui/Pagination'
 import { safeErrorMessage } from '../../ui/safeErrorMessage'
 import { AssessmentEditor } from './AssessmentEditor'
+import { IndividualAssessmentSummary } from './IndividualAssessmentSummary'
 
 type AssessmentsPanelProps = {
   api: ApiClient
@@ -21,6 +24,7 @@ type AssessmentsPanelProps = {
   canSubmitSelfAssessment: boolean
   canPublishAssessments: boolean
   canReopenAssessments: boolean
+  isAdministrativeView: boolean
   journey?: 'EQUIPE' | 'AUTOAVALIACAO'
   assessmentId?: string
   onExitEditor: () => void
@@ -37,6 +41,7 @@ export function AssessmentsPanel({
   canSubmitSelfAssessment,
   canPublishAssessments,
   canReopenAssessments,
+  isAdministrativeView,
   journey,
   assessmentId,
   onExitEditor,
@@ -53,6 +58,16 @@ export function AssessmentsPanel({
   const [pageNumber, setPageNumber] = useState(1)
   const [cursorHistory, setCursorHistory] = useState<readonly string[]>([])
   const [cycles, setCycles] = useState<readonly EvaluationCycle[]>([])
+  const [administrativeCycles, setAdministrativeCycles] = useState<readonly EvaluationCycle[]>([])
+  const [administrativeCollaborators, setAdministrativeCollaborators] = useState<
+    readonly AdministrativeCollaborator[]
+  >([])
+  const [administrativeCycleId, setAdministrativeCycleId] = useState('')
+  const [administrativeCollaboratorId, setAdministrativeCollaboratorId] = useState('')
+  const [previewedAssessmentId, setPreviewedAssessmentId] = useState<string>()
+  const [previewAssessment, setPreviewAssessment] = useState<AssessmentDetail>()
+  const [previewError, setPreviewError] = useState<string>()
+  const [isLoadingPreview, setIsLoadingPreview] = useState(false)
   const [selectedCycleId, setSelectedCycleId] = useState('')
   const [selectedManagerCycleId, setSelectedManagerCycleId] = useState('')
   const [managerCollaborators, setManagerCollaborators] = useState<
@@ -84,12 +99,31 @@ export function AssessmentsPanel({
   const loadAssessments = useCallback(
     async (cursor?: string, reset = false) => {
       try {
-        const loadedPage = await api.listAssessments({ limit: assessmentsPageSize, cursor })
+        const loadedPage = await api.listAssessments({
+          limit: assessmentsPageSize,
+          cursor,
+          cycleId: administrativeCycleId || undefined,
+          collaboratorId: administrativeCollaboratorId || undefined,
+        })
         // Compatibilidade transitória com respostas de builds locais anteriores ao cursor.
         const page = Array.isArray(loadedPage)
           ? { items: loadedPage, page: { limit: assessmentsPageSize, nextCursor: null } }
           : loadedPage
         setAssessmentPage(page)
+        if (isAdministrativeView && administrativeCycleId && administrativeCollaboratorId) {
+          const completedAssessments = page.items.filter(
+            (assessment) => assessment.status === 'ENVIADA' || assessment.status === 'PUBLICADA',
+          )
+          setPreviewedAssessmentId((current) =>
+            completedAssessments.some((assessment) => assessment.id === current)
+              ? current
+              : completedAssessments[0]?.id,
+          )
+        } else {
+          setPreviewedAssessmentId(undefined)
+          setPreviewAssessment(undefined)
+          setPreviewError(undefined)
+        }
         if (reset) {
           setPageNumber(1)
           setCursorHistory([])
@@ -105,13 +139,89 @@ export function AssessmentsPanel({
         setIsLoading(false)
       }
     },
-    [api, onSessionExpired],
+    [
+      administrativeCollaboratorId,
+      administrativeCycleId,
+      api,
+      isAdministrativeView,
+      onSessionExpired,
+    ],
   )
 
   useEffect(() => {
     // oxlint-disable-next-line react/set-state-in-effect -- Network loading is asynchronous.
     void loadAssessments(undefined, true)
   }, [loadAssessments])
+
+  useEffect(() => {
+    if (!isAdministrativeView) {
+      return undefined
+    }
+
+    let isCurrent = true
+    async function loadAdministrativeFilters() {
+      try {
+        const [loadedCycles, loadedCollaborators] = await Promise.all([
+          api.listAllCycles(),
+          api.listCollaborators(),
+        ])
+        if (isCurrent) {
+          setAdministrativeCycles(loadedCycles)
+          setAdministrativeCollaborators(
+            loadedCollaborators.filter((collaborator) => collaborator.active),
+          )
+        }
+      } catch (requestError) {
+        if (isAuthenticationError(requestError)) {
+          onSessionExpired()
+        } else if (isCurrent) {
+          setError(safeErrorMessage(requestError))
+        }
+      }
+    }
+
+    void loadAdministrativeFilters()
+    return () => {
+      isCurrent = false
+    }
+  }, [api, isAdministrativeView, onSessionExpired])
+
+  useEffect(() => {
+    if (!previewedAssessmentId) {
+      return undefined
+    }
+
+    const assessmentIdForPreview = previewedAssessmentId
+    let isCurrent = true
+    async function loadPreview() {
+      setIsLoadingPreview(true)
+      setPreviewError(undefined)
+      setPreviewAssessment(undefined)
+      try {
+        const detail = await api.getAssessment(assessmentIdForPreview)
+        if (isCurrent) {
+          setPreviewAssessment(detail)
+        }
+      } catch (requestError) {
+        if (isAuthenticationError(requestError)) {
+          onSessionExpired()
+          return
+        }
+        if (isCurrent) {
+          setPreviewError(safeErrorMessage(requestError))
+        }
+      } finally {
+        if (isCurrent) {
+          setIsLoadingPreview(false)
+        }
+      }
+    }
+
+    void loadPreview()
+    return () => {
+      isCurrent = false
+    }
+  }, [api, onSessionExpired, previewedAssessmentId])
 
   useEffect(() => {
     if (!canCreateSelfAssessment && !canCreateManagerAssessment) {
@@ -320,10 +430,14 @@ export function AssessmentsPanel({
     <section aria-labelledby="assessments-title">
       <div className="section-heading">
         <div>
-          <p className="eyebrow">Minhas avaliações</p>
-          <h2 id="assessments-title">Avaliações autorizadas</h2>
+          <p className="eyebrow">{isAdministrativeView ? 'Administração' : 'Minhas avaliações'}</p>
+          <h2 id="assessments-title">
+            {isAdministrativeView ? 'Avaliações individuais' : 'Avaliações autorizadas'}
+          </h2>
           <p className="muted">
-            A lista é definida pelo servidor conforme seu vínculo e suas permissões.
+            {isAdministrativeView
+              ? 'Selecione o ciclo e o colaborador para pré-visualizar o resumo individual; a lista continua disponível para abrir o formulário completo.'
+              : 'A lista é definida pelo servidor conforme seu vínculo e suas permissões.'}
           </p>
         </div>
         <button className="button" type="button" onClick={refreshAssessments} disabled={isLoading}>
@@ -339,6 +453,93 @@ export function AssessmentsPanel({
           <Metric label="Enviadas" value={assessmentMetrics.submitted} icon={<Send />} />
           <Metric label="Publicadas" value={assessmentMetrics.published} icon={<CheckCircle2 />} />
         </dl>
+      ) : null}
+
+      {isAdministrativeView ? (
+        <section
+          className="card assessment-creation-card"
+          aria-labelledby="individual-filter-title"
+        >
+          <div className="assessment-creation-card__header">
+            <h3 id="individual-filter-title">Localizar avaliação</h3>
+            <p className="muted">
+              Selecione o ciclo, o colaborador ou ambos. O servidor só devolve avaliações dentro do
+              seu escopo autorizado.
+            </p>
+          </div>
+          <div className="stack-form assessment-creation-form assessment-creation-form--manager">
+            <div className="field">
+              <label htmlFor="individual-assessment-cycle">Ciclo</label>
+              <select
+                id="individual-assessment-cycle"
+                value={administrativeCycleId}
+                onChange={(event) => {
+                  setAdministrativeCycleId(event.target.value)
+                  setPreviewedAssessmentId(undefined)
+                  setPreviewAssessment(undefined)
+                  setPreviewError(undefined)
+                }}
+              >
+                <option value="">Todos os ciclos</option>
+                {administrativeCycles.map((cycle) => (
+                  <option key={cycle.id} value={cycle.id}>
+                    {cycle.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <label htmlFor="individual-assessment-collaborator">Colaborador</label>
+              <select
+                id="individual-assessment-collaborator"
+                value={administrativeCollaboratorId}
+                onChange={(event) => {
+                  setAdministrativeCollaboratorId(event.target.value)
+                  setPreviewedAssessmentId(undefined)
+                  setPreviewAssessment(undefined)
+                  setPreviewError(undefined)
+                }}
+              >
+                <option value="">Todos os colaboradores</option>
+                {administrativeCollaborators.map((collaborator) => (
+                  <option key={collaborator.id} value={collaborator.id}>
+                    {collaborator.displayName}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      {isAdministrativeView && administrativeCycleId && administrativeCollaboratorId ? (
+        <section
+          aria-label="Pré-visualização da avaliação individual"
+          className="assessment-preview"
+        >
+          {isLoadingPreview ? (
+            <FeedbackMessage kind="info">Carregando pré-visualização da avaliação…</FeedbackMessage>
+          ) : null}
+          {previewError ? <FeedbackMessage kind="error">{previewError}</FeedbackMessage> : null}
+          {!isLoading &&
+          !isLoadingPreview &&
+          !previewError &&
+          !previewedAssessmentId &&
+          assessmentPage.items.length > 0 ? (
+            <FeedbackMessage kind="warning">
+              Há avaliação localizada, mas ela ainda está em rascunho. O gráfico aparece depois do
+              envio.
+            </FeedbackMessage>
+          ) : null}
+          {!isLoading && !isLoadingPreview && !previewError && assessmentPage.items.length === 0 ? (
+            <FeedbackMessage kind="warning">
+              Nenhuma avaliação foi localizada para este ciclo e colaborador.
+            </FeedbackMessage>
+          ) : null}
+          {previewedAssessmentId && previewAssessment ? (
+            <IndividualAssessmentSummary assessment={previewAssessment} />
+          ) : null}
+        </section>
       ) : null}
 
       {canCreateManagerAssessment || canCreateSelfAssessment ? (
@@ -521,6 +722,18 @@ export function AssessmentsPanel({
             >
               Abrir avaliação
             </button>
+            {isAdministrativeView &&
+            administrativeCycleId &&
+            administrativeCollaboratorId &&
+            (assessment.status === 'ENVIADA' || assessment.status === 'PUBLICADA') ? (
+              <button
+                className="button"
+                type="button"
+                onClick={() => setPreviewedAssessmentId(assessment.id)}
+              >
+                Pré-visualizar
+              </button>
+            ) : null}
           </li>
         ))}
       </ul>

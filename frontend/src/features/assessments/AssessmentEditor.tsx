@@ -6,6 +6,7 @@ import type { ApiClient } from '../../api/client'
 import type { AssessmentDetail, AssessmentDraftInput } from '../../api/contracts'
 import { FeedbackMessage } from '../../ui/Feedback'
 import { safeErrorMessage } from '../../ui/safeErrorMessage'
+import { IndividualAssessmentSummary } from './IndividualAssessmentSummary'
 
 type AssessmentEditorProps = {
   api: ApiClient
@@ -287,6 +288,8 @@ export function AssessmentEditor({
         </div>
       ) : null}
       {status ? <FeedbackMessage kind="status">{status}</FeedbackMessage> : null}
+
+      <IndividualAssessmentSummary assessment={assessment} />
 
       <form className="stack-form" onSubmit={handleSubmit} noValidate aria-busy={isSaving}>
         {assessment.questionnaire.competencies.map((competency) => (

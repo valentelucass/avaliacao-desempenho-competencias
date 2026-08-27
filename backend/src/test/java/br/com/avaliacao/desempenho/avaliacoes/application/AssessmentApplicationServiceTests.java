@@ -72,7 +72,8 @@ class AssessmentApplicationServiceTests {
             List.of(),
             null,
             null,
-            null);
+            null,
+            List.of());
     when(repository.findAccessible(assessmentId, actor)).thenReturn(Optional.of(accessible));
 
     service.recordPrint(assessmentId, actor, "request-correlation-id");

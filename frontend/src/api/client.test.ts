@@ -128,6 +128,28 @@ describe('HttpApiClient', () => {
     )
   })
 
+  it('renova a sessão e repete uma leitura que recebeu 401', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(null, { status: 401 }))
+      .mockResolvedValueOnce(jsonResponse({ token: 'csrf-test-token' }))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
+      .mockResolvedValueOnce(jsonResponse({ id: 'user-1', displayName: 'Pessoa' }))
+      .mockResolvedValueOnce(jsonResponse([]))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const api = new HttpApiClient()
+
+    await expect(api.listBranches()).resolves.toEqual([])
+    expect(fetchMock).toHaveBeenCalledTimes(5)
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      3,
+      '/api/v1/auth/sessions/refresh',
+      expect.objectContaining({ credentials: 'include', method: 'POST' }),
+    )
+    expect(fetchMock).toHaveBeenNthCalledWith(5, '/api/v1/master-data/branches', expect.anything())
+  })
+
   it('não oculta falhas não relacionadas à autenticação ao retomar a sessão', async () => {
     const fetchMock = vi
       .fn()

@@ -2,6 +2,7 @@ package br.com.avaliacao.desempenho.avaliacoes.application;
 
 import br.com.avaliacao.desempenho.avaliacoes.domain.model.AssessmentAccessContext;
 import br.com.avaliacao.desempenho.avaliacoes.domain.model.AssessmentType;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -13,7 +14,10 @@ import java.util.UUID;
 public interface AssessmentRepository {
 
   AssessmentPageView listAccessible(
-      AssessmentAccessContext actor, int limit, AssessmentCursor cursor);
+      AssessmentAccessContext actor,
+      AssessmentListFilter filter,
+      int limit,
+      AssessmentCursor cursor);
 
   List<ManagerCreationOptionView> listManagerCreationOptions(
       UUID cycleId, AssessmentAccessContext actor);
@@ -69,6 +73,13 @@ public interface AssessmentRepository {
 
   record AssessmentPageView(List<AssessmentSummaryView> items, AssessmentCursor nextCursor) {}
 
+  /** Filtros opcionais; o repositório sempre reaplica o escopo do ator. */
+  record AssessmentListFilter(UUID cycleId, UUID collaboratorId) {
+    public static AssessmentListFilter none() {
+      return new AssessmentListFilter(null, null);
+    }
+  }
+
   /** Cursor estável da ordenação por atualização decrescente e identificador. */
   record AssessmentCursor(Instant updatedAt, UUID id) {}
 
@@ -81,7 +92,8 @@ public interface AssessmentRepository {
       List<AnswerView> answers,
       String comment,
       String actionPlan,
-      ResultView result) {}
+      ResultView result,
+      List<CompetencyScoreView> competencyScores) {}
 
   record CompetencyView(UUID id, String name, List<QuestionView> questions) {}
 
@@ -93,6 +105,9 @@ public interface AssessmentRepository {
   record AnswerView(UUID questionId, UUID optionId) {}
 
   record ResultView(String finalScore, String classification, String guidance) {}
+
+  /** Pontuação já consolidada no servidor para um eixo do resumo individual. */
+  record CompetencyScoreView(UUID id, String name, BigDecimal score) {}
 
   record DraftContent(List<AnswerView> answers, String comment, String actionPlan) {}
 }

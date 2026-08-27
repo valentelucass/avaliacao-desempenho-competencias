@@ -40,7 +40,8 @@ public final class AssessmentResponseMapper {
         safeSource.answers().stream().map(this::toAnswer).toList(),
         safeSource.comment(),
         safeSource.actionPlan(),
-        safeSource.result() == null ? null : toResult(safeSource.result()));
+        safeSource.result() == null ? null : toResult(safeSource.result()),
+        safeSource.competencyScores().stream().map(this::toCompetencyScore).toList());
   }
 
   private AssessmentDetailResponse.CompetencyResponse toCompetency(
@@ -75,5 +76,11 @@ public final class AssessmentResponseMapper {
         new BigDecimal(source.finalScore()),
         new AssessmentDetailResponse.ClassificationResponse(
             classification.label(), source.guidance()));
+  }
+
+  private AssessmentDetailResponse.CompetencyScoreResponse toCompetencyScore(
+      AssessmentRepository.CompetencyScoreView source) {
+    return new AssessmentDetailResponse.CompetencyScoreResponse(
+        source.id(), source.name(), source.score());
   }
 }

@@ -16,7 +16,7 @@ import App from './App'
 const passwordChangeMethod = 'changePassword'
 
 describe('App', () => {
-  it('apresenta login sem gravar credenciais no navegador', async () => {
+  it('apresenta login e tenta recuperar uma sessão sem gravar credenciais no navegador', async () => {
     const api = createApi()
     render(<App api={api} />)
 
@@ -35,11 +35,11 @@ describe('App', () => {
       'Avaliações de desempenho',
     )
     expect(screen.getByRole('button', { name: 'Retomar sessão existente' })).toBeInTheDocument()
-    expect(api.currentUser).not.toHaveBeenCalled()
-    expect(api.refreshSession).not.toHaveBeenCalled()
+    await waitFor(() => expect(api.refreshSession).toHaveBeenCalledTimes(1))
+    expect(api.currentUser).toHaveBeenCalledTimes(1)
   })
 
-  it('retoma uma sessão somente após ação explícita do usuário', async () => {
+  it('retoma automaticamente uma sessão existente', async () => {
     const api = createApi({
       refreshSession: vi.fn().mockResolvedValue({
         id: 'user-1',
@@ -49,9 +49,6 @@ describe('App', () => {
     })
 
     render(<App api={api} />)
-
-    expect(api.refreshSession).not.toHaveBeenCalled()
-    fireEvent.click(screen.getByRole('button', { name: 'Retomar sessão existente' }))
 
     expect(await screen.findByText('Sessão retomada')).toBeInTheDocument()
     expect(api.refreshSession).toHaveBeenCalledTimes(1)
@@ -79,13 +76,8 @@ describe('App', () => {
     const api = createApi({ refreshSession: vi.fn().mockResolvedValue(null) })
     render(<App api={api} />)
 
-    fireEvent.click(screen.getByRole('button', { name: 'Retomar sessão existente' }))
-
-    expect(
-      await screen.findByText('Não há uma sessão ativa para retomar. Entre com seu login e senha.'),
-    ).toBeInTheDocument()
+    await waitFor(() => expect(api.refreshSession).toHaveBeenCalledTimes(1))
     expect(screen.getByLabelText('E-mail ou login')).toBeInTheDocument()
-    expect(api.refreshSession).toHaveBeenCalledTimes(1)
   })
 
   it('explica falha de credenciais sem revelar o estado da conta', async () => {
@@ -355,6 +347,54 @@ describe('App', () => {
 
     expect(await screen.findByText('Avaliação publicada com sucesso.')).toBeInTheDocument()
     expect(api.publishAssessment).toHaveBeenCalledWith(submittedAssessment.id)
+  })
+
+  it('pré-visualiza o gráfico ao selecionar ciclo e colaborador na visão administrativa', async () => {
+    const completedAssessment: AssessmentDetail = {
+      ...sampleManagerAssessment(),
+      status: 'PUBLICADA',
+      result: {
+        finalScore: 100,
+        classification: { label: 'Dentro das expectativas' },
+      },
+      competencyScores: [{ id: 'competency-1', name: 'Conduta pessoal', score: 100 }],
+    }
+    const api = createApi({
+      currentUser: vi.fn().mockResolvedValue({
+        id: 'rh-1',
+        displayName: 'Pessoa de RH',
+        permissions: ['AVALIACOES.VISUALIZAR_TODAS', 'CADASTROS.GERIR'],
+      }),
+      listAllCycles: vi
+        .fn()
+        .mockResolvedValue([{ id: 'cycle-2024', name: 'Ciclo 2024', status: 'ENCERRADO' }]),
+      listCollaborators: vi
+        .fn()
+        .mockResolvedValue([
+          { id: 'collaborator-1', displayName: 'Colaborador vinculado', active: true },
+        ]),
+      listAssessments: vi.fn().mockResolvedValue([
+        {
+          id: completedAssessment.id,
+          cycle: completedAssessment.cycle,
+          evaluated: completedAssessment.evaluated,
+          type: completedAssessment.type,
+          status: completedAssessment.status,
+        },
+      ]),
+      getAssessment: vi.fn().mockResolvedValue(completedAssessment),
+    })
+
+    renderWithExistingSession(api, '/avaliacoes')
+
+    await screen.findByRole('option', { name: 'Ciclo 2024' })
+    fireEvent.change(screen.getByLabelText('Ciclo'), { target: { value: 'cycle-2024' } })
+    fireEvent.change(screen.getByLabelText('Colaborador'), { target: { value: 'collaborator-1' } })
+
+    expect(
+      await screen.findByRole('img', { name: /Pontuação por competência/ }),
+    ).toBeInTheDocument()
+    expect(api.getAssessment).toHaveBeenCalledWith(completedAssessment.id)
   })
 
   it('mantém um rascunho em consulta quando a permissão não autoriza sua edição', async () => {
@@ -813,9 +853,7 @@ describe('App', () => {
 
 function renderWithExistingSession(api: ApiClient, path = '/') {
   window.history.replaceState(null, '', path)
-  const rendered = render(<App api={api} />)
-  fireEvent.click(screen.getByRole('button', { name: 'Retomar sessão existente' }))
-  return rendered
+  return render(<App api={api} />)
 }
 
 function createApi(overrides: Partial<ApiClient> = {}): ApiClient {
