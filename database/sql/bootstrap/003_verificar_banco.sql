@@ -1,0 +1,6 @@
+SET NOCOUNT ON;
+
+IF DB_ID(N'$(DatabaseName)') IS NULL
+    SELECT N'MISSING';
+ELSE
+    SELECT N'EXISTS';

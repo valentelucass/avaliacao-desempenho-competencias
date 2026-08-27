@@ -1,0 +1,42 @@
+# Operating system and editor files
+.DS_Store
+Thumbs.db
+.idea/
+*.iml
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# Java / Maven
+backend/target/
+*.class
+
+# Node / Vite
+frontend/node_modules/
+frontend/dist/
+frontend/coverage/
+frontend/*.tsbuildinfo
+
+# Logs and local configuration
+*.log
+*.log.*
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+secrets/
+
+# Materiais locais sigilosos
+/docs/SECRETO/
+
+# Local SQL Server bootstrap configuration
+/database/config.local.bat
+/database/*.local.bat
+
+# Fonte local com dados pessoais e cache de avaliações; não versionar.
+/docs/AVALIAÇÃO DE DESEMPENHO - MACRO.xlsm
