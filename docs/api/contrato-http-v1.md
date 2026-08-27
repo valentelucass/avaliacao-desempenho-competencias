@@ -39,14 +39,14 @@ As coleções não são uniformes nesta primeira entrega: ciclos aceitam `limit`
 
 ## Sessão local
 
-| Operação                        | Corpo / retorno                                            | Regra                                                                                           |
-| ------------------------------- | ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `GET /auth/csrf`                | `{ "token": "…" }`                                         | Público somente para obter o token técnico de CSRF.                                             |
-| `POST /auth/sessions`           | `{ "login", "password" }` → `204`                          | Aplica limitação local, autenticação genérica e escreve `ADC-ACCESS` e `ADC-REFRESH`.           |
-| `POST /auth/sessions/refresh`   | → `204`                                                    | Rotaciona o refresh opaco armazenado somente por hash e substitui os cookies.                   |
-| `DELETE /auth/sessions/current` | → `204`                                                    | Revoga a sessão autenticada e limpa cookies.                                                    |
+| Operação                        | Corpo / retorno                                                                  | Regra                                                                                           |
+| ------------------------------- | -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `GET /auth/csrf`                | `{ "token": "…" }`                                                               | Público somente para obter o token técnico de CSRF.                                             |
+| `POST /auth/sessions`           | `{ "login", "password" }` → `204`                                                | Aplica limitação local, autenticação genérica e escreve `ADC-ACCESS` e `ADC-REFRESH`.           |
+| `POST /auth/sessions/refresh`   | → `204`                                                                          | Rotaciona o refresh opaco armazenado somente por hash e substitui os cookies.                   |
+| `DELETE /auth/sessions/current` | → `204`                                                                          | Revoga a sessão autenticada e limpa cookies.                                                    |
 | `GET /auth/me`                  | `{ id, displayName, permissions, passwordChangeRequired, supremeAdministrator }` | Permissões servem à interface; a autorização sempre é revalidada no servidor.                   |
-| `PUT /auth/password`            | `{ "currentPassword", "newPassword" }` → `204`             | Exige nova senha de 12 a 200 caracteres, revoga todas as sessões do usuário e limpa os cookies. |
+| `PUT /auth/password`            | `{ "currentPassword", "newPassword" }` → `204`                                   | Exige nova senha de 12 a 200 caracteres, revoga todas as sessões do usuário e limpa os cookies. |
 
 Os cookies de credencial são host-only, `HttpOnly`, `Secure`, `SameSite=Strict`; o JWT curto HS256 contém somente `iss`, `aud`, `sub`, `exp`, `nbf`, `jti` e `sid`. Em cada requisição o servidor revalida assinatura, claims, sessão, situação da conta e permissões efetivas. O limiter usa o endereço remoto visto pela aplicação até haver proxy confiável formalmente configurado.
 
@@ -54,15 +54,15 @@ Os cookies de credencial são host-only, `HttpOnly`, `Secure`, `SameSite=Strict`
 
 Todas as rotas abaixo exigem autenticação e a permissão correspondente. A API normal nunca cria, promove ou altera administrador supremo.
 
-| Operação                                                | Permissão                                  | Contrato                                                                                                  |
-| ------------------------------------------------------- | ------------------------------------------ | --------------------------------------------------------------------------------------------------------- |
-| `GET /administration/users`                             | `USUARIOS.LER`                             | Lista `UserResponse`, sem hash, senha, token ou sessão.                                                   |
-| `GET /administration/users/{userId}`                    | `USUARIOS.LER`                             | Retorna o mesmo `UserResponse`.                                                                           |
-| `POST /administration/users`                            | `USUARIOS.CRIAR`                           | `{ login, displayName, initialPassword, initialRoles: [] }` → `201`; a senha inicial exige troca.         |
-| `PATCH /administration/users/{userId}`                  | `USUARIOS.ALTERAR`                         | `{ displayName, status: ACTIVE\|BLOCKED\|DISABLED }`; bloqueio/desativação revoga sessões.                |
-| `PATCH /administration/users/{userId}/logical-deletion` | `USUARIOS.ALTERAR`                         | `{ deleted: true }` marca somente uma conta comum como excluída logicamente, desativa-a e revoga sessões. |
+| Operação                                                | Permissão                                  | Contrato                                                                                                      |
+| ------------------------------------------------------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
+| `GET /administration/users`                             | `USUARIOS.LER`                             | Lista `UserResponse`, sem hash, senha, token ou sessão.                                                       |
+| `GET /administration/users/{userId}`                    | `USUARIOS.LER`                             | Retorna o mesmo `UserResponse`.                                                                               |
+| `POST /administration/users`                            | `USUARIOS.CRIAR`                           | `{ login, displayName, initialPassword, initialRoles: [] }` → `201`; a senha inicial exige troca.             |
+| `PATCH /administration/users/{userId}`                  | `USUARIOS.ALTERAR`                         | `{ displayName, status: ACTIVE\|BLOCKED\|DISABLED }`; bloqueio/desativação revoga sessões.                    |
+| `PATCH /administration/users/{userId}/logical-deletion` | `USUARIOS.ALTERAR`                         | `{ deleted: true }` marca somente uma conta comum como excluída logicamente, desativa-a e revoga sessões.     |
 | `PUT /administration/users/{userId}/password-reset`     | `USUARIOS.ALTERAR` + administrador supremo | `{ temporaryPassword }` de 12 a 200 caracteres; somente para conta comum ativa, força troca e revoga sessões. |
-| `PUT /administration/users/{userId}/access-grants`      | `ACESSOS.GERIR` ou `ACESSOS.NEGOCIO.GERIR` | `{ roles: [], permissions: [{ code, effect: ALLOW\|DENY }] }`; retorna `UserResponse`.                    |
+| `PUT /administration/users/{userId}/access-grants`      | `ACESSOS.GERIR` ou `ACESSOS.NEGOCIO.GERIR` | `{ roles: [], permissions: [{ code, effect: ALLOW\|DENY }] }`; retorna `UserResponse`.                        |
 
 `UserResponse` contém `id`, `login`, `displayName`, `status`, `protectedFromNormalFlow`, `logicallyDeleted`, `passwordChangeRequired`, `roles`, `individualPermissions` e `updatedAt`. A substituição de concessões preserva histórico revogado e revoga sessões do alvo.
 
@@ -129,23 +129,23 @@ O ciclo v2024.1 exige `America/Sao_Paulo`, início em 1º de setembro às 00:00 
 
 ## Avaliações
 
-| Operação                                           | Regra                                                                                                                                   |
-| -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Operação                                                                            | Regra                                                                                                                                                                                                                             |
+| ----------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `GET /assessments?limit=1..100&cursor=<opaco>&cycleId={UUID}&collaboratorId={UUID}` | Retorna `{ items, page: { limit, nextCursor } }` no escopo do ator. `cycleId` e `collaboratorId` são filtros opcionais, sempre reaplicados depois da regra de escopo; `nextCursor` só deve ser reutilizado com os mesmos filtros. |
-| `GET /assessments/creation-options?cycleId={UUID}` | Gestor recebe somente `{ collaborators: [{ id, displayName }] }` ainda avaliáveis por ele no ciclo.                                     |
-| `GET /assessments/{assessmentId}`                  | Retorna detalhe somente quando o ator possui escopo do recurso.                                                                         |
-| `POST /assessments/{assessmentId}/print-events`    | Requer o mesmo escopo de leitura do detalhe e CSRF; registra a solicitação de impressão e retorna `204`, sem gerar ou devolver arquivo. |
-| `POST /assessments`                                | Requer `Idempotency-Key`; `{ type: "GESTOR", cycleId, collaboratorId }` ou `{ type: "AUTOAVALIACAO", cycleId }`.                        |
-| `PATCH /assessments/{assessmentId}`                | Requer `If-Match`; salva respostas, comentário e plano somente em rascunho autorizado.                                                  |
-| `POST /assessments/{assessmentId}/submit`          | Requer `If-Match` e `Idempotency-Key`; valida todas as respostas e calcula resultado no servidor.                                       |
-| `POST /assessments/{assessmentId}/publish`         | Requer `Idempotency-Key`; somente RH/Diretoria publicam avaliação de gestor enviada.                                                    |
-| `POST /assessments/{assessmentId}/reopen`          | Requer `Idempotency-Key` e `{ reason }` de até 80 caracteres; somente RH/Diretoria reabrem avaliação de gestor publicada.               |
+| `GET /assessments/creation-options?cycleId={UUID}`                                  | Gestor recebe somente `{ collaborators: [{ id, displayName }] }` ainda avaliáveis por ele no ciclo.                                                                                                                               |
+| `GET /assessments/{assessmentId}`                                                   | Retorna detalhe somente quando o ator possui escopo do recurso.                                                                                                                                                                   |
+| `POST /assessments/{assessmentId}/print-events`                                     | Requer o mesmo escopo de leitura do detalhe e CSRF; registra a solicitação de impressão e retorna `204`, sem gerar ou devolver arquivo.                                                                                           |
+| `POST /assessments`                                                                 | Requer `Idempotency-Key`; `{ type: "GESTOR", cycleId, collaboratorId }` ou `{ type: "AUTOAVALIACAO", cycleId }`.                                                                                                                  |
+| `PATCH /assessments/{assessmentId}`                                                 | Requer `If-Match`; salva respostas, comentário e plano somente em rascunho autorizado.                                                                                                                                            |
+| `POST /assessments/{assessmentId}/submit`                                           | Requer `If-Match` e `Idempotency-Key`; valida todas as respostas e calcula resultado no servidor.                                                                                                                                 |
+| `POST /assessments/{assessmentId}/publish`                                          | Requer `Idempotency-Key`; somente RH/Diretoria publicam avaliação de gestor enviada.                                                                                                                                              |
+| `POST /assessments/{assessmentId}/reopen`                                           | Requer `Idempotency-Key` e `{ reason }` de até 80 caracteres; somente RH/Diretoria reabrem avaliação de gestor publicada.                                                                                                         |
 
 Detalhes devolvem `id`, `cycle`, `evaluated`, `type`, `status`, `revision`, `updatedAt`, questionário, respostas e, quando aplicável, `result.finalScore` e `result.classification { label, guidance }`. Para avaliação enviada ou publicada, devolvem ainda `competencyScores: [{ id, name, score }]`, com a média simples por competência calculada no servidor a partir das respostas persistidas e arredondada para uma casa decimal; esse campo é apenas apresentação individual autorizada e não é um indicador agregado. Cada opção de resposta do questionário traz também seu `points` somente para exibição transparente ao avaliador; o cliente continua enviando exclusivamente `optionId` e o servidor continua sendo a única autoridade para validar a escala, calcular a nota e classificar o resultado. Rascunho não possui resultado nem `competencyScores`. A nota é calculada no servidor, pertence a 80–120 e usa a regra `2024.1`.
 
 Criação, edição e envio regulares só ocorrem dentro da janela aberta. Publicação e reabertura administrativa também são permitidas após o encerramento. A reabertura registrada de uma avaliação de gestor encerrada permite somente ao gestor autor corrigir e reenviar aquele rascunho; não reabre o ciclo, autoavaliações ou novas criações.
 
-A cópia individual é gerada exclusivamente pela caixa de impressão local do navegador, depois do evento auditado. Não há rota de download, PDF persistido, anexo ou envio de conteúdo de avaliação por e-mail.
+A cópia individual é gerada exclusivamente pela caixa de impressão local do navegador, depois do evento auditado. A interface a disponibiliza somente para detalhe enviado ou publicado com resultado calculado e aplica folha A4 compacta de uma página: gráfico radar, nota final e classificação calculadas no servidor e uma linha vazia para assinatura física do colaborador. Comentário, plano de ação, respostas, tabela textual e assinatura eletrônica não fazem parte da cópia; a linha de assinatura não é transmitida nem persistida. Não há rota de download, PDF persistido, anexo ou envio de conteúdo de avaliação por e-mail.
 
 ## Indicadores e exportação
 

@@ -83,6 +83,8 @@ export function AssessmentsPanel({
   const [creationError, setCreationError] = useState<string>()
   const [managerCreationError, setManagerCreationError] = useState<string>()
   const isPageNavigationPending = useRef(false)
+  const managerCreationCardRef = useRef<HTMLElement>(null)
+  const selfCreationCardRef = useRef<HTMLElement>(null)
 
   const assessmentMetrics = useMemo(
     () => ({
@@ -296,6 +298,20 @@ export function AssessmentsPanel({
       isCurrent = false
     }
   }, [api, canCreateManagerAssessment, onSessionExpired, selectedManagerCycleId])
+
+  useEffect(() => {
+    const destination =
+      journey === 'EQUIPE' ? managerCreationCardRef.current : selfCreationCardRef.current
+    if (!destination || !journey) {
+      return undefined
+    }
+
+    const animationFrame = window.requestAnimationFrame(() => {
+      destination.focus({ preventScroll: true })
+      destination.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+    return () => window.cancelAnimationFrame(animationFrame)
+  }, [journey])
 
   function refreshAssessments() {
     if (isPageNavigationPending.current) {
@@ -548,6 +564,8 @@ export function AssessmentsPanel({
             <section
               className="card assessment-creation-card"
               aria-labelledby="create-manager-assessment-title"
+              ref={managerCreationCardRef}
+              tabIndex={-1}
             >
               <div className="assessment-creation-card__header">
                 <h3 id="create-manager-assessment-title">Criar avaliação de gestor</h3>
@@ -640,6 +658,8 @@ export function AssessmentsPanel({
             <section
               className="card assessment-creation-card"
               aria-labelledby="create-self-assessment-title"
+              ref={selfCreationCardRef}
+              tabIndex={-1}
             >
               <div className="assessment-creation-card__header">
                 <h3 id="create-self-assessment-title">Criar autoavaliação</h3>

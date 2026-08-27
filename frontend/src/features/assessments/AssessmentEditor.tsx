@@ -88,6 +88,10 @@ export function AssessmentEditor({
     isDraft && (assessment?.type === 'GESTOR' ? canEditManagerAssessment : canEditSelfAssessment)
   const canSubmitDraft =
     isDraft && (assessment?.type === 'GESTOR' ? canEditManagerAssessment : canSubmitSelfAssessment)
+  const hasPrintableSummary =
+    (assessment?.status === 'ENVIADA' || assessment?.status === 'PUBLICADA') &&
+    assessment.result !== undefined &&
+    (assessment.competencyScores?.length ?? 0) > 0
 
   function applyDetail(detail: AssessmentDetail) {
     setAssessment(detail)
@@ -149,7 +153,9 @@ export function AssessmentEditor({
     setError(undefined)
     setStatus(undefined)
     try {
-      const updated = await api.submitAssessment(assessment.id, assessment.revision)
+      const saved = await api.saveAssessment(assessment.id, draftInput(), assessment.revision)
+      applyDetail(saved)
+      const updated = await api.submitAssessment(saved.id, saved.revision)
       applyDetail(updated)
       setStatus('Avaliação enviada. O resultado exibido é calculado pelo servidor.')
       onChanged()
@@ -224,7 +230,7 @@ export function AssessmentEditor({
   }
 
   async function printAssessment() {
-    if (!assessment || isPrinting) {
+    if (!assessment || !hasPrintableSummary || isPrinting) {
       return
     }
 
@@ -272,7 +278,12 @@ export function AssessmentEditor({
           <p className="muted">Ciclo: {assessment.cycle.name}</p>
         </div>
         <div className="action-row print-hidden">
-          <button className="button" type="button" disabled={isPrinting} onClick={printAssessment}>
+          <button
+            className="button"
+            type="button"
+            disabled={isPrinting || !hasPrintableSummary}
+            onClick={printAssessment}
+          >
             <Printer aria-hidden="true" size={17} strokeWidth={2} />
             {isPrinting ? 'Registrando impressão…' : 'Imprimir / PDF'}
           </button>
@@ -281,6 +292,12 @@ export function AssessmentEditor({
           </button>
         </div>
       </div>
+
+      {!hasPrintableSummary ? (
+        <p className="field-hint assessment-editor__print-hint">
+          A impressão com gráfico e resumo fica disponível após o envio da avaliação.
+        </p>
+      ) : null}
 
       {error ? (
         <div className="error-summary" ref={errorSummaryRef} tabIndex={-1}>
@@ -376,7 +393,13 @@ export function AssessmentEditor({
           />
         </div>
 
-        <IndividualAssessmentSummary assessment={assessment} displayMode="chart" />
+        <div className="assessment-editor__print-sheet">
+          <IndividualAssessmentSummary assessment={assessment} displayMode="chart" />
+          <section className="assessment-print-signature" aria-label="Assinatura do colaborador">
+            <span>Assinatura do colaborador</span>
+            <div aria-hidden="true" className="assessment-print-signature__line" />
+          </section>
+        </div>
 
         {canEditDraft || canSubmitDraft ? (
           <div className="action-row">

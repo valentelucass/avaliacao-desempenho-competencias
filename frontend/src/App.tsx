@@ -170,28 +170,6 @@ function App({ api = defaultApiClient }: AppProps) {
     [api],
   )
 
-  useEffect(() => {
-    let isCurrent = true
-
-    void api
-      .refreshSession()
-      .then((restoredUser) => {
-        if (!isCurrent || !restoredUser) {
-          return
-        }
-        setUser(restoredUser)
-      })
-      .catch((requestError) => {
-        if (isCurrent) {
-          setStartupError(safeErrorMessage(requestError))
-        }
-      })
-
-    return () => {
-      isCurrent = false
-    }
-  }, [api])
-
   const handleSessionExpired = useCallback(() => {
     if (sessionRecoveryRef.current) {
       return

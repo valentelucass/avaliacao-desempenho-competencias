@@ -31,8 +31,9 @@
   color: var(--text);
   color-scheme: light;
   font: 16px/1.5 var(--sans);
+  font-kerning: normal;
   font-synthesis: none;
-  text-rendering: optimizeLegibility;
+  text-rendering: auto;
   -webkit-font-smoothing: antialiased;
 }
 

@@ -135,7 +135,7 @@
 }
 
 @page {
-  margin: 12mm;
+  margin: 8mm;
   size: A4;
 }
 
@@ -467,8 +467,11 @@ textarea {
   border: 1px solid var(--border-strong);
   border-radius: 0.65rem;
   color: var(--text);
+  font-kerning: normal;
+  letter-spacing: normal;
   min-height: 2.55rem;
   padding: 0.52rem 0.7rem;
+  text-rendering: auto;
   transition:
     border-color 160ms ease,
     box-shadow 160ms ease;
@@ -1484,8 +1487,9 @@ thead th {
 }
 
 .application-footer--workspace {
-  margin-top: clamp(1rem, 2vw, 1.75rem);
-  padding: 0.85rem 0;
+  align-self: start;
+  margin-top: clamp(0.55rem, 1vw, 0.85rem);
+  padding: 0.45rem 0;
   text-align: left;
 }
 
@@ -3235,12 +3239,32 @@ thead th {
     padding-top: 0;
   }
 
+  .master-data-quick-grid .administration-users th:last-child {
+    text-align: right;
+  }
+
+  .master-data-quick-grid .administration-users .table-actions {
+    justify-content: flex-end;
+  }
+
   .master-data-administration .master-data-allocation-form {
     grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 
   .master-data-administration .master-data-assignment-form {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* Em tablets, duas tabelas lado a lado fariam cada card ficar menor que a
+   largura mínima de leitura. A coluna única evita rolagem horizontal interna. */
+@media (min-width: 48.0625rem) and (max-width: 77.99rem) {
+  .master-data-quick-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .master-data-administration .master-data-allocation-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -3430,6 +3454,7 @@ thead th {
 }
 
 .application-shell:not(.application-shell--narrow) {
+  align-content: start;
   grid-template-rows: minmax(0, 1fr) auto;
 }
 
@@ -3906,12 +3931,98 @@ thead th {
   max-height: min(12rem, 40svh);
 }
 
+.assessment-editor__print-sheet {
+  min-width: 0;
+}
+
+.assessment-print-signature {
+  display: none;
+}
+
 .result-card {
   padding: 0.9rem 1.1rem;
 }
 
 @media print {
-  .individual-assessment-summary {
+  .application-footer,
+  .assessment-editor > :not(.stack-form),
+  .assessment-editor .stack-form > :not(.assessment-editor__print-sheet) {
+    display: none !important;
+  }
+
+  .application-shell,
+  .workspace,
+  .workspace__content,
+  .assessment-editor,
+  .assessment-editor .stack-form,
+  .assessment-editor__print-sheet {
+    display: block;
+    margin: 0;
+    min-height: 0;
+    padding: 0;
+    width: 100%;
+  }
+
+  .assessment-editor__print-sheet .individual-assessment-summary {
+    background: #fff;
     break-inside: avoid;
+    box-shadow: none;
+    gap: 3mm;
+    padding: 0;
+    page-break-inside: avoid;
+  }
+
+  .assessment-editor__print-sheet .individual-assessment-summary__chart-heading .eyebrow,
+  .assessment-editor__print-sheet .individual-assessment-summary__guidance,
+  .assessment-editor__print-sheet .table-scroll,
+  .assessment-editor__print-sheet .competency-radar figcaption {
+    display: none;
+  }
+
+  .assessment-editor__print-sheet .individual-assessment-summary__chart-header {
+    align-items: end;
+    gap: 3mm;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr);
+  }
+
+  .assessment-editor__print-sheet .individual-assessment-summary__chart-heading h3 {
+    font-size: 4.2mm;
+  }
+
+  .assessment-editor__print-sheet .individual-assessment-summary__chart-result {
+    gap: 3mm;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .assessment-editor__print-sheet .individual-assessment-summary__chart-result dt {
+    font-size: 2.5mm;
+  }
+
+  .assessment-editor__print-sheet .individual-assessment-summary__chart-result dd {
+    font-size: 4.2mm;
+  }
+
+  .assessment-editor__print-sheet .competency-radar {
+    max-inline-size: 136mm;
+  }
+
+  .assessment-editor__print-sheet .competency-radar__label,
+  .assessment-editor__print-sheet .competency-radar__ring-label {
+    font-size: 2.5mm;
+  }
+
+  .assessment-print-signature {
+    break-inside: avoid;
+    display: grid;
+    font-size: 3mm;
+    gap: 2.5mm;
+    margin: 5mm auto 0;
+    max-width: 118mm;
+    page-break-inside: avoid;
+  }
+
+  .assessment-print-signature__line {
+    border-bottom: 0.3mm solid #0f172a;
+    height: 8mm;
   }
 }
