@@ -705,35 +705,39 @@ export function AssessmentsPanel({
       <ul className="assessment-list" aria-busy={isLoading}>
         {assessmentPage.items.map((assessment) => (
           <li className="card assessment-list__item" key={assessment.id}>
-            <div>
-              <h3>{assessment.evaluated.displayName}</h3>
+            <div className="assessment-list__details">
+              <div className="assessment-list__title">
+                <h3>{assessment.evaluated.displayName}</h3>
+                <span className={`status-badge status-badge--${assessment.status.toLowerCase()}`}>
+                  {formatAssessmentStatus(assessment.status)}
+                </span>
+              </div>
               <p id={`assessment-${assessment.id}-summary`}>
                 {assessment.cycle.name} · {formatAssessmentType(assessment.type)}
               </p>
-              <span className={`status-badge status-badge--${assessment.status.toLowerCase()}`}>
-                {formatAssessmentStatus(assessment.status)}
-              </span>
             </div>
-            <button
-              className="button button--primary"
-              type="button"
-              aria-describedby={`assessment-${assessment.id}-summary`}
-              onClick={() => onSelectAssessment(assessment.id)}
-            >
-              Abrir avaliação
-            </button>
-            {isAdministrativeView &&
-            administrativeCycleId &&
-            administrativeCollaboratorId &&
-            (assessment.status === 'ENVIADA' || assessment.status === 'PUBLICADA') ? (
+            <div className="assessment-list__actions">
               <button
-                className="button"
+                className="button button--primary"
                 type="button"
-                onClick={() => setPreviewedAssessmentId(assessment.id)}
+                aria-describedby={`assessment-${assessment.id}-summary`}
+                onClick={() => onSelectAssessment(assessment.id)}
               >
-                Pré-visualizar
+                Abrir avaliação
               </button>
-            ) : null}
+              {isAdministrativeView &&
+              administrativeCycleId &&
+              administrativeCollaboratorId &&
+              (assessment.status === 'ENVIADA' || assessment.status === 'PUBLICADA') ? (
+                <button
+                  className="button"
+                  type="button"
+                  onClick={() => setPreviewedAssessmentId(assessment.id)}
+                >
+                  Pré-visualizar
+                </button>
+              ) : null}
+            </div>
           </li>
         ))}
       </ul>

@@ -376,7 +376,6 @@ export function AssessmentEditor({
           />
         </div>
 
-        {assessment.result ? <ServerCalculatedResult result={assessment.result} /> : null}
         <IndividualAssessmentSummary assessment={assessment} displayMode="chart" />
 
         {canEditDraft || canSubmitDraft ? (
@@ -452,30 +451,6 @@ export function AssessmentEditor({
           </FeedbackMessage>
         ) : null}
       </form>
-    </section>
-  )
-}
-
-function ServerCalculatedResult({ result }: { result: NonNullable<AssessmentDetail['result']> }) {
-  const score = new Intl.NumberFormat('pt-BR', {
-    maximumFractionDigits: 1,
-    minimumFractionDigits: 1,
-  }).format(result.finalScore)
-
-  return (
-    <section className="result-card" aria-labelledby="server-result-title">
-      <h3 id="server-result-title">Resultado calculado no servidor</h3>
-      <dl>
-        <div>
-          <dt>Nota final</dt>
-          <dd>{score}</dd>
-        </div>
-        <div>
-          <dt>Classificação</dt>
-          <dd>{result.classification.label}</dd>
-        </div>
-      </dl>
-      {result.classification.guidance ? <p>{result.classification.guidance}</p> : null}
     </section>
   )
 }

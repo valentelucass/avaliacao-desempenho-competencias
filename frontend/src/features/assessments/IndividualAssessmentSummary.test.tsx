@@ -31,6 +31,8 @@ describe('IndividualAssessmentSummary', () => {
     render(<IndividualAssessmentSummary assessment={sampleAssessment()} displayMode="chart" />)
 
     expect(screen.getByRole('heading', { name: 'Gráfico da avaliação' })).toBeInTheDocument()
+    expect(screen.getByText('Nota final')).toBeInTheDocument()
+    expect(screen.getByText('Dentro das expectativas')).toBeInTheDocument()
     expect(screen.getByText('80')).toBeInTheDocument()
     expect(screen.queryByText('Comentário seguro')).not.toBeInTheDocument()
     expect(screen.queryByText('Plano de desenvolvimento')).not.toBeInTheDocument()

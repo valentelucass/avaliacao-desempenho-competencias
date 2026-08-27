@@ -59,9 +59,30 @@ export function IndividualAssessmentSummary({
           </dl>
         </div>
       ) : (
-        <div className="individual-assessment-summary__chart-heading">
-          <p className="eyebrow">Resultado por competência</p>
-          <h3 id="individual-summary-title">Gráfico da avaliação</h3>
+        <div className="individual-assessment-summary__chart-header">
+          <div className="individual-assessment-summary__chart-heading">
+            <p className="eyebrow">Resultado por competência</p>
+            <h3 id="individual-summary-title">Gráfico da avaliação</h3>
+          </div>
+          <dl
+            aria-label="Resultado calculado no servidor"
+            className="individual-assessment-summary__chart-result"
+          >
+            <div>
+              <dt>Nota final</dt>
+              <dd>{score}</dd>
+            </div>
+            <div>
+              <dt>Classificação</dt>
+              <dd>{assessment.result.classification.label}</dd>
+            </div>
+            {assessment.result.classification.guidance ? (
+              <div className="individual-assessment-summary__guidance">
+                <dt>Orientação</dt>
+                <dd>{assessment.result.classification.guidance}</dd>
+              </div>
+            ) : null}
+          </dl>
         </div>
       )}
 

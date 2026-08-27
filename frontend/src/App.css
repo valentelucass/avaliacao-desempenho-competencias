@@ -681,12 +681,40 @@ textarea:focus-visible,
   padding: 0;
 }
 .assessment-list__item {
+  align-items: start;
+  display: grid;
   gap: 1rem;
+  grid-template-columns: minmax(0, 1fr);
   justify-content: space-between;
+  min-width: 0;
   padding: 1rem;
 }
-.assessment-list__item h3 {
+
+.assessment-list__details,
+.assessment-list__title {
+  min-width: 0;
+}
+
+.assessment-list__title {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.65rem;
+}
+
+.assessment-list__title h3 {
+  flex: 1 1 12rem;
   margin: 0;
+}
+
+.assessment-list__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.assessment-list__actions .button {
+  flex: 1 1 10rem;
 }
 .status-badge {
   align-items: center;
@@ -2183,6 +2211,30 @@ thead th {
     width: auto;
   }
 
+  .assessment-list {
+    gap: 0.85rem;
+    grid-template-columns: repeat(auto-fill, minmax(20rem, 1fr));
+  }
+
+  .assessment-list__item {
+    align-items: flex-start;
+    gap: 0.75rem;
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding: 0.95rem 1rem;
+  }
+
+  .assessment-list__actions {
+    align-items: flex-end;
+    flex-direction: column;
+    justify-content: flex-start;
+  }
+
+  .assessment-list__actions .button {
+    flex: 0 0 auto;
+    min-width: 10rem;
+    white-space: nowrap;
+  }
+
   .form-grid,
   .filter-panel {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -3634,12 +3686,53 @@ thead th {
   margin: 0;
 }
 
+.individual-assessment-summary__chart-header {
+  align-items: start;
+  display: grid;
+  gap: 0.85rem;
+}
+
 .individual-assessment-summary__chart-heading h3 {
   margin-top: 0.2rem;
 }
 
+.individual-assessment-summary__chart-result {
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  margin: 0;
+}
+
+.individual-assessment-summary__chart-result div {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.individual-assessment-summary__chart-result dt {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.individual-assessment-summary__chart-result dd {
+  color: var(--text-h);
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.individual-assessment-summary__chart-result .individual-assessment-summary__guidance dd {
+  font-weight: 500;
+}
+
 .individual-assessment-summary--chart .individual-assessment-summary__content {
   display: block;
+}
+
+/* No modo somente gráfico, centralize a figura no espaço amplo do desktop.
+   A largura continua fluida, portanto o comportamento móvel não é alterado. */
+.individual-assessment-summary--chart .competency-radar {
+  margin-inline: auto;
 }
 
 .competency-radar {
@@ -3770,6 +3863,42 @@ thead th {
 
   .assessment-editor .stack-form > .assessment-editor__narrative-field {
     grid-column: auto;
+  }
+
+  .individual-assessment-summary--chart .individual-assessment-summary__chart-header {
+    align-items: center;
+    grid-template-columns: minmax(14rem, 0.8fr) minmax(0, 1.2fr);
+  }
+
+  .individual-assessment-summary--chart .individual-assessment-summary__chart-result {
+    grid-template-columns: minmax(6rem, 0.45fr) minmax(13rem, 1fr) minmax(10rem, 0.8fr);
+  }
+
+  .assessment-editor .result-card {
+    align-items: center;
+    column-gap: 1.35rem;
+    grid-template-columns: minmax(13rem, 0.7fr) minmax(0, 1.3fr);
+    padding: 0.75rem 1rem;
+    row-gap: 0.35rem;
+  }
+
+  .assessment-editor .result-card h3 {
+    grid-row: 1 / span 2;
+  }
+
+  .assessment-editor .result-card dl {
+    gap: 0.35rem 1rem;
+    grid-column: 2;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .assessment-editor .result-card dl div {
+    gap: 0.1rem;
+  }
+
+  .assessment-editor .result-card p {
+    font-size: 0.95rem;
+    grid-column: 2;
   }
 }
 
