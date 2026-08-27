@@ -21,12 +21,20 @@ if /i "%~1"=="--no-browser" (
   set "ADC_EXIT=%ERRORLEVEL%"
   goto :result
 )
+if /i "%~1"=="--public-preview" (
+  if "%~2"=="" goto :usage
+  if not "%~3"=="" goto :usage
+  "%ADC_POWERSHELL%" -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\iniciar-dev-local.ps1" -KeepRunning -PublicPreviewOrigin "%~2"
+  set "ADC_EXIT=%ERRORLEVEL%"
+  goto :result
+)
 
 :usage
-echo Uso: %~nx0 [--open-browser]
+echo Uso: %~nx0 [--open-browser ^| --public-preview https://seu-tunel.devtunnels.ms]
 echo Por padrao, o navegador nao e aberto automaticamente.
 echo O modo de desenvolvimento compila a API localmente antes de iniciar.
 echo Ele nao instala dependencias nem publica em producao.
+echo A demonstracao publica e temporaria e libera somente o endereco exato informado.
 exit /b 2
 
 :start

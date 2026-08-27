@@ -1,7 +1,8 @@
 [CmdletBinding()]
 param(
     [switch]$OpenBrowser,
-    [switch]$KeepRunning
+    [switch]$KeepRunning,
+    [string]$PublicPreviewOrigin
 )
 
 Set-StrictMode -Version Latest
@@ -211,13 +212,41 @@ function Get-PowerShellExecutable {
 function Set-TemporaryEnvironment {
     param(
         [Parameter(Mandatory)][string]$Name,
-        [Parameter(Mandatory)][string]$Value
+        [Parameter(Mandatory)][AllowEmptyString()][string]$Value
     )
 
     if (-not $previousEnvironment.ContainsKey($Name)) {
         $previousEnvironment[$Name] = [Environment]::GetEnvironmentVariable($Name, 'Process')
     }
     [Environment]::SetEnvironmentVariable($Name, $Value, 'Process')
+}
+
+function Get-ValidatedPublicPreviewOrigin {
+    param([AllowEmptyString()][string]$Origin)
+
+    if ([string]::IsNullOrWhiteSpace($Origin)) {
+        return $null
+    }
+
+    $uri = $null
+    if (-not [Uri]::TryCreate($Origin, [UriKind]::Absolute, [ref]$uri)) {
+        throw 'O endereço da demonstração deve ser uma URL HTTPS completa do Dev Tunnel.'
+    }
+
+    $previewHost = $uri.DnsSafeHost.ToLowerInvariant()
+    if (
+        $uri.Scheme -ne 'https' -or
+        -not [string]::IsNullOrEmpty($uri.UserInfo) -or
+        $uri.Port -ne 443 -or
+        $uri.AbsolutePath -ne '/' -or
+        -not [string]::IsNullOrEmpty($uri.Query) -or
+        -not [string]::IsNullOrEmpty($uri.Fragment) -or
+        $previewHost -notmatch '^[a-z0-9][a-z0-9-]*(?:\.[a-z0-9][a-z0-9-]*)*\.devtunnels\.ms$'
+    ) {
+        throw 'A demonstração aceita somente a origem HTTPS exata de um Dev Tunnel, sem caminho, porta, parâmetros ou credenciais.'
+    }
+
+    return $uri.GetLeftPart([UriPartial]::Authority)
 }
 
 function Restore-ProcessEnvironment {
@@ -267,7 +296,7 @@ function Fill-CryptographicBytes {
     }
 }
 
-function Wait-ForHttpsEndpoint {
+function Wait-ForEndpoint {
     param(
         [Parameter(Mandatory)][string]$Url,
         [Parameter(Mandatory)][System.Diagnostics.Process]$Process,
@@ -454,6 +483,7 @@ try {
     if ($null -eq (Get-Command npm.cmd -ErrorAction SilentlyContinue)) {
         throw 'npm não foi encontrado no PATH.'
     }
+    $validatedPublicPreviewOrigin = Get-ValidatedPublicPreviewOrigin -Origin $PublicPreviewOrigin
 
     $backendArtifact = New-DevelopmentBackendArtifact
     Assert-BackendArtifactIsCurrent -Artifact $backendArtifact
@@ -498,13 +528,20 @@ try {
         'app.security.authentication.issuer' = "https://localhost:$backendPort"
         'app.security.authentication.audience' = 'avaliacao-desempenho-local'
         'app.security.authentication.hmac-secret-base64' = [Convert]::ToBase64String($hmacSecretBytes)
-        'app.security.cors.allowed-origins' = "https://localhost:$frontendPort"
         'app.evaluation-cycles.read.enabled' = $true
         'app.assessments.enabled' = $true
         'app.indicators.enabled' = $true
     }
     Assert-SafeLocalLoggingConfiguration -Properties $runtimeProperties
     Set-TemporaryEnvironment -Name 'SPRING_APPLICATION_JSON' -Value ($runtimeProperties | ConvertTo-Json -Compress)
+    # Propriedades indexadas evitam a conversão ambígua de listas no JSON transitório do
+    # Spring e mantêm a allowlist CORS explícita durante toda a demonstração.
+    Set-TemporaryEnvironment -Name 'APP_SECURITY_CORS_ALLOWEDORIGINS_0' -Value "https://localhost:$frontendPort"
+    if ($null -ne $validatedPublicPreviewOrigin) {
+        Set-TemporaryEnvironment -Name 'APP_SECURITY_CORS_ALLOWEDORIGINS_1' -Value $validatedPublicPreviewOrigin
+        # O Vite atende em HTTP no loopback quando o Dev Tunnel termina o HTTPS público.
+        Set-TemporaryEnvironment -Name 'APP_SECURITY_CORS_ALLOWEDORIGINS_2' -Value "http://localhost:$frontendPort"
+    }
     $priorJavaToolOptions = [Environment]::GetEnvironmentVariable('JAVA_TOOL_OPTIONS', 'Process')
     $javaToolOptions = if ([string]::IsNullOrWhiteSpace($priorJavaToolOptions)) {
         "-Djava.library.path=$nativeAuthenticationDirectory"
@@ -515,6 +552,12 @@ try {
     Set-TemporaryEnvironment -Name 'ADC_LOCAL_HTTPS_PFX_PATH' -Value $pfxPath
     Set-TemporaryEnvironment -Name 'ADC_LOCAL_HTTPS_PFX_PASSWORD' -Value $pfxPasswordText
     Set-TemporaryEnvironment -Name 'ADC_LOCAL_API_TARGET' -Value "https://localhost:$backendPort"
+    $publicPreviewOriginForVite = if ($null -eq $validatedPublicPreviewOrigin) {
+        ''
+    } else {
+        $validatedPublicPreviewOrigin
+    }
+    Set-TemporaryEnvironment -Name 'ADC_LOCAL_PUBLIC_PREVIEW_ORIGIN' -Value $publicPreviewOriginForVite
 
     $backendLog = Join-Path $runtimeDirectory 'api.log'
     $backendErrorLog = Join-Path $runtimeDirectory 'api.error.log'
@@ -529,32 +572,48 @@ try {
         -PassThru `
         -RedirectStandardOutput $backendLog `
         -RedirectStandardError $backendErrorLog
-    Wait-ForHttpsEndpoint `
+    Wait-ForEndpoint `
         -Url "https://localhost:$backendPort/api/v1/auth/csrf" `
         -Process $backendProcess `
         -LogPath $backendLog `
         -Name 'A API local'
     $startedListeners += Get-StartedLocalDevelopmentListener -Port $backendPort -Kind 'api'
 
+    $frontendBindHost = if ($null -eq $validatedPublicPreviewOrigin) {
+        'localhost'
+    } else {
+        # O agente do Dev Tunnel encaminha para IPv4 local; localhost pode resolver somente em ::1.
+        '127.0.0.1'
+    }
+    $frontendProtocol = if ($null -eq $validatedPublicPreviewOrigin) {
+        'https'
+    } else {
+        # O Dev Tunnel termina HTTPS no endereço público e encaminha HTTP ao processo local.
+        'http'
+    }
     $frontendProcess = Start-Process `
         -FilePath 'cmd.exe' `
-        -ArgumentList @('/d', '/c', "npm.cmd run dev -- --host localhost --port $frontendPort --strictPort") `
+        -ArgumentList @('/d', '/c', "npm.cmd run dev -- --host $frontendBindHost --port $frontendPort --strictPort") `
         -WorkingDirectory $frontendDirectory `
         -WindowStyle Hidden `
         -PassThru `
         -RedirectStandardOutput $frontendLog `
         -RedirectStandardError $frontendErrorLog
-    Wait-ForHttpsEndpoint `
-        -Url "https://localhost:$frontendPort/" `
+    Wait-ForEndpoint `
+        -Url "${frontendProtocol}://${frontendBindHost}:$frontendPort/" `
         -Process $frontendProcess `
         -LogPath $frontendLog `
         -Name 'O front-end local'
     $startedListeners += Get-StartedLocalDevelopmentListener -Port $frontendPort -Kind 'frontend'
 
     $started = $true
-    Write-Host "Desenvolvimento local disponível em https://localhost:$frontendPort"
+    Write-Host "Desenvolvimento local disponível em ${frontendProtocol}://${frontendBindHost}:$frontendPort"
     Write-Host "API local disponível em https://localhost:$backendPort/api/v1"
     Write-Host "Processos em escuta: API $($startedListeners[0].ProcessId), front-end $($startedListeners[1].ProcessId)."
+    if ($null -ne $validatedPublicPreviewOrigin) {
+        Write-Host "Demonstração temporária disponível em $validatedPublicPreviewOrigin"
+        Write-Host 'Mantenha apenas a porta 5180 pública no Dev Tunnel e encerre esta sessão ao concluir a demonstração.'
+    }
     Write-Host 'A primeira entrada exige a troca da senha inicial e um novo login.'
     if ($OpenBrowser) {
         Start-Process "https://localhost:$frontendPort"

@@ -24,7 +24,17 @@ Ele é distinto de `iniciar-prod.bat`. O launcher chama `scripts/iniciar-dev-loc
 
 No desenvolvimento local, a API usa autenticação integrada da identidade Windows que executa a JVM. O launcher cria/usa um certificado HTTPS local somente no perfil Windows atual; o PFX exportado para a execução, a senha desse PFX e o material HMAC são efêmeros e não entram no repositório. Ele força `debug=false`, desabilita detalhes de requisição e restringe os loggers HTTP, segurança e JDBC para impedir que respostas CSRF, tokens ou credenciais sejam serializados no log local, mesmo quando a máquina tiver variáveis de ambiente amplas. A cada inicialização, ele compila a API em um diretório de release local exclusivo sob `backend/target/dev-local-releases`; não baixa a biblioteca de autenticação integrada, não executa `npm install` e não publica em produção. Antes de reiniciar processos, valida o JAR recém-gerado e as dependências atuais em `frontend/node_modules`, falhando sem interromper a instância em execução se algum pré-requisito estiver ausente ou desatualizado. O navegador não abre automaticamente; `iniciar-dev.bat --open-browser` é a opção explícita para abri-lo.
 
-Esse modo não cria configuração de produção, conta SQL dedicada, rota de Cloudflare, serviço PM2 ou acesso público. A inicialização ativada foi verificada com API/SPA/proxy em execução, `GET /api/v1/auth/csrf` retornando `200` pelo front-end e rota protegida retornando `401`; o fluxo interativo de credencial, login e navegador ainda precisa de validação antes de ser considerado aceito.
+Sem a opção de demonstração abaixo, esse modo não cria configuração de produção, conta SQL dedicada, rota de Cloudflare, serviço PM2 ou acesso público. A inicialização ativada foi verificada com API/SPA/proxy em execução, `GET /api/v1/auth/csrf` retornando `200` pelo front-end e rota protegida retornando `401`; o fluxo interativo de credencial, login e navegador ainda precisa de validação antes de ser considerado aceito.
+
+### Demonstração temporária por Dev Tunnel
+
+Para demonstrar a instância de desenvolvimento a uma pessoa em outra máquina, inicie o Dev Tunnel somente para a porta **5180** e reinicie o launcher com a origem HTTPS exata produzida pelo túnel:
+
+```bat
+iniciar-dev.bat --public-preview https://seu-tunel.devtunnels.ms
+```
+
+O launcher aceita exclusivamente uma origem `https://…devtunnels.ms`, sem porta, caminho, parâmetros ou credenciais. Enquanto estiver aberto, ele libera apenas essa origem específica no Vite e no CORS da API local e faz a SPA escutar em `http://127.0.0.1:5180`: o Dev Tunnel termina o HTTPS no endereço público e encaminha HTTP ao processo local. A API continua em HTTPS de loopback na porta 5181 e deve permanecer privada no Dev Tunnel. Ao encerrar o launcher com `Ctrl+C` ou remover a porta pública no Dev Tunnel, o acesso externo deixa de funcionar. Essa demonstração não publica, não altera PM2, Cloudflare, banco de produção ou a configuração persistente, e deve usar somente dados e contas fictícias de desenvolvimento.
 
 ## Contrato do launcher de produção
 

@@ -5,10 +5,36 @@ import { defineConfig } from 'vitest/config'
 
 const allowedPublicHosts = ['formulario.rodogarcia.com.br']
 
+function publicPreviewHost(origin: string | undefined) {
+  if (!origin) {
+    return undefined
+  }
+
+  const parsedOrigin = new URL(origin)
+  const host = parsedOrigin.hostname.toLowerCase()
+  if (
+    parsedOrigin.protocol !== 'https:' ||
+    parsedOrigin.port ||
+    parsedOrigin.username ||
+    parsedOrigin.password ||
+    parsedOrigin.pathname !== '/' ||
+    parsedOrigin.search ||
+    parsedOrigin.hash ||
+    !/^[a-z0-9][a-z0-9-]*(?:\.[a-z0-9][a-z0-9-]*)*\.devtunnels\.ms$/.test(host)
+  ) {
+    throw new Error(
+      'ADC_LOCAL_PUBLIC_PREVIEW_ORIGIN deve ser a origem HTTPS exata de um Dev Tunnel, sem caminho, porta ou credenciais.',
+    )
+  }
+
+  return host
+}
+
 function secureLocalDevelopmentServer() {
   const certificatePath = process.env.ADC_LOCAL_HTTPS_PFX_PATH
   const certificatePassword = process.env.ADC_LOCAL_HTTPS_PFX_PASSWORD
   const apiTarget = process.env.ADC_LOCAL_API_TARGET
+  const previewHost = publicPreviewHost(process.env.ADC_LOCAL_PUBLIC_PREVIEW_ORIGIN)
 
   if (!certificatePath && !certificatePassword && !apiTarget) {
     return undefined
@@ -28,13 +54,17 @@ function secureLocalDevelopmentServer() {
     throw new Error('ADC_LOCAL_API_TARGET deve apontar para uma API HTTPS de loopback.')
   }
 
+  const https = previewHost
+    ? undefined
+    : {
+        pfx: readFileSync(certificatePath),
+        passphrase: certificatePassword,
+      }
+
   return {
     host: 'localhost',
-    allowedHosts: allowedPublicHosts,
-    https: {
-      pfx: readFileSync(certificatePath),
-      passphrase: certificatePassword,
-    },
+    allowedHosts: [...allowedPublicHosts, ...(previewHost ? [previewHost] : [])],
+    ...(https ? { https } : {}),
     proxy: {
       '/api': {
         target: parsedTarget.origin,
