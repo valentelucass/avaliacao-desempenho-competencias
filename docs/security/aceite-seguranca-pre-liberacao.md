@@ -5,10 +5,10 @@
 ## Base já verificada localmente
 
 - A API nega rotas por padrão, aplica CORS explícito, CSRF, cabeçalhos de segurança, erros sem detalhe interno e correlação de requisição.
-- A fonte implementa identidade local, sessão/JWT, RBAC/ABAC por recurso, vínculos, auditoria e limiter local; o banco local dedicado está reconciliado de `V0001` a `V0007` e possui somente uma conta técnica de desenvolvimento, sem dado ou escopo de negócio.
-- O gate `scripts/verify-quality.ps1` cobre testes locais, lint/formatter, revisão estática das migrations, scanner heurístico de segredos e auditoria npm. As validações SQL do runner passaram no banco local e a inicialização API/SPA/proxy respondeu CSRF `200` e rota protegida `401`; integração de repositórios, login interativo e navegador ainda permanecem pendentes.
+- A fonte implementa identidade local, sessão/JWT, RBAC/ABAC por recurso, vínculos, auditoria e limiter local; em 2026-08-26, `AVALIACAO_DEV` e `AVALIACAO_PROD` estavam reconciliados de `V0001` a `V0010`, sem ciclos, lotações, vínculos, atribuições ou avaliações. A `V0011` já está em fonte e aguarda aplicação autorizada nos dois alvos.
+- O gate `scripts/verify-quality.ps1` cobre testes locais, lint/formatter, revisão estática das migrations, scanner heurístico de segredos e auditoria npm. As validações SQL somente leitura passaram nos dois bancos canônicos; a verificação anônima dos hosts retornou `200` e os processos PM2 estavam online. Integração autenticada de repositórios, login, navegador e escrita em produção permanecem pendentes.
 
-Essas evidências de fonte não comprovam integração contra SQL Server, operação pública, proxy/Tunnel ou proteção completa de dados pessoais.
+Essas evidências não comprovam jornada autenticada de ponta a ponta, aceite de negócio, proteção completa de dados pessoais, backup/restauração ou os controles do proxy/Tunnel em produção.
 
 ## Revisão técnica local — 2026-08-26
 

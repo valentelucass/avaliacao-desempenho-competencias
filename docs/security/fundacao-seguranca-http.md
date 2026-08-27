@@ -8,7 +8,7 @@
 
 ## Estado seguro de inicialização
 
-`application.properties` mantém persistência SQL Server, autenticação e módulos persistidos desabilitados. Assim, iniciar o repositório sem configuração externa não cria conexão, conta, sessão, JWT ou rota de negócio operacional. O banco local dedicado está reconciliado de `V0001` a `V0007`; o launcher `iniciar-dev.bat` fornece a configuração necessária somente ao processo local de desenvolvimento.
+`application.properties` mantém persistência SQL Server, autenticação e módulos persistidos desabilitados. Assim, iniciar o repositório sem configuração externa não cria conexão, conta, sessão, JWT ou rota de negócio operacional. Em 2026-08-26, os bancos canônicos `AVALIACAO_DEV` e `AVALIACAO_PROD` estavam reconciliados de `V0001` a `V0010`; a `V0011` está em fonte, restringe a autoridade de Administrador e normaliza contas administrativas legadas para perfil único, mas ainda depende de aplicação autorizada. O launcher `iniciar-dev.bat` fornece a configuração necessária somente ao processo local de desenvolvimento.
 
 Ativar a implementação em outro ambiente exige migrations autorizadas, identidade SQL de mínimo privilégio, segredo HMAC externo, emissor/audiência/durações, bootstrap controlado de administradores supremos e validação não produtiva. O modo local usa a identidade Windows atual e material efêmero de execução; isso está detalhado em [Configuração externa da aplicação](../operations/configuracao-externa-da-aplicacao.md) e não autoriza publicação ou configuração de produção.
 
@@ -23,19 +23,20 @@ Ativar a implementação em outro ambiente exige migrations autorizadas, identid
 
 ## Segregação de acesso
 
-O administrador de plataforma não herda acesso a avaliações, indicadores ou exportações. A API normal não cria, promove ou altera administrador supremo. Além disso:
+O Administrador de plataforma não é autoridade para publicar/reabrir avaliações, consultar indicadores ou exportar. Essas ações exigem Gerência de RH ou Diretoria, além de permissão, escopo e estado válidos. A API normal não cria, promove ou altera administrador supremo. Além disso:
 
 - uma conta não pode substituir a própria configuração de acesso;
-- uma conta somente técnica pode conceder somente acesso técnico;
-- papel ou permissão de negócio exigem outro alvo e ator já pertencente à Gerência de RH ou Diretoria, com `ACESSOS.NEGOCIO.GERIR`;
-- a alteração de acesso preserva concessões revogadas para trilha e invalida a sessão do alvo.
+- o perfil administrativo é exatamente um de `ADMINISTRADOR_PLATAFORMA`, `GESTOR`, `GERENCIA_RH`, `DIRETORIA` ou `COLABORADOR`;
+- a API rejeita permissões individuais e papéis fora desse catálogo no fluxo administrativo;
+- perfil de negócio exige outro alvo e `ACESSOS.NEGOCIO.GERIR`; no catálogo atual, Administrador, Gerência de RH e Diretoria podem receber essa permissão para provisionamento controlado, sem que isso lhes conceda automaticamente as decisões restritas;
+- a alteração de acesso preserva a trilha auditável e invalida a sessão do alvo.
 
 Essas regras evitam que `ACESSOS.GERIR` seja usado para autoelevação ou para obter indiretamente o escopo de negócio.
 
 ## Limites que ainda exigem ativação e aceite
 
-- Foi criada somente uma conta local técnica de desenvolvimento, protegida como administrador supremo, com troca de senha inicial obrigatória e sem escopo de negócio. Nenhum vínculo, dado de negócio, segredo persistente, conta SQL dedicada ou configuração externa de produção foi criado.
-- As migrations `V0001`–`V0007` foram validadas no banco local dedicado, e a inicialização ativada comprovou API/SPA/proxy com CSRF `200` pelo front-end e rota protegida `401`. Ainda não há teste interativo de login, repositórios, autorização por recurso ou navegador contra esse SQL Server.
+- As migrations `V0001`–`V0010` foram validadas por leitura em `AVALIACAO_DEV` e `AVALIACAO_PROD`; a `V0011`, que normaliza os papéis legados de contas administrativas, está pendente de aplicação autorizada. O catálogo inicial existe, mas não há ciclos, lotações, vínculos, atribuições ou avaliações. Identidades de bootstrap permanecem protegidas e seus dados não são documentados.
+- A verificação anônima mais recente do front-end e de CSRF público retornou `200`, e os processos PM2 estavam online. Ainda não há validação autenticada de ponta a ponta, teste de escrita em produção, aceite de negócio ou certificação de controles no proxy/Tunnel.
 - O rate limit vê o endereço remoto da aplicação até a configuração e o teste de proxy confiável atrás do Cloudflare Tunnel. O limiter de indicadores é local à instância.
 - ASVS/LGPD, TLS/túnel, backup/restauração, monitoração, retenção de logs/sessões e recuperação operacional de administradores supremos requerem aceite e validação operacional.
 

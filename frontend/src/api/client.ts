@@ -685,7 +685,7 @@ export class HttpApiClient implements ApiClient {
   }
 
   async exportIndicators(query: IndicatorQuery): Promise<IndicatorExport | IndicatorResponse> {
-    const response = await this.send('/indicators/exports', {
+    const response = await this.sendWithRecovery('/indicators/exports', {
       method: 'POST',
       body: query,
       headers: { Accept: 'text/csv, application/json' },
@@ -711,6 +711,21 @@ export class HttpApiClient implements ApiClient {
     path: string,
     options: RequestOptions = {},
   ): Promise<ResponseType> {
+    const response = await this.sendWithRecovery(path, options)
+
+    if (!response.ok) {
+      throw await toApiError(response)
+    }
+
+    if (response.status === 204) {
+      return undefined as ResponseType
+    }
+
+    const body = await response.text()
+    return body ? (JSON.parse(body) as ResponseType) : (undefined as ResponseType)
+  }
+
+  private async sendWithRecovery(path: string, options: RequestOptions): Promise<Response> {
     let response = await this.send(path, options)
     if (!response.ok && response.status === 401 && !options.skipSessionRecovery) {
       if (await this.recoverSession()) {
@@ -724,16 +739,8 @@ export class HttpApiClient implements ApiClient {
       this.csrfToken = undefined
       response = await this.send(path, options)
     }
-    if (!response.ok) {
-      throw await toApiError(response)
-    }
 
-    if (response.status === 204) {
-      return undefined as ResponseType
-    }
-
-    const body = await response.text()
-    return body ? (JSON.parse(body) as ResponseType) : (undefined as ResponseType)
+    return response
   }
 
   private async send(path: string, options: RequestOptions): Promise<Response> {

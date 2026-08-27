@@ -38,6 +38,12 @@ if /i "%~1"=="--apply-all" (
   shift
   goto :LER_ARGUMENTOS
 )
+if /i "%~1"=="--apply-bootstrap-prerequisites" (
+  if defined MODO goto :ARGUMENTOS_INVALIDOS
+  set "MODO=APPLY_BOOTSTRAP_PREREQUISITES"
+  shift
+  goto :LER_ARGUMENTOS
+)
 if /i "%~1"=="--validate" (
   if defined MODO goto :ARGUMENTOS_INVALIDOS
   set "MODO=VALIDATE"
@@ -59,10 +65,9 @@ if /i "%~1"=="--recover-empty-bootstrap" (
 goto :ARGUMENTOS_INVALIDOS
 
 :ARGUMENTOS_OK
-if not defined MODO set "MODO=APPLY_ALL_AUTOMATIC"
+if not defined MODO goto :ARGUMENTOS_AUSENTES
 
 if /i "%MODO%"=="CHECK_ALL" goto :VERIFICAR_TODOS
-if /i "%MODO%"=="APPLY_ALL_AUTOMATIC" goto :APLICAR_TODOS_AUTOMATICO
 if /i "%MODO%"=="APPLY_ALL" goto :APLICAR_TODOS
 
 if not defined CONFIG_FILE set "CONFIG_FILE=%~dp0config.local.bat"
@@ -118,12 +123,23 @@ if errorlevel 1 (
   goto :FIM
 )
 
+if /i "%MODO%"=="APPLY" if /i "%ADC_DB_NAME%"=="AVALIACAO_PROD" if /i "%DATABASE_STATUS%"=="MISSING" (
+  echo [ERRO] A primeira criacao de AVALIACAO_PROD exige o bootstrap explicito antes da V0010.
+  echo Use --apply-bootstrap-prerequisites, execute o bootstrap do administrador supremo e so depois use --apply.
+  set "EXIT_CODE=1"
+  goto :FIM
+)
+
 if /i "%MODO%"=="CHECK" goto :CHECK
 if /i "%MODO%"=="VALIDATE" goto :VALIDATE
 if /i "%MODO%"=="RECOVER_V0001" goto :RECUPERAR_V0001
 if /i "%MODO%"=="RECOVER_EMPTY_BOOTSTRAP" goto :RECUPERAR_BOOTSTRAP_VAZIO
 
-call :CONFIRMAR_APLICACAO
+if /i "%MODO%"=="APPLY_BOOTSTRAP_PREREQUISITES" (
+  call :CONFIRMAR_PRE_REQUISITOS_BOOTSTRAP
+) else (
+  call :CONFIRMAR_APLICACAO
+)
 if errorlevel 1 (
   set "EXIT_CODE=1"
   goto :FIM
@@ -185,6 +201,8 @@ if /i "%FUNDACAO_V0001_ESTADO%"=="INCONSISTENTE" (
   goto :FIM
 )
 
+if /i "%MODO%"=="APPLY_BOOTSTRAP_PREREQUISITES" goto :APLICAR_PRE_REQUISITOS_BOOTSTRAP
+
 for /f "usebackq delims=" %%F in ("%WORK_DIR%\migration-files.txt") do (
   call :APLICAR_MIGRATION "%%F"
   if errorlevel 1 (
@@ -202,6 +220,46 @@ if errorlevel 1 (
 )
 
 echo [OK] Banco e migrations concluidos sem operacao destrutiva.
+goto :FIM
+
+:APLICAR_PRE_REQUISITOS_BOOTSTRAP
+if /i not "%ADC_DB_NAME%"=="AVALIACAO_PROD" (
+  echo [ERRO] O preparo para bootstrap e reservado ao alvo AVALIACAO_PROD.
+  echo Use o fluxo normal --apply para qualquer outro alvo autorizado.
+  set "EXIT_CODE=1"
+  goto :FIM
+)
+
+if not exist "%~dp0sql\migrations\V0010__catalogo_inicial_rodogarcia_2024_1.sql" (
+  echo [ERRO] A migration V0010 esperada nao foi encontrada; o bootstrap foi bloqueado.
+  set "EXIT_CODE=1"
+  goto :FIM
+)
+
+findstr /B /C:"V0010|" "%ADC_MIGRATION_HISTORY%" >nul
+if not errorlevel 1 (
+  echo [ERRO] V0010 ja esta aplicada neste alvo; o preparo de bootstrap nao e permitido.
+  set "EXIT_CODE=1"
+  goto :FIM
+)
+
+echo [ETAPA] Aplicando somente os pre-requisitos V0001 a V0009 do bootstrap...
+call :APLICAR_MIGRATIONS_ATE_V0009
+if errorlevel 1 (
+  set "EXIT_CODE=1"
+  goto :FIM
+)
+
+echo [ETAPA] Executando validacoes somente leitura ate V0009...
+call :EXECUTAR_VALIDACOES_ATE_V0009
+if errorlevel 1 (
+  echo [ERRO] A validacao dos pre-requisitos falhou. O bootstrap foi bloqueado.
+  set "EXIT_CODE=1"
+  goto :FIM
+)
+
+echo [OK] Pre-requisitos V0001 a V0009 preparados; V0010 permanece pendente.
+echo [PROXIMO PASSO] Execute o bootstrap confirmado do administrador supremo e, depois, --apply para V0010.
 goto :FIM
 
 :VERIFICAR_TODOS
@@ -222,26 +280,6 @@ if errorlevel 1 (
   goto :FIM
 )
 echo [OK] A verificacao de AVALIACAO_DEV e AVALIACAO_PROD foi concluida sem alteracoes.
-goto :FIM
-
-:APLICAR_TODOS_AUTOMATICO
-call :VALIDAR_ALVOS_CANONICOS
-if errorlevel 1 (
-  set "EXIT_CODE=1"
-  goto :FIM
-)
-echo [INFO] Atualizando AVALIACAO_DEV e AVALIACAO_PROD sem confirmacao interativa.
-call :EXECUTAR_NO_ALVO "%~dp0config.local.bat" "--apply" "AUTO_CONFIRM"
-if errorlevel 1 (
-  set "EXIT_CODE=1"
-  goto :FIM
-)
-call :EXECUTAR_NO_ALVO "%~dp0config.production.local.bat" "--apply" "AUTO_CONFIRM"
-if errorlevel 1 (
-  set "EXIT_CODE=1"
-  goto :FIM
-)
-echo [OK] AVALIACAO_DEV e AVALIACAO_PROD foram atualizados e validados.
 goto :FIM
 
 :APLICAR_TODOS
@@ -498,6 +536,24 @@ for %%F in (
   008_validar_atribuicao_questionario_por_colaborador_e_ciclo.sql
   009_validar_perfis_administrador_integral_e_usuario_comum.sql
   010_validar_catalogo_inicial_rodogarcia_2024_1.sql
+  011_validar_restricao_autoridade_administrador_plataforma.sql
+) do (
+  echo [ETAPA] Validando %%F...
+  sqlcmd %SQLCMD_FLAGS% -S "%SQLCMD_SERVER%" -E -d "%ADC_DB_NAME%" -i "%~dp0sql\validation\%%F"
+  if errorlevel 1 exit /b 1
+)
+exit /b 0
+
+:EXECUTAR_VALIDACOES_ATE_V0009
+for %%F in (
+  001_validar_fundacao_identidade.sql
+  003_validar_catalogo_inicial_acesso.sql
+  004_validar_cadastros_ciclos_e_questionarios.sql
+  005_validar_avaliacoes_rascunho_envio_e_historico.sql
+  006_validar_regra_operacional_2024_1.sql
+  007_validar_catalogo_rbac_2024_1.sql
+  008_validar_atribuicao_questionario_por_colaborador_e_ciclo.sql
+  009_validar_perfis_administrador_integral_e_usuario_comum.sql
 ) do (
   echo [ETAPA] Validando %%F...
   sqlcmd %SQLCMD_FLAGS% -S "%SQLCMD_SERVER%" -E -d "%ADC_DB_NAME%" -i "%~dp0sql\validation\%%F"
@@ -586,11 +642,8 @@ echo [ERRO] A base nao esta vazia ou possui metadados; a recuperacao do bootstra
 exit /b 1
 
 :CONFIRMAR_APLICACAO
-if /i "%ADC_DATABASE_INTERNAL_AUTO_CONFIRM%"=="1" (
-  echo [INFO] Confirmacao interativa dispensada pelo fluxo automatico dos dois alvos.
-  exit /b 0
-)
 echo.
+echo [AVISO] Esta operacao pode criar %ADC_DB_NAME% e aplicar migrations versionadas nele.
 set "CONFIRMACAO="
 set /p "CONFIRMACAO=Digite exatamente APLICAR %ADC_DB_NAME% para continuar: "
 if /i not "%CONFIRMACAO%"=="APLICAR %ADC_DB_NAME%" (
@@ -599,8 +652,30 @@ if /i not "%CONFIRMACAO%"=="APLICAR %ADC_DB_NAME%" (
 )
 exit /b 0
 
+:CONFIRMAR_PRE_REQUISITOS_BOOTSTRAP
+if /i not "%ADC_DB_NAME%"=="AVALIACAO_PROD" (
+  echo [ERRO] O preparo para bootstrap exige o alvo AVALIACAO_PROD.
+  exit /b 1
+)
+if /i not "%DATABASE_STATUS%"=="MISSING" (
+  echo [ERRO] O preparo de bootstrap aceita somente uma AVALIACAO_PROD ainda inexistente.
+  echo Nao use este caminho para alterar, completar ou reinterpretar uma base existente.
+  exit /b 1
+)
+echo.
+echo [AVISO] Esta operacao pode criar AVALIACAO_PROD e aplica somente V0001 a V0009.
+echo [AVISO] Ela para antes de V0010 para que o administrador supremo seja criado em transacao separada.
+set "CONFIRMACAO="
+set /p "CONFIRMACAO=Digite exatamente PREPARAR BOOTSTRAP AVALIACAO_PROD V0001-V0009 para continuar: "
+if /i not "%CONFIRMACAO%"=="PREPARAR BOOTSTRAP AVALIACAO_PROD V0001-V0009" (
+  echo Operacao cancelada. Nenhuma alteracao foi feita.
+  exit /b 1
+)
+exit /b 0
+
 :CONFIRMAR_APLICACAO_TODOS
 echo.
+echo [AVISO] Esta operacao pode criar e aplicar migrations em AVALIACAO_DEV e AVALIACAO_PROD.
 set "CONFIRMACAO="
 set /p "CONFIRMACAO=Digite exatamente APLICAR TODOS AVALIACAO_DEV AVALIACAO_PROD para continuar: "
 if /i not "%CONFIRMACAO%"=="APLICAR TODOS AVALIACAO_DEV AVALIACAO_PROD" (
@@ -617,13 +692,10 @@ if not exist "%TARGET_CONFIG%" (
   exit /b 1
 )
 set "SAVED_ADC_DATABASE_CONFIG=%ADC_DATABASE_CONFIG%"
-set "SAVED_ADC_DATABASE_INTERNAL_AUTO_CONFIRM=%ADC_DATABASE_INTERNAL_AUTO_CONFIRM%"
 set "ADC_DATABASE_CONFIG=%TARGET_CONFIG%"
-if /i "%~3"=="AUTO_CONFIRM" set "ADC_DATABASE_INTERNAL_AUTO_CONFIRM=1"
 call "%~f0" %TARGET_MODE%
 set "TARGET_EXIT_CODE=%ERRORLEVEL%"
 set "ADC_DATABASE_CONFIG=%SAVED_ADC_DATABASE_CONFIG%"
-set "ADC_DATABASE_INTERNAL_AUTO_CONFIRM=%SAVED_ADC_DATABASE_INTERNAL_AUTO_CONFIRM%"
 exit /b %TARGET_EXIT_CODE%
 
 :VALIDAR_ALVOS_CANONICOS
@@ -667,6 +739,30 @@ if errorlevel 1 (
   exit /b 1
 )
 exit /b 0
+
+:APLICAR_MIGRATIONS_ATE_V0009
+set "PRE_BOOTSTRAP_LIMIT_FOUND=0"
+for /f "usebackq delims=" %%F in ("%WORK_DIR%\migration-files.txt") do (
+  call :APLICAR_MIGRATION_ATE_V0009 "%%F"
+  if errorlevel 1 exit /b 1
+)
+if /i not "%PRE_BOOTSTRAP_LIMIT_FOUND%"=="1" (
+  echo [ERRO] A migration V0010 nao foi encontrada na lista preparada; o bootstrap foi bloqueado.
+  exit /b 1
+)
+exit /b 0
+
+:APLICAR_MIGRATION_ATE_V0009
+set "PRE_BOOTSTRAP_MIGRATION_FILE=%~1"
+for %%M in ("%PRE_BOOTSTRAP_MIGRATION_FILE%") do set "PRE_BOOTSTRAP_MIGRATION_NAME=%%~nM"
+for /f "tokens=1 delims=_" %%V in ("%PRE_BOOTSTRAP_MIGRATION_NAME%") do set "PRE_BOOTSTRAP_MIGRATION_VERSION=%%V"
+if /i "%PRE_BOOTSTRAP_MIGRATION_VERSION%"=="V0010" (
+  set "PRE_BOOTSTRAP_LIMIT_FOUND=1"
+  exit /b 0
+)
+if /i "%PRE_BOOTSTRAP_LIMIT_FOUND%"=="1" exit /b 0
+call :APLICAR_MIGRATION "%PRE_BOOTSTRAP_MIGRATION_FILE%"
+exit /b %ERRORLEVEL%
 
 :CALCULAR_SHA256
 set "SHA256_INPUT=%~1"
@@ -811,17 +907,26 @@ echo [ERRO] Argumento invalido. Use --help para ver os comandos aceitos.
 set "EXIT_CODE=1"
 goto :FIM
 
+:ARGUMENTOS_AUSENTES
+echo [ERRO] Nenhuma operacao foi solicitada. O runner falha fechado sem argumento.
+echo Use --check para leitura ou --help para consultar os comandos confirmados.
+set "EXIT_CODE=1"
+goto :FIM
+
 :AJUDA
 echo.
 echo Uso:
 echo   executar-database.bat
-echo      Atualiza automaticamente AVALIACAO_DEV e AVALIACAO_PROD, sem confirmacao.
-echo      O comando exige os dois arquivos locais de configuracao antes de iniciar.
+echo      Falha fechado sem consultar, criar ou alterar qualquer banco.
 echo.
 echo   executar-database.bat --apply-all
 echo      Atualiza primeiro AVALIACAO_DEV e depois AVALIACAO_PROD, usando somente
 echo      os arquivos locais config.local.bat e config.production.local.bat.
 echo      Exige uma confirmacao global e as confirmacoes individuais dos dois bancos.
+echo.
+echo   executar-database.bat --apply-bootstrap-prerequisites
+echo      Prepara somente AVALIACAO_PROD com V0001 a V0009 e para antes da V0010.
+echo      Use apenas para bootstrap novo, com confirmacao especifica e o administrador autorizado.
 echo.
 echo   executar-database.bat --check-all
 echo      Verifica AVALIACAO_DEV e AVALIACAO_PROD, sem criar ou alterar bancos.
@@ -833,6 +938,7 @@ echo.
 echo   executar-database.bat --apply
 echo      Cria somente o banco configurado e autorizado se ele ainda nao existir,
 echo      aplica migrations pendentes e executa validacao de leitura. Exige confirmacao digitada.
+echo      Para a primeira AVALIACAO_PROD, use antes --apply-bootstrap-prerequisites.
 echo.
 echo   executar-database.bat --validate
 echo      Confere historico, checksum, deriva V0001 e todas as validacoes SQL de leitura.

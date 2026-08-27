@@ -199,7 +199,10 @@ public class AssessmentController {
   }
 
   @PostMapping("/{assessmentId}/publish")
-  @PreAuthorize("hasAuthority('PERMISSION:AVALIACOES.PUBLICAR')")
+  @PreAuthorize(
+      "hasAuthority('PERMISSION:AVALIACOES.PUBLICAR')"
+          + " and hasAnyAuthority('ROLE:GERENCIA_RH', 'ROLE:DIRETORIA')"
+          + " and !hasAuthority('ROLE:ADMINISTRADOR_PLATAFORMA')")
   public ResponseEntity<AssessmentDetailResponse> publish(
       @PathVariable UUID assessmentId,
       @RequestHeader("Idempotency-Key") @NotBlank @Size(max = 256) String idempotencyKey,
@@ -214,7 +217,10 @@ public class AssessmentController {
   }
 
   @PostMapping("/{assessmentId}/reopen")
-  @PreAuthorize("hasAuthority('PERMISSION:AVALIACOES.REABRIR')")
+  @PreAuthorize(
+      "hasAuthority('PERMISSION:AVALIACOES.REABRIR')"
+          + " and hasAnyAuthority('ROLE:GERENCIA_RH', 'ROLE:DIRETORIA')"
+          + " and !hasAuthority('ROLE:ADMINISTRADOR_PLATAFORMA')")
   public ResponseEntity<AssessmentDetailResponse> reopen(
       @PathVariable UUID assessmentId,
       @Valid @RequestBody ReopenAssessmentRequest request,
@@ -240,7 +246,10 @@ public class AssessmentController {
   private static AssessmentAccessContext accessFor(AuthenticatedPrincipal principal) {
     AuthenticatedPrincipal authenticated =
         Objects.requireNonNull(principal, "principal autenticado não foi resolvido");
-    return new AssessmentAccessContext(authenticated.userId(), authenticated.user().permissions());
+    return new AssessmentAccessContext(
+        authenticated.userId(),
+        authenticated.user().permissions(),
+        authenticated.user().roleCodes());
   }
 
   private static String quotedEtag(String revision) {

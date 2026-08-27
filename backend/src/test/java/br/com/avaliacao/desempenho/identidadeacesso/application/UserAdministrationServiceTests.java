@@ -147,6 +147,59 @@ class UserAdministrationServiceTests {
   }
 
   @Test
+  void assignsAnInitialManagerProfileThroughAuthorizedBusinessAccessManagement() {
+    UUID actor = UUID.randomUUID();
+    when(transactionTemplate.execute(any())).thenAnswer(this::runTransaction);
+    when(repository.createLocalUser(any(), any()))
+        .thenAnswer(
+            invocation -> {
+              NewLocalUser created = invocation.getArgument(0);
+              return new UserView(
+                  created.userId(),
+                  created.normalizedLogin(),
+                  created.displayName(),
+                  AccountStatus.ACTIVE,
+                  false,
+                  false,
+                  true,
+                  Set.of(),
+                  List.of(),
+                  Instant.EPOCH);
+            });
+    when(repository.replaceAccess(any(), any(), any())).thenReturn(true);
+    when(repository.findUser(any()))
+        .thenReturn(
+            Optional.of(
+                new UserView(
+                    UUID.randomUUID(),
+                    "gestor.novo",
+                    "Gestor novo",
+                    AccountStatus.ACTIVE,
+                    false,
+                    false,
+                    true,
+                    Set.of("GESTOR"),
+                    List.of(),
+                    Instant.EPOCH)));
+
+    service.createUser(
+        "gestor.novo",
+        "Gestor novo",
+        "senha-inicial-123",
+        Set.of("GESTOR"),
+        actor,
+        Set.of("GERENCIA_RH"),
+        Set.of("USUARIOS.CRIAR", "ACESSOS.NEGOCIO.GERIR"),
+        "request");
+
+    ArgumentCaptor<UserAdministrationRepository.AccessConfiguration> access =
+        ArgumentCaptor.forClass(UserAdministrationRepository.AccessConfiguration.class);
+    verify(repository)
+        .replaceAccess(any(), access.capture(), org.mockito.ArgumentMatchers.eq(actor));
+    assertThat(access.getValue().roleCodes()).containsExactly("GESTOR");
+  }
+
+  @Test
   void rejectsInitialBusinessProfileWithoutBusinessAccessManagement() {
     UUID actor = UUID.randomUUID();
 

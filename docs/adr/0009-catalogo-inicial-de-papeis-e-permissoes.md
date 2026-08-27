@@ -27,6 +27,10 @@ O atributo de administrador supremo permanece separado dos papéis de negócio. 
 
 A `V0006` foi aplicada no banco local dedicado e acrescentou o papel `COLABORADOR`, as permissões v2024.1 e `ACESSOS.NEGOCIO.GERIR`, conforme a regra operacional aprovada posteriormente. A única conta local de desenvolvimento recebeu somente `ADMINISTRADOR_PLATAFORMA`, continua sem escopo de negócio e exige troca da senha inicial; seus dados de identificação e credencial não são registrados nesta ADR.
 
+## Estado atual — 2026-08-27
+
+Os parágrafos anteriores preservam a evolução histórica do catálogo. O contrato administrativo atual aceita exatamente um dos perfis `ADMINISTRADOR_PLATAFORMA`, `GESTOR`, `GERENCIA_RH`, `DIRETORIA` ou `COLABORADOR`, sem permissões individuais. Publicação/reabertura, indicadores e exportação são autoridades de Gerência de RH ou Diretoria, com permissão e escopo revalidados no servidor; o Administrador não as recebe por ser administrador. A evidência de migrations dos bancos canônicos está reconciliada até `V0010`; a `V0011`, que restringe essas permissões e normaliza contas administrativas legadas para perfil único com histórico, aguarda aplicação autorizada e não altera esta migration imutável.
+
 ## Consequências
 
 - O catálogo fica versionado e auditável no banco, mas nada é autorizado até haver conta autenticada, atribuição ativa, implementação de RBAC e verificação de escopo no servidor.

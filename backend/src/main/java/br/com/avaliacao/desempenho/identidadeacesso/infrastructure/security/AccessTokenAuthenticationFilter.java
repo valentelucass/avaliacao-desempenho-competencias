@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.time.Clock;
 import java.util.Collection;
 import java.util.List;
+import java.util.stream.Stream;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -69,8 +70,11 @@ public class AccessTokenAuthenticationFilter extends OncePerRequestFilter {
     Collection<SimpleGrantedAuthority> authorities =
         user.passwordChangeRequired()
             ? List.of()
-            : user.permissions().stream()
-                .map(permission -> new SimpleGrantedAuthority("PERMISSION:" + permission))
+            : Stream.concat(
+                    user.permissions().stream()
+                        .map(permission -> new SimpleGrantedAuthority("PERMISSION:" + permission)),
+                    user.roleCodes().stream()
+                        .map(roleCode -> new SimpleGrantedAuthority("ROLE:" + roleCode)))
                 .toList();
     UsernamePasswordAuthenticationToken authentication =
         new UsernamePasswordAuthenticationToken(

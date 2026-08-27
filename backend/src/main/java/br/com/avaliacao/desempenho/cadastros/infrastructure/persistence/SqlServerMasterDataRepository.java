@@ -9,7 +9,10 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
-/** JDBC parametrizado para os cadastros versionados; não há operações DELETE neste repositório. */
+/**
+ * JDBC parametrizado para cadastros versionados; DELETE físico é limitado à filial inativa e sem
+ * referências, conforme a regra administrativa.
+ */
 @Repository
 @ConditionalOnSqlServerPersistence
 public class SqlServerMasterDataRepository implements MasterDataRepository {

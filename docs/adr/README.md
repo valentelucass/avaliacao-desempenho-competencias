@@ -15,3 +15,6 @@ Cada ADR registra uma decisão arquitetural relevante, seu contexto e as consequ
 - [ADR-0011 — Regras operacionais v1 baseadas na macro de 2024](0011-regras-operacionais-v1-baseadas-na-macro.md)
 - [ADR-0012 — Autenticação local e módulos persistidos por configuração externa](0012-autenticacao-local-e-modulos-persistidos-por-configuracao.md)
 - [ADR-0013 — Projeções administrativas minimizadas por capacidade](0013-projecoes-administrativas-minimizadas.md)
+- [ADR-0014 — Base de produção e identidade SQL de mínimo privilégio](0014-base-de-producao-e-identidade-sql-minima.md)
+- [ADR-0015 — Nomes de banco por ambiente](0015-nomes-de-banco-por-ambiente.md)
+- [ADR-0016 — Perfis Administrador e Usuário comum](0016-perfis-administrador-e-usuario-comum.md)

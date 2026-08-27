@@ -28,6 +28,10 @@ O projeto precisa de segurança desde o início, mas não possui banco autorizad
 
 A identidade persistida, sessão/JWT, RBAC/ABAC, auditoria e limites locais foram implementados posteriormente sob a ADR-0012. O banco local dedicado foi reconciliado de `V0001` a `V0007` e recebeu uma conta técnica de desenvolvimento protegida, sem escopo de negócio. O launcher `iniciar-dev.bat` ativa esses módulos somente em loopback HTTPS com material de execução efêmero; a inicialização API/SPA/proxy foi verificada com CSRF `200` e rota protegida `401`, enquanto login interativo e navegador continuam pendentes.
 
+## Estado atual — 2026-08-27
+
+O parágrafo anterior é histórico. A evidência mais recente registra `V0001`–`V0010` reconciliadas em `AVALIACAO_DEV` e `AVALIACAO_PROD`, hosts públicos com resposta anônima `200` e processos PM2 online. A `V0011` está em fonte e aguarda aplicação autorizada. Isso não substitui validação autenticada, teste de escrita em produção, aceite de negócio ou certificação de segurança do proxy/Tunnel.
+
 ## Referências
 
 - [Fundação de segurança HTTP](../security/fundacao-seguranca-http.md)

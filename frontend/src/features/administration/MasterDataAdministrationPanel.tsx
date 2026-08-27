@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useMemo, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Archive, ClipboardList, MapPin, Plus, Power, RefreshCw, Trash2 } from 'lucide-react'
 import { isAuthenticationError } from '../../api/client'
@@ -14,6 +14,7 @@ import type {
 import { FeedbackMessage } from '../../ui/Feedback'
 import { Pagination } from '../../ui/Pagination'
 import { safeErrorMessage } from '../../ui/safeErrorMessage'
+import { useAccessibleDialog } from '../../ui/useAccessibleDialog'
 
 type MasterDataAdministrationPanelProps = {
   api: ApiClient
@@ -78,6 +79,7 @@ export function MasterDataAdministrationPanel({
   const assignmentQuestionnaireId = useId()
   const confirmationEndsOnId = useId()
   const confirmationReasonId = useId()
+  const confirmationDialogRef = useRef<HTMLElement | null>(null)
 
   const [branches, setBranches] = useState<readonly AdministrativeNamedResource[]>([])
   const [areas, setAreas] = useState<readonly AdministrativeNamedResource[]>([])
@@ -379,6 +381,13 @@ export function MasterDataAdministrationPanel({
       current?.kind === 'REVOKE_QUESTIONNAIRE_ASSIGNMENT' ? { ...current, reason } : current,
     )
   }
+
+  useAccessibleDialog({
+    dialogRef: confirmationDialogRef,
+    isOpen: Boolean(pendingAction),
+    onRequestClose: cancelConfirmation,
+    canDismiss: !isWriting,
+  })
 
   if (!canManageMasterData) {
     return (
@@ -814,6 +823,8 @@ export function MasterDataAdministrationPanel({
             aria-modal="true"
             aria-labelledby="master-data-confirmation-title"
             aria-describedby="master-data-confirmation-description"
+            ref={confirmationDialogRef}
+            tabIndex={-1}
           >
             <div className="card-title-row">
               <h3 id="master-data-confirmation-title">Confirmação necessária</h3>
@@ -837,6 +848,7 @@ export function MasterDataAdministrationPanel({
                 <div className="field">
                   <label htmlFor={confirmationEndsOnId}>Data de encerramento</label>
                   <input
+                    data-dialog-initial-focus
                     id={confirmationEndsOnId}
                     type="date"
                     value={pendingAction.endsOn}
@@ -850,6 +862,7 @@ export function MasterDataAdministrationPanel({
                 <div className="field">
                   <label htmlFor={confirmationReasonId}>Motivo da revogação</label>
                   <textarea
+                    data-dialog-initial-focus
                     id={confirmationReasonId}
                     value={pendingAction.reason}
                     onChange={(event) => changePendingReason(event.target.value)}
@@ -866,6 +879,12 @@ export function MasterDataAdministrationPanel({
               <div className="action-row">
                 <button
                   className="button"
+                  data-dialog-initial-focus={
+                    pendingAction.kind !== 'CLOSE_ALLOCATION' &&
+                    pendingAction.kind !== 'REVOKE_QUESTIONNAIRE_ASSIGNMENT'
+                      ? ''
+                      : undefined
+                  }
                   type="button"
                   onClick={cancelConfirmation}
                   disabled={isWriting}

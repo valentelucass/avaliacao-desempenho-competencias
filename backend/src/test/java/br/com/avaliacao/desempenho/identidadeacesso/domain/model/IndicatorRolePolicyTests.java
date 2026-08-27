@@ -10,7 +10,7 @@ class IndicatorRolePolicyTests {
   private final IndicatorRolePolicy policy = new IndicatorRolePolicy();
 
   @Test
-  void permitsIndividualIndicatorGrantsOnlyForAdministratorRhOrBoardRoles() {
+  void permitsIndividualIndicatorGrantsOnlyForRhOrBoardRoles() {
     assertThat(
             policy.mayReceiveIndividualPermission(
                 Set.of(PlatformRole.GESTOR.name()),
@@ -19,10 +19,11 @@ class IndicatorRolePolicyTests {
         .isFalse();
     assertThat(
             policy.mayReceiveIndividualPermission(
-                Set.of(PlatformRole.ADMINISTRADOR_PLATAFORMA.name()),
+                Set.of(
+                    PlatformRole.ADMINISTRADOR_PLATAFORMA.name(), PlatformRole.GERENCIA_RH.name()),
                 PlatformPermission.DATA_EXPORT.code(),
                 PermissionEffect.ALLOW))
-        .isTrue();
+        .isFalse();
     assertThat(
             policy.mayReceiveIndividualPermission(
                 Set.of(PlatformRole.GERENCIA_RH.name()),

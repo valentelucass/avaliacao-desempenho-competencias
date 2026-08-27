@@ -1,6 +1,6 @@
 # ADR-0015 — Nomes de banco por ambiente
 
-- **Status:** Aceita; execução operacional pendente de confirmação das conexões afetadas
+- **Status:** Aceita; nomes canônicos confirmados em 2026-08-26
 - **Data:** 2026-08-26
 - **Origem:** Solicitação explícita para padronizar os nomes das bases de desenvolvimento e produção.
 
@@ -20,6 +20,10 @@ Os nomes anteriores descreviam o produto e não o ambiente. A mesma instância l
 - A API de desenvolvimento deve ser reiniciada após o renomeio para receber a URL JDBC com `AVALIACAO_DEV`.
 - Qualquer processo externo conectado a uma das bases é interrompido; deve ser identificado e autorizado antes da execução.
 - A ADR-0014 permanece válida quanto à separação de ambientes e à identidade SQL mínima; apenas os nomes canônicos foram substituídos.
+
+## Estado operacional posterior — 2026-08-26
+
+`AVALIACAO_DEV` e `AVALIACAO_PROD` são os nomes em uso e seus históricos foram reconciliados até `V0010`. A `V0011` existe em fonte e aguarda aplicação autorizada; essa pendência não exige nem autoriza repetir o renomeio. A disponibilidade anônima observada dos hosts e os processos PM2 online também não substituem o aceite de negócio ou a validação autenticada por recurso.
 
 ## Referências
 

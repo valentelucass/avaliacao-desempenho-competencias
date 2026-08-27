@@ -31,13 +31,13 @@ O preflight de Java também pode ser chamado diretamente sem iniciar processo:
 
 `iniciar-dev.bat` não tem modo `--check`: ele é exclusivamente o launcher de desenvolvimento local com HTTPS. Nenhum dos comandos acima inicia ou reinicia processos. Se um deles falhar, interrompa a preparação e corrija a causa antes de qualquer publicação.
 
-## Itens obrigatórios antes da primeira publicação
+## Itens obrigatórios antes de uma nova publicação ou alteração operacional
 
 | Item                 | Evidência necessária                                                                                       | Situação atual                                                         |
 | -------------------- | ---------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| Configuração externa | Arquivo `.properties`, URL pública da API e diretório de logs fora do repositório validados pelo preflight | Pendente de provisionamento autorizado                                 |
-| Cloudflare Tunnel    | Rotas dos dois hosts apontando para os serviços corretos no loopback e teste externo HTTPS                 | Pendente de autorização e configuração externa                         |
-| Processos            | Processos PM2 exclusivos em execução, portas privadas e teste após reinício da VM                          | PM2 ainda não foi publicado nem configurado para iniciar após reinício |
+| Configuração externa | Arquivo `.properties`, URL pública da API e diretório de logs fora do repositório validados pelo preflight | Configurada externamente; revalidar antes de qualquer alteração        |
+| Cloudflare Tunnel    | Rotas dos dois hosts apontando para os serviços corretos no loopback e teste externo HTTPS                 | Hosts responderam `200` anonimamente em 2026-08-26; validar novamente e sem inferir aceite |
+| Processos            | Processos PM2 exclusivos em execução, portas privadas e teste após reinício da VM                          | Online em 2026-08-26; recuperação após reinício da VM continua pendente |
 | Logs                 | Local definido, acesso restrito, retenção e consulta de erro/correlação                                    | Pendente                                                               |
 | Backup               | Procedimento do banco, responsável, retenção e restauração comprovada em ambiente seguro                   | Pendente                                                               |
 | Atualização          | Artefato identificado, responsável, janela e comunicação                                                   | Pendente                                                               |

@@ -68,12 +68,17 @@ As listas de filiais e áreas de 2024 na especificação sanitizada são a base 
 
 Uma conta só é gestora autorizada quando estiver ativa, receber explicitamente o papel `GESTOR` e possuir vínculo gestor–colaborador ativo. A macro não cria nem autoriza contas, vínculos ou gestores. Cada colaborador terá no máximo um vínculo de gestor ativo por vez; substituições encerram o vínculo anterior, criam outro com vigência e preservam autoria e histórico.
 
-O perfil **Administrador** é representado pelo papel `ADMINISTRADOR_PLATAFORMA` e possui acesso integral aos módulos e operações autorizadas da versão. Ele pode administrar perfis de terceiros, mas não pode alterar a própria configuração de acesso no fluxo normal. Toda operação continua registrada e validada no servidor por recurso, vínculo, estado e privacidade; o acesso integral não cria, publica nem revela dados fora dessas regras.
+O perfil **Administrador** é representado pelo papel `ADMINISTRADOR_PLATAFORMA` e administra a plataforma e os perfis de terceiros, sem poder alterar a própria configuração de acesso no fluxo normal. Ele não é autoridade para publicar ou reabrir avaliações, consultar indicadores ou exportar dados; essas ações continuam exclusivas de Gerência de RH ou Diretoria, com permissão, escopo, estado, auditoria e privacidade validados no servidor.
 
-| Perfil                            | Escopo v1                                                                                                                                       |
-| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| Administrador                     | Acessa todos os módulos e operações autorizadas, sempre sujeito às validações de recurso, vínculo, estado, auditoria e privacidade do servidor. |
-| Usuário comum com conta vinculada | Preenche e lê apenas a própria autoavaliação; não visualiza a avaliação de gestor nesta versão.                                                 |
+No fluxo administrativo, toda conta possui exatamente um perfil: `ADMINISTRADOR_PLATAFORMA`, `GESTOR`, `GERENCIA_RH`, `DIRETORIA` ou `COLABORADOR`. A API rejeita papéis fora dessa lista e concessões de permissões individuais; mudanças de perfil revogam sessões e preservam a trilha de auditoria.
+
+| Perfil         | Escopo v1                                                                                                                                                            |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Administrador  | Administra contas, acessos e operações técnicas autorizadas; não publica/reabre avaliações, não consulta indicadores e não exporta.                              |
+| Gestor         | Cria, edita, envia e consulta somente as avaliações de gestor para colaboradores com vínculo vigente; não consulta indicadores agregados nem exporta.             |
+| Gerência de RH | Administra o processo de negócio autorizado e, com as permissões aplicáveis, visualiza, publica/reabre avaliações, consulta indicadores e exporta agregados.       |
+| Diretoria      | Possui o mesmo escopo de autoridade de negócio da Gerência de RH, sujeito às permissões, ao recurso, à confidencialidade e à auditoria.                            |
+| Colaborador    | Com conta vinculada, preenche e lê apenas a própria autoavaliação; não visualiza a avaliação de gestor nesta versão.                                                |
 
 ### Autoavaliação e transições
 

@@ -68,7 +68,9 @@ DECLARE @use_database nvarchar(max) =
       DECLARE @grant_permissions nvarchar(max) =
           N''GRANT CONNECT TO '' + QUOTENAME(@user_name) + N'';
             GRANT SELECT, INSERT, UPDATE ON SCHEMA::dbo TO '' + QUOTENAME(@user_name) + N'';
-            DENY DELETE ON SCHEMA::dbo TO '' + QUOTENAME(@user_name) + N'';'';
+            REVOKE DELETE ON SCHEMA::dbo FROM '' + QUOTENAME(@user_name) + N'';
+            GRANT DELETE ON OBJECT::dbo.ciclo_questionario TO '' + QUOTENAME(@user_name) + N'';
+            GRANT DELETE ON OBJECT::dbo.filial TO '' + QUOTENAME(@user_name) + N'';'';
       EXEC sys.sp_executesql @grant_permissions;';
 
 EXEC sys.sp_executesql
@@ -77,4 +79,4 @@ EXEC sys.sp_executesql
     @user_name = @login_name,
     @login_name = @login_name;
 
-PRINT N'Login e usuario da aplicacao configurados com privilegios minimos.';
+PRINT N'Login e usuario da aplicacao configurados com privilegios minimos, incluindo DELETE somente nos dois recursos administrativos autorizados.';

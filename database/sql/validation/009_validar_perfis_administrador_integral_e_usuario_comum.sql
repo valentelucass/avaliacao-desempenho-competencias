@@ -1,5 +1,12 @@
 SET NOCOUNT ON;
 
+DECLARE @v0011_aplicada bit = CASE WHEN EXISTS (
+    SELECT 1
+    FROM dbo.schema_migrations
+    WHERE version = N'V0011'
+      AND script_name = N'V0011__restringir_autoridade_administrador_plataforma'
+) THEN 1 ELSE 0 END;
+
 IF NOT EXISTS (
     SELECT 1
     FROM dbo.schema_migrations
@@ -27,10 +34,6 @@ VALUES
     (N'AVALIACOES.AVALIAR_VINCULADOS'),
     (N'AVALIACOES.VISUALIZAR_PROPRIAS_RESPOSTAS'),
     (N'AVALIACOES.VISUALIZAR_TODAS'),
-    (N'AVALIACOES.PUBLICAR'),
-    (N'AVALIACOES.REABRIR'),
-    (N'INDICADORES.VISUALIZAR'),
-    (N'DADOS.EXPORTAR'),
     (N'AUTOAVALIACOES.PREENCHER_PROPRIA'),
     (N'AUTOAVALIACOES.ENVIAR_PROPRIA'),
     (N'AUTOAVALIACOES.VISUALIZAR_PROPRIA'),
@@ -39,6 +42,14 @@ VALUES
     (N'QUESTIONARIOS.GERIR'),
     (N'VINCULOS_GESTOR_COLABORADOR.GERIR'),
     (N'VINCULOS_USUARIO_COLABORADOR.GERIR');
+
+IF @v0011_aplicada = 0
+    INSERT INTO @permissoes_administrador (codigo)
+    VALUES
+        (N'AVALIACOES.PUBLICAR'),
+        (N'AVALIACOES.REABRIR'),
+        (N'INDICADORES.VISUALIZAR'),
+        (N'DADOS.EXPORTAR');
 
 DECLARE @papel_administrador_id uniqueidentifier = (
     SELECT papel_id
@@ -57,17 +68,21 @@ IF EXISTS (
     LEFT JOIN dbo.papel_permissao AS concessao
         ON concessao.permissao_id = permissao.permissao_id
        AND concessao.papel_id = @papel_administrador_id
+       AND concessao.revogado_em_utc IS NULL
     WHERE concessao.papel_id IS NULL
 )
     THROW 51128, N'Administrador sem uma permissao obrigatoria do perfil integral.', 1;
 
 IF (SELECT COUNT(*)
     FROM dbo.papel_permissao
-    WHERE papel_id = @papel_administrador_id) <> (SELECT COUNT(*) FROM @permissoes_administrador)
+    WHERE papel_id = @papel_administrador_id
+      AND revogado_em_utc IS NULL) <> (SELECT COUNT(*) FROM @permissoes_administrador)
     THROW 51129, N'Administrador possui concessao fora do catalogo integral aprovado.', 1;
 
 SELECT
-    (SELECT COUNT(*) FROM @permissoes_administrador) AS permissoes_administrador_integral,
+    @v0011_aplicada AS v0011_aplicada,
+    (SELECT COUNT(*) FROM @permissoes_administrador) AS permissoes_administrador_ativas_esperadas,
     (SELECT COUNT(*)
      FROM dbo.papel_permissao
-     WHERE papel_id = @papel_administrador_id) AS permissoes_administrador_aplicadas;
+     WHERE papel_id = @papel_administrador_id
+       AND revogado_em_utc IS NULL) AS permissoes_administrador_ativas;

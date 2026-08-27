@@ -21,8 +21,12 @@ A VM já possui processos PM2 de outros sistemas. A aplicação precisa de scrip
 ## Consequências
 
 - As portas escolhidas estavam livres na verificação de 2026-08-25 e não pertencem às faixas de exclusão TCP observadas no Windows.
-- A API e o front-end ficarão restritos ao loopback. O acesso público por Cloudflare Tunnel nesta VM está definido na [ADR-0005](0005-acesso-publico-por-cloudflare-tunnel.md); a configuração externa das rotas ainda não foi executada.
+- A API e o front-end ficam restritos ao loopback. O acesso público por Cloudflare Tunnel nesta VM está definido na [ADR-0005](0005-acesso-publico-por-cloudflare-tunnel.md).
 - O pre-flight de produção executa a validação local antes de tocar nos processos PM2, mas não implementa rollback automático porque ainda não existe endpoint de saúde nem política de artefatos/reversão aprovada.
 - O script chama `pm2 save` após sucesso, mas não configura inicialização automática do PM2 após reinício da VM.
 - O manifesto configura reinício automático com backoff, limite de reinícios, mínimo de disponibilidade e arquivos de saída/erro no diretório externo de logs. A atualização do manifesto exige nova execução autorizada de `iniciar-prod.bat` para ser aplicada aos processos existentes.
 - Testes afetados: validação dos modos `--check`, disponibilidade das portas, início dos processos PM2 e verificação de saúde quando o contrato de uma rota de saúde for aprovado.
+
+## Estado operacional posterior — 2026-08-26
+
+Os processos `avaliacao-desempenho-backend-prod` e `avaliacao-desempenho-frontend-prod` foram observados online, e os hosts públicos responderam `200` na verificação anônima. Essa é uma evidência pontual de disponibilidade: não confirma jornada autenticada, operação com dados reais, aceite de negócio, backup/restauração nem a recuperação automática do PM2 após reinício da VM.

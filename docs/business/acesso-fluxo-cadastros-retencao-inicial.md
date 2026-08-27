@@ -5,7 +5,7 @@
 | Campo                   | Valor                                                                                                                                                                                                                                                                                                                                             |
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Origem                  | Resposta do gestor encaminhada pelo usuário em 2026-08-25.                                                                                                                                                                                                                                                                                        |
-| Status                  | Regras iniciais complementadas pela [Regra operacional 2024.1](regras-operacionais-v1.md). A fonte implementa autenticação, autorização, exportação agregada e auditoria; o banco local dedicado está reconciliado de `V0001` a `V0007`, a inicialização API/SPA/proxy foi verificada e o teste interativo de login/navegador permanece pendente. |
+| Status                  | Regras iniciais complementadas pela [Regra operacional 2024.1](regras-operacionais-v1.md). A fonte implementa autenticação, autorização, exportação agregada e auditoria; em 2026-08-26, `AVALIACAO_DEV` e `AVALIACAO_PROD` reconciliaram `V0001`–`V0010`, os hosts responderam `200` anonimamente e PM2 estava online. A `V0011` permanece pendente de aplicação autorizada. Isso não equivale a login autenticado, aceite de negócio ou uso de dados reais. |
 | Responsáveis conhecidos | Usuário solicitante para a decisão v1; Gerência de RH e Diretoria para a operação futura de publicação, consulta e exportação.                                                                                                                                                                                                                    |
 | Testes afetados         | Autorização por papel e escopo, lista de gestores autorizados, transições de estado, autoavaliação, bloqueio de recurso, cadastro, exportação e retenção.                                                                                                                                                                                         |
 
@@ -13,7 +13,7 @@
 
 | Ação                                                | Regra recebida                                                                                                                                                             |
 | --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Criar usuários, papéis e permissões                 | Administradores de plataforma, conforme ADR-0003.                                                                                                                          |
+| Criar usuários e definir perfil                     | Administrador para perfil técnico; Gerência de RH ou Diretoria para perfil de negócio, conforme a segregação do contrato HTTP. Cada conta recebe exatamente um perfil e não há permissões individuais. |
 | Realizar avaliação de gestor                        | Exclusivamente gestores autorizados na plataforma. Analistas, assistentes e auxiliares não recebem essa permissão.                                                         |
 | Publicar, reabrir e visualizar avaliações completas | Gerência de RH e Diretoria.                                                                                                                                                |
 | Autoavaliação                                       | Existirá na primeira versão.                                                                                                                                               |
@@ -23,7 +23,7 @@
 
 A lista de usuários que serão gestores autorizados será criada administrativamente no sistema; nenhuma pessoa é importada da macro. A autorização é decidida por conta autenticada, papel explícito e vínculo gestor–colaborador ativo; o texto digitado no campo “Gestor” não concede acesso por si só.
 
-Administrar usuários também não concede automaticamente acesso a avaliações, indicadores ou exportações. Enquanto não houver uma permissão explícita de Gerência de RH ou Diretoria, o administrador de plataforma permanece sem esse acesso de negócio.
+Administrar usuários também não concede autoridade para publicar/reabrir avaliações, consultar indicadores ou exportar. Essas ações exigem Gerência de RH ou Diretoria, além de permissão e escopo válidos. O fluxo administrativo aceita apenas os perfis Administrador, Gestor, Gerência de RH, Diretoria e Colaborador, exatamente um por conta e sem permissões individuais.
 
 ## Cadastros e ciclo
 

@@ -6,12 +6,12 @@ import type { ApiClient } from '../../api/client'
 import type {
   AccountStatus,
   AdministrationUser,
-  AdministrationUserPermissionGrant,
   Permission,
   PermissionGrantEffect,
 } from '../../api/contracts'
 import { FeedbackMessage } from '../../ui/Feedback'
 import { safeErrorMessage } from '../../ui/safeErrorMessage'
+import { useAccessibleDialog } from '../../ui/useAccessibleDialog'
 
 type UserAdministrationPanelProps = {
   api: ApiClient
@@ -26,7 +26,7 @@ type AccessCatalogItem = {
   label: string
 }
 
-type InitialAccountProfile = 'ADMINISTRATOR' | 'USER'
+type InitialAccountProfile = 'ADMINISTRATOR' | 'MANAGER' | 'HUMAN_RESOURCES' | 'BOARD' | 'USER'
 
 type InitialAccountProfileOption = {
   value: InitialAccountProfile
@@ -37,16 +37,34 @@ type InitialAccountProfileOption = {
 
 const accountProfileCatalog: readonly InitialAccountProfileOption[] = [
   {
+    value: 'ADMINISTRATOR',
+    label: 'Administrador',
+    hint: 'Administra a plataforma e os cadastros. Publicação, reabertura, indicadores e exportação são reservados a RH ou Diretoria.',
+    roles: ['ADMINISTRADOR_PLATAFORMA'],
+  },
+  {
+    value: 'MANAGER',
+    label: 'Gestor',
+    hint: 'Pode avaliar somente colaboradores com vínculo de gestor ativo e autorizado.',
+    roles: ['GESTOR'],
+  },
+  {
+    value: 'HUMAN_RESOURCES',
+    label: 'Gerência de RH',
+    hint: 'Pode tomar decisões de publicação e reabertura e consultar ou exportar indicadores dentro das regras de privacidade.',
+    roles: ['GERENCIA_RH'],
+  },
+  {
+    value: 'BOARD',
+    label: 'Diretoria',
+    hint: 'Pode tomar decisões de publicação e reabertura e consultar ou exportar indicadores dentro das regras de privacidade.',
+    roles: ['DIRETORIA'],
+  },
+  {
     value: 'USER',
     label: 'Usuário comum',
     hint: 'Acessa somente a própria autoavaliação quando houver vínculo, ciclo e questionário.',
     roles: ['COLABORADOR'],
-  },
-  {
-    value: 'ADMINISTRATOR',
-    label: 'Administrador',
-    hint: 'Acessa todos os módulos. Regras de vínculo, estado, privacidade e auditoria continuam válidas.',
-    roles: ['ADMINISTRADOR_PLATAFORMA'],
   },
 ]
 
@@ -57,9 +75,9 @@ const roleCatalog: readonly AccessCatalogItem[] = [
     code: 'ADMINISTRADOR_PLATAFORMA',
     label: 'Administrador',
   },
-  { code: 'GESTOR', label: 'Gestor (legado)' },
-  { code: 'GERENCIA_RH', label: 'Gerência de RH (legado)' },
-  { code: 'DIRETORIA', label: 'Diretoria (legado)' },
+  { code: 'GESTOR', label: 'Gestor' },
+  { code: 'GERENCIA_RH', label: 'Gerência de RH' },
+  { code: 'DIRETORIA', label: 'Diretoria' },
   { code: 'COLABORADOR', label: 'Usuário comum' },
 ]
 
@@ -134,12 +152,10 @@ export function UserAdministrationPanel({
   const editStatusId = useId()
   const temporaryPasswordId = useId()
   const detailRequest = useRef(0)
+  const selectedUserDialogRef = useRef<HTMLElement | null>(null)
   const [users, setUsers] = useState<readonly AdministrationUser[]>([])
   const [selectedUser, setSelectedUser] = useState<AdministrationUser>()
   const [draftRoles, setDraftRoles] = useState<readonly string[]>([])
-  const [draftPermissions, setDraftPermissions] = useState<
-    readonly AdministrationUserPermissionGrant[]
-  >([])
   const [newLogin, setNewLogin] = useState('')
   const [newDisplayName, setNewDisplayName] = useState('')
   const [newInitialPassword, setNewInitialPassword] = useState('')
@@ -172,7 +188,7 @@ export function UserAdministrationPanel({
   const accountProfiles = useMemo<ReadonlyArray<InitialAccountProfileOption>>(() => {
     return accountProfileCatalog.filter(
       (profile) =>
-        (profile.value === 'USER' && canManageBusinessAccess) ||
+        (profile.value !== 'ADMINISTRATOR' && canManageBusinessAccess) ||
         (profile.value === 'ADMINISTRATOR' && canManageTechnicalAccess && canManageBusinessAccess),
     )
   }, [canManageBusinessAccess, canManageTechnicalAccess])
@@ -196,7 +212,6 @@ export function UserAdministrationPanel({
     setEditStatus(user.status)
     const profile = profileForRoles(user.roles)
     setDraftRoles(profile.roles)
-    setDraftPermissions([])
   }, [])
 
   const loadUsers = useCallback(async () => {
@@ -431,7 +446,7 @@ export function UserAdministrationPanel({
     try {
       const updatedUser = await api.replaceAdministrationUserAccessGrants(selectedUser.id, {
         roles: uniqueCodes(draftRoles),
-        permissions: uniquePermissionGrants(draftPermissions),
+        permissions: [],
       })
       updateKnownUser(updatedUser)
       hydrateSelectedUser(updatedUser)
@@ -453,7 +468,6 @@ export function UserAdministrationPanel({
       return
     }
     setDraftRoles(profile.roles)
-    setDraftPermissions([])
   }
 
   const selectedUserIsCurrent = selectedUser?.id === currentUserId
@@ -464,14 +478,11 @@ export function UserAdministrationPanel({
   const hasAnyAdministrationPermission =
     canReadUsers || canCreateUsers || canUpdateUsers || canManageAccess
 
-  useEffect(() => {
-    if (!selectedUser) return
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setSelectedUser(undefined)
-    }
-    document.addEventListener('keydown', closeOnEscape)
-    return () => document.removeEventListener('keydown', closeOnEscape)
-  }, [selectedUser])
+  useAccessibleDialog({
+    dialogRef: selectedUserDialogRef,
+    isOpen: Boolean(selectedUser && !isLoadingDetail),
+    onRequestClose: () => setSelectedUser(undefined),
+  })
 
   return (
     <section aria-labelledby="user-administration-title" className="user-administration">
@@ -480,8 +491,8 @@ export function UserAdministrationPanel({
           <p className="eyebrow">Administração de acesso</p>
           <h2 id="user-administration-title">Contas e concessões</h2>
           <p className="muted">
-            Papéis e permissões individuais são substituídos como conjunto completo. A autorização
-            efetiva e a segregação de funções são sempre verificadas no servidor.
+            Cada conta recebe exatamente um perfil. A autorização efetiva e a segregação de funções
+            são sempre verificadas no servidor.
           </p>
         </div>
         {canReadUsers ? (
@@ -664,7 +675,9 @@ export function UserAdministrationPanel({
             aria-labelledby="selected-user-title"
             aria-modal="true"
             className="card selected-user-card account-dialog"
+            ref={selectedUserDialogRef}
             role="dialog"
+            tabIndex={-1}
             onMouseDown={(event) => event.stopPropagation()}
           >
             <div className="section-heading">
@@ -679,6 +692,7 @@ export function UserAdministrationPanel({
                 <button
                   aria-label="Fechar detalhes da conta"
                   className="icon-button"
+                  data-dialog-initial-focus
                   type="button"
                   onClick={() => setSelectedUser(undefined)}
                 >
@@ -837,8 +851,9 @@ export function UserAdministrationPanel({
               >
                 <h4>Perfil de acesso</h4>
                 <p className="muted">
-                  Escolha um dos dois perfis. Ao salvar, papéis legados e exceções individuais desta
-                  conta serão removidos; o servidor revalida o operador, o alvo e todas as regras.
+                  Escolha exatamente um perfil. Ao salvar, os papéis anteriores e exceções
+                  individuais desta conta serão removidos; o servidor revalida o operador, o alvo e
+                  todas as regras.
                 </p>
                 {accessError ? <FeedbackMessage kind="error">{accessError}</FeedbackMessage> : null}
 
@@ -917,7 +932,7 @@ function AccountActions({ user, isBusy, onOpen }: AccountActionsProps) {
 function AccessSummary({ user }: { user: AdministrationUser }) {
   const profile = profileForRoles(user.roles)
   const legacyRoles = user.roles.filter(
-    (role) => role !== 'ADMINISTRADOR_PLATAFORMA' && role !== 'COLABORADOR',
+    (role) => !accountProfileCatalog.some((knownProfile) => knownProfile.roles.includes(role)),
   )
   return (
     <section aria-labelledby="access-summary-title" className="access-summary">
@@ -937,7 +952,7 @@ function AccessSummary({ user }: { user: AdministrationUser }) {
         </div>
       ) : null}
       <div className="field">
-        <p className="field-hint">Exceções individuais</p>
+        <p className="field-hint">Exceções individuais legadas (somente leitura)</p>
         {user.individualPermissions.length > 0 ? (
           <ul>
             {user.individualPermissions.map((permission) => (
@@ -960,17 +975,10 @@ function uniqueCodes(codes: readonly string[]): readonly string[] {
 }
 
 function profileForRoles(roles: readonly string[]): InitialAccountProfileOption {
-  return roles.includes('ADMINISTRADOR_PLATAFORMA')
-    ? accountProfileCatalog[1]
-    : accountProfileCatalog[0]
-}
-
-function uniquePermissionGrants(
-  permissions: readonly AdministrationUserPermissionGrant[],
-): readonly AdministrationUserPermissionGrant[] {
-  const grantsByCode = new Map<string, AdministrationUserPermissionGrant>()
-  permissions.forEach((permission) => grantsByCode.set(permission.code, permission))
-  return [...grantsByCode.values()]
+  return (
+    accountProfileCatalog.find((profile) => profile.roles.some((role) => roles.includes(role))) ??
+    accountProfileCatalog.find((profile) => profile.value === 'USER')!
+  )
 }
 
 function formatCatalogItem(catalog: readonly AccessCatalogItem[], code: string): string {

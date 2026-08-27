@@ -101,6 +101,7 @@ describe('UserAdministrationPanel', () => {
     ).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Salvar acessos' })).not.toBeInTheDocument()
 
+    fireEvent.click(screen.getByRole('button', { name: 'Fechar detalhes da conta' }))
     await viewAccountDetails(otherUser.displayName)
     expect(
       await screen.findByRole('heading', { name: `Detalhes de ${otherUser.displayName}` }),
@@ -118,7 +119,7 @@ describe('UserAdministrationPanel', () => {
     )
   })
 
-  it('oferece somente usuário comum quando falta autorização técnica integral', async () => {
+  it('oferece os perfis de negócio, mas não administrador, quando falta autorização técnica integral', async () => {
     const otherUser = sampleUser({
       id: 'rh-user',
       login: 'rh',
@@ -144,8 +145,75 @@ describe('UserAdministrationPanel', () => {
     await viewAccountDetails(otherUser.displayName)
 
     const profile = await screen.findByLabelText('Perfil de acesso')
-    expect(profile).toHaveValue('USER')
+    expect(profile).toHaveValue('HUMAN_RESOURCES')
+    expect(screen.getByRole('option', { name: 'Gestor' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'Gerência de RH' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'Diretoria' })).toBeInTheDocument()
     expect(screen.queryByRole('option', { name: 'Administrador' })).not.toBeInTheDocument()
+  })
+
+  it('cria um gestor por um perfil suportado', async () => {
+    const initialPassword = ['senha', 'inicial', 'gestor', 'teste'].join('-')
+    const api = createApi({ createAdministrationUser: vi.fn().mockResolvedValue(sampleUser()) })
+
+    render(
+      <UserAdministrationPanel
+        api={api}
+        currentUserId="rh-1"
+        isSupremeAdministrator={false}
+        permissions={['USUARIOS.CRIAR', 'ACESSOS.NEGOCIO.GERIR']}
+        onSessionExpired={vi.fn()}
+      />,
+    )
+
+    fireEvent.change(screen.getByLabelText('Perfil inicial'), { target: { value: 'MANAGER' } })
+    fireEvent.change(screen.getByLabelText('Login'), { target: { value: 'gestor.novo' } })
+    fireEvent.change(screen.getByLabelText('Nome'), { target: { value: 'Gestor novo' } })
+    fireEvent.change(screen.getByLabelText('Senha inicial'), { target: { value: initialPassword } })
+    fireEvent.click(screen.getByRole('button', { name: 'Criar conta' }))
+
+    await waitFor(() =>
+      expect(api.createAdministrationUser).toHaveBeenCalledWith({
+        login: 'gestor.novo',
+        displayName: 'Gestor novo',
+        initialPassword,
+        initialRoles: ['GESTOR'],
+      }),
+    )
+  })
+
+  it('isola o diálogo da conta, mantém o foco nele e o devolve ao fechar', async () => {
+    const user = sampleUser({ id: 'dialog-user', displayName: 'Conta no diálogo' })
+    const api = createApi({
+      listAdministrationUsers: vi.fn().mockResolvedValue([user]),
+      getAdministrationUser: vi.fn().mockResolvedValue(user),
+    })
+
+    render(
+      <UserAdministrationPanel
+        api={api}
+        currentUserId="another-user"
+        isSupremeAdministrator={false}
+        permissions={['USUARIOS.LER']}
+        onSessionExpired={vi.fn()}
+      />,
+    )
+
+    const trigger = await screen.findByRole('button', { name: `Ações para ${user.displayName}` })
+    trigger.focus()
+    fireEvent.click(trigger)
+
+    const closeButton = await screen.findByRole('button', { name: 'Fechar detalhes da conta' })
+    expect(closeButton).toHaveFocus()
+    expect(trigger.closest('[aria-hidden="true"]')).not.toBeNull()
+    expect(trigger.closest('[aria-hidden="true"]')).toHaveProperty('inert', true)
+
+    fireEvent.keyDown(document, { key: 'Tab' })
+    expect(closeButton).toHaveFocus()
+    fireEvent.click(closeButton)
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(trigger).toHaveFocus()
   })
 
   it('altera somente nome e situação quando a conta possui USUARIOS.ALTERAR', async () => {
@@ -251,6 +319,7 @@ describe('UserAdministrationPanel', () => {
       }),
     )
 
+    fireEvent.click(await screen.findByRole('button', { name: 'Fechar detalhes da conta' }))
     expect(await screen.findByRole('cell', { name: ordinaryUser.displayName })).toBeInTheDocument()
     await viewAccountDetails(ordinaryUser.displayName)
     expect(

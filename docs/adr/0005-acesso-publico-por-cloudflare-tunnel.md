@@ -28,3 +28,7 @@ Esta VM já possui o serviço `Cloudflared` em execução automática. Os proces
 
 - O inventário local de 2026-08-25 confirmou o serviço `Cloudflared` em execução automática e as portas `18080` e `18081` estavam livres antes de qualquer publicação.
 - Após a configuração externa autorizada, validar cada hostname público, a ausência de escuta pública da aplicação, o encaminhamento para o serviço correto e a recuperação dos processos após reinicialização.
+
+## Estado operacional posterior — 2026-08-26
+
+Os hosts público do front-end e de CSRF da API responderam `200` em leitura anônima, com os dois processos PM2 do projeto online. Essa observação não altera a decisão nem certifica a configuração Cloudflare: ainda faltam validação autenticada de ponta a ponta, teste após reinicialização, backup/restauração e aceite de negócio.

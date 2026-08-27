@@ -6,11 +6,13 @@
 | Escopo | Persistência SQL Server, autenticação local, ciclos, avaliações e indicadores.                                                                             |
 | Origem | ADC-007 a ADC-011, ADR-0008 e ADR-0011.                                                                                                                    |
 
+> Estado observado em 2026-08-26: `AVALIACAO_DEV` e `AVALIACAO_PROD` reconciliaram `V0001`–`V0010`; a verificação anônima dos hosts retornou `200` e os processos PM2 do projeto estavam online. A `V0011` está em fonte e permanece pendente de aplicação autorizada nesses alvos. A observação não é aceite de negócio, nem teste autenticado de ponta a ponta, nem autorização para alterar os alvos.
+
 ## Princípio
 
 O repositório inicia com persistência, autenticação, leitura de ciclos, avaliações e indicadores desabilitadas na configuração versionada. A ativação só é permitida quando a VM tiver recebido por canal protegido uma identidade SQL Server autorizada da aplicação — conta SQL ou identidade Windows do processo com autenticação integrada —, as configurações de emissão de sessão e uma chave aleatória de pelo menos 32 bytes codificada em Base64. Nenhum segredo deve ir para Git, `application.properties`, log, resposta HTTP, teste ou PM2 compartilhado.
 
-No banco local dedicado autorizado, `V0001` a `V0007` já foram aplicadas e as validações do runner passaram. Em qualquer outro alvo, aplique e valide as migrations de forma autorizada antes de habilitar módulos; o código de leitura de ciclos exige explicitamente `V0003`, `V0005` e `V0007` e falha na inicialização em vez de consultar schema incompleto.
+Nos bancos canônicos autorizados, `V0001` a `V0010` já foram aplicadas e as validações somente leitura do runner passaram; a fonte também contém a `V0011`, pendente de aplicação autorizada. Em qualquer alvo novo, aplique e valide todo o histórico disponível de forma autorizada antes de habilitar módulos; o código de leitura de ciclos falha na inicialização em vez de consultar schema incompleto.
 
 ## Desenvolvimento local autorizado
 
@@ -103,15 +105,15 @@ As origens permitidas por CORS são configuração separada e precisam correspon
 ## Sequência operacional segura
 
 1. Provisionar para produção a identidade SQL Server exclusiva da aplicação — conta SQL Server ou identidade Windows do processo —, sempre com mínimo privilégio sobre o banco dedicado, sem usar `sa` e sem acesso de leitura para contas de ferramenta. A identidade Windows usada no desenvolvimento local não equivale a esse provisionamento.
-2. Para qualquer alvo novo, aplicar migrations e executar `database\executar-database.bat --validate` com a conta administrativa autorizada; esse passo não é executado automaticamente pela aplicação. O alvo local de desenvolvimento já está reconciliado em `V0001`–`V0007`.
+2. Para qualquer alvo novo, aplicar migrations e executar `database\executar-database.bat --validate` com a conta administrativa autorizada; esse passo não é executado automaticamente pela aplicação. A evidência dos alvos canônicos registra reconciliação em `V0001`–`V0010`, enquanto a `V0011` permanece pendente de aplicação autorizada.
 3. Disponibilizar as propriedades externas sem imprimir seus valores e iniciar a API em ambiente não produtivo. No launcher local, elas existem somente no ambiente do processo e os segredos são gerados para a execução.
-4. Antes de produção, executar o bootstrap controlado do primeiro administrador supremo e, em seguida, criar a segunda conta por aprovação independente da Diretoria. Atribua os papéis explicitamente e confirme a troca obrigatória da senha inicial. Uma conta técnica local de desenvolvimento não substitui esse bootstrap de produção. A API normal não cria nem promove administradores supremos. A conta técnica não pode elevar a si mesma nem conceder acesso de negócio; uma concessão de negócio requer RH/Diretoria, outro alvo e `ACESSOS.NEGOCIO.GERIR`.
+4. Antes de operação com dados reais, executar o bootstrap controlado do primeiro administrador supremo quando aplicável e, em seguida, criar a segunda conta por aprovação independente da Diretoria. Atribua exatamente um dos perfis suportados por conta e confirme a troca obrigatória da senha inicial. A API normal não cria nem promove administradores supremos. Uma concessão de perfil de negócio requer outro alvo e `ACESSOS.NEGOCIO.GERIR`; o catálogo atual concede essa permissão a Administrador, RH e Diretoria para provisionamento controlado. Isso não permite ao Administrador elevar a própria conta nem se tornar autoridade de publicação, reabertura, indicadores ou exportação.
 5. Criar cadastros, questionários aprovados, configurações de cálculo, matrizes, ciclos e atribuições de questionário antes de abrir um ciclo; a macro não é importada automaticamente.
 6. Executar a suíte de qualidade e o teste de autorização em ambiente não produtivo antes de qualquer liberação.
 
 ## Bootstrap do primeiro administrador de produção
 
-O script `database\\scripts\\bootstrap-primeiro-administrador-producao.ps1` é a única rotina manual prevista para uma base `AVALIACAO_PROD` recém-migrada e sem usuários ou dados de negócio. Ele exige confirmação explícita, valida as sete migrations e os cinco papéis obrigatórios, bloqueia a execução concorrente, grava usuário protegido, credencial BCrypt com troca obrigatória de senha, os papéis necessários e a auditoria em uma única transação. Ele se recusa a operar se a base já tiver usuários ou dados de negócio.
+O script `database\\scripts\\bootstrap-primeiro-administrador-producao.ps1` é a única rotina manual prevista para uma base `AVALIACAO_PROD` nova, sem usuários ou dados de negócio. A sequência segura é: `database\executar-database.bat --apply-bootstrap-prerequisites` prepara somente `V0001`–`V0009`; o bootstrap confirmado cria o administrador supremo; então `database\executar-database.bat --apply` publica `V0010`, a `V0011` — que normaliza contas administrativas legadas para perfil único — e futuras migrations pendentes; por fim, execute `--validate`. O bootstrap exige confirmação explícita, bloqueia execução concorrente, grava usuário protegido, credencial BCrypt com troca obrigatória de senha, o perfil inicial suportado e a auditoria em uma única transação. Ele se recusa a operar se a base já tiver usuários ou dados de negócio.
 
 Execute-o somente no console seguro da VM e informe a senha via `SecureString`; ela não deve constar de argumentos, arquivos, variáveis de ambiente, histórico, logs ou repositório:
 

@@ -84,6 +84,43 @@ describe('MasterDataAdministrationPanel', () => {
     ).toBeInTheDocument()
   })
 
+  it('isola, mantém o foco e restaura o acionador ao fechar uma confirmação por Escape', async () => {
+    const api = createApi()
+
+    render(
+      <MasterDataAdministrationPanel
+        api={api}
+        permissions={['CADASTROS.GERIR']}
+        onSessionExpired={vi.fn()}
+      />,
+    )
+
+    const trigger = await screen.findByRole('button', { name: 'Desativar filial Matriz' })
+    trigger.focus()
+    fireEvent.click(trigger)
+
+    const dialog = screen.getByRole('alertdialog')
+    const cancel = screen.getByRole('button', { name: 'Cancelar' })
+    const confirm = screen.getByRole('button', { name: 'Confirmar desativação da filial' })
+
+    expect(cancel).toHaveFocus()
+    expect(trigger.closest('[aria-hidden="true"]')).not.toBeNull()
+    expect(trigger.closest('[aria-hidden="true"]')).toHaveProperty('inert', true)
+
+    confirm.focus()
+    fireEvent.keyDown(document, { key: 'Tab' })
+    expect(cancel).toHaveFocus()
+    cancel.focus()
+    fireEvent.keyDown(document, { key: 'Tab', shiftKey: true })
+    expect(confirm).toHaveFocus()
+
+    fireEvent.keyDown(document, { key: 'Escape' })
+
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+    expect(dialog).not.toBeInTheDocument()
+    expect(trigger).toHaveFocus()
+  })
+
   it('permite excluir definitivamente apenas a filial já desativada', async () => {
     const api = createApi({
       listBranches: vi.fn().mockResolvedValue([sampleBranch({ active: false })]),

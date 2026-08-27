@@ -6,7 +6,7 @@ Esta pasta contém scripts manuais para a base de produção `AVALIACAO_PROD`. E
 
 1. Copie `database/config.production.example.bat` para `database/config.production.local.bat`.
 2. Confirme que a instância SQL Server possui certificado TLS confiável; mantenha `ADC_SQLCMD_TRUST_SERVER_CERTIFICATE=0`.
-3. Execute as migrations com a conta Windows administrativa autorizada:
+3. Para uma `AVALIACAO_PROD` nova, siga o bootstrap explícito descrito no [`../README.md`](../README.md): `--apply-bootstrap-prerequisites` até `V0009`, criação transacional do primeiro administrador supremo, depois `--apply` para `V0010` e migrations posteriores, seguida de `--validate`. Para um alvo de produção já existente e autorizado, confirme primeiro o histórico e aplique somente migrations pendentes:
 
    ```bat
    set ADC_DATABASE_CONFIG=%CD%\database\config.production.local.bat
@@ -24,7 +24,7 @@ Esta pasta contém scripts manuais para a base de produção `AVALIACAO_PROD`. E
    sqlcmd -S localhost,1433 -E -N -d master -i database\production\002_validar_login_e_usuario_da_aplicacao.sql
    ```
 
-O login `rodogarcia_adc_app` recebe somente `CONNECT`, `SELECT`, `INSERT` e `UPDATE` no schema `dbo`. Ele recebe negação explícita de `DELETE`, não recebe `db_owner`, `sysadmin`, DDL, acesso a outros bancos nem acesso aos scripts de migration.
+O login `rodogarcia_adc_app` recebe `CONNECT`, `SELECT`, `INSERT` e `UPDATE` no schema `dbo`, sem `DELETE` geral. Os únicos `DELETE` concedidos são em `dbo.ciclo_questionario` e `dbo.filial`, necessários às operações administrativas já limitadas pela API. Ele não recebe `db_owner`, `sysadmin`, DDL, acesso a outros bancos nem acesso aos scripts de migration.
 
 ## Configuração da API
 

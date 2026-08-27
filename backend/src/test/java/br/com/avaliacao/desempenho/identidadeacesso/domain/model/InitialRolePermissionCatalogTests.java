@@ -7,9 +7,19 @@ import org.junit.jupiter.api.Test;
 class InitialRolePermissionCatalogTests {
 
   @Test
-  void grantsAdministratorsTheWholePermissionCatalog() {
+  void keepsTechnicalAdministrationButReservesDecisionAndIndicatorPermissions() {
     assertThat(InitialRolePermissionCatalog.permissionsFor(PlatformRole.ADMINISTRADOR_PLATAFORMA))
-        .containsExactlyInAnyOrder(PlatformPermission.values());
+        .contains(
+            PlatformPermission.USERS_READ,
+            PlatformPermission.USERS_CREATE,
+            PlatformPermission.ACCESS_MANAGE,
+            PlatformPermission.BUSINESS_ACCESS_MANAGE,
+            PlatformPermission.MASTER_DATA_MANAGE)
+        .doesNotContain(
+            PlatformPermission.ASSESSMENTS_PUBLISH,
+            PlatformPermission.ASSESSMENTS_REOPEN,
+            PlatformPermission.INDICATORS_VIEW,
+            PlatformPermission.DATA_EXPORT);
   }
 
   @Test
@@ -25,6 +35,7 @@ class InitialRolePermissionCatalogTests {
   void givesRhTheBusinessAndCycleConfigurationPermissions() {
     assertThat(InitialRolePermissionCatalog.permissionsFor(PlatformRole.GERENCIA_RH))
         .containsExactlyInAnyOrder(
+            PlatformPermission.BUSINESS_ACCESS_MANAGE,
             PlatformPermission.ASSESSMENTS_VIEW_ALL,
             PlatformPermission.ASSESSMENTS_PUBLISH,
             PlatformPermission.ASSESSMENTS_REOPEN,
@@ -38,6 +49,7 @@ class InitialRolePermissionCatalogTests {
   void givesBoardCycleConfigurationButNotQuestionnaireAdministration() {
     assertThat(InitialRolePermissionCatalog.permissionsFor(PlatformRole.DIRETORIA))
         .containsExactlyInAnyOrder(
+            PlatformPermission.BUSINESS_ACCESS_MANAGE,
             PlatformPermission.ASSESSMENTS_VIEW_ALL,
             PlatformPermission.ASSESSMENTS_PUBLISH,
             PlatformPermission.ASSESSMENTS_REOPEN,

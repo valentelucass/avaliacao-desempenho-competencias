@@ -22,6 +22,10 @@ O banco de desenvolvimento já reconciliado não deve ser reutilizado para a pub
 - A senha do login é fornecida somente ao `sqlcmd` no terminal seguro e nunca é escrita nos scripts, `.env`, documentação, logs ou Git.
 - Antes de iniciar a API em produção, ainda é obrigatório configurar certificado SQL Server confiável, arquivo externo de propriedades, diretório de logs, backup/restauração e validar o preflight. Esta decisão não executa SQL Server, Cloudflare, PM2 ou publicação.
 
+## Estado posterior — 2026-08-27
+
+A decisão acima registra o privilégio inicialmente previsto. Em fonte, o `DENY DELETE` global foi substituído por ausência de `DELETE` geral e `GRANT DELETE` explícito somente para `dbo.ciclo_questionario` e `dbo.filial`, que são as duas operações limitadas da aplicação que exigem remoção física. A alteração ainda depende de aplicação autorizada em cada alvo; este documento não afirma que `AVALIACAO_PROD` já recebeu a correção. O restante do princípio de mínimo privilégio, sem papéis administrativos, DDL ou acesso a outros bancos, permanece inalterado.
+
 ## Referências
 
 - [Provisionamento de produção](../../database/production/README.md)

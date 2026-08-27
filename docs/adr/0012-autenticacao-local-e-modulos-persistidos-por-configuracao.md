@@ -35,3 +35,7 @@ O banco local dedicado foi posteriormente reconciliado de `V0001` a `V0007`, ap�
 - A identidade de mínimo privilégio para produção, a chave criptográfica persistente, o bootstrap de dois administradores supremos para produção, proxy confiável atrás do Tunnel, backups e a publicação continuam procedimentos externos e auditáveis. A identidade Windows e os segredos efêmeros usados no launcher local não os substituem.
 - A autenticação usa BCrypt com custo 12 por compatibilidade já validada. A eventual mudança para Argon2id requer ADR, dependência controlada, migração de credenciais e validação de operação antes de uso.
 - Testes unitários cobrem cálculo, autorização, sessão e contratos. A validação de repositório contra SQL Server autorizado permanece obrigatória antes de liberação.
+
+## Estado atual — 2026-08-27
+
+O bloco de atualização de 2026-08-25 preserva o contexto daquela data. A evidência operacional mais recente registra `V0001`–`V0010` reconciliadas em `AVALIACAO_DEV` e `AVALIACAO_PROD`, hosts públicos com resposta anônima `200` e PM2 online. A `V0011` está em fonte e aguarda aplicação autorizada. Ainda faltam teste autenticado de ponta a ponta, validação por recurso em produção, backup/restauração e aceite de negócio; nenhuma dessas conclusões decorre da mera disponibilidade observada.

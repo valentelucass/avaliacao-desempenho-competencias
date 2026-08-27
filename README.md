@@ -6,7 +6,7 @@ Aplicação interna para avaliações de colaboradores, com cálculo no servidor
 
 O código-fonte implementa autenticação local, administração de acesso, cadastros, questionários, ciclos, avaliações de gestor e autoavaliação, indicadores agregados e exportação CSV. A SPA cobre login, troca de senha, avaliações e indicadores.
 
-O sistema não está publicado. As flags persistidas continuam desabilitadas por padrão na configuração versionada, mas o banco local dedicado está reconciliado de `V0001` a `V0007` e possui uma conta técnica de desenvolvimento autorizada, protegida e com troca de senha inicial obrigatória. Essa conta não tem papel ou escopo de negócio; nenhum cadastro, vínculo, questionário, ciclo ou avaliação foi semeado. `iniciar-dev.bat` concentra a ativação local controlada em HTTPS de loopback: API, SPA e proxy foram iniciados, `GET /api/v1/auth/csrf` respondeu `200` pelo front-end e rota protegida respondeu `401`, não `404`. O teste interativo de credencial, login e navegador ainda está pendente. Não houve configuração de produção, deploy, rota de Tunnel ou segredo persistente. Veja [Configuração externa da aplicação](docs/operations/configuracao-externa-da-aplicacao.md) antes de qualquer ativação em outro alvo.
+Em 2026-08-26, os bancos canônicos `AVALIACAO_DEV` e `AVALIACAO_PROD` foram reconciliados até `V0010`; a validação somente leitura confirmou o catálogo inicial, sem ciclos, lotações, vínculos, atribuições ou avaliações. Na mesma evidência, a verificação anônima de `https://formulario.rodogarcia.com.br/` e de `GET /api/v1/auth/csrf` retornou `200`, com os dois processos PM2 do projeto online. A fonte já contém a `V0011`, que restringe a autoridade do Administrador e normaliza contas administrativas legadas para perfil único, preservando o histórico; ela permanece pendente de aplicação autorizada nos alvos canônicos. Isso confirma a disponibilidade observada naquele momento, não um aceite de negócio, uma jornada autenticada de ponta a ponta, autorização para alterar produção ou o uso de dados reais. As flags persistidas continuam desabilitadas por padrão na configuração versionada; qualquer ativação, alteração de banco ou publicação posterior exige alvo, autorização e validação próprios. Veja [Configuração externa da aplicação](docs/operations/configuracao-externa-da-aplicacao.md) antes de qualquer operação em outro alvo.
 
 ## Estrutura
 
@@ -61,7 +61,7 @@ npm run build
 
 ## Banco SQL Server
 
-Os bancos exclusivos são `AVALIACAO_DEV` e `AVALIACAO_PROD`. O estado real é documentado em [`database/`](database/README.md): `V0001`–`V0007` aplicadas e validadas nos alvos dedicados; a produção permanece sem dados de negócio. Não aplique migrations em outro alvo, crie conta SQL ou cadastre dados de negócio sem autorização explícita e ambiente alvo confirmado.
+Os bancos exclusivos são `AVALIACAO_DEV` e `AVALIACAO_PROD`. A evidência mais recente registra `V0001`–`V0010` reconciliadas nos dois alvos e catálogo inicial sem ciclos, lotações, vínculos, atribuições ou avaliações; a `V0011` está em fonte e aguarda aplicação autorizada. Não aplique migrations em outro alvo, crie conta SQL ou cadastre dados de negócio sem autorização explícita e ambiente alvo confirmado.
 
 Para inspeção sem alteração:
 
@@ -91,4 +91,4 @@ O launcher mantém o segredo de sessão e o PFX de execução apenas durante o p
 - [Modelo relacional lógico](docs/architecture/modelo-relacional-logico.md)
 - [Qualidade e verificações locais](docs/quality.md)
 
-O administrador de plataforma não herda acesso a avaliações ou indicadores e não pode elevar a própria conta. Indicadores só retornam agregados com pelo menos cinco colaboradores distintos após os filtros. A validação contra SQL Server, Tunnel/TLS, backup/restauração, ASVS/LGPD e publicação ainda requerem aceite operacional.
+O Administrador administra a plataforma e não é autoridade para publicar ou reabrir avaliações, consultar indicadores ou exportar dados: essas ações exigem Gerência de RH ou Diretoria, além da permissão e do escopo aplicáveis. Indicadores só retornam agregados com pelo menos cinco colaboradores distintos após os filtros. A validação autenticada contra SQL Server, Tunnel/TLS, backup/restauração, ASVS/LGPD e aceite de negócio ainda permanece necessária.

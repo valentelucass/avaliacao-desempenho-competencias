@@ -142,6 +142,31 @@ try {
     }
   }
 
+  $v0011 = $files | Where-Object {
+    $_.Name -eq 'V0011__restringir_autoridade_administrador_plataforma.sql'
+  }
+  if ($null -ne $v0011) {
+    $authorityValidation = Join-Path $PSScriptRoot 'testar-v0011-restricao-autoridade-administrador.ps1'
+    $sqlValidation = Join-Path $resolvedDirectory '..\validation\011_validar_restricao_autoridade_administrador_plataforma.sql'
+    $profileValidation = Join-Path $resolvedDirectory '..\validation\009_validar_perfis_administrador_integral_e_usuario_comum.sql'
+
+    if (-not (Test-Path -LiteralPath $authorityValidation)) {
+      throw 'Teste estatico da V0011 nao encontrado.'
+    }
+    if (-not (Test-Path -LiteralPath $sqlValidation)) {
+      throw 'Validacao SQL da V0011 nao encontrada.'
+    }
+    if (-not (Test-Path -LiteralPath $profileValidation)) {
+      throw 'Validacao SQL de perfis da V0009 nao encontrada.'
+    }
+
+    $global:LASTEXITCODE = 0
+    & $authorityValidation -MigrationPath $v0011.FullName -SqlValidationPath $sqlValidation -ProfileValidationPath $profileValidation
+    if ($LASTEXITCODE -ne 0) {
+      throw 'Teste estatico da V0011 falhou.'
+    }
+  }
+
   Write-Output "Migrations validas: $($files.Count)"
   Write-Output 'Conteudo de migrations compativel com o runner.'
 } catch {

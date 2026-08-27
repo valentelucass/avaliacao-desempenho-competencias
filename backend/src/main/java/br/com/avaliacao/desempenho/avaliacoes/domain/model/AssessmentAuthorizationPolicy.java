@@ -49,11 +49,22 @@ public final class AssessmentAuthorizationPolicy {
   }
 
   public boolean canPublish(AssessmentAccessContext actor, AssessmentType type) {
-    return type == AssessmentType.GESTOR && Objects.requireNonNull(actor, "actor").has(PUBLISH);
+    AssessmentAccessContext safeActor = Objects.requireNonNull(actor, "actor");
+    return type == AssessmentType.GESTOR
+        && safeActor.has(PUBLISH)
+        && hasAdministrativeDecisionRole(safeActor);
   }
 
   public boolean canReopen(AssessmentAccessContext actor, AssessmentType type) {
-    return type == AssessmentType.GESTOR && Objects.requireNonNull(actor, "actor").has(REOPEN);
+    AssessmentAccessContext safeActor = Objects.requireNonNull(actor, "actor");
+    return type == AssessmentType.GESTOR
+        && safeActor.has(REOPEN)
+        && hasAdministrativeDecisionRole(safeActor);
+  }
+
+  private static boolean hasAdministrativeDecisionRole(AssessmentAccessContext actor) {
+    return !actor.hasRole("ADMINISTRADOR_PLATAFORMA")
+        && (actor.hasRole("GERENCIA_RH") || actor.hasRole("DIRETORIA"));
   }
 
   public record AssessmentOwnership(UUID authorUserId, AssessmentType type) {

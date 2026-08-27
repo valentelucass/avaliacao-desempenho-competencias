@@ -4,6 +4,7 @@ import br.com.avaliacao.desempenho.identidadeacesso.application.UserAdministrati
 import br.com.avaliacao.desempenho.identidadeacesso.domain.model.AccountStatus;
 import br.com.avaliacao.desempenho.identidadeacesso.domain.model.AdministrativeAccessSegregationPolicy;
 import br.com.avaliacao.desempenho.identidadeacesso.domain.model.LoginNormalizer;
+import br.com.avaliacao.desempenho.identidadeacesso.domain.model.PlatformRole;
 import br.com.avaliacao.desempenho.identidadeacesso.infrastructure.persistence.ConditionalOnSqlServerPersistence;
 import java.util.List;
 import java.util.Objects;
@@ -19,7 +20,12 @@ import org.springframework.transaction.support.TransactionTemplate;
 public class UserAdministrationService {
 
   private static final Set<String> SUPPORTED_PROFILE_ROLE_CODES =
-      Set.of("ADMINISTRADOR_PLATAFORMA", "COLABORADOR");
+      Set.of(
+          PlatformRole.ADMINISTRADOR_PLATAFORMA.name(),
+          PlatformRole.GESTOR.name(),
+          PlatformRole.GERENCIA_RH.name(),
+          PlatformRole.DIRETORIA.name(),
+          PlatformRole.COLABORADOR.name());
 
   private final UserAdministrationRepository repository;
   private final PasswordEncoder credentialEncoder;
@@ -302,7 +308,8 @@ public class UserAdministrationService {
             .collect(java.util.stream.Collectors.toUnmodifiableSet());
     if (safeRoles.size() != 1 || !SUPPORTED_PROFILE_ROLE_CODES.containsAll(safeRoles)) {
       throw new UserAdministrationException(
-          Reason.INVALID_INPUT, "Escolha exatamente o perfil Administrador ou Usuário comum.");
+          Reason.INVALID_INPUT,
+          "Escolha exatamente um perfil administrativo, gestor, RH, diretoria ou colaborador.");
     }
     return safeRoles;
   }

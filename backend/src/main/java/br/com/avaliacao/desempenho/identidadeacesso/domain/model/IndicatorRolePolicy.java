@@ -6,17 +6,17 @@ import java.util.Set;
 /**
  * Separa o acesso a indicadores dos demais privilégios administrativos.
  *
- * <p>As permissões de indicadores só podem ser efetivas para Administração, Gerência de RH ou
- * Diretoria. A verificação também protege a concessão individual, para que ela não transforme um
- * usuário comum em consumidor de resultados agregados.
+ * <p>As permissões de indicadores só podem ser efetivas para Gerência de RH ou Diretoria. A
+ * verificação também protege a concessão individual, para que ela não transforme um usuário comum
+ * ou administrador técnico em consumidor de resultados agregados.
  */
 public final class IndicatorRolePolicy {
 
   public boolean hasEligibleRole(Set<String> roleCodes) {
     Set<String> safeRoleCodes = Objects.requireNonNull(roleCodes, "papéis não podem ser nulos");
-    return safeRoleCodes.contains(PlatformRole.ADMINISTRADOR_PLATAFORMA.name())
-        || safeRoleCodes.contains(PlatformRole.GERENCIA_RH.name())
-        || safeRoleCodes.contains(PlatformRole.DIRETORIA.name());
+    return !safeRoleCodes.contains(PlatformRole.ADMINISTRADOR_PLATAFORMA.name())
+        && (safeRoleCodes.contains(PlatformRole.GERENCIA_RH.name())
+            || safeRoleCodes.contains(PlatformRole.DIRETORIA.name()));
   }
 
   public boolean mayReceiveIndividualPermission(

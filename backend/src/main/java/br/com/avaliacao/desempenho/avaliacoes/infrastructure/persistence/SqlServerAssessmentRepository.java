@@ -924,6 +924,7 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
   private void requirePublish(LockedAssessment assessment, AssessmentAccessContext actor) {
     requireActiveActor(actor.userId());
     requirePermission(actor, "AVALIACOES.PUBLICAR");
+    requireAdministrativeDecisionRole(actor);
     requireAdministrativeDecisionWindow(assessment);
     if (assessment.type() != AssessmentType.GESTOR) {
       throw new AssessmentForbiddenException();
@@ -933,8 +934,16 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
   private void requireReopen(LockedAssessment assessment, AssessmentAccessContext actor) {
     requireActiveActor(actor.userId());
     requirePermission(actor, "AVALIACOES.REABRIR");
+    requireAdministrativeDecisionRole(actor);
     requireAdministrativeDecisionWindow(assessment);
     if (assessment.type() != AssessmentType.GESTOR) {
+      throw new AssessmentForbiddenException();
+    }
+  }
+
+  private static void requireAdministrativeDecisionRole(AssessmentAccessContext actor) {
+    if (actor.hasRole("ADMINISTRADOR_PLATAFORMA")
+        || (!actor.hasRole("GERENCIA_RH") && !actor.hasRole("DIRETORIA"))) {
       throw new AssessmentForbiddenException();
     }
   }

@@ -1,6 +1,6 @@
 # ADR-0016 — Perfis Administrador e Usuário comum
 
-- **Status:** Aceita; migration e publicação pendentes de execução autorizada
+- **Status:** Superada para provisionamento e contrato em 2026-08-27; a `V0009` permanece como registro histórico imutável.
 - **Data:** 2026-08-26
 - **Origem:** Solicitação explícita para separar a experiência entre administradores e usuários comuns.
 
@@ -14,6 +14,12 @@ O papel `ADMINISTRADOR_PLATAFORMA` era técnico e precisava ser combinado com pa
 - `COLABORADOR` é o perfil **Usuário comum**, limitado à própria autoavaliação e condicionado ao vínculo ativo, ao ciclo e ao questionário atribuídos.
 - A criação e a substituição de acesso na interface oferecem somente esses dois perfis. Papéis legados continuam reconhecidos para leitura e histórico, mas não são oferecidos para novas concessões.
 - A autorização por recurso, a privacidade dos indicadores, a validação de vínculo e a proteção da conta suprema não são removidas. Acesso integral a módulos não permite burlar regras de integridade ou criar avaliações sem os dados obrigatórios.
+
+## Estado atual — 2026-08-27
+
+Esta ADR preserva a decisão histórica que levou à `V0009`; ela não define mais o fluxo administrativo vigente. Para novas contas e substituições de acesso, o contrato aceita exatamente um perfil entre Administrador (`ADMINISTRADOR_PLATAFORMA`), Gestor (`GESTOR`), Gerência de RH (`GERENCIA_RH`), Diretoria (`DIRETORIA`) e Colaborador (`COLABORADOR`), sem permissões individuais.
+
+O Administrador administra a plataforma, mas não é autoridade para publicação/reabertura, indicadores ou exportação. Essas operações exigem Gerência de RH ou Diretoria, a permissão correspondente e o escopo revalidado no servidor. A `V0011` em fonte restringe essas permissões do catálogo de Administrador e normaliza, com histórico, contas administrativas legadas para perfil único; ela ainda aguarda aplicação autorizada. A migration `V0009` não é reescrita.
 
 ## Consequências
 

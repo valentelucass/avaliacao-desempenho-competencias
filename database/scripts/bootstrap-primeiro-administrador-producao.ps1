@@ -18,12 +18,17 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $productionDatabase = 'AVALIACAO_PROD'
-$requiredRoles = @(
-    'ADMINISTRADOR_PLATAFORMA',
-    'COLABORADOR',
-    'GESTOR',
-    'GERENCIA_RH',
-    'DIRETORIA'
+$requiredRoles = @('ADMINISTRADOR_PLATAFORMA')
+$requiredMigrationVersions = @(
+    'V0001',
+    'V0002',
+    'V0003',
+    'V0004',
+    'V0005',
+    'V0006',
+    'V0007',
+    'V0008',
+    'V0009'
 )
 
 function ConvertTo-PlainText {
@@ -116,7 +121,6 @@ if ([string]::IsNullOrWhiteSpace($normalizedDisplayName) -or $normalizedDisplayN
     throw 'O nome de exibição informado é inválido para o bootstrap.'
 }
 
-$passwordHash = New-BcryptHash -Password $InitialPassword
 $connectionString = "Server=localhost,1433;Database=$productionDatabase;Integrated Security=True;Encrypt=True;TrustServerCertificate=False;"
 $connection = [System.Data.SqlClient.SqlConnection]::new($connectionString)
 $transaction = $null
@@ -141,10 +145,39 @@ SELECT @result;
     $validationCommand = New-SqlCommand -Connection $connection -Transaction $transaction -CommandText @'
 SELECT
     (SELECT COUNT(*) FROM dbo.schema_migrations) AS migrations,
+    (SELECT COUNT(*) FROM dbo.schema_migrations
+     WHERE version IN (
+         N'V0001', N'V0002', N'V0003', N'V0004', N'V0005',
+         N'V0006', N'V0007', N'V0008', N'V0009'
+     )) AS bootstrap_prerequisite_migrations,
+    (SELECT COUNT(*) FROM dbo.schema_migrations WHERE version = N'V0010') AS catalog_migration,
     (SELECT COUNT(*) FROM dbo.usuario) AS users,
     (SELECT COUNT(*) FROM dbo.colaborador) +
+        (SELECT COUNT(*) FROM dbo.filial) +
+        (SELECT COUNT(*) FROM dbo.area) +
+        (SELECT COUNT(*) FROM dbo.lotacao_colaborador) +
+        (SELECT COUNT(*) FROM dbo.vinculo_gestor_colaborador) +
+        (SELECT COUNT(*) FROM dbo.vinculo_usuario_colaborador) +
+        (SELECT COUNT(*) FROM dbo.questionario) +
+        (SELECT COUNT(*) FROM dbo.versao_questionario) +
+        (SELECT COUNT(*) FROM dbo.competencia) +
+        (SELECT COUNT(*) FROM dbo.versao_competencia) +
+        (SELECT COUNT(*) FROM dbo.questionario_competencia) +
+        (SELECT COUNT(*) FROM dbo.pergunta_questionario) +
+        (SELECT COUNT(*) FROM dbo.opcao_resposta) +
         (SELECT COUNT(*) FROM dbo.ciclo_avaliacao) +
-        (SELECT COUNT(*) FROM dbo.avaliacao) AS business_records;
+        (SELECT COUNT(*) FROM dbo.ciclo_questionario) +
+        (SELECT COUNT(*) FROM dbo.transicao_ciclo_avaliacao) +
+        (SELECT COUNT(*) FROM dbo.atribuicao_questionario_colaborador) +
+        (SELECT COUNT(*) FROM dbo.configuracao_calculo_versao) +
+        (SELECT COUNT(*) FROM dbo.matriz_classificacao_versao) +
+        (SELECT COUNT(*) FROM dbo.faixa_classificacao) +
+        (SELECT COUNT(*) FROM dbo.avaliacao) +
+        (SELECT COUNT(*) FROM dbo.versao_avaliacao) +
+        (SELECT COUNT(*) FROM dbo.resposta_avaliacao) +
+        (SELECT COUNT(*) FROM dbo.transicao_avaliacao) +
+        (SELECT COUNT(*) FROM dbo.resultado_avaliacao) AS business_records,
+    (SELECT COUNT(*) FROM dbo.evento_auditoria) AS audit_records;
 '@
     $reader = $validationCommand.ExecuteReader()
     try {
@@ -152,35 +185,35 @@ SELECT
             throw 'Não foi possível validar o estado da base de produção.'
         }
         $migrationCount = $reader.GetInt32(0)
-        $userCount = $reader.GetInt32(1)
-        $businessRecordCount = $reader.GetInt32(2)
+        $bootstrapPrerequisiteMigrationCount = $reader.GetInt32(1)
+        $catalogMigrationCount = $reader.GetInt32(2)
+        $userCount = $reader.GetInt32(3)
+        $businessRecordCount = $reader.GetInt32(4)
+        $auditRecordCount = $reader.GetInt32(5)
     }
     finally {
         $reader.Dispose()
     }
-    if ($migrationCount -ne 7) {
-        throw 'A base de produção não possui as sete migrations esperadas.'
+    if ($migrationCount -ne $requiredMigrationVersions.Count -or
+        $bootstrapPrerequisiteMigrationCount -ne $requiredMigrationVersions.Count -or
+        $catalogMigrationCount -ne 0) {
+        throw 'O bootstrap exige exatamente V0001 a V0009 aplicadas e V0010 ainda pendente.'
     }
-    if ($userCount -ne 0 -or $businessRecordCount -ne 0) {
-        throw 'O bootstrap do primeiro administrador exige produção sem usuários e sem dados de negócio.'
+    if ($userCount -ne 0 -or $businessRecordCount -ne 0 -or $auditRecordCount -ne 0) {
+        throw 'O bootstrap do primeiro administrador exige produção sem usuários, dados de negócio ou auditoria prévia.'
     }
 
     $catalogCommand = New-SqlCommand -Connection $connection -Transaction $transaction -CommandText @'
 SELECT COUNT(*)
 FROM dbo.papel
 WHERE ativo = 1
-  AND codigo IN (
-    N'ADMINISTRADOR_PLATAFORMA',
-    N'COLABORADOR',
-    N'GESTOR',
-    N'GERENCIA_RH',
-    N'DIRETORIA'
-  );
+  AND codigo = N'ADMINISTRADOR_PLATAFORMA';
 '@
     if ([int]$catalogCommand.ExecuteScalar() -ne $requiredRoles.Count) {
         throw 'O catálogo de papéis necessário ao administrador supremo está incompleto.'
     }
 
+    $passwordHash = New-BcryptHash -Password $InitialPassword
     $userId = [guid]::NewGuid()
     $userCommand = New-SqlCommand -Connection $connection -Transaction $transaction -CommandText @'
 INSERT INTO dbo.usuario (
@@ -222,13 +255,7 @@ INSERT INTO dbo.atribuicao_papel (usuario_id, papel_id, concedido_por_usuario_id
 SELECT @userId, papel_id, NULL
 FROM dbo.papel
 WHERE ativo = 1
-  AND codigo IN (
-    N'ADMINISTRADOR_PLATAFORMA',
-    N'COLABORADOR',
-    N'GESTOR',
-    N'GERENCIA_RH',
-    N'DIRETORIA'
-  );
+  AND codigo = N'ADMINISTRADOR_PLATAFORMA';
 '@
     $roleUserIdParameter = $roleCommand.Parameters.Add('@userId', [System.Data.SqlDbType]::UniqueIdentifier)
     $roleUserIdParameter.Value = $userId

@@ -8,6 +8,8 @@
 
 > Atualização em 2026-08-25: a ADR-0011 definiu as regras de negócio antes pendentes. As estruturas adicionais foram versionadas nas migrations imutáveis `V0005` e `V0007`, posteriormente aplicadas e validadas no banco local dedicado, sem alterar `V0003` ou `V0004`.
 
+> Estado atual em 2026-08-27: a nota acima é histórica. Os bancos canônicos reconciliaram `V0001`–`V0010`, inclusive as extensões posteriores e o catálogo inicial `2024.1`; a `V0011` está em fonte e aguarda aplicação autorizada. Ainda não há ciclos, lotações, vínculos, atribuições ou avaliações. Isso não altera esta ADR nem equivale a aceite de negócio.
+
 ## Contexto
 
 Os módulos de cadastros, ciclos e avaliações precisavam preservar histórico enquanto a regra de negócio ainda não estava definida. A fundação foi criada sem antecipar a regra; a ADR-0011 agora fornece a versão `2024.1` que guiará as migrations e casos de uso posteriores.

@@ -13,13 +13,30 @@ public final class InitialRolePermissionCatalog {
   private static final Map<PlatformRole, Set<PlatformPermission>> PERMISSIONS_BY_ROLE =
       Map.of(
           PlatformRole.ADMINISTRADOR_PLATAFORMA,
-          Set.copyOf(java.util.EnumSet.allOf(PlatformPermission.class)),
+          Set.of(
+              PlatformPermission.USERS_READ,
+              PlatformPermission.USERS_CREATE,
+              PlatformPermission.USERS_UPDATE,
+              PlatformPermission.ACCESS_MANAGE,
+              PlatformPermission.BUSINESS_ACCESS_MANAGE,
+              PlatformPermission.ASSESSMENTS_EVALUATE_LINKED,
+              PlatformPermission.ASSESSMENTS_VIEW_OWN_RESPONSES,
+              PlatformPermission.ASSESSMENTS_VIEW_ALL,
+              PlatformPermission.SELF_ASSESSMENTS_FILL_OWN,
+              PlatformPermission.SELF_ASSESSMENTS_SUBMIT_OWN,
+              PlatformPermission.SELF_ASSESSMENTS_VIEW_OWN,
+              PlatformPermission.MASTER_DATA_MANAGE,
+              PlatformPermission.CYCLES_MANAGE,
+              PlatformPermission.QUESTIONNAIRES_MANAGE,
+              PlatformPermission.MANAGER_ASSIGNMENTS_MANAGE,
+              PlatformPermission.USER_COLLABORATOR_ASSIGNMENTS_MANAGE),
           PlatformRole.GESTOR,
           Set.of(
               PlatformPermission.ASSESSMENTS_EVALUATE_LINKED,
               PlatformPermission.ASSESSMENTS_VIEW_OWN_RESPONSES),
           PlatformRole.GERENCIA_RH,
           Set.of(
+              PlatformPermission.BUSINESS_ACCESS_MANAGE,
               PlatformPermission.ASSESSMENTS_VIEW_ALL,
               PlatformPermission.ASSESSMENTS_PUBLISH,
               PlatformPermission.ASSESSMENTS_REOPEN,
@@ -29,6 +46,7 @@ public final class InitialRolePermissionCatalog {
               PlatformPermission.QUESTIONNAIRES_MANAGE),
           PlatformRole.DIRETORIA,
           Set.of(
+              PlatformPermission.BUSINESS_ACCESS_MANAGE,
               PlatformPermission.ASSESSMENTS_VIEW_ALL,
               PlatformPermission.ASSESSMENTS_PUBLISH,
               PlatformPermission.ASSESSMENTS_REOPEN,

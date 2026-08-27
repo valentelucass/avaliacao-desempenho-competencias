@@ -1,6 +1,6 @@
 # Banco de dados — Avaliação de Desempenho e Competências
 
-Esta pasta contém a fonte versionada do banco SQL Server do projeto. Os nomes canônicos são `AVALIACAO_DEV` para desenvolvimento e `AVALIACAO_PROD` para produção. Ambos usam as migrations `V0001` a `V0008`; a base de produção usa uma identidade SQL de mínimo privilégio definida em [`production/`](production/README.md). Não há colaboradores, vínculos, áreas, filiais, questionários, ciclos, atribuições ou avaliações semeados no alvo de produção.
+Esta pasta contém a fonte versionada do banco SQL Server do projeto. Os nomes canônicos são `AVALIACAO_DEV` para desenvolvimento e `AVALIACAO_PROD` para produção. A fonte contém as migrations `V0001` a `V0011`; o estado operacional registrado em [`../STATES.md`](../STATES.md) informa os dois históricos reconciliados até `V0010`, portanto `V0011` permanece pendente de aplicação autorizada. A migration `V0010` carrega somente o catálogo inicial aprovado; não cria colaboradores, vínculos, ciclos, atribuições ou avaliações. A base de produção usa uma identidade SQL de mínimo privilégio definida em [`production/`](production/README.md).
 
 ## Estrutura
 
@@ -16,7 +16,7 @@ database/
 │   └── preparar-migrations.ps1 # Lista e manifesto UTF-8 sem BOM das migrations
 └── sql/
     ├── bootstrap/            # Criação controlada do banco e infraestrutura de migrations
-    ├── migrations/           # Fonte única do schema, em ordem V0001 a V0008...
+    ├── migrations/           # Fonte única do schema, em ordem V0001 a V0011
     ├── validation/           # Consultas de validação somente leitura e detecção de deriva
     └── manual/               # Scripts manuais que nunca são executados automaticamente
 ```
@@ -31,37 +31,61 @@ database/
    database\executar-database.bat --check-all
    ```
 
-4. Para atualizar os dois alvos sem escrever confirmações, execute sem argumentos:
+4. Executar o runner sem argumentos **falha fechado**: ele não consulta, cria nem altera banco. Use um comando explícito.
+
+5. Para atualizar os dois alvos, execute:
 
    ```bat
-   database\executar-database.bat
+   database\executar-database.bat --apply-all
    ```
 
-   O runner executa `AVALIACAO_DEV` antes de `AVALIACAO_PROD`. Se `config.local.bat` ou `config.production.local.bat` não existir, ele para antes de alterar qualquer alvo. As verificações de propriedade, checksum, ordem de migrations e validação SQL continuam obrigatórias para cada banco.
+   O runner executa `AVALIACAO_DEV` antes de `AVALIACAO_PROD`. Se `config.local.bat` ou `config.production.local.bat` não existir, ele para antes de alterar qualquer alvo. A operação exige a confirmação global e as confirmações individuais dos dois alvos; verificações de propriedade, checksum, ordem de migrations e validação SQL continuam obrigatórias para cada banco.
 
-   O comando explícito `--apply-all` permanece disponível quando for desejada uma confirmação global e uma confirmação individual por banco.
-
-5. Para operar apenas o alvo escolhido pela variável `ADC_DATABASE_CONFIG`, execute primeiro:
+6. Para operar apenas o alvo escolhido pela variável `ADC_DATABASE_CONFIG`, execute primeiro:
 
    ```bat
    database\executar-database.bat --check
    ```
 
-6. Para validar o banco existente, o histórico e todas as consultas estruturais sem alterar nada, execute:
+7. Para validar o banco existente, o histórico e todas as consultas estruturais sem alterar nada, execute:
 
    ```bat
    database\executar-database.bat --validate
    ```
 
-7. Para criar o banco novo ou publicar migrations pendentes e validar a estrutura em um único alvo, execute:
+8. Para publicar migrations pendentes e validar a estrutura em um único alvo já preparado, execute:
 
    ```bat
    database\executar-database.bat --apply
    ```
 
-   O script exige digitar `APLICAR <nome-do-banco-configurado>` antes de fazer qualquer alteração. Para produção, a confirmação é `APLICAR AVALIACAO_PROD`.
+   O script exige digitar `APLICAR <nome-do-banco-configurado>` antes de fazer qualquer alteração. Para produção, a confirmação é `APLICAR AVALIACAO_PROD`. A primeira criação de `AVALIACAO_PROD` deve seguir a sequência de bootstrap abaixo; `--apply` a bloqueia antes de criar a base, para não tentar `V0010` sem administrador supremo.
 
-No banco local autorizado, `V0001`–`V0007` estão reconciliadas; a `V0008` de exclusão lógica de contas permanece pendente até aplicação autorizada. Se outro alvo reportar migration pendente, checksum divergente ou estrutura incompatível, não edite migration aplicada nem use esse resultado para publicar sem confirmar o alvo e receber autorização explícita.
+Se um alvo reportar migration pendente, checksum divergente ou estrutura incompatível, não edite migration aplicada nem use esse resultado para publicar sem confirmar o alvo e receber autorização explícita.
+
+## Bootstrap explícito de uma `AVALIACAO_PROD` nova
+
+`V0010` registra autoria do catálogo inicial e, por isso, exige uma conta ativa com `administrador_supremo = 1`. Para evitar uma base parcialmente aplicada, a primeira criação de produção deve usar exatamente esta sequência, em console administrativo autorizado e sem reutilizar senhas, arquivos de configuração ou dados de outro ambiente:
+
+1. Aponte `ADC_DATABASE_CONFIG` para `database\config.production.local.bat` e execute `database\executar-database.bat --check` para conferir o alvo inexistente, sem escrita.
+2. Execute `database\executar-database.bat --apply-bootstrap-prerequisites` e digite `PREPARAR BOOTSTRAP AVALIACAO_PROD V0001-V0009`. Esse comando cria somente a base nova, aplica `V0001` a `V0009` e valida a estrutura até essa versão. Ele não aplica `V0010`.
+3. No console seguro da VM, crie o primeiro administrador supremo com a rotina transacional abaixo. A senha é lida como `SecureString`; não a coloque em argumentos, arquivos, variáveis de ambiente persistentes, histórico, logs ou repositório.
+
+   ```powershell
+   $senhaInicial = Read-Host 'Senha inicial' -AsSecureString
+   .\database\scripts\bootstrap-primeiro-administrador-producao.ps1 `
+     -Login 'login-autorizado@dominio' `
+     -DisplayName 'Nome autorizado' `
+     -InitialPassword $senhaInicial `
+     -ConfirmProductionBootstrap
+   Remove-Variable senhaInicial
+   ```
+
+   A rotina aceita somente `AVALIACAO_PROD` com exatamente `V0001` a `V0009`, sem usuários, dados de negócio ou auditoria anterior, e com `V0010` pendente. Ela cria uma conta ativa, protegida e marcada com `administrador_supremo = 1`, atribui apenas o perfil vigente `ADMINISTRADOR_PLATAFORMA`, grava a credencial BCrypt com troca obrigatória no primeiro acesso e audita a operação na mesma transação. Ela não concede papéis legados nem imprime senha ou hash.
+
+4. Execute `database\executar-database.bat --apply`, digite `APLICAR AVALIACAO_PROD` e, após concluir `V0010` e as migrations posteriores pendentes, execute `database\executar-database.bat --validate`.
+
+Cada passo exige alvo, impacto e autorização explícitos. A criação da segunda conta suprema e sua aprovação independente continuam obrigatórias antes de uso operacional.
 
 Se o `--check` indicar fundação `PARCIAL`, o `--apply` é bloqueado. A recuperação só é permitida para o prefixo vazio e exato da `V0001`, exige uma confirmação diferente e recria a fundação na mesma transação:
 

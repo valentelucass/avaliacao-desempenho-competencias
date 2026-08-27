@@ -51,11 +51,21 @@ class AssessmentAuthorizationPolicyTests {
     AssessmentAccessContext rh =
         new AssessmentAccessContext(
             UUID.randomUUID(),
-            Set.of(AssessmentAuthorizationPolicy.PUBLISH, AssessmentAuthorizationPolicy.REOPEN));
+            Set.of(AssessmentAuthorizationPolicy.PUBLISH, AssessmentAuthorizationPolicy.REOPEN),
+            Set.of("GERENCIA_RH"));
 
     assertThat(policy.canPublish(rh, AssessmentType.AUTOAVALIACAO)).isFalse();
     assertThat(policy.canReopen(rh, AssessmentType.AUTOAVALIACAO)).isFalse();
     assertThat(policy.canPublish(rh, AssessmentType.GESTOR)).isTrue();
     assertThat(policy.canReopen(rh, AssessmentType.GESTOR)).isTrue();
+
+    AssessmentAccessContext technicalAdministrator =
+        new AssessmentAccessContext(
+            UUID.randomUUID(),
+            Set.of(AssessmentAuthorizationPolicy.PUBLISH, AssessmentAuthorizationPolicy.REOPEN),
+            Set.of("ADMINISTRADOR_PLATAFORMA", "GERENCIA_RH"));
+
+    assertThat(policy.canPublish(technicalAdministrator, AssessmentType.GESTOR)).isFalse();
+    assertThat(policy.canReopen(technicalAdministrator, AssessmentType.GESTOR)).isFalse();
   }
 }

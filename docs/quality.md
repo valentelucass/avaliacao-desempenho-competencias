@@ -18,7 +18,7 @@ O comando é um gate local. Ele não cria usuários, dados de negócio, migratio
 | Front-end     | Prettier, Oxlint, Vitest, teste de acessibilidade com axe e build Vite/TypeScript.                                                                                                                   |
 | Dependências | `npm audit --audit-level=high`. Essa etapa consulta o registro npm e requer conectividade externa.                                                                                                 |
 
-Use o comando sem `-SkipDatabase` no banco local dedicado, que está reconciliado de `V0001` a `V0007`. Use `-SkipDatabase` somente quando o alvo SQL Server não estiver disponível para o gate; essa opção ainda valida os arquivos de migration, mas não substitui a execução completa contra SQL Server antes da liberação.
+Use o comando sem `-SkipDatabase` no banco local dedicado. A evidência de 2026-08-26 registra `V0001`–`V0010` reconciliadas em `AVALIACAO_DEV` e `AVALIACAO_PROD`; a `V0011` da fonte aguarda aplicação e validação autorizadas. Use `-SkipDatabase` somente quando o alvo SQL Server não estiver disponível para o gate; essa opção ainda valida os arquivos de migration, mas não substitui a execução completa contra SQL Server antes da liberação.
 
 ## Acessibilidade
 

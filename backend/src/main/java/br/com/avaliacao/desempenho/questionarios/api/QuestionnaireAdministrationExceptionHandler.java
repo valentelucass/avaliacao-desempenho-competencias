@@ -37,7 +37,7 @@ public class QuestionnaireAdministrationExceptionHandler {
           problem(
               request,
               HttpStatus.SERVICE_UNAVAILABLE,
-              "RESOURCE_UNAVAILABLE",
+              "SERVICE_UNAVAILABLE",
               "Recurso indisponível",
               "O recurso administrativo ainda não está disponível.");
     };

@@ -199,6 +199,66 @@ describe('HttpApiClient', () => {
     )
   })
 
+  it('recupera a sessão e preserva o CSV quando a exportação recebe 401', async () => {
+    const csv = 'metric,value\r\nFINAL_SCORE_AVERAGE,104.8\r\n'
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ token: 'csrf-test-token' }))
+      .mockResolvedValueOnce(new Response(null, { status: 401 }))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
+      .mockResolvedValueOnce(jsonResponse({ id: 'user-1', displayName: 'Pessoa' }))
+      .mockResolvedValueOnce(
+        new Response(csv, {
+          headers: {
+            'Content-Disposition': 'attachment; filename="indicadores.csv"',
+            'Content-Type': 'text/csv; charset=utf-8',
+          },
+        }),
+      )
+    vi.stubGlobal('fetch', fetchMock)
+
+    const api = new HttpApiClient()
+    const result = await api.exportIndicators({
+      cycleId: 'cycle-2024',
+      metric: 'FINAL_SCORE_AVERAGE',
+    })
+
+    expect(fetchMock).toHaveBeenCalledTimes(5)
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      3,
+      '/api/v1/auth/sessions/refresh',
+      expect.objectContaining({ credentials: 'include', method: 'POST' }),
+    )
+    expect(fetchMock).toHaveBeenNthCalledWith(5, '/api/v1/indicators/exports', expect.anything())
+    expect(result).toMatchObject({ filename: 'indicadores.csv' })
+    expect('content' in result && (await result.content.text())).toBe(csv)
+  })
+
+  it('renova o CSRF e preserva a resposta JSON quando a exportação recebe 403', async () => {
+    const response = { availability: 'DADOS_INSUFICIENTES', policyVersion: '2024.1' }
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ token: 'csrf-expirado' }))
+      .mockResolvedValueOnce(new Response(null, { status: 403 }))
+      .mockResolvedValueOnce(jsonResponse({ token: 'csrf-atualizado' }))
+      .mockResolvedValueOnce(jsonResponse(response))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const api = new HttpApiClient()
+    await expect(
+      api.exportIndicators({ cycleId: 'cycle-2024', metric: 'FINAL_SCORE_AVERAGE' }),
+    ).resolves.toEqual(response)
+
+    expect(fetchMock).toHaveBeenCalledTimes(4)
+    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/v1/indicators/exports', expect.anything())
+    expect(fetchMock).toHaveBeenNthCalledWith(4, '/api/v1/indicators/exports', expect.anything())
+
+    const firstHeaders = fetchMock.mock.calls[1]?.[1]?.headers as Headers
+    const secondHeaders = fetchMock.mock.calls[3]?.[1]?.headers as Headers
+    expect(firstHeaders.get('X-CSRF-TOKEN')).toBe('csrf-expirado')
+    expect(secondHeaders.get('X-CSRF-TOKEN')).toBe('csrf-atualizado')
+  })
+
   it('troca a senha com CSRF e credenciais por cookie', async () => {
     const fetchMock = vi
       .fn()
