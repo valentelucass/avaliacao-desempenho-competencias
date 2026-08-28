@@ -65,7 +65,11 @@ if /i "%~1"=="--recover-empty-bootstrap" (
 goto :ARGUMENTOS_INVALIDOS
 
 :ARGUMENTOS_OK
-if not defined MODO goto :ARGUMENTOS_AUSENTES
+if not defined MODO (
+  set "MODO=APPLY_ALL"
+  set "APLICACAO_SEM_ARGUMENTO=1"
+  echo [INFO] Nenhum argumento informado: sera executada a atualizacao AVALIACAO_DEV ^> AVALIACAO_PROD.
+)
 
 if /i "%MODO%"=="CHECK_ALL" goto :VERIFICAR_TODOS
 if /i "%MODO%"=="APPLY_ALL" goto :APLICAR_TODOS
@@ -137,6 +141,8 @@ if /i "%MODO%"=="RECOVER_EMPTY_BOOTSTRAP" goto :RECUPERAR_BOOTSTRAP_VAZIO
 
 if /i "%MODO%"=="APPLY_BOOTSTRAP_PREREQUISITES" (
   call :CONFIRMAR_PRE_REQUISITOS_BOOTSTRAP
+) else if /i "%MODO%"=="APPLY" if /i "%ADC_DATABASE_APPLY_ALL_CONFIRMED%"=="1" (
+  echo [INFO] Confirmacao global ja registrada para %ADC_DB_NAME%.
 ) else (
   call :CONFIRMAR_APLICACAO
 )
@@ -288,10 +294,12 @@ if errorlevel 1 (
   set "EXIT_CODE=1"
   goto :FIM
 )
-call :CONFIRMAR_APLICACAO_TODOS
-if errorlevel 1 (
-  set "EXIT_CODE=1"
-  goto :FIM
+if not defined APLICACAO_SEM_ARGUMENTO (
+  call :CONFIRMAR_APLICACAO_TODOS
+  if errorlevel 1 (
+    set "EXIT_CODE=1"
+    goto :FIM
+  )
 )
 
 echo [INFO] Aplicando migrations primeiro em AVALIACAO_DEV e depois em AVALIACAO_PROD.
@@ -692,10 +700,13 @@ if not exist "%TARGET_CONFIG%" (
   exit /b 1
 )
 set "SAVED_ADC_DATABASE_CONFIG=%ADC_DATABASE_CONFIG%"
+set "SAVED_ADC_DATABASE_APPLY_ALL_CONFIRMED=%ADC_DATABASE_APPLY_ALL_CONFIRMED%"
 set "ADC_DATABASE_CONFIG=%TARGET_CONFIG%"
+if /i "%TARGET_MODE%"=="--apply" set "ADC_DATABASE_APPLY_ALL_CONFIRMED=1"
 call "%~f0" %TARGET_MODE%
 set "TARGET_EXIT_CODE=%ERRORLEVEL%"
 set "ADC_DATABASE_CONFIG=%SAVED_ADC_DATABASE_CONFIG%"
+set "ADC_DATABASE_APPLY_ALL_CONFIRMED=%SAVED_ADC_DATABASE_APPLY_ALL_CONFIRMED%"
 exit /b %TARGET_EXIT_CODE%
 
 :VALIDAR_ALVOS_CANONICOS
@@ -907,22 +918,18 @@ echo [ERRO] Argumento invalido. Use --help para ver os comandos aceitos.
 set "EXIT_CODE=1"
 goto :FIM
 
-:ARGUMENTOS_AUSENTES
-echo [ERRO] Nenhuma operacao foi solicitada. O runner falha fechado sem argumento.
-echo Use --check para leitura ou --help para consultar os comandos confirmados.
-set "EXIT_CODE=1"
-goto :FIM
-
 :AJUDA
 echo.
 echo Uso:
 echo   executar-database.bat
-echo      Falha fechado sem consultar, criar ou alterar qualquer banco.
+echo      Atualiza primeiro AVALIACAO_DEV e depois AVALIACAO_PROD, usando somente
+echo      os arquivos locais config.local.bat e config.production.local.bat.
+echo      Executa sem confirmacao interativa; use somente quando os dois alvos forem autorizados.
 echo.
 echo   executar-database.bat --apply-all
 echo      Atualiza primeiro AVALIACAO_DEV e depois AVALIACAO_PROD, usando somente
 echo      os arquivos locais config.local.bat e config.production.local.bat.
-echo      Exige uma confirmacao global e as confirmacoes individuais dos dois bancos.
+echo      Exige uma unica confirmacao global antes de qualquer alteracao.
 echo.
 echo   executar-database.bat --apply-bootstrap-prerequisites
 echo      Prepara somente AVALIACAO_PROD com V0001 a V0009 e para antes da V0010.

@@ -31,15 +31,15 @@ database/
    database\executar-database.bat --check-all
    ```
 
-4. Executar o runner sem argumentos **falha fechado**: ele não consulta, cria nem altera banco. Use um comando explícito.
+4. Executar o runner sem argumentos inicia automaticamente a atualização canônica, sempre em ordem `AVALIACAO_DEV` e depois `AVALIACAO_PROD`, sem confirmação interativa. Use-o somente quando a atualização dos dois alvos já estiver autorizada. Os dois arquivos locais de configuração continuam obrigatórios.
 
-5. Para atualizar os dois alvos, execute:
+5. Para atualizar os dois alvos de forma explícita, o comando equivalente é:
 
    ```bat
    database\executar-database.bat --apply-all
    ```
 
-   O runner executa `AVALIACAO_DEV` antes de `AVALIACAO_PROD`. Se `config.local.bat` ou `config.production.local.bat` não existir, ele para antes de alterar qualquer alvo. A operação exige a confirmação global e as confirmações individuais dos dois alvos; verificações de propriedade, checksum, ordem de migrations e validação SQL continuam obrigatórias para cada banco.
+   O runner executa `AVALIACAO_DEV` antes de `AVALIACAO_PROD`. Se `config.local.bat` ou `config.production.local.bat` não existir, ele para antes de alterar qualquer alvo. O comando explícito exige uma confirmação global que identifica os dois alvos; verificações de propriedade, checksum, ordem de migrations e validação SQL continuam obrigatórias para cada banco.
 
 6. Para operar apenas o alvo escolhido pela variável `ADC_DATABASE_CONFIG`, execute primeiro:
 
