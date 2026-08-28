@@ -64,6 +64,28 @@ describe('RelationshipAdministrationPanel', () => {
     expect(await screen.findByText('Vínculo gestor-colaborador criado.')).toBeInTheDocument()
   })
 
+  it('mantém os rótulos de cada vínculo para a apresentação móvel', async () => {
+    const api = createApi()
+
+    render(
+      <RelationshipAdministrationPanel
+        api={api}
+        permissions={['VINCULOS_GESTOR_COLABORADOR.GERIR']}
+        onSessionExpired={vi.fn()}
+      />,
+    )
+
+    const cells = (await screen.findByRole('button', { name: 'Encerrar' }))
+      .closest('tr')
+      ?.querySelectorAll('td')
+
+    expect(cells).toHaveLength(4)
+    expect(cells?.[0]).toHaveAttribute('data-label', 'Gestor')
+    expect(cells?.[1]).toHaveAttribute('data-label', 'Colaborador')
+    expect(cells?.[2]).toHaveAttribute('data-label', 'Início')
+    expect(cells?.[3]).toHaveAttribute('data-label', 'Ação')
+  })
+
   it('exige confirmação com data para encerrar um vínculo e preserva o histórico', async () => {
     const api = createApi()
 

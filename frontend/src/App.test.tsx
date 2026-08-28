@@ -334,6 +334,27 @@ describe('App', () => {
     })
   })
 
+  it('não duplica a criação de avaliação no menu lateral', async () => {
+    const api = createApi({
+      currentUser: vi.fn().mockResolvedValue({
+        id: 'manager-1',
+        displayName: 'Gestor autorizado',
+        permissions: ['AVALIACOES.AVALIAR_VINCULADOS'],
+      }),
+    })
+
+    renderWithExistingSession(api, '/avaliacoes?jornada=EQUIPE')
+
+    await screen.findByRole('heading', { name: 'Avaliações autorizadas' })
+    fireEvent.click(screen.getByRole('button', { name: 'Abrir menu' }))
+
+    expect(screen.getByRole('button', { name: 'Minhas avaliações' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
+    expect(screen.queryByRole('button', { name: 'Nova avaliação' })).not.toBeInTheDocument()
+  })
+
   it('permite a RH publicar uma avaliação enviada pelo gestor', async () => {
     const submittedAssessment: AssessmentDetail = {
       ...sampleManagerAssessment(),
@@ -633,7 +654,7 @@ describe('App', () => {
 
     expect(await screen.findByRole('heading', { name: 'Contas locais' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Abrir menu' }))
-    expect(screen.getByRole('button', { name: 'Administração' })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: 'Contas e acessos' })).toHaveAttribute(
       'aria-current',
       'page',
     )
@@ -669,7 +690,9 @@ describe('App', () => {
 
     expect(await screen.findByRole('heading', { name: 'Ciclos de avaliação' })).toBeInTheDocument()
     expect(window.location.pathname).toBe('/administracao/ciclos')
-    expect(screen.getByRole('button', { name: 'Ciclos' })).toHaveAttribute('aria-current', 'page')
+    expect(
+      screen.queryByRole('navigation', { name: 'Áreas administrativas' }),
+    ).not.toBeInTheDocument()
     await waitFor(() => expect(api.listAllCycles).toHaveBeenCalledTimes(1))
   })
 
@@ -687,21 +710,26 @@ describe('App', () => {
     renderWithExistingSession(api, '/administracao/ciclos')
 
     await screen.findByRole('heading', { name: 'Ciclos de avaliação' })
-    fireEvent.click(screen.getByRole('button', { name: 'Questionários' }))
+    expect(
+      screen.queryByRole('navigation', { name: 'Áreas administrativas' }),
+    ).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Abrir menu' }))
+    const drawer = await screen.findByRole('dialog', { name: 'Menu de módulos' })
+    expect(within(drawer).getByText('Administração')).toBeInTheDocument()
+    fireEvent.click(within(drawer).getByRole('button', { name: 'Questionários' }))
 
     expect(await screen.findByRole('heading', { name: 'Questionários' })).toBeInTheDocument()
     expect(window.location.pathname).toBe('/administracao/questionarios')
-    expect(screen.getByRole('button', { name: 'Questionários' })).toHaveAttribute(
-      'aria-current',
-      'page',
-    )
-    expect(screen.queryByRole('button', { name: 'Contas e acessos' })).not.toBeInTheDocument()
-
     fireEvent.click(screen.getByRole('button', { name: 'Abrir menu' }))
-    expect(screen.getByRole('button', { name: 'Administração' })).toHaveAttribute(
+    const reopenedDrawer = await screen.findByRole('dialog', { name: 'Menu de módulos' })
+    expect(within(reopenedDrawer).getByRole('button', { name: 'Questionários' })).toHaveAttribute(
       'aria-current',
       'page',
     )
+    expect(
+      within(reopenedDrawer).queryByRole('button', { name: 'Contas e acessos' }),
+    ).not.toBeInTheDocument()
   })
 
   it('fecha o drawer com Escape e devolve o foco ao botão que o abriu', async () => {
@@ -725,8 +753,9 @@ describe('App', () => {
 
     fireEvent.keyDown(document, { key: 'Escape' })
 
-    await waitFor(() => expect(menuButton).toHaveFocus())
+    expect(menuButton).toHaveFocus()
     expect(menuButton).toHaveAttribute('aria-expanded', 'false')
+    expect(drawer).toHaveAttribute('aria-hidden', 'true')
   })
 
   it('bloqueia a rolagem global enquanto o drawer está aberto', async () => {

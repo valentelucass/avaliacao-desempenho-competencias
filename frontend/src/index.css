@@ -3,11 +3,14 @@
   --primary-strong: #17386f;
   --primary-soft: #e9f0fb;
   --on-primary: #ffffff;
-  --page-bg: #f3f7fb;
+  --page-bg: #edf3f8;
   --surface: #ffffff;
-  --surface-muted: #f8fafc;
-  --border: #d9e4f0;
-  --border-strong: #b9c9db;
+  --surface-muted: #f6f8fb;
+  --surface-subtle: #f0f5fa;
+  --table-header: #edf3f8;
+  --table-stripe: #f9fbfd;
+  --border: #cfdae8;
+  --border-strong: #aec0d4;
   --text: #334155;
   --text-h: #1e293b;
   --muted: #64748b;
@@ -23,8 +26,8 @@
   --error-text: #b91c1c;
   --error-bg: #fff1f2;
   --on-danger: #ffffff;
-  --shadow-sm: 0 1px 2px rgb(15 23 42 / 4%);
-  --shadow-md: 0 10px 24px rgb(15 23 42 / 7%);
+  --shadow-sm: 0 1px 2px rgb(15 23 42 / 5%), 0 5px 12px rgb(15 23 42 / 3%);
+  --shadow-md: 0 12px 28px rgb(15 23 42 / 8%);
   --sans: 'Inter', 'Segoe UI', Arial, sans-serif;
 
   background: var(--page-bg);
@@ -61,8 +64,11 @@ textarea {
   --page-bg: #0b1220;
   --surface: #111b2d;
   --surface-muted: #17243a;
-  --border: #293a54;
-  --border-strong: #48607e;
+  --surface-subtle: #1b2a41;
+  --table-header: #1c2b43;
+  --table-stripe: #142137;
+  --border: #31435f;
+  --border-strong: #536b89;
   --text: #d2dceb;
   --text-h: #f1f5f9;
   --muted: #aab9ce;

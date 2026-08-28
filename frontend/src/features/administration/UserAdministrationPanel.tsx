@@ -682,7 +682,6 @@ export function UserAdministrationPanel({
           >
             <div className="section-heading">
               <div>
-                <p className="eyebrow">Conta selecionada</p>
                 <h3 id="selected-user-title">Detalhes de {selectedUser.displayName}</h3>
               </div>
               <div className="account-dialog__header-actions">
@@ -723,181 +722,189 @@ export function UserAdministrationPanel({
             </div>
 
             {isSupremeAdministrator && !selectedUserIsCurrent && selectedUserIsMutable ? (
-              <form
-                className="stack-form user-password-reset-form"
-                onSubmit={resetSelectedUserPassword}
-                noValidate
-                aria-busy={isResettingPassword}
-              >
-                <h4>Redefinir senha</h4>
-                <p className="muted">
-                  Defina uma senha temporária para recuperação. A conta será obrigada a trocá-la no
-                  próximo acesso e todas as sessões atuais serão encerradas.
-                </p>
-                {passwordResetError ? (
-                  <FeedbackMessage kind="error">{passwordResetError}</FeedbackMessage>
-                ) : null}
-                <div className="field">
-                  <label htmlFor={temporaryPasswordId}>Senha temporária</label>
-                  <input
-                    id={temporaryPasswordId}
-                    name="temporaryPassword"
-                    type="password"
-                    value={temporaryPassword}
-                    onChange={(event) => setTemporaryPassword(event.target.value)}
-                    autoComplete="new-password"
-                    disabled={isResettingPassword}
-                    minLength={12}
-                    maxLength={200}
-                    required
-                  />
-                  <p className="field-hint">
-                    Mínimo de 12 caracteres. Ela não será exibida novamente após a redefinição.
+              <details className="account-password-reset">
+                <summary>Redefinir senha</summary>
+                <form
+                  className="stack-form user-password-reset-form"
+                  onSubmit={resetSelectedUserPassword}
+                  noValidate
+                  aria-busy={isResettingPassword}
+                >
+                  <p className="muted">
+                    Defina uma senha temporária para recuperação. A conta será obrigada a trocá-la
+                    no próximo acesso e todas as sessões atuais serão encerradas.
                   </p>
-                </div>
-                <div className="action-row">
-                  <button
-                    className="button button--success"
-                    type="submit"
-                    disabled={isResettingPassword}
-                  >
-                    <KeyRound aria-hidden="true" size={17} strokeWidth={2} />
-                    {isResettingPassword ? 'Redefinindo…' : 'Definir senha temporária'}
-                  </button>
-                </div>
-              </form>
-            ) : null}
-
-            {canUpdateUsers && selectedUserIsMutable ? (
-              <form
-                className="stack-form user-account-edit-form"
-                onSubmit={updateUser}
-                noValidate
-                aria-busy={isUpdating}
-              >
-                <h4>Editar conta</h4>
-                {updateError ? <FeedbackMessage kind="error">{updateError}</FeedbackMessage> : null}
-                <div className="field">
-                  <label htmlFor={editDisplayNameId}>Nome</label>
-                  <input
-                    id={editDisplayNameId}
-                    name="editDisplayName"
-                    value={editDisplayName}
-                    onChange={(event) => setEditDisplayName(event.target.value)}
-                    disabled={isUpdating}
-                    maxLength={200}
-                    required
-                  />
-                </div>
-                <div className="field">
-                  <label htmlFor={editStatusId}>Situação</label>
-                  <select
-                    id={editStatusId}
-                    name="editStatus"
-                    value={editStatus}
-                    onChange={(event) => setEditStatus(event.target.value as AccountStatus)}
-                    disabled={isUpdating}
-                  >
-                    <option value="ACTIVE">Ativa</option>
-                    <option value="BLOCKED">Bloqueada</option>
-                    <option value="DISABLED">Desativada</option>
-                  </select>
-                </div>
-                <div className="action-row">
-                  <button className="button button--success" type="submit" disabled={isUpdating}>
-                    <Save aria-hidden="true" size={17} strokeWidth={2} />
-                    {isUpdating ? 'Salvando…' : 'Salvar dados da conta'}
-                  </button>
-                  {!selectedUser.protectedFromNormalFlow &&
-                  !selectedUser.logicallyDeleted &&
-                  selectedUser.id !== currentUserId ? (
-                    <button
-                      className="button button--danger"
-                      type="button"
-                      onClick={() => void logicallyDeleteUser(selectedUser)}
-                      disabled={isUpdating || isDeleting}
-                    >
-                      <Trash2 aria-hidden="true" size={17} strokeWidth={2} />
-                      {isDeleting ? 'Excluindo…' : 'Excluir logicamente'}
-                    </button>
+                  {passwordResetError ? (
+                    <FeedbackMessage kind="error">{passwordResetError}</FeedbackMessage>
                   ) : null}
-                </div>
-              </form>
+                  <div className="field">
+                    <label htmlFor={temporaryPasswordId}>Senha temporária</label>
+                    <div className="account-password-reset__input-row">
+                      <input
+                        id={temporaryPasswordId}
+                        name="temporaryPassword"
+                        type="password"
+                        value={temporaryPassword}
+                        onChange={(event) => setTemporaryPassword(event.target.value)}
+                        autoComplete="new-password"
+                        disabled={isResettingPassword}
+                        minLength={12}
+                        maxLength={200}
+                        required
+                      />
+                      <button
+                        className="button button--success"
+                        type="submit"
+                        disabled={isResettingPassword}
+                      >
+                        <KeyRound aria-hidden="true" size={17} strokeWidth={2} />
+                        {isResettingPassword ? 'Redefinindo…' : 'Definir senha temporária'}
+                      </button>
+                    </div>
+                    <p className="field-hint">
+                      Mínimo de 12 caracteres. Ela não será exibida novamente após a redefinição.
+                    </p>
+                  </div>
+                </form>
+              </details>
             ) : null}
 
-            {selectedUser.protectedFromNormalFlow ? (
-              <FeedbackMessage kind="warning">
-                Esta é uma conta administradora suprema protegida. Ela não pode ser alterada,
-                desativada, excluída logicamente ou ter acessos substituídos pelo fluxo normal.
-              </FeedbackMessage>
-            ) : null}
+            <div className="account-dialog__management">
+              {canUpdateUsers && selectedUserIsMutable ? (
+                <form
+                  className="stack-form user-account-edit-form"
+                  onSubmit={updateUser}
+                  noValidate
+                  aria-busy={isUpdating}
+                >
+                  <h4>Editar conta</h4>
+                  {updateError ? (
+                    <FeedbackMessage kind="error">{updateError}</FeedbackMessage>
+                  ) : null}
+                  <div className="field">
+                    <label htmlFor={editDisplayNameId}>Nome</label>
+                    <input
+                      id={editDisplayNameId}
+                      name="editDisplayName"
+                      value={editDisplayName}
+                      onChange={(event) => setEditDisplayName(event.target.value)}
+                      disabled={isUpdating}
+                      maxLength={200}
+                      required
+                    />
+                  </div>
+                  <div className="field">
+                    <label htmlFor={editStatusId}>Situação</label>
+                    <select
+                      id={editStatusId}
+                      name="editStatus"
+                      value={editStatus}
+                      onChange={(event) => setEditStatus(event.target.value as AccountStatus)}
+                      disabled={isUpdating}
+                    >
+                      <option value="ACTIVE">Ativa</option>
+                      <option value="BLOCKED">Bloqueada</option>
+                      <option value="DISABLED">Desativada</option>
+                    </select>
+                  </div>
+                  <div className="action-row">
+                    <button className="button button--success" type="submit" disabled={isUpdating}>
+                      <Save aria-hidden="true" size={17} strokeWidth={2} />
+                      {isUpdating ? 'Salvando…' : 'Salvar dados da conta'}
+                    </button>
+                    {!selectedUser.protectedFromNormalFlow &&
+                    !selectedUser.logicallyDeleted &&
+                    selectedUser.id !== currentUserId ? (
+                      <button
+                        className="button button--danger"
+                        type="button"
+                        onClick={() => void logicallyDeleteUser(selectedUser)}
+                        disabled={isUpdating || isDeleting}
+                      >
+                        <Trash2 aria-hidden="true" size={17} strokeWidth={2} />
+                        {isDeleting ? 'Excluindo…' : 'Excluir logicamente'}
+                      </button>
+                    ) : null}
+                  </div>
+                </form>
+              ) : null}
 
-            {selectedUserIsCurrent ? (
-              <FeedbackMessage kind="status">
-                A configuração de acesso da sua própria conta não pode ser exibida para edição nesta
-                tela.
-              </FeedbackMessage>
-            ) : null}
+              {selectedUser.protectedFromNormalFlow ? (
+                <FeedbackMessage kind="warning">
+                  Esta é uma conta administradora suprema protegida. Ela não pode ser alterada,
+                  desativada, excluída logicamente ou ter acessos substituídos pelo fluxo normal.
+                </FeedbackMessage>
+              ) : null}
 
-            {!selectedUserIsCurrent &&
-            selectedUserIsMutable &&
-            canManageAccess &&
-            accountProfiles.length > 0 ? (
-              <form
-                className="stack-form"
-                onSubmit={saveAccess}
-                noValidate
-                aria-busy={isSavingAccess}
-              >
-                <h4>Perfil de acesso</h4>
-                <p className="muted">
-                  Escolha exatamente um perfil. Ao salvar, os papéis anteriores e exceções
-                  individuais desta conta serão removidos; o servidor revalida o operador, o alvo e
-                  todas as regras.
+              {selectedUserIsCurrent ? (
+                <FeedbackMessage kind="status">
+                  A configuração de acesso da sua própria conta não pode ser exibida para edição
+                  nesta tela.
+                </FeedbackMessage>
+              ) : null}
+
+              {!selectedUserIsCurrent &&
+              selectedUserIsMutable &&
+              canManageAccess &&
+              accountProfiles.length > 0 ? (
+                <form
+                  className="stack-form user-access-profile-form"
+                  onSubmit={saveAccess}
+                  noValidate
+                  aria-busy={isSavingAccess}
+                >
+                  <h4>Perfil de acesso</h4>
+                  <p className="muted">
+                    Escolha exatamente um perfil. Ao salvar, os papéis anteriores e exceções
+                    individuais desta conta serão removidos; o servidor revalida o operador, o alvo
+                    e todas as regras.
+                  </p>
+                  {accessError ? (
+                    <FeedbackMessage kind="error">{accessError}</FeedbackMessage>
+                  ) : null}
+
+                  <fieldset disabled={isSavingAccess}>
+                    <legend className="visually-hidden">Perfil de acesso</legend>
+                    <label htmlFor={accessProfileId}>Perfil de acesso</label>
+                    <select
+                      id={accessProfileId}
+                      name="accessProfile"
+                      value={profileForRoles(draftRoles).value}
+                      onChange={(event) =>
+                        selectAccessProfile(event.target.value as InitialAccountProfile)
+                      }
+                    >
+                      {accountProfiles.map((profile) => (
+                        <option key={profile.value} value={profile.value}>
+                          {profile.label}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="field-hint">{profileForRoles(draftRoles).hint}</p>
+                  </fieldset>
+
+                  <div className="action-row">
+                    <button
+                      className="button button--success"
+                      type="submit"
+                      disabled={isSavingAccess}
+                    >
+                      <ShieldCheck aria-hidden="true" size={17} strokeWidth={2} />
+                      {isSavingAccess ? 'Salvando acessos…' : 'Salvar acessos'}
+                    </button>
+                  </div>
+                </form>
+              ) : null}
+
+              {!selectedUserIsCurrent &&
+              selectedUserIsMutable &&
+              (!canManageAccess || accountProfiles.length === 0) ? (
+                <p className="field-hint">
+                  Sua conta pode consultar esta configuração, mas não possui autorização integral
+                  para alterar perfis.
                 </p>
-                {accessError ? <FeedbackMessage kind="error">{accessError}</FeedbackMessage> : null}
-
-                <fieldset disabled={isSavingAccess}>
-                  <legend>Perfil</legend>
-                  <label htmlFor={accessProfileId}>Perfil de acesso</label>
-                  <select
-                    id={accessProfileId}
-                    name="accessProfile"
-                    value={profileForRoles(draftRoles).value}
-                    onChange={(event) =>
-                      selectAccessProfile(event.target.value as InitialAccountProfile)
-                    }
-                  >
-                    {accountProfiles.map((profile) => (
-                      <option key={profile.value} value={profile.value}>
-                        {profile.label}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="field-hint">{profileForRoles(draftRoles).hint}</p>
-                </fieldset>
-
-                <div className="action-row">
-                  <button
-                    className="button button--success"
-                    type="submit"
-                    disabled={isSavingAccess}
-                  >
-                    <ShieldCheck aria-hidden="true" size={17} strokeWidth={2} />
-                    {isSavingAccess ? 'Salvando acessos…' : 'Salvar acessos'}
-                  </button>
-                </div>
-              </form>
-            ) : null}
-
-            {!selectedUserIsCurrent &&
-            selectedUserIsMutable &&
-            (!canManageAccess || accountProfiles.length === 0) ? (
-              <p className="field-hint">
-                Sua conta pode consultar esta configuração, mas não possui autorização integral para
-                alterar perfis.
-              </p>
-            ) : null}
+              ) : null}
+            </div>
           </section>
         </div>
       ) : null}

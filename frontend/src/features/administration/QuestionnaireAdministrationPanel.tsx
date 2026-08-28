@@ -254,7 +254,7 @@ export function QuestionnaireAdministrationPanel({
             ) : null}
             {!isLoadingVersions && !loadError && versions.length > 0 ? (
               <div className="administration-users">
-                <table>
+                <table className="questionnaire-versions__table">
                   <caption className="visually-hidden">
                     Versões de questionário aprovadas e suas configurações disponíveis
                   </caption>
@@ -276,9 +276,13 @@ export function QuestionnaireAdministrationPanel({
                           </span>
                         </td>
                         <td data-label="Versão">v{version.versionNumber}</td>
-                        <td data-label="Título">{version.title}</td>
+                        <td data-label="Título">
+                          <span className="questionnaire-versions__value">{version.title}</span>
+                        </td>
                         <td data-label="Configuração aprovada">
-                          {formatConfigurationOptions(version)}
+                          <span className="questionnaire-versions__value">
+                            {formatConfigurationOptions(version)}
+                          </span>
                         </td>
                       </tr>
                     ))}

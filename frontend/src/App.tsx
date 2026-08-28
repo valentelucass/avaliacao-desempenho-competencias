@@ -1,13 +1,17 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import {
   BarChart3,
+  BookOpenCheck,
+  BriefcaseBusiness,
   ClipboardCheck,
   LayoutDashboard,
+  Link2,
   LogOut,
   Menu,
   Moon,
   ShieldCheck,
   Sun,
+  UsersRound,
   X,
 } from 'lucide-react'
 import type { ApiClient } from './api/client'
@@ -61,6 +65,12 @@ function App({ api = defaultApiClient }: AppProps) {
   const workspaceRef = useRef<HTMLElement>(null)
   const sessionRecoveryRef = useRef<Promise<CurrentUser | null> | null>(null)
   const location = useLocation()
+  const closeSidebar = useCallback(() => {
+    if (isSidebarOpen) {
+      menuButtonRef.current?.focus({ preventScroll: true })
+    }
+    setIsSidebarOpen(false)
+  }, [isSidebarOpen])
 
   useEffect(() => {
     if (!isSidebarOpen) {
@@ -108,7 +118,7 @@ function App({ api = defaultApiClient }: AppProps) {
 
     document.addEventListener('keydown', handleKeydown)
     return () => document.removeEventListener('keydown', handleKeydown)
-  }, [isSidebarOpen])
+  }, [closeSidebar, isSidebarOpen])
 
   useEffect(() => {
     if (!isSidebarOpen) {
@@ -276,6 +286,47 @@ function App({ api = defaultApiClient }: AppProps) {
   const canViewIndicators = hasAnyPermission(user, ['INDICADORES.VISUALIZAR'])
   const canExportIndicators = hasAnyPermission(user, ['DADOS.EXPORTAR'])
   const canViewAdministration = hasAnyPermission(user, administrationPermissions)
+  const administrationMenuItems = [
+    {
+      section: 'usuarios' as const,
+      label: 'Contas e acessos',
+      icon: <ShieldCheck aria-hidden="true" size={16} strokeWidth={2} />,
+      available: hasAnyPermission(user, [
+        'USUARIOS.LER',
+        'USUARIOS.CRIAR',
+        'USUARIOS.ALTERAR',
+        'ACESSOS.GERIR',
+        'ACESSOS.NEGOCIO.GERIR',
+      ]),
+    },
+    {
+      section: 'cadastros' as const,
+      label: 'Cadastros',
+      icon: <UsersRound aria-hidden="true" size={16} strokeWidth={2} />,
+      available: hasAnyPermission(user, ['CADASTROS.GERIR']),
+    },
+    {
+      section: 'vinculos' as const,
+      label: 'Vínculos',
+      icon: <Link2 aria-hidden="true" size={16} strokeWidth={2} />,
+      available: hasAnyPermission(user, [
+        'VINCULOS_GESTOR_COLABORADOR.GERIR',
+        'VINCULOS_USUARIO_COLABORADOR.GERIR',
+      ]),
+    },
+    {
+      section: 'questionarios' as const,
+      label: 'Questionários',
+      icon: <BookOpenCheck aria-hidden="true" size={16} strokeWidth={2} />,
+      available: hasAnyPermission(user, ['QUESTIONARIOS.GERIR']),
+    },
+    {
+      section: 'ciclos' as const,
+      label: 'Ciclos',
+      icon: <BriefcaseBusiness aria-hidden="true" size={16} strokeWidth={2} />,
+      available: hasAnyPermission(user, ['CICLOS.GERIR']),
+    },
+  ].filter((item) => item.available)
   const availableWorkspaceCount = [
     canViewAdministration,
     canViewAssessments,
@@ -302,6 +353,10 @@ function App({ api = defaultApiClient }: AppProps) {
   const assessmentJourney = journeyFromSearch(location.search)
   const assessmentId = assessmentIdFromPath(location.pathname)
   const administrationSection = administrationSectionFromPath(location.pathname)
+  const activeAdministrationSection =
+    activeWorkspace === 'administration'
+      ? (administrationSection ?? administrationMenuItems[0]?.section)
+      : undefined
 
   function navigate(
     nextWorkspace: Workspace,
@@ -310,16 +365,11 @@ function App({ api = defaultApiClient }: AppProps) {
     const path = workspacePath(nextWorkspace, options)
     window.history.pushState(null, '', path)
     window.dispatchEvent(new PopStateEvent('popstate'))
-    setIsSidebarOpen(false)
+    closeSidebar()
   }
 
   function beginAssessment(journey: AssessmentJourney) {
     navigate('assessments', { journey })
-  }
-
-  function closeSidebar() {
-    setIsSidebarOpen(false)
-    window.setTimeout(() => menuButtonRef.current?.focus(), 0)
   }
 
   return (
@@ -421,34 +471,20 @@ function App({ api = defaultApiClient }: AppProps) {
               Início
             </button>
           </div>
-          {canViewAssessments || canCreateManagerAssessment || canCreateSelfAssessment ? (
+          {canViewAssessments ? (
             <div className="workspace-nav__section">
               <p className="workspace-nav__label">Avaliações</p>
-              {canViewAssessments ? (
-                <button
-                  className="workspace-nav__item"
-                  type="button"
-                  aria-current={activeWorkspace === 'assessments' ? 'page' : undefined}
-                  onClick={() => navigate('assessments')}
-                >
-                  <ClipboardCheck aria-hidden="true" size={17} strokeWidth={2} />
-                  {canViewAdministration && canViewAllAssessments
-                    ? 'Avaliações individuais'
-                    : 'Minhas avaliações'}
-                </button>
-              ) : null}
-              {canCreateManagerAssessment || canCreateSelfAssessment ? (
-                <button
-                  className="workspace-nav__item workspace-nav__item--primary"
-                  type="button"
-                  onClick={() =>
-                    beginAssessment(canCreateManagerAssessment ? 'EQUIPE' : 'AUTOAVALIACAO')
-                  }
-                >
-                  <ClipboardCheck aria-hidden="true" size={17} strokeWidth={2} />
-                  Nova avaliação
-                </button>
-              ) : null}
+              <button
+                className="workspace-nav__item"
+                type="button"
+                aria-current={activeWorkspace === 'assessments' ? 'page' : undefined}
+                onClick={() => navigate('assessments')}
+              >
+                <ClipboardCheck aria-hidden="true" size={17} strokeWidth={2} />
+                {canViewAdministration && canViewAllAssessments
+                  ? 'Avaliações individuais'
+                  : 'Minhas avaliações'}
+              </button>
             </div>
           ) : null}
           {canViewIndicators || canViewAdministration ? (
@@ -466,15 +502,28 @@ function App({ api = defaultApiClient }: AppProps) {
                 </button>
               ) : null}
               {canViewAdministration ? (
-                <button
-                  className="workspace-nav__item"
-                  type="button"
-                  aria-current={activeWorkspace === 'administration' ? 'page' : undefined}
-                  onClick={() => navigate('administration')}
-                >
-                  <ShieldCheck aria-hidden="true" size={17} strokeWidth={2} />
-                  Administração
-                </button>
+                <div className="workspace-nav__administration">
+                  <div className="workspace-nav__administration-heading">
+                    <ShieldCheck aria-hidden="true" size={17} strokeWidth={2} />
+                    Administração
+                  </div>
+                  <div className="workspace-nav__administration-items">
+                    {administrationMenuItems.map((item) => (
+                      <button
+                        aria-current={
+                          activeAdministrationSection === item.section ? 'page' : undefined
+                        }
+                        className="workspace-nav__item workspace-nav__item--nested"
+                        key={item.section}
+                        onClick={() => navigate('administration', { section: item.section })}
+                        type="button"
+                      >
+                        {item.icon}
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               ) : null}
             </div>
           ) : null}
@@ -509,7 +558,6 @@ function App({ api = defaultApiClient }: AppProps) {
                 isSupremeAdministrator={user.supremeAdministrator === true}
                 permissions={user.permissions}
                 section={administrationSection}
-                onNavigate={(section) => navigate('administration', { section })}
                 onSessionExpired={handleSessionExpired}
               />
             ) : null}

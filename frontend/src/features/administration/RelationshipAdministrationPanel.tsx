@@ -543,18 +543,20 @@ function RelationshipTable<
         <tbody>
           {entries.map((entry) => (
             <tr key={entry.id}>
-              <td>{getAccountName(entry)}</td>
-              <td>{getCollaboratorName(entry)}</td>
-              <td>{entry.startsOn ?? 'Não informado'}</td>
-              <td>
-                <button
-                  className="button button--danger"
-                  type="button"
-                  onClick={() => onClose(entry)}
-                >
-                  <Unlink aria-hidden="true" size={16} strokeWidth={2} />
-                  Encerrar
-                </button>
+              <td data-label={accountColumn}>{getAccountName(entry)}</td>
+              <td data-label="Colaborador">{getCollaboratorName(entry)}</td>
+              <td data-label="Início">{entry.startsOn ?? 'Não informado'}</td>
+              <td data-label="Ação">
+                <div className="table-actions">
+                  <button
+                    className="button button--danger"
+                    type="button"
+                    onClick={() => onClose(entry)}
+                  >
+                    <Unlink aria-hidden="true" size={16} strokeWidth={2} />
+                    Encerrar
+                  </button>
+                </div>
               </td>
             </tr>
           ))}

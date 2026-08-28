@@ -489,8 +489,10 @@ function ClassificationDistribution({
         <tbody>
           {distribution.map((item) => (
             <tr key={item.classification}>
-              <th scope="row">{item.classification}</th>
-              <td>
+              <th data-label="Classificação" scope="row">
+                {item.classification}
+              </th>
+              <td data-label="Percentual">
                 <span className="distribution-value">{formatPercentage(item.percentage)}</span>
                 <span
                   aria-hidden="true"

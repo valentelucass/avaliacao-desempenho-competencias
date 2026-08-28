@@ -402,22 +402,24 @@ export function CycleAdministrationPanel({
               <tbody>
                 {cycles.map((cycle) => (
                   <tr key={cycle.id}>
-                    <td>{cycle.name}</td>
-                    <td>
+                    <td data-label="Ciclo">{cycle.name}</td>
+                    <td data-label="Situação">
                       <span className={`status-badge status-badge--${cycle.status.toLowerCase()}`}>
                         {formatCycleStatus(cycle.status)}
                       </span>
                     </td>
-                    <td>
-                      <button
-                        className="button"
-                        type="button"
-                        onClick={() => void selectCycle(cycle)}
-                        disabled={isLoadingDraft}
-                      >
-                        <Pencil aria-hidden="true" size={16} strokeWidth={2} />
-                        {cycle.status === 'RASCUNHO' ? 'Configurar' : 'Consultar'}
-                      </button>
+                    <td data-label="Ação">
+                      <div className="table-actions">
+                        <button
+                          className="button"
+                          type="button"
+                          onClick={() => void selectCycle(cycle)}
+                          disabled={isLoadingDraft}
+                        >
+                          <Pencil aria-hidden="true" size={16} strokeWidth={2} />
+                          {cycle.status === 'RASCUNHO' ? 'Configurar' : 'Consultar'}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

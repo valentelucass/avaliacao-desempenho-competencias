@@ -113,6 +113,27 @@ describe('CycleAdministrationPanel', () => {
     )
   })
 
+  it('mantém rótulos de dados nos ciclos para a apresentação móvel', async () => {
+    const api = createApi({ listAllCycles: vi.fn().mockResolvedValue([sampleCycle()]) })
+
+    render(
+      <CycleAdministrationPanel
+        api={api}
+        permissions={['CICLOS.GERIR']}
+        onSessionExpired={vi.fn()}
+      />,
+    )
+
+    const cells = (await screen.findByRole('button', { name: 'Configurar' }))
+      .closest('tr')
+      ?.querySelectorAll('td')
+
+    expect(cells).toHaveLength(3)
+    expect(cells?.[0]).toHaveAttribute('data-label', 'Ciclo')
+    expect(cells?.[1]).toHaveAttribute('data-label', 'Situação')
+    expect(cells?.[2]).toHaveAttribute('data-label', 'Ação')
+  })
+
   it('pede confirmação antes de abrir o ciclo em rascunho', async () => {
     const confirmation = vi.spyOn(window, 'confirm').mockReturnValue(true)
     const cycle = sampleCycle()

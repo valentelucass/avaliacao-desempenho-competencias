@@ -1,5 +1,3 @@
-import { BookOpenCheck, BriefcaseBusiness, Link2, ShieldCheck, UsersRound } from 'lucide-react'
-import type { ReactNode } from 'react'
 import type { ApiClient } from '../../api/client'
 import type { Permission } from '../../api/contracts'
 import { FeedbackMessage } from '../../ui/Feedback'
@@ -18,14 +16,11 @@ type AdministrationPanelProps = {
   isSupremeAdministrator: boolean
   permissions: readonly Permission[]
   section?: AdministrationSection
-  onNavigate: (section: AdministrationSection) => void
   onSessionExpired: () => void
 }
 
 type AdministrationNavigationItem = {
   id: AdministrationSection
-  label: string
-  icon: ReactNode
   isAvailable: boolean
 }
 
@@ -39,7 +34,6 @@ export function AdministrationPanel({
   isSupremeAdministrator,
   permissions,
   section,
-  onNavigate,
   onSessionExpired,
 }: AdministrationPanelProps) {
   const hasAny = (...expected: readonly string[]) =>
@@ -47,8 +41,6 @@ export function AdministrationPanel({
   const navigation: readonly AdministrationNavigationItem[] = [
     {
       id: 'usuarios',
-      label: 'Contas e acessos',
-      icon: <ShieldCheck aria-hidden="true" size={17} strokeWidth={2} />,
       isAvailable: hasAny(
         'USUARIOS.LER',
         'USUARIOS.CRIAR',
@@ -59,14 +51,10 @@ export function AdministrationPanel({
     },
     {
       id: 'cadastros',
-      label: 'Cadastros',
-      icon: <UsersRound aria-hidden="true" size={17} strokeWidth={2} />,
       isAvailable: hasAny('CADASTROS.GERIR'),
     },
     {
       id: 'vinculos',
-      label: 'Vínculos',
-      icon: <Link2 aria-hidden="true" size={17} strokeWidth={2} />,
       isAvailable: hasAny(
         'VINCULOS_GESTOR_COLABORADOR.GERIR',
         'VINCULOS_USUARIO_COLABORADOR.GERIR',
@@ -74,14 +62,10 @@ export function AdministrationPanel({
     },
     {
       id: 'questionarios',
-      label: 'Questionários',
-      icon: <BookOpenCheck aria-hidden="true" size={17} strokeWidth={2} />,
       isAvailable: hasAny('QUESTIONARIOS.GERIR'),
     },
     {
       id: 'ciclos',
-      label: 'Ciclos',
-      icon: <BriefcaseBusiness aria-hidden="true" size={17} strokeWidth={2} />,
       isAvailable: hasAny('CICLOS.GERIR'),
     },
   ]
@@ -92,11 +76,10 @@ export function AdministrationPanel({
 
   if (!activeSection) {
     return (
-      <section aria-labelledby="administration-title">
+      <section aria-labelledby="administration-title" className="administration-shell">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">Administração</p>
-            <h2 id="administration-title">Operações administrativas</h2>
+            <h2 id="administration-title">Administração indisponível</h2>
           </div>
         </div>
         <FeedbackMessage kind="error">
@@ -107,32 +90,7 @@ export function AdministrationPanel({
   }
 
   return (
-    <section aria-labelledby="administration-title" className="stack-form">
-      <div className="section-heading">
-        <div>
-          <p className="eyebrow">Administração</p>
-          <h2 id="administration-title">Operações administrativas</h2>
-          <p className="muted">
-            Selecione uma área. A autorização, o escopo e a auditoria são confirmados pelo servidor
-            em toda alteração.
-          </p>
-        </div>
-      </div>
-      <nav aria-label="Áreas administrativas" className="workspace-nav administration-nav">
-        {availableNavigation.map((item) => (
-          <button
-            aria-current={activeSection === item.id ? 'page' : undefined}
-            className="workspace-nav__item"
-            key={item.id}
-            onClick={() => onNavigate(item.id)}
-            type="button"
-          >
-            {item.icon}
-            {item.label}
-          </button>
-        ))}
-      </nav>
-
+    <section aria-label="Administração" className="administration-shell">
       {activeSection === 'usuarios' ? (
         <UserAdministrationPanel
           api={api}

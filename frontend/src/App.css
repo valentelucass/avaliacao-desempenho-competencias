@@ -323,13 +323,6 @@
   background: var(--primary-strong);
   color: var(--on-primary);
 }
-.administration-nav {
-  align-items: center;
-  flex-direction: row;
-  height: auto;
-  overflow-x: auto;
-  padding: 0.25rem;
-}
 .workspace,
 .workspace__content {
   min-width: 0;
@@ -1603,11 +1596,6 @@ thead th {
 
 .competency-card {
   padding: clamp(1rem, 2vw, 1.35rem);
-}
-
-.administration-nav {
-  gap: 0.35rem;
-  margin-bottom: 0.25rem;
 }
 
 .administration-users,
@@ -3307,19 +3295,6 @@ thead th {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .administration-nav {
-    align-items: stretch;
-    flex-direction: column;
-    overflow: visible;
-    padding: 0.35rem;
-  }
-
-  .administration-nav .workspace-nav__item {
-    justify-content: flex-start;
-    min-height: 2.75rem;
-    white-space: normal;
-  }
-
   .workspace-sidebar {
     bottom: 0.5rem;
     height: calc(100dvh - 1rem);
@@ -3526,29 +3501,7 @@ thead th {
   }
 }
 
-/* A lista de contas vira cartões no celular; e-mail longo não exige rolagem lateral. */
 @media (max-width: 48rem) {
-  .master-data-administration .administration-users tbody {
-    gap: 0.65rem;
-    padding: 0.65rem;
-  }
-
-  .master-data-administration .administration-users tbody tr {
-    gap: 0.35rem;
-    padding: 0.75rem;
-  }
-
-  .master-data-administration .administration-users td {
-    grid-template-columns: minmax(5.8rem, 0.75fr) minmax(0, 1fr);
-    gap: 0.55rem;
-    padding-block: 0.3rem;
-  }
-
-  .master-data-administration .administration-users td:last-child {
-    margin-top: 0.4rem;
-    padding-top: 0.65rem;
-  }
-
   .administration-users {
     margin-inline: 0;
     overflow: hidden;
@@ -3625,6 +3578,13 @@ thead th {
 
   .allocations-table td:last-child .button,
   .questionnaire-assignments-table td:last-child .button {
+    width: auto;
+  }
+
+  .cycle-questionnaire-table td:nth-child(1),
+  .cycle-questionnaire-table td:nth-child(2),
+  .cycle-questionnaire-table td:nth-child(3),
+  .cycle-questionnaire-table td:nth-child(4) {
     width: auto;
   }
 
@@ -4024,5 +3984,830 @@ thead th {
   .assessment-print-signature__line {
     border-bottom: 0.3mm solid #0f172a;
     height: 8mm;
+  }
+}
+
+/* Navegação lateral: menos cartões, contornos e ênfase decorativa. */
+.workspace-sidebar {
+  background: var(--surface);
+  box-shadow: -0.75rem 0 2.25rem color-mix(in srgb, var(--text-h) 16%, transparent);
+  padding: 1rem;
+}
+
+.workspace-sidebar__heading {
+  font-size: 0.9rem;
+  font-weight: 650;
+  margin: 0 0.2rem 0.9rem;
+}
+
+.workspace-sidebar__heading .icon-button {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  color: var(--muted);
+}
+
+.workspace-sidebar__heading .icon-button:hover {
+  background: var(--surface-muted);
+  border-color: transparent;
+  color: var(--text-h);
+}
+
+.workspace-sidebar__account {
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  gap: 0.65rem;
+  margin: 0 0.15rem 0.9rem;
+  padding: 0 0 0.9rem;
+}
+
+.workspace-sidebar__account .user-chip__avatar {
+  background: color-mix(in srgb, var(--primary-soft) 72%, var(--surface));
+  height: 2rem;
+  width: 2rem;
+}
+
+.workspace-sidebar__account-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.workspace-sidebar__account strong {
+  font-size: 0.88rem;
+  font-weight: 650;
+}
+
+.workspace-sidebar .workspace-nav {
+  gap: 0.7rem;
+  padding-inline: 0;
+}
+
+.workspace-nav__section {
+  gap: 0.12rem;
+}
+
+.workspace-nav__label {
+  font-size: 0.68rem;
+  font-weight: 650;
+  letter-spacing: 0.025em;
+  margin: 0 0.5rem 0.2rem;
+  text-transform: none;
+}
+
+.workspace-sidebar .workspace-nav__item {
+  border-color: transparent;
+  border-radius: 0.45rem;
+  font-size: 0.88rem;
+  font-weight: 650;
+  min-height: 2.45rem;
+  padding-inline: 0.7rem;
+}
+
+.workspace-sidebar .workspace-nav__item:hover {
+  background: color-mix(in srgb, var(--primary-soft) 58%, var(--surface));
+  border-color: transparent;
+  color: var(--text-h);
+}
+
+.workspace-sidebar .workspace-nav__item[aria-current='page'] {
+  background: color-mix(in srgb, var(--primary-soft) 58%, var(--surface));
+  border-color: transparent;
+  box-shadow: none;
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.workspace-nav__administration {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.workspace-nav__administration-heading {
+  align-items: center;
+  color: var(--text-h);
+  display: flex;
+  font-size: 0.88rem;
+  font-weight: 700;
+  gap: 0.5rem;
+  min-height: 2.45rem;
+  padding-inline: 0.7rem;
+}
+
+.workspace-nav__administration-items {
+  display: grid;
+  gap: 0.12rem;
+  padding-left: 1.15rem;
+}
+
+.workspace-sidebar .workspace-nav__item--nested {
+  font-size: 0.84rem;
+  min-height: 2.28rem;
+}
+
+.workspace-sidebar .workspace-nav__item--primary {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  color: var(--primary);
+}
+
+.workspace-sidebar .workspace-nav__item--primary:hover {
+  background: color-mix(in srgb, var(--primary-soft) 58%, var(--surface));
+  border-color: transparent;
+  color: var(--primary-strong);
+}
+
+.workspace-sidebar__footer {
+  margin-inline: 0.15rem;
+  padding-top: 0.75rem;
+}
+
+.workspace-sidebar__sign-out {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  color: var(--muted);
+  justify-content: flex-start;
+  min-height: 2.45rem;
+  padding-inline: 0.7rem;
+}
+
+.workspace-sidebar__sign-out:hover {
+  background: var(--surface-muted);
+  border-color: transparent;
+  color: var(--text-h);
+}
+
+/* Em tabela larga, a decisão fica no limite direito, distante dos dados descritivos. */
+@media (min-width: 48.0625rem) {
+  .administration-users th:last-child,
+  .administration-users td:last-child {
+    text-align: right;
+    white-space: nowrap;
+    width: 1%;
+  }
+
+  .administration-users .table-actions {
+    justify-content: flex-end;
+    width: 100%;
+  }
+}
+
+/* Detalhe de conta: prioriza os controles e evita altura vazia no desktop. */
+.account-dialog.selected-user-card {
+  gap: 0.65rem;
+}
+
+.account-dialog .section-heading {
+  gap: 0.65rem;
+  padding-bottom: 0.6rem;
+}
+
+.account-dialog .stack-form,
+.account-dialog__management {
+  gap: 0.6rem;
+}
+
+.account-dialog__management {
+  display: grid;
+}
+
+.account-dialog .stack-form > h4 {
+  font-size: 0.92rem;
+  margin: 0;
+}
+
+.account-dialog .stack-form > .muted {
+  line-height: 1.35;
+  margin: 0;
+}
+
+.account-dialog .field {
+  gap: 0.28rem;
+}
+
+.account-dialog .field-hint {
+  line-height: 1.35;
+  margin: 0;
+}
+
+.account-dialog .user-account-edit-form > .action-row,
+.account-dialog .user-access-profile-form > .action-row {
+  margin-top: 0;
+  padding-top: 0.65rem;
+}
+
+.account-dialog .user-access-profile-form fieldset {
+  display: grid;
+  gap: 0.28rem;
+  margin: 0;
+  padding: 0.55rem 0.7rem 0.65rem;
+}
+
+.account-dialog .user-access-profile-form legend {
+  font-size: 0.78rem;
+}
+
+.account-dialog .selected-user-overview .definition-list div,
+.account-dialog .access-summary .field {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 0.25rem 0.8rem;
+}
+
+.account-dialog .selected-user-overview .definition-list div:first-child,
+.account-dialog .access-summary .field:first-of-type {
+  padding-left: 0;
+}
+
+.account-dialog .selected-user-overview .definition-list div + div,
+.account-dialog .access-summary .field + .field {
+  border-left: 1px solid var(--border);
+}
+
+.account-password-reset {
+  border-block: 1px solid var(--border);
+  padding: 0.55rem 0;
+}
+
+.account-password-reset summary {
+  color: var(--text-h);
+  cursor: pointer;
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.account-password-reset[open] summary {
+  margin-bottom: 0.65rem;
+}
+
+.account-password-reset .user-password-reset-form {
+  gap: 0.55rem;
+}
+
+.account-password-reset__input-row {
+  align-items: center;
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+@media (max-width: 48rem) {
+  .account-password-reset__input-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .account-password-reset__input-row .button {
+    width: 100%;
+  }
+}
+
+.account-dialog .user-account-edit-form > .action-row,
+.account-dialog .user-access-profile-form > .action-row {
+  border-top: 0;
+  padding-top: 0.2rem;
+}
+
+.account-dialog .user-access-profile-form fieldset {
+  border: 0;
+  padding: 0;
+}
+
+@media (min-width: 48.0625rem) {
+  .account-dialog__management {
+    align-items: start;
+    display: grid;
+    gap: 0.85rem 1rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .account-dialog__management > .feedback,
+  .account-dialog__management > .field-hint {
+    grid-column: 1 / -1;
+  }
+
+  .account-dialog .user-account-edit-form,
+  .account-dialog .user-access-profile-form {
+    align-content: start;
+  }
+
+  .account-password-reset .user-password-reset-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Hierarquia de superfície: página, seções, tabelas e controles não competem entre si. */
+.application-shell {
+  background: var(--page-bg);
+}
+
+.card,
+.competency-card,
+.result-card {
+  background: var(--surface);
+  border-color: var(--border);
+  box-shadow: var(--shadow-sm);
+}
+
+.filter-fieldset {
+  background: var(--surface-subtle);
+  border-color: var(--border);
+  box-shadow: none;
+}
+
+.card > .section-heading,
+.card > .card-title-row {
+  border-bottom-color: color-mix(in srgb, var(--border) 88%, var(--primary));
+}
+
+.administration-users,
+.indicator-results {
+  background: var(--surface);
+  border-color: var(--border);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--surface) 72%, var(--text-h));
+}
+
+.administration-users table,
+.indicator-results table {
+  background: var(--surface);
+}
+
+thead th {
+  background: var(--table-header);
+  border-bottom-color: var(--border-strong);
+  color: color-mix(in srgb, var(--muted) 90%, var(--text-h));
+}
+
+tbody tr {
+  background: var(--surface);
+}
+
+tbody tr:nth-child(even) {
+  background: var(--table-stripe);
+}
+
+@media (hover: hover) {
+  .administration-users tbody tr:hover,
+  .indicator-results tbody tr:hover {
+    background: color-mix(in srgb, var(--primary-soft) 42%, var(--surface));
+  }
+}
+
+.administration-users td,
+.indicator-results td {
+  border-bottom-color: color-mix(in srgb, var(--border) 82%, transparent);
+}
+
+input,
+select,
+textarea {
+  background: color-mix(in srgb, var(--surface) 94%, var(--surface-subtle));
+}
+
+input:hover:not(:disabled),
+select:hover:not(:disabled),
+textarea:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--border-strong) 82%, var(--primary));
+}
+
+:root[data-theme='dark'] .card,
+:root[data-theme='dark'] .competency-card,
+:root[data-theme='dark'] .result-card {
+  box-shadow: 0 0.5rem 1.3rem rgb(0 0 0 / 16%);
+}
+
+/* Administração: a aba escolhe a área; o painel ativo já fornece o título e o contexto. */
+.administration-shell {
+  display: grid;
+  gap: clamp(1rem, 1.8vw, 1.35rem);
+}
+
+@media (max-width: 48rem) {
+  html,
+  body,
+  #root {
+    max-width: 100%;
+    overflow-x: clip;
+  }
+
+  .workspace-nav {
+    overflow-x: hidden;
+  }
+
+  .indicator-results,
+  .table-scroll {
+    margin-inline: 0;
+    overflow: hidden;
+    padding-inline: 0;
+  }
+
+  .indicator-results table,
+  .individual-assessment-summary__table {
+    min-width: 0;
+  }
+
+  .indicator-results thead,
+  .individual-assessment-summary__table thead {
+    position: absolute;
+    height: 1px;
+    overflow: hidden;
+    width: 1px;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .indicator-results tbody,
+  .individual-assessment-summary__table tbody {
+    display: grid;
+    gap: 0.65rem;
+    padding: 0.65rem;
+  }
+
+  .indicator-results tbody tr {
+    background: var(--surface-muted);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    display: grid;
+    gap: 0.45rem;
+    padding: 0.75rem;
+  }
+
+  .indicator-results tbody th,
+  .indicator-results tbody td {
+    align-items: center;
+    border: 0;
+    display: grid;
+    gap: 0.55rem;
+    grid-template-columns: minmax(6.4rem, 0.8fr) minmax(0, 1fr);
+    overflow-wrap: anywhere;
+    padding: 0.15rem 0;
+    text-align: left;
+  }
+
+  .indicator-results tbody th::before,
+  .indicator-results tbody td::before,
+  .individual-assessment-summary__table td::before {
+    color: var(--muted);
+    content: attr(data-label);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .individual-assessment-summary__table tbody tr {
+    display: grid;
+    gap: 0.5rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .individual-assessment-summary__table td {
+    background: var(--surface-muted);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    display: grid;
+    gap: 0.25rem;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    padding: 0.65rem;
+    width: auto;
+  }
+
+  .individual-assessment-summary__table td[colspan] {
+    display: none;
+  }
+
+  /* Em cartões móveis, rótulo e conteúdo formam uma sequência vertical: nunca duas colunas apertadas. */
+  .administration-users td {
+    align-items: start;
+    gap: 0.2rem;
+    grid-template-columns: minmax(0, 1fr);
+    padding-block: 0.3rem;
+    text-align: left;
+  }
+
+  .administration-users .status-badge {
+    justify-self: start;
+    width: auto;
+  }
+
+  .cycle-questionnaire-table tbody {
+    gap: 0;
+    padding: 0;
+  }
+
+  .cycle-questionnaire-table tbody tr {
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    gap: 0.7rem;
+    padding: 1rem 0;
+  }
+
+  .cycle-questionnaire-table tbody tr + tr {
+    border-top: 1px solid var(--border);
+  }
+
+  .cycle-questionnaire-table {
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .cycle-questionnaire-table td,
+  .cycle-questionnaire-table td:first-child {
+    align-items: start;
+    gap: 0.2rem;
+    grid-column: 1 / -1;
+    grid-template-columns: minmax(0, 1fr);
+    padding: 0;
+    width: auto;
+  }
+
+  .cycle-questionnaire-table td:last-child {
+    border-top: 1px solid var(--border);
+    margin-top: 0.1rem;
+    padding-top: 0.75rem;
+  }
+
+  .cycle-questionnaire-table__selection {
+    justify-self: start;
+    min-height: 2.4rem;
+    width: auto;
+  }
+
+  .cycle-questionnaire-table__selection input[type='checkbox'] {
+    accent-color: var(--primary);
+    flex: 0 0 1.1rem;
+    height: 1.1rem;
+    margin: 0;
+    min-height: 1.1rem;
+    padding: 0;
+    width: 1.1rem;
+  }
+
+  /* Em telas pequenas, o painel externo delimita a seção e os registros formam
+     uma lista única, separada por divisórias — nunca por faixas alternadas. */
+  .administration-users {
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .administration-users table {
+    background: transparent;
+  }
+
+  .administration-users tbody {
+    gap: 0;
+    padding: 0;
+  }
+
+  .administration-users tbody tr,
+  .administration-users tbody tr:nth-child(even) {
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    gap: 0.55rem;
+    padding: 1rem 0;
+  }
+
+  .administration-users tbody tr + tr {
+    border-top: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
+    margin-top: 0;
+    padding-top: 1rem;
+  }
+
+  .administration-users .pagination-placeholder {
+    display: none;
+  }
+
+  .administration-users td:last-child {
+    border-top: 0;
+    margin-top: 0.2rem;
+    padding-top: 0.45rem;
+  }
+
+  .questionnaire-versions__table tbody tr {
+    gap: 0.65rem;
+    grid-template-areas:
+      'questionnaire version'
+      'title title'
+      'configuration configuration';
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding: 0.9rem;
+  }
+
+  .questionnaire-versions__table td {
+    align-items: start;
+    border: 0;
+    display: block;
+    min-width: 0;
+    padding: 0;
+  }
+
+  .questionnaire-versions__table td::before {
+    display: none;
+  }
+
+  .questionnaire-versions__table td:nth-child(1) {
+    align-items: start;
+    display: grid;
+    gap: 0.18rem;
+    grid-area: questionnaire;
+  }
+
+  .questionnaire-versions__table td:nth-child(1) strong {
+    color: var(--text-h);
+    font-size: 0.92rem;
+    line-height: 1.3;
+  }
+
+  .questionnaire-versions__table .questionnaire-versions__code {
+    font-size: 0.68rem;
+    letter-spacing: 0.04em;
+  }
+
+  .questionnaire-versions__table td:nth-child(2) {
+    align-self: start;
+    background: var(--primary-soft);
+    border: 1px solid color-mix(in srgb, var(--primary) 22%, var(--border));
+    border-radius: 999px;
+    color: var(--primary);
+    font-size: 0.74rem;
+    font-weight: 700;
+    grid-area: version;
+    padding: 0.25rem 0.5rem;
+    white-space: nowrap;
+  }
+
+  .questionnaire-versions__table td:nth-child(3),
+  .questionnaire-versions__table td:nth-child(4) {
+    align-items: baseline;
+    border-top: 0;
+    display: grid;
+    gap: 0.6rem;
+    grid-template-columns: minmax(6.5rem, 0.72fr) minmax(0, 1fr);
+    overflow-wrap: anywhere;
+    padding-top: 0;
+  }
+
+  .questionnaire-versions__table td:nth-child(3) {
+    border-top: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
+    grid-area: title;
+    padding-top: 0.65rem;
+  }
+
+  .questionnaire-versions__table td:nth-child(4) {
+    grid-area: configuration;
+    padding-top: 0.35rem;
+  }
+
+  .questionnaire-versions__table td:nth-child(3)::before,
+  .questionnaire-versions__table td:nth-child(4)::before {
+    color: var(--muted);
+    display: block;
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .questionnaire-versions__table td:nth-child(3)::before {
+    content: 'Título';
+  }
+
+  .questionnaire-versions__table td:nth-child(4)::before {
+    content: 'Configuração';
+  }
+
+  .questionnaire-versions__value {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  /* Estas listas têm conteúdo e ações próprios; no celular cada registro vira
+     uma unidade compacta, sem transformar a ação em um item solto. */
+  .questionnaire-assignments-table tbody,
+  .local-users-table tbody,
+  .questionnaire-versions__table tbody {
+    gap: 0.65rem;
+    padding: 0;
+  }
+
+  .questionnaire-assignments-table tbody tr,
+  .questionnaire-assignments-table tbody tr:nth-child(even),
+  .local-users-table tbody tr,
+  .local-users-table tbody tr:nth-child(even),
+  .questionnaire-versions__table tbody tr,
+  .questionnaire-versions__table tbody tr:nth-child(even) {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    margin: 0;
+    padding: 0.85rem;
+  }
+
+  .questionnaire-assignments-table tbody tr + tr,
+  .local-users-table tbody tr + tr,
+  .questionnaire-versions__table tbody tr + tr {
+    border: 1px solid var(--border);
+    margin: 0;
+    padding-top: 0.85rem;
+  }
+
+  .questionnaire-assignments-table tbody tr {
+    gap: 0.7rem 0.75rem;
+    grid-template-areas:
+      'collaborator action'
+      'assignment assignment';
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .questionnaire-assignments-table td {
+    align-items: start;
+    gap: 0.2rem;
+    grid-template-columns: minmax(0, 1fr);
+    padding: 0;
+  }
+
+  .questionnaire-assignments-table td:nth-child(1) {
+    grid-area: collaborator;
+  }
+
+  .questionnaire-assignments-table td:nth-child(2) {
+    border-top: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
+    grid-area: assignment;
+    padding-top: 0.65rem;
+  }
+
+  .questionnaire-assignments-table td:last-child {
+    align-self: start;
+    border: 0;
+    display: block;
+    grid-area: action;
+    margin: 0;
+    padding: 0;
+  }
+
+  .questionnaire-assignments-table .table-actions {
+    justify-content: flex-end;
+  }
+
+  .local-users-table tbody tr {
+    column-gap: 0.75rem;
+    grid-template-areas:
+      'name action'
+      'login action'
+      'status action';
+    grid-template-columns: minmax(0, 1fr) auto;
+    row-gap: 0.55rem;
+  }
+
+  .local-users-table td {
+    padding: 0;
+  }
+
+  .local-users-table td:nth-child(1) {
+    grid-area: name;
+  }
+
+  .local-users-table td:nth-child(2) {
+    grid-area: login;
+  }
+
+  .local-users-table td:nth-child(3) {
+    grid-area: status;
+  }
+
+  .local-users-table td:last-child {
+    align-self: start;
+    border: 0;
+    display: flex;
+    grid-area: action;
+    justify-content: flex-end;
+    margin: 0;
+    padding: 0;
+  }
+
+  .questionnaire-versions__table tbody tr {
+    gap: 0.65rem 0.75rem;
+    grid-template-areas:
+      'questionnaire version'
+      'title title'
+      'configuration configuration';
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding: 0.9rem;
+  }
+
+  .questionnaire-versions__table tbody tr + tr {
+    padding: 0.9rem;
   }
 }
