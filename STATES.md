@@ -1,10 +1,12 @@
 # Estado Atual — Avaliação de Desempenho e Competências
 
-> Atualizado em: 2026-08-27
+> Atualizado em: 2026-08-28
 
-> **Estado canônico em 2026-08-27:** a última evidência operacional registrada para `AVALIACAO_DEV` e `AVALIACAO_PROD` é o histórico reconciliado de `V0001` a `V0010`, catálogo inicial confirmado por leitura e sem ciclos, lotações, vínculos, atribuições ou avaliações. A `V0011__restringir_autoridade_administrador_plataforma` está somente na fonte e **não** foi aplicada em nenhum desses bancos nesta etapa. A última verificação anônima registrada para os dois hosts retornou `200` e encontrou os processos PM2 online; isso não é aceite de negócio, teste autenticado de ponta a ponta nem autorização para nova alteração de produção.
+> **Estado canônico em 2026-08-28:** a validação somente leitura de `AVALIACAO_DEV` reconciliou `V0001` a `V0011`, sem pendências. No ciclo fictício `DEV-DEMO-2026`, a consulta somente leitura confirmou 6 avaliações de gestor `PUBLICADA`, 1 `ENVIADA`, 1 `RASCUNHO` e 1 autoavaliação `ENVIADA`, em conformidade com o fluxo implementado. Esta é evidência de desenvolvimento, não teste autenticado ponta a ponta. Para `AVALIACAO_PROD`, a última evidência registrada continua o histórico reconciliado até `V0010`; a situação atual da `V0011` nesse alvo não foi verificada nesta etapa. A última verificação anônima registrada para os dois hosts retornou `200` e encontrou os processos PM2 online; isso não é aceite de negócio nem autorização para nova alteração de produção.
 >
 > As entradas cronológicas abaixo preservam fatos de suas respectivas datas. Quando descrevem estados anteriores de migrations, host ou perfis, não substituem este resumo canônico.
+
+Em 2026-08-28, foram executados sem falha os testes focados `AssessmentLifecycleTests`, `SqlServerAssessmentRepositoryTests` e `AssessmentControllerTests`. Após autorização explícita, a massa exclusivamente fictícia de `AVALIACAO_DEV` recebeu o papel `GESTOR` na conta fictícia já existente, para testar vínculos administrativos; a verificação posterior confirmou 1 gestor elegível, 9 colaboradores ativos e 7 usuários ativos. A alteração foi transacional, idempotente e auditada, sem alteração de ciclo, avaliação, migration ou de `AVALIACAO_PROD`. A confirmação autenticada ponta a ponta e uma verificação equivalente em `AVALIACAO_PROD` permanecem pendentes.
 
 ## Estado de inicialização
 
@@ -78,7 +80,9 @@ Em 2026-08-26, as mensagens foram diferenciadas semanticamente no front-end: aus
 
 Em 2026-08-26, cards diretos de Contas e concessões passaram a usar espaçamento interno em grade, separando de forma consistente título, descrição, formulário, ação e listagem.
 
-Toda implementação futura deve começar pela leitura de `AGENTS.md`, deste arquivo e de eventual `../CONTEXTO_GLOBAL.md` existente.
+Toda implementação futura deve começar pela leitura de `AGENTS.md` e deste arquivo.
+
+Em 2026-08-28, a referência a um arquivo de contexto global fora do repositório foi removida das instruções operacionais e deste estado. Não houve alteração de código, banco, dados, API, autorização ou operação.
 
 ## Objetivo do produto
 
@@ -183,6 +187,26 @@ As regras de acesso, cadastros, indicadores e retenção recebidas do gestor est
 > As etapas humanas e de ativação pública foram adiadas por decisão explícita do usuário.
 >
 > As tarefas de código efetivamente concluídas foram removidas desta seção. As evidências históricas permanecem registradas nas demais seções deste documento.
+
+- [x] ADC-021 — **Clareza visual dos cartões de avaliações de demonstração:** concluída em 2026-08-28. Os cartões passaram a distribuir o nome do colaborador em largura integral, a situação do fluxo em linha própria com selo textual e o tipo da avaliação antes da ação; o botão ocupa uma faixa exclusiva. Foram removidos da listagem os cabeçalhos e as repetições visuais de ciclo. Não houve alteração de avaliações, status, cálculos ou dados persistidos. Evidências: 26 testes focados de `App`, Prettier, Oxlint, build TypeScript/Vite e `git diff --check` aprovados. A conferência visual manual no navegador permanece necessária.
+
+- [x] ADC-022 — **Paginação global refinada:** concluída em 2026-08-28. O controle compartilhado recebeu separação visual mais sóbria, página atual destacada, navegação com estados de foco, hover e indisponibilidade preservados, sem um cartão externo envolvendo seus botões. Não houve alteração de paginação, rotas, dados, permissões ou comportamento por teclado. Evidências: 89 testes Vitest, Prettier, Oxlint, build TypeScript/Vite e `git diff --check` aprovados. A conferência visual manual no navegador permanece necessária.
+
+- [x] ADC-023 — **Status compacto nos cartões de avaliações:** concluída em 2026-08-28. O selo da situação foi alinhado ao título do colaborador e o rótulo visual redundante foi removido; o nome não disputa espaço com a ação, que permanece em faixa própria. O selo continua expondo o rótulo acessível “Situação: …”. Não houve alteração de status, dados ou fluxo. Evidências: 26 testes focados de `App`, Prettier, Oxlint, build TypeScript/Vite e `git diff --check` aprovados. A conferência visual manual no navegador permanece necessária.
+
+- [x] ADC-024 — **Profundidade visual global dos cartões:** concluída em 2026-08-28. Foi criado um token de sombra individual para os temas claro e escuro e ele foi aplicado globalmente a cartões, cartões de competência e resultados; fieldsets internos preservam superfície e borda, sem sombra adicional. Não houve alteração de conteúdo, dados, interação, acessibilidade ou contratos. Evidências: 89 testes Vitest, Prettier, Oxlint, build TypeScript/Vite e `git diff --check` aprovados. A conferência visual manual no navegador permanece necessária.
+
+- [x] ADC-025 — **Refinamento da profundidade dos cartões:** concluída em 2026-08-28. O token global de elevação passou a combinar brilho interno discreto, sombra curta de separação e sombras longas graduais, com valores próprios para claro e escuro. Contraste, temas e semântica foram preservados. Evidências: 89 testes Vitest, Prettier, Oxlint, build TypeScript/Vite e `git diff --check` aprovados. A conferência visual manual no navegador permanece necessária.
+
+- [x] ADC-026 — **Backdrop do menu lateral sem desfoque:** concluída em 2026-08-28. O blur do conteúdo encoberto pelo menu lateral foi removido; permanece somente a camada escura translúcida. Foco, navegação e acessibilidade do diálogo não foram alterados. Evidências: 26 testes focados de `App`, Prettier, Oxlint, build TypeScript/Vite e `git diff --check` aprovados. A conferência visual manual no navegador permanece necessária.
+
+- [x] ADC-027 — **Ações niveladas na lista de avaliações:** concluída em 2026-08-28. A área de conteúdo dos cartões reserva altura para até duas linhas de título e os botões “Abrir avaliação” usam altura fixa de `2,45rem`, a menor altura padrão atual. Isso alinha as ações sem cortar títulos longos. Não houve alteração de ação, navegação ou conteúdo. Evidências: 26 testes focados de `App`, Prettier, Oxlint, build TypeScript/Vite e `git diff --check` aprovados. A conferência visual manual no navegador permanece necessária.
+
+- [x] ADC-028 — **Sistema global de botões compacto:** concluída em 2026-08-28. Ações neutras e primárias usam contorno leve, sem sombra ou deslocamento no hover; ações conclusivas usam preenchimento verde. Foram preservados semântica de cor, foco, desabilitado, altura e comportamento existentes. Evidências: 89 testes Vitest, Prettier, Oxlint, build TypeScript/Vite e `git diff --check` aprovados. A conferência visual manual no navegador permanece necessária.
+
+- [x] ADC-029 — **Badges globais compactos:** concluída em 2026-08-28. O componente compartilhado passou a usar altura de `1,65rem`, fonte menor e preenchimento/letter spacing reduzidos, preservando texto, contraste e semântica dos estados. Evidências: 89 testes Vitest, Prettier, Oxlint, build TypeScript/Vite e `git diff --check` aprovados. A conferência visual manual no navegador permanece necessária.
+
+- [x] ADC-030 — **Massa fictícia de vínculos em desenvolvimento:** concluída em 2026-08-28. A leitura inicial de `AVALIACAO_DEV` encontrou 7 usuários e 9 colaboradores ativos, mas nenhum gestor elegível — a causa do aviso na tela de vínculos. Foi criado e executado `database/sql/manual/008_conceder_papel_gestor_conta_ficticia_desenvolvimento.sql`, restrito a `AVALIACAO_DEV`, transacional, idempotente e auditado, que concede `GESTOR` somente à conta fictícia preexistente. A primeira execução confirmou 1 gestor elegível, 9 colaboradores e 7 usuários ativos; a segunda execução preservou esses totais e confirmou somente 1 evento de auditoria da massa, provando a idempotência. `database\\executar-database.bat --validate` passou com 11 migrations reconciliadas e as validações SQL somente leitura aprovadas. Nenhum dado real, produção, ciclo ou avaliação foi alterado. Resta apenas recarregar e conferir manualmente a tela autenticada.
 
 - [ ] ADC-020 — **Base, TLS, identidade técnica e publicação:** a última evidência canônica de 2026-08-26 registra `AVALIACAO_PROD` reconciliada até `V0010`, hosts anônimos com `200` e processos PM2 online; a `V0011` de restrição administrativa e o ajuste de privilégio `DELETE` estão somente em fonte e aguardam aplicação autorizada. A observação não é aceite de negócio, teste autenticado de ponta a ponta ou autorização para alterar produção. Bootstrap humano, segunda conta suprema, backup/restauração, validação de login e nova liberação coordenada continuam pendentes.
 

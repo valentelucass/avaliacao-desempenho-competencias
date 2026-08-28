@@ -188,6 +188,32 @@ describe('App', () => {
     expect(screen.queryByText('Resultado calculado no servidor')).not.toBeInTheDocument()
   })
 
+  it('identifica separadamente a situação do fluxo na lista de avaliações', async () => {
+    const api = createApi({
+      currentUser: vi.fn().mockResolvedValue({
+        id: 'manager-1',
+        displayName: 'Gestor autorizado',
+        permissions: ['AVALIACOES.AVALIAR_VINCULADOS'],
+      }),
+      listAssessments: vi.fn().mockResolvedValue([
+        {
+          id: 'assessment-1',
+          cycle: { id: 'cycle-demo', name: 'Demonstração DEV — radar com 5 perfis' },
+          evaluated: { displayName: 'Pessoa fictícia 01 — abaixo' },
+          type: 'GESTOR',
+          status: 'PUBLICADA',
+        },
+      ]),
+    })
+
+    renderWithExistingSession(api, '/avaliacoes')
+
+    const assessment = await screen.findByRole('listitem')
+    expect(screen.queryByText('Ciclo de avaliação')).not.toBeInTheDocument()
+    expect(within(assessment).getByLabelText('Situação: Publicada')).toBeInTheDocument()
+    expect(within(assessment).getByText('Avaliação de gestor')).toBeInTheDocument()
+  })
+
   it('salva as respostas atuais antes de enviar e oferece impressão do resumo', async () => {
     const draftAssessment = sampleManagerAssessmentWithOptionalQuestion()
     const savedAssessment: AssessmentDetail = {

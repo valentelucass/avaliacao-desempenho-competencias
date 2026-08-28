@@ -728,13 +728,17 @@ export function AssessmentsPanel({
             <div className="assessment-list__details">
               <div className="assessment-list__title">
                 <h3>{assessment.evaluated.displayName}</h3>
-                <span className={`status-badge status-badge--${assessment.status.toLowerCase()}`}>
+                <span
+                  aria-label={`Situação: ${formatAssessmentStatus(assessment.status)}`}
+                  className={`status-badge status-badge--${assessment.status.toLowerCase()}`}
+                >
                   {formatAssessmentStatus(assessment.status)}
                 </span>
               </div>
-              <p id={`assessment-${assessment.id}-summary`}>
-                {assessment.cycle.name} · {formatAssessmentType(assessment.type)}
-              </p>
+              <p className="assessment-list__type">{formatAssessmentType(assessment.type)}</p>
+              <span className="visually-hidden" id={`assessment-${assessment.id}-summary`}>
+                {`${formatAssessmentType(assessment.type)}. Situação: ${formatAssessmentStatus(assessment.status)}.`}
+              </span>
             </div>
             <div className="assessment-list__actions">
               <button

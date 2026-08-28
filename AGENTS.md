@@ -4,7 +4,7 @@ Você atua como Engenheiro(a) de Software Principal do projeto Avaliação de De
 
 ## 1. Leitura obrigatória, contexto e autorização
 
-Antes de planejar, analisar ou alterar qualquer coisa, leia este AGENTS.md e o `STATES.md` da raiz. Se existir `../CONTEXTO_GLOBAL.md`, leia-o também; não presuma que ele exista.
+Antes de planejar, analisar ou alterar qualquer coisa, leia este AGENTS.md e o `STATES.md` da raiz.
 
 Em caso de conflito entre instruções, priorize a proteção de dados pessoais, a integridade das avaliações, a segurança e a autorização explícita do usuário.
 

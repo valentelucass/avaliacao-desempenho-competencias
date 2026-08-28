@@ -61,7 +61,6 @@
 }
 
 .sidebar-backdrop {
-  backdrop-filter: blur(0.35rem) saturate(0.82);
   background: rgb(15 23 42 / 38%);
   border: 0;
   inset: 0;
@@ -329,16 +328,17 @@
 }
 .card,
 .competency-card,
-.result-card,
-.filter-fieldset {
+.result-card {
   background: color-mix(in srgb, var(--surface) 94%, var(--primary-soft));
   border: 1px solid color-mix(in srgb, var(--border-strong) 78%, var(--primary));
   border-radius: 1.25rem;
-  box-shadow: 0 0.35rem 0.9rem color-mix(in srgb, var(--text-h) 7%, transparent);
+  box-shadow: var(--shadow-card);
 }
 
 .filter-fieldset {
   background: color-mix(in srgb, var(--surface) 88%, var(--primary-soft));
+  border: 1px solid color-mix(in srgb, var(--border-strong) 78%, var(--primary));
+  border-radius: 1.25rem;
 }
 .card,
 .competency-card,
@@ -507,47 +507,46 @@ textarea:focus-visible,
 .icon-button {
   align-items: center;
   background: var(--surface);
-  border: 1px solid var(--border-strong);
-  border-radius: 0.65rem;
+  border: 1px solid color-mix(in srgb, var(--primary) 42%, var(--border));
+  border-radius: 0.75rem;
+  box-shadow: none;
   color: var(--primary);
   cursor: pointer;
   display: inline-flex;
   font: inherit;
-  font-size: 0.86rem;
+  font-size: 0.82rem;
   font-weight: 700;
   gap: 0.45rem;
   justify-content: center;
   min-height: 2.45rem;
-  padding: 0.5rem 0.78rem;
+  padding: 0.45rem 0.85rem;
   transition:
     background-color 160ms ease,
     border-color 160ms ease,
-    box-shadow 160ms ease,
-    transform 160ms ease;
+    color 160ms ease;
 }
 .button:hover:not(:disabled),
 .icon-button:hover:not(:disabled) {
   background: var(--primary-soft);
-  border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
-  transform: translateY(-1px);
+  border-color: var(--primary);
 }
 .button--primary {
-  background: var(--primary-soft);
-  border-color: color-mix(in srgb, var(--primary) 48%, var(--border));
+  background: var(--surface);
+  border-color: color-mix(in srgb, var(--primary) 55%, var(--border));
   color: var(--primary);
 }
 .button--primary:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--primary-soft) 72%, var(--surface));
+  background: var(--primary-soft);
   border-color: var(--primary);
 }
 .button--success {
-  background: var(--success-bg);
-  border-color: color-mix(in srgb, var(--success) 48%, var(--border));
-  color: var(--success);
+  background: var(--success);
+  border-color: var(--success);
+  color: var(--on-success);
 }
 .button--success:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--success-bg) 72%, var(--surface));
-  border-color: var(--success);
+  background: var(--success-strong);
+  border-color: var(--success-strong);
 }
 .button--danger {
   background: var(--error-bg);
@@ -673,15 +672,14 @@ textarea:focus-visible,
   display: grid;
   gap: 0.65rem;
   list-style: none;
-  margin: 1rem 0 0;
+  margin: 0;
   padding: 0;
 }
 .assessment-list__item {
-  align-items: start;
+  align-items: stretch;
   display: grid;
-  gap: 1rem;
+  gap: 0.75rem;
   grid-template-columns: minmax(0, 1fr);
-  justify-content: space-between;
   min-width: 0;
   padding: 1rem;
 }
@@ -691,26 +689,37 @@ textarea:focus-visible,
   min-width: 0;
 }
 
+.assessment-list__details {
+  min-height: 5rem;
+}
+
 .assessment-list__title {
   align-items: center;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.45rem 0.65rem;
+  display: grid;
+  gap: 0.55rem;
+  grid-template-columns: minmax(0, 1fr) auto;
 }
 
 .assessment-list__title h3 {
-  flex: 1 1 12rem;
   margin: 0;
+}
+
+.assessment-list__type {
+  color: var(--muted);
+  line-height: 1.4;
+  margin: 0.5rem 0 0;
 }
 
 .assessment-list__actions {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.55rem;
+  gap: 0.5rem;
 }
 
 .assessment-list__actions .button {
-  flex: 1 1 10rem;
+  flex: 1 1 auto;
+  height: 2.45rem;
+  min-height: 2.45rem;
+  width: 100%;
 }
 .status-badge {
   align-items: center;
@@ -719,13 +728,13 @@ textarea:focus-visible,
   border-radius: 999px;
   color: var(--muted);
   display: inline-flex;
-  font-size: 0.7rem;
+  font-size: 0.64rem;
   font-weight: 800;
-  letter-spacing: 0.035em;
+  letter-spacing: 0.025em;
   line-height: 1;
   margin: 0;
-  min-height: 2.1rem;
-  padding: 0.25rem 0.75rem;
+  min-height: 1.65rem;
+  padding: 0.2rem 0.62rem;
   text-transform: uppercase;
   white-space: nowrap;
 }
@@ -1079,21 +1088,24 @@ thead th {
   width: var(--distribution-width);
 }
 .pagination {
+  border-top: 1px solid var(--border);
   flex-wrap: wrap;
-  gap: 0.75rem;
+  gap: 0.85rem;
   justify-content: space-between;
-  margin-top: 1rem;
+  margin-top: 1.25rem;
+  padding-top: 0.85rem;
 }
 .pagination__summary {
   color: var(--muted);
   font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
   margin: 0;
 }
 .pagination__controls {
-  gap: 0.25rem;
+  gap: 0.4rem;
+  padding: 0;
 }
-.icon-button,
-.pagination__page {
+.icon-button {
   align-items: center;
   background: var(--surface);
   border: 1px solid var(--border);
@@ -1109,9 +1121,39 @@ thead th {
   padding: 0;
   width: 2.15rem;
 }
+.pagination .icon-button,
+.pagination__page {
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.6rem;
+  color: var(--text-h);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 0.78rem;
+  font-weight: 700;
+  height: 2.25rem;
+  justify-content: center;
+  min-height: 0;
+  padding: 0;
+  transition:
+    background-color 160ms ease,
+    box-shadow 160ms ease,
+    color 160ms ease;
+  width: 2.25rem;
+}
+.pagination .icon-button:not(:disabled):hover {
+  background: var(--surface-muted);
+  border-color: color-mix(in srgb, var(--primary) 35%, var(--border));
+}
+.pagination .icon-button:disabled {
+  color: var(--muted);
+  cursor: not-allowed;
+  opacity: 0.5;
+}
 .pagination__page[aria-current='page'] {
   background: var(--primary);
-  border-color: var(--primary);
+  box-shadow: 0 0.2rem 0.45rem color-mix(in srgb, var(--primary) 28%, transparent);
   color: #fff;
 }
 .pagination__page--with-total {
@@ -2209,22 +2251,22 @@ thead th {
   }
 
   .assessment-list__item {
-    align-items: flex-start;
+    align-items: stretch;
     gap: 0.75rem;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr);
     padding: 0.95rem 1rem;
   }
 
   .assessment-list__actions {
-    align-items: flex-end;
-    flex-direction: column;
-    justify-content: flex-start;
+    align-items: stretch;
+    flex-direction: row;
   }
 
   .assessment-list__actions .button {
-    flex: 0 0 auto;
-    min-width: 10rem;
-    white-space: nowrap;
+    flex: 1 1 auto;
+    min-width: 0;
+    white-space: normal;
+    width: 100%;
   }
 
   .form-grid,
