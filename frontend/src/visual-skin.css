@@ -46,10 +46,12 @@
     color-mix(in srgb, var(--surface-subtle) 84%, #ffffff),
     var(--surface-subtle)
   );
-  --visual-card-border: color-mix(in srgb, var(--primary) 20%, var(--border));
-  --visual-control-border: color-mix(in srgb, var(--primary) 27%, var(--border));
-  --visual-card-shadow: 0 1px 2px rgb(31 61 84 / 5%), 0 0.85rem 2.25rem rgb(31 61 84 / 9%);
-  --visual-raised-shadow: 0 0.2rem 0.6rem rgb(31 61 84 / 8%), 0 1rem 2.5rem rgb(31 61 84 / 14%);
+  --visual-card-border: color-mix(in srgb, var(--border) 58%, var(--surface));
+  --visual-control-border: color-mix(in srgb, var(--border) 72%, var(--surface));
+  --visual-card-shadow:
+    0 1px 2px rgb(31 61 84 / 3%), 0 0.75rem 1.8rem rgb(31 61 84 / 6%),
+    0 2.5rem 4.5rem rgb(31 61 84 / 4%);
+  --visual-raised-shadow: 0 0.3rem 0.85rem rgb(31 61 84 / 7%), 0 1.25rem 2.8rem rgb(31 61 84 / 11%);
   --visual-primary-shadow: 0 0.55rem 1.2rem color-mix(in srgb, var(--primary) 28%, transparent);
   --visual-table-heading: linear-gradient(
     180deg,
@@ -102,10 +104,11 @@
     color-mix(in srgb, var(--surface-subtle) 90%, var(--surface)),
     var(--surface-subtle)
   );
-  --visual-card-border: color-mix(in srgb, var(--primary) 24%, var(--border));
-  --visual-control-border: color-mix(in srgb, var(--primary) 30%, var(--border));
-  --visual-card-shadow: 0 1px 2px rgb(0 0 0 / 26%), 0 1rem 2.5rem rgb(0 0 0 / 30%);
-  --visual-raised-shadow: 0 0.25rem 0.8rem rgb(0 0 0 / 32%), 0 1.2rem 2.75rem rgb(0 0 0 / 38%);
+  --visual-card-border: color-mix(in srgb, var(--border) 72%, var(--surface));
+  --visual-control-border: color-mix(in srgb, var(--border) 84%, var(--surface));
+  --visual-card-shadow:
+    0 1px 2px rgb(0 0 0 / 22%), 0 0.85rem 2rem rgb(0 0 0 / 24%), 0 2.25rem 4.75rem rgb(0 0 0 / 16%);
+  --visual-raised-shadow: 0 0.3rem 0.9rem rgb(0 0 0 / 28%), 0 1.35rem 3rem rgb(0 0 0 / 32%);
   --visual-primary-shadow: 0 0.65rem 1.35rem color-mix(in srgb, var(--primary) 24%, transparent);
   --visual-table-heading: linear-gradient(
     180deg,
@@ -132,8 +135,8 @@
   .application-header {
     @apply bg-rodo-surface text-rodo-heading;
     background: color-mix(in srgb, var(--surface) 93%, transparent);
-    border-bottom-color: color-mix(in srgb, var(--primary) 24%, var(--border));
-    box-shadow: 0 0.6rem 1.8rem rgb(31 61 84 / 8%);
+    border-bottom-color: transparent;
+    box-shadow: 0 0.5rem 1.6rem rgb(31 61 84 / 6%);
   }
 
   .workspace-sidebar {
@@ -211,7 +214,7 @@
   .card > .section-heading,
   .card > .card-title-row,
   .auth-about-panel__note {
-    border-color: color-mix(in srgb, var(--primary) 18%, var(--border));
+    border-color: color-mix(in srgb, var(--border) 64%, var(--surface));
   }
 
   :root[data-theme='dark'] .auth-about-panel {
@@ -220,10 +223,8 @@
       color-mix(in srgb, var(--primary-soft) 68%, var(--surface)),
       color-mix(in srgb, var(--surface) 88%, var(--page-bg))
     );
-    border-color: color-mix(in srgb, var(--primary) 44%, var(--border));
-    box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 7%),
-      0 1rem 2.5rem rgb(0 0 0 / 25%);
+    border-color: var(--visual-card-border);
+    box-shadow: var(--visual-card-shadow);
   }
 
   :root[data-theme='dark'] .auth-about-panel__icon {
@@ -232,7 +233,7 @@
       color-mix(in srgb, var(--primary) 22%, var(--primary-soft)),
       color-mix(in srgb, var(--primary-soft) 82%, var(--surface))
     );
-    border: 1px solid color-mix(in srgb, var(--primary) 44%, var(--border));
+    border: 1px solid color-mix(in srgb, var(--border) 72%, var(--primary-soft));
     box-shadow: inset 0 1px 0 rgb(255 255 255 / 8%);
     color: var(--primary-strong);
   }
@@ -242,12 +243,12 @@
   }
 
   :root[data-theme='dark'] .auth-about-panel__note {
-    border-color: color-mix(in srgb, var(--primary) 30%, var(--border));
+    border-color: color-mix(in srgb, var(--border) 72%, var(--surface));
   }
 
   .dashboard-hero,
   .assessment-kind-card {
-    border-color: color-mix(in srgb, var(--primary) 30%, var(--border));
+    border-color: var(--visual-card-border);
   }
 
   .assessment-kind-card {
@@ -256,7 +257,7 @@
       color-mix(in srgb, var(--primary-soft) 42%, #ffffff),
       var(--surface)
     );
-    box-shadow: 0 0.35rem 1rem rgb(31 61 84 / 6%);
+    box-shadow: var(--visual-card-shadow);
   }
 
   .assessment-kind-card:hover {
@@ -265,7 +266,7 @@
       color-mix(in srgb, var(--primary-soft) 70%, #ffffff),
       var(--surface)
     );
-    border-color: var(--primary);
+    border-color: color-mix(in srgb, var(--border) 72%, var(--primary-soft));
     box-shadow: var(--visual-raised-shadow);
   }
 
@@ -275,9 +276,9 @@
       color-mix(in srgb, var(--primary-soft) 50%, #ffffff),
       var(--surface)
     );
-    border-color: color-mix(in srgb, var(--primary) 22%, var(--border));
+    border-color: var(--visual-card-border);
     border-radius: var(--visual-radius-card);
-    box-shadow: 0 0.45rem 1.25rem rgb(31 61 84 / 7%);
+    box-shadow: var(--visual-card-shadow);
   }
 
   .kpi-card__icon,
