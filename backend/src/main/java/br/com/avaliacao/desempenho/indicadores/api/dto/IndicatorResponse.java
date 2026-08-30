@@ -16,6 +16,7 @@ public sealed interface IndicatorResponse
   }
 
   record Available(
+      IndicatorAvailability availability,
       String policyVersion,
       IndicatorMetricRequest metric,
       BigDecimal averageScore,
@@ -23,6 +24,9 @@ public sealed interface IndicatorResponse
       implements IndicatorResponse {
 
     public Available {
+      if (availability != IndicatorAvailability.AVAILABLE) {
+        throw new IllegalArgumentException("Indicador disponível exige disponibilidade AVAILABLE.");
+      }
       requireNotBlank(policyVersion, "versão de política");
       Objects.requireNonNull(metric, "métrica não pode ser nula");
       classificationDistribution = List.copyOf(classificationDistribution);
@@ -37,22 +41,17 @@ public sealed interface IndicatorResponse
             "Uma métrica de média exige nota e não aceita distribuição.");
       }
     }
-
-    @Override
-    public IndicatorAvailability availability() {
-      return IndicatorAvailability.AVAILABLE;
-    }
   }
 
-  record InsufficientData(String policyVersion) implements IndicatorResponse {
+  record InsufficientData(IndicatorAvailability availability, String policyVersion)
+      implements IndicatorResponse {
 
     public InsufficientData {
+      if (availability != IndicatorAvailability.INSUFFICIENT_DATA) {
+        throw new IllegalArgumentException(
+            "Indicador suprimido exige disponibilidade INSUFFICIENT_DATA.");
+      }
       requireNotBlank(policyVersion, "versão de política");
-    }
-
-    @Override
-    public IndicatorAvailability availability() {
-      return IndicatorAvailability.INSUFFICIENT_DATA;
     }
   }
 

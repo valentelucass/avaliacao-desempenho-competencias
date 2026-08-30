@@ -147,6 +147,9 @@ public final class SqlServerEvaluationCycleReadRepository implements EvaluationC
     if (requestedScope.managedCollaborators()) {
       predicates.add(managerAssignmentPredicate(cycleAlias, cycleQuestionnaireAlias));
     }
+    if (requestedScope.directorManagedCollaborators()) {
+      predicates.add(directorManagerAssignmentPredicate(cycleAlias, cycleQuestionnaireAlias));
+    }
     if (requestedScope.ownCollaborator()) {
       predicates.add(ownAssignmentPredicate(cycleAlias, cycleQuestionnaireAlias));
     }
@@ -211,6 +214,32 @@ public final class SqlServerEvaluationCycleReadRepository implements EvaluationC
             cycleAlias, assignmentQuestionnairePredicate(cycleQuestionnaireAlias), cycleAlias);
   }
 
+  private static String directorManagerAssignmentPredicate(
+      String cycleAlias, String cycleQuestionnaireAlias) {
+    return """
+        EXISTS (
+            SELECT 1
+            FROM dbo.atribuicao_questionario_colaborador AS atribuicao
+            INNER JOIN dbo.vinculo_diretoria_gerencia AS vinculo_diretoria
+                ON vinculo_diretoria.gerencia_colaborador_id = atribuicao.colaborador_id
+            WHERE atribuicao.ciclo_avaliacao_id = %s.ciclo_avaliacao_id
+        %s
+              AND atribuicao.revogado_em_utc IS NULL
+              AND vinculo_diretoria.diretoria_usuario_id = ?
+              AND vinculo_diretoria.revogado_em_utc IS NULL
+              AND (
+                  vinculo_diretoria.inicio_vigencia IS NULL
+                  OR vinculo_diretoria.inicio_vigencia <= CONVERT(date, SYSUTCDATETIME())
+              )
+              AND (
+                  vinculo_diretoria.fim_vigencia IS NULL
+                  OR vinculo_diretoria.fim_vigencia >= CONVERT(date, SYSUTCDATETIME())
+              )
+        )
+        """
+        .formatted(cycleAlias, assignmentQuestionnairePredicate(cycleQuestionnaireAlias));
+  }
+
   private static String assignmentQuestionnairePredicate(String cycleQuestionnaireAlias) {
     return cycleQuestionnaireAlias == null
         ? ""
@@ -245,6 +274,9 @@ public final class SqlServerEvaluationCycleReadRepository implements EvaluationC
       return;
     }
     if (scope.managedCollaborators()) {
+      arguments.add(actorUserId);
+    }
+    if (scope.directorManagedCollaborators()) {
       arguments.add(actorUserId);
     }
     if (scope.ownCollaborator()) {

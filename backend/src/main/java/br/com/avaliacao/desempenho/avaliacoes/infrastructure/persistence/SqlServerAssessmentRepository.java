@@ -19,6 +19,8 @@ import br.com.avaliacao.desempenho.avaliacoes.domain.model.AssessmentRuleViolati
 import br.com.avaliacao.desempenho.avaliacoes.domain.model.AssessmentScaleOption;
 import br.com.avaliacao.desempenho.avaliacoes.domain.model.AssessmentStatus;
 import br.com.avaliacao.desempenho.avaliacoes.domain.model.AssessmentType;
+import br.com.avaliacao.desempenho.avaliacoes.domain.model.FeedbackLifecycle;
+import br.com.avaliacao.desempenho.avaliacoes.domain.model.FeedbackStatus;
 import br.com.avaliacao.desempenho.avaliacoes.domain.model.PerformanceClassification;
 import br.com.avaliacao.desempenho.identidadeacesso.infrastructure.persistence.ConditionalOnSqlServerPersistence;
 import br.com.avaliacao.desempenho.identidadeacesso.infrastructure.persistence.SqlServerUtcDateTime;
@@ -30,6 +32,7 @@ import java.security.NoSuchAlgorithmException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -44,7 +47,6 @@ import java.util.function.Supplier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -67,6 +69,7 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
   private static final int REOPEN_REASON_MAXIMUM_LENGTH = 80;
 
   private final AssessmentCycleAccessPolicy cycleAccessPolicy = new AssessmentCycleAccessPolicy();
+  private final FeedbackLifecycle feedbackLifecycle = new FeedbackLifecycle();
 
   private static final String ASSESSMENT_SELECT =
       """
@@ -78,8 +81,17 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
              assessment.avaliador_usuario_id,
              assessment.vinculo_gestor_colaborador_id,
              assessment.vinculo_usuario_colaborador_id,
+             assessment.vinculo_diretoria_gerencia_id,
              assessment.tipo_avaliacao,
              assessment.situacao AS assessment_situacao,
+             COALESCE(
+                 feedback.situacao,
+                 CASE
+                     WHEN assessment.situacao = 'PUBLICADA'
+                          AND assessment.tipo_avaliacao <> 'AUTOAVALIACAO' THEN 'PENDENTE'
+                     ELSE 'NAO_APLICAVEL'
+                 END
+             ) AS feedback_situacao,
              assessment.versao_atual_numero,
              assessment.atualizada_em_utc,
              cycle.nome AS cycle_name,
@@ -100,6 +112,8 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
       INNER JOIN dbo.versao_avaliacao AS version
           ON version.avaliacao_id = assessment.avaliacao_id
          AND version.numero = assessment.versao_atual_numero
+      LEFT JOIN dbo.feedback_avaliacao AS feedback
+          ON feedback.versao_avaliacao_id = version.versao_avaliacao_id
       WHERE assessment.avaliacao_id = ?
       """;
 
@@ -113,8 +127,17 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
              assessment.avaliador_usuario_id,
              assessment.vinculo_gestor_colaborador_id,
              assessment.vinculo_usuario_colaborador_id,
+             assessment.vinculo_diretoria_gerencia_id,
              assessment.tipo_avaliacao,
              assessment.situacao AS assessment_situacao,
+             COALESCE(
+                 feedback.situacao,
+                 CASE
+                     WHEN assessment.situacao = 'PUBLICADA'
+                          AND assessment.tipo_avaliacao <> 'AUTOAVALIACAO' THEN 'PENDENTE'
+                     ELSE 'NAO_APLICAVEL'
+                 END
+             ) AS feedback_situacao,
              assessment.versao_atual_numero,
              assessment.atualizada_em_utc,
              cycle.nome AS cycle_name,
@@ -135,6 +158,8 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
       INNER JOIN dbo.versao_avaliacao AS version WITH (UPDLOCK, HOLDLOCK)
           ON version.avaliacao_id = assessment.avaliacao_id
          AND version.numero = assessment.versao_atual_numero
+      LEFT JOIN dbo.feedback_avaliacao AS feedback WITH (UPDLOCK, HOLDLOCK)
+          ON feedback.versao_avaliacao_id = version.versao_avaliacao_id
       WHERE assessment.avaliacao_id = ?
       """;
 
@@ -147,6 +172,14 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
              collaborator.nome_exibicao AS collaborator_display_name,
              assessment.tipo_avaliacao,
              assessment.situacao AS assessment_situation,
+             COALESCE(
+                 feedback.situacao,
+                 CASE
+                     WHEN assessment.situacao = 'PUBLICADA'
+                          AND assessment.tipo_avaliacao <> 'AUTOAVALIACAO' THEN 'PENDENTE'
+                     ELSE 'NAO_APLICAVEL'
+                 END
+             ) AS feedback_situation,
              version.row_version AS version_row_version,
              assessment.atualizada_em_utc
       FROM dbo.avaliacao AS assessment
@@ -157,6 +190,8 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
       INNER JOIN dbo.versao_avaliacao AS version
           ON version.avaliacao_id = assessment.avaliacao_id
          AND version.numero = assessment.versao_atual_numero
+      LEFT JOIN dbo.feedback_avaliacao AS feedback
+          ON feedback.versao_avaliacao_id = version.versao_avaliacao_id
       WHERE ((? = 1)
          OR (
              assessment.avaliador_usuario_id = ?
@@ -173,6 +208,19 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
                             OR manager_link.inicio_vigencia <= CONVERT(date, SYSUTCDATETIME()))
                        AND (manager_link.fim_vigencia IS NULL
                             OR manager_link.fim_vigencia >= CONVERT(date, SYSUTCDATETIME()))
+                 ))
+                 OR (assessment.tipo_avaliacao = 'DIRETORIA_GERENCIA' AND ? = 1 AND EXISTS (
+                     SELECT 1
+                     FROM dbo.vinculo_diretoria_gerencia AS director_link
+                     WHERE director_link.vinculo_diretoria_gerencia_id
+                               = assessment.vinculo_diretoria_gerencia_id
+                       AND director_link.diretoria_usuario_id = ?
+                       AND director_link.gerencia_colaborador_id = assessment.colaborador_id
+                       AND director_link.revogado_em_utc IS NULL
+                       AND (director_link.inicio_vigencia IS NULL
+                            OR director_link.inicio_vigencia <= CONVERT(date, SYSUTCDATETIME()))
+                       AND (director_link.fim_vigencia IS NULL
+                            OR director_link.fim_vigencia >= CONVERT(date, SYSUTCDATETIME()))
                  ))
                  OR (assessment.tipo_avaliacao = 'AUTOAVALIACAO' AND ? = 1 AND EXISTS (
                      SELECT 1
@@ -249,6 +297,45 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
     return LIST_MANAGER_CREATION_OPTIONS_SQL;
   }
 
+  private static final String LIST_DIRECTOR_CREATION_OPTIONS_SQL =
+      """
+      SELECT assignment.colaborador_id AS collaborator_id,
+             collaborator.nome_exibicao AS collaborator_display_name
+      FROM dbo.ciclo_avaliacao AS cycle
+      INNER JOIN dbo.atribuicao_questionario_colaborador AS assignment
+          ON assignment.ciclo_avaliacao_id = cycle.ciclo_avaliacao_id
+         AND assignment.revogado_em_utc IS NULL
+      INNER JOIN dbo.colaborador AS collaborator
+          ON collaborator.colaborador_id = assignment.colaborador_id
+      INNER JOIN dbo.vinculo_diretoria_gerencia AS director_link
+          ON director_link.gerencia_colaborador_id = assignment.colaborador_id
+         AND director_link.diretoria_usuario_id = ?
+         AND director_link.revogado_em_utc IS NULL
+         AND (director_link.inicio_vigencia IS NULL
+              OR director_link.inicio_vigencia <= CONVERT(date, SYSUTCDATETIME()))
+         AND (director_link.fim_vigencia IS NULL
+              OR director_link.fim_vigencia >= CONVERT(date, SYSUTCDATETIME()))
+      INNER JOIN dbo.usuario AS actor_user
+          ON actor_user.usuario_id = ?
+         AND actor_user.situacao = 'ATIVO'
+      WHERE cycle.ciclo_avaliacao_id = ?
+        AND cycle.situacao = 'ABERTO'
+        AND cycle.janela_abertura_em_utc <= SYSUTCDATETIME()
+        AND cycle.janela_encerramento_em_utc > SYSUTCDATETIME()
+        AND NOT EXISTS (
+            SELECT 1
+            FROM dbo.avaliacao AS assessment
+            WHERE assessment.ciclo_avaliacao_id = cycle.ciclo_avaliacao_id
+              AND assessment.colaborador_id = assignment.colaborador_id
+              AND assessment.tipo_avaliacao = 'DIRETORIA_GERENCIA'
+        )
+      ORDER BY collaborator.nome_exibicao, assignment.colaborador_id
+      """;
+
+  static String directorCreationOptionsSql() {
+    return LIST_DIRECTOR_CREATION_OPTIONS_SQL;
+  }
+
   private final JdbcTemplate jdbcTemplate;
   private final TransactionTemplate transactionTemplate;
   private final AssessmentLifecycle lifecycle = new AssessmentLifecycle();
@@ -284,6 +371,8 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
                     safeActor.userId(),
                     safeActor.has("AVALIACOES.VISUALIZAR_PROPRIAS_RESPOSTAS") ? 1 : 0,
                     safeActor.userId(),
+                    safeActor.has("AVALIACOES.AVALIAR_GERENCIAS_VINCULADAS") ? 1 : 0,
+                    safeActor.userId(),
                     safeActor.has("AUTOAVALIACOES.VISUALIZAR_PROPRIA") ? 1 : 0,
                     safeActor.userId(),
                     safeFilter.cycleId(),
@@ -297,6 +386,8 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
                     safeActor.has("AVALIACOES.VISUALIZAR_TODAS") ? 1 : 0,
                     safeActor.userId(),
                     safeActor.has("AVALIACOES.VISUALIZAR_PROPRIAS_RESPOSTAS") ? 1 : 0,
+                    safeActor.userId(),
+                    safeActor.has("AVALIACOES.AVALIAR_GERENCIAS_VINCULADAS") ? 1 : 0,
                     safeActor.userId(),
                     safeActor.has("AUTOAVALIACOES.VISUALIZAR_PROPRIA") ? 1 : 0,
                     safeActor.userId(),
@@ -323,6 +414,25 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
     requirePermission(safeActor, "AVALIACOES.AVALIAR_VINCULADOS");
     return jdbcTemplate.query(
         LIST_MANAGER_CREATION_OPTIONS_SQL,
+        (resultSet, rowNumber) ->
+            new ManagerCreationOptionView(
+                resultSet.getObject("collaborator_id", UUID.class),
+                resultSet.getString("collaborator_display_name")),
+        safeActor.userId(),
+        safeActor.userId(),
+        Objects.requireNonNull(cycleId, "cycleId não pode ser nulo"));
+  }
+
+  @Override
+  public List<ManagerCreationOptionView> listDirectorCreationOptions(
+      UUID cycleId, AssessmentAccessContext actor) {
+    AssessmentAccessContext safeActor = Objects.requireNonNull(actor, "actor não pode ser nulo");
+    requirePermission(safeActor, "AVALIACOES.AVALIAR_GERENCIAS_VINCULADAS");
+    if (!safeActor.hasRole("DIRETORIA") || safeActor.hasRole("ADMINISTRADOR_PLATAFORMA")) {
+      throw new AssessmentForbiddenException();
+    }
+    return jdbcTemplate.query(
+        LIST_DIRECTOR_CREATION_OPTIONS_SQL,
         (resultSet, rowNumber) ->
             new ManagerCreationOptionView(
                 resultSet.getObject("collaborator_id", UUID.class),
@@ -399,6 +509,7 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
                 safeActor.userId(),
                 AssessmentType.GESTOR,
                 scope.managerLinkId(),
+                null,
                 null);
             insertVersion(
                 versionId,
@@ -439,6 +550,85 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
   }
 
   @Override
+  public AssessmentDetailView createDirectorDraft(
+      UUID cycleId,
+      UUID collaboratorId,
+      AssessmentAccessContext actor,
+      String idempotencyKey,
+      String requestId) {
+    AssessmentAccessContext safeActor = Objects.requireNonNull(actor, "actor não pode ser nulo");
+    try {
+      return inTransaction(
+          () -> {
+            IdempotencyDecision decision =
+                beginIdempotent(
+                    safeActor,
+                    "AVALIACOES.CRIAR_DIRETORIA_GERENCIA",
+                    idempotencyKey,
+                    canonical(cycleId, collaboratorId));
+            if (decision.replayedAssessmentId() != null) {
+              LockedAssessment replay = requireLocked(decision.replayedAssessmentId());
+              requireView(replay, safeActor);
+              writeAudit(
+                  safeActor.userId(),
+                  "AVALIACOES.CRIAR_DIRETORIA_GERENCIA",
+                  replay.id(),
+                  "SUCESSO",
+                  requestId,
+                  "REPETICAO_IDEMPOTENTE");
+              return toDetail(replay);
+            }
+
+            CreationScope scope = requireDirectorCreationScope(cycleId, collaboratorId, safeActor);
+            UUID assessmentId = UUID.randomUUID();
+            UUID versionId = UUID.randomUUID();
+            insertAssessment(
+                assessmentId,
+                scope,
+                safeActor.userId(),
+                AssessmentType.DIRETORIA_GERENCIA,
+                null,
+                null,
+                scope.directorManagerLinkId());
+            insertVersion(
+                versionId,
+                assessmentId,
+                scope.cycleQuestionnaireId(),
+                1,
+                AssessmentStatus.RASCUNHO,
+                "CRIACAO",
+                safeActor.userId(),
+                null,
+                null);
+            insertTransition(
+                assessmentId,
+                versionId,
+                null,
+                AssessmentStatus.RASCUNHO,
+                "CRIACAO",
+                safeActor.userId(),
+                requestId,
+                null);
+            completeIdempotent(decision, 201, assessmentId);
+            writeAudit(
+                safeActor.userId(),
+                "AVALIACOES.CRIAR_DIRETORIA_GERENCIA",
+                assessmentId,
+                "SUCESSO",
+                requestId,
+                POLICY_VERSION);
+            return toDetail(requireLocked(assessmentId));
+          });
+    } catch (AssessmentForbiddenException exception) {
+      safeDeniedAudit(safeActor.userId(), "AVALIACOES.CRIAR_DIRETORIA_GERENCIA", null, requestId);
+      throw exception;
+    } catch (DataIntegrityViolationException exception) {
+      throw new AssessmentConflictException(
+          Reason.DUPLICATE_EVALUATION, "A avaliação já existe para este ciclo e gerência.");
+    }
+  }
+
+  @Override
   public AssessmentDetailView createSelfAssessmentDraft(
       UUID cycleId, AssessmentAccessContext actor, String idempotencyKey, String requestId) {
     AssessmentAccessContext safeActor = Objects.requireNonNull(actor, "actor não pode ser nulo");
@@ -470,7 +660,8 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
                 safeActor.userId(),
                 AssessmentType.AUTOAVALIACAO,
                 null,
-                scope.userCollaboratorLinkId());
+                scope.userCollaboratorLinkId(),
+                null);
             insertVersion(
                 versionId,
                 assessmentId,
@@ -704,6 +895,8 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
                 current.actionPlan());
             copyAnswers(current.versionId(), versionId);
             copyResult(current.id(), versionId, result);
+            insertFeedbackStatus(
+                current.id(), versionId, feedbackLifecycle.statusAtPublication(current.type()));
             updateCurrentVersion(current, nextVersionNumber, AssessmentStatus.PUBLICADA);
             insertTransition(
                 current.id(),
@@ -726,6 +919,83 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
           });
     } catch (AssessmentForbiddenException exception) {
       safeDeniedAudit(safeActor.userId(), "AVALIACOES.PUBLICAR", assessmentId, requestId);
+      throw exception;
+    }
+  }
+
+  @Override
+  public AssessmentDetailView completeFeedback(
+      UUID assessmentId,
+      LocalDate feedbackDate,
+      String comment,
+      AssessmentAccessContext actor,
+      String idempotencyKey,
+      String requestId) {
+    AssessmentAccessContext safeActor = Objects.requireNonNull(actor, "actor não pode ser nulo");
+    LocalDate safeFeedbackDate =
+        Objects.requireNonNull(feedbackDate, "data do feedback não pode ser nula");
+    String normalizedComment =
+        normalizeRequiredText(comment, "O comentário do feedback é obrigatório.");
+    try {
+      return inTransaction(
+          () -> {
+            IdempotencyDecision decision =
+                beginIdempotent(
+                    safeActor,
+                    "AVALIACOES.CONCLUIR_FEEDBACK",
+                    idempotencyKey,
+                    canonical(assessmentId, safeFeedbackDate, normalizedComment));
+            if (decision.replayedAssessmentId() != null) {
+              LockedAssessment replay = requireLocked(decision.replayedAssessmentId());
+              requireView(replay, safeActor);
+              writeAudit(
+                  safeActor.userId(),
+                  "AVALIACOES.FEEDBACK.CONCLUIR",
+                  replay.id(),
+                  "SUCESSO",
+                  requestId,
+                  "REPETICAO_IDEMPOTENTE");
+              return toDetail(replay);
+            }
+
+            LockedAssessment current = requireLocked(assessmentId);
+            requireFeedbackCompletion(current, safeActor);
+            ensureFeedbackStatus(current, FeedbackStatus.PENDENTE);
+            try {
+              feedbackLifecycle.complete(current.status(), current.feedbackStatus());
+            } catch (AssessmentRuleViolation exception) {
+              throw invalidTransition();
+            }
+            int updated =
+                jdbcTemplate.update(
+                    """
+                    UPDATE dbo.feedback_avaliacao
+                    SET situacao = 'CONCLUIDO',
+                        data_feedback = ?,
+                        comentario = ?,
+                        concluido_por_usuario_id = ?,
+                        concluido_em_utc = SYSUTCDATETIME()
+                    WHERE versao_avaliacao_id = ? AND situacao = 'PENDENTE'
+                    """,
+                    safeFeedbackDate,
+                    normalizedComment,
+                    safeActor.userId(),
+                    current.versionId());
+            if (updated != 1) {
+              throw invalidTransition();
+            }
+            completeIdempotent(decision, 200, current.id());
+            writeAudit(
+                safeActor.userId(),
+                "AVALIACOES.FEEDBACK.CONCLUIR",
+                current.id(),
+                "SUCESSO",
+                requestId,
+                POLICY_VERSION);
+            return toDetail(requireLocked(current.id()));
+          });
+    } catch (AssessmentForbiddenException exception) {
+      safeDeniedAudit(safeActor.userId(), "AVALIACOES.FEEDBACK.CONCLUIR", assessmentId, requestId);
       throw exception;
     }
   }
@@ -889,6 +1159,52 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
     return scope.orElseThrow(AssessmentForbiddenException::new);
   }
 
+  private CreationScope requireDirectorCreationScope(
+      UUID cycleId, UUID collaboratorId, AssessmentAccessContext actor) {
+    requirePermission(actor, "AVALIACOES.AVALIAR_GERENCIAS_VINCULADAS");
+    if (!actor.hasRole("DIRETORIA") || actor.hasRole("ADMINISTRADOR_PLATAFORMA")) {
+      throw new AssessmentForbiddenException();
+    }
+    Optional<CreationScope> scope =
+        jdbcTemplate.query(
+            """
+            SELECT cycle.ciclo_avaliacao_id AS cycle_id,
+                   assignment.atribuicao_questionario_colaborador_id,
+                   assignment.ciclo_questionario_id,
+                   assignment.colaborador_id,
+                   director_link.vinculo_diretoria_gerencia_id
+            FROM dbo.ciclo_avaliacao AS cycle WITH (UPDLOCK, HOLDLOCK)
+            INNER JOIN dbo.atribuicao_questionario_colaborador AS assignment WITH (UPDLOCK, HOLDLOCK)
+                ON assignment.ciclo_avaliacao_id = cycle.ciclo_avaliacao_id
+               AND assignment.colaborador_id = ?
+               AND assignment.revogado_em_utc IS NULL
+            INNER JOIN dbo.vinculo_diretoria_gerencia AS director_link WITH (UPDLOCK, HOLDLOCK)
+                ON director_link.gerencia_colaborador_id = assignment.colaborador_id
+               AND director_link.diretoria_usuario_id = ?
+               AND director_link.revogado_em_utc IS NULL
+               AND (director_link.inicio_vigencia IS NULL
+                    OR director_link.inicio_vigencia <= CONVERT(date, SYSUTCDATETIME()))
+               AND (director_link.fim_vigencia IS NULL
+                    OR director_link.fim_vigencia >= CONVERT(date, SYSUTCDATETIME()))
+            INNER JOIN dbo.usuario AS actor_user WITH (UPDLOCK, HOLDLOCK)
+                ON actor_user.usuario_id = ?
+               AND actor_user.situacao = 'ATIVO'
+            WHERE cycle.ciclo_avaliacao_id = ?
+              AND cycle.situacao = 'ABERTO'
+              AND cycle.janela_abertura_em_utc <= SYSUTCDATETIME()
+              AND cycle.janela_encerramento_em_utc > SYSUTCDATETIME()
+            """,
+            resultSet ->
+                resultSet.next()
+                    ? Optional.of(mapDirectorCreationScope(resultSet))
+                    : Optional.empty(),
+            collaboratorId,
+            actor.userId(),
+            actor.userId(),
+            cycleId);
+    return scope.orElseThrow(AssessmentForbiddenException::new);
+  }
+
   private void requireEditable(LockedAssessment assessment, AssessmentAccessContext actor) {
     requireActiveActor(actor.userId());
     requireContributionWindow(assessment);
@@ -897,28 +1213,43 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
     } catch (AssessmentRuleViolation exception) {
       throw invalidTransition();
     }
-    if (assessment.type() == AssessmentType.GESTOR) {
-      requirePermission(actor, "AVALIACOES.AVALIAR_VINCULADOS");
-      requireAuthor(assessment, actor);
-      requireActiveManagerLink(assessment, actor.userId());
-      return;
-    }
-    requirePermission(actor, "AUTOAVALIACOES.PREENCHER_PROPRIA");
     requireAuthor(assessment, actor);
-    requireActiveUserCollaboratorLink(assessment, actor.userId());
+    switch (assessment.type()) {
+      case GESTOR -> {
+        requirePermission(actor, "AVALIACOES.AVALIAR_VINCULADOS");
+        requireActiveManagerLink(assessment, actor.userId());
+      }
+      case DIRETORIA_GERENCIA -> {
+        requirePermission(actor, "AVALIACOES.AVALIAR_GERENCIAS_VINCULADAS");
+        requireDirectorRole(actor);
+        requireActiveDirectorManagerLink(assessment, actor.userId());
+      }
+      case AUTOAVALIACAO -> {
+        requirePermission(actor, "AUTOAVALIACOES.PREENCHER_PROPRIA");
+        requireActiveUserCollaboratorLink(assessment, actor.userId());
+      }
+    }
   }
 
   private void requireSubmit(LockedAssessment assessment, AssessmentAccessContext actor) {
     requireActiveActor(actor.userId());
     requireContributionWindow(assessment);
     requireAuthor(assessment, actor);
-    if (assessment.type() == AssessmentType.GESTOR) {
-      requirePermission(actor, "AVALIACOES.AVALIAR_VINCULADOS");
-      requireActiveManagerLink(assessment, actor.userId());
-      return;
+    switch (assessment.type()) {
+      case GESTOR -> {
+        requirePermission(actor, "AVALIACOES.AVALIAR_VINCULADOS");
+        requireActiveManagerLink(assessment, actor.userId());
+      }
+      case DIRETORIA_GERENCIA -> {
+        requirePermission(actor, "AVALIACOES.AVALIAR_GERENCIAS_VINCULADAS");
+        requireDirectorRole(actor);
+        requireActiveDirectorManagerLink(assessment, actor.userId());
+      }
+      case AUTOAVALIACAO -> {
+        requirePermission(actor, "AUTOAVALIACOES.ENVIAR_PROPRIA");
+        requireActiveUserCollaboratorLink(assessment, actor.userId());
+      }
     }
-    requirePermission(actor, "AUTOAVALIACOES.ENVIAR_PROPRIA");
-    requireActiveUserCollaboratorLink(assessment, actor.userId());
   }
 
   private void requirePublish(LockedAssessment assessment, AssessmentAccessContext actor) {
@@ -926,9 +1257,6 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
     requirePermission(actor, "AVALIACOES.PUBLICAR");
     requireAdministrativeDecisionRole(actor);
     requireAdministrativeDecisionWindow(assessment);
-    if (assessment.type() != AssessmentType.GESTOR) {
-      throw new AssessmentForbiddenException();
-    }
   }
 
   private void requireReopen(LockedAssessment assessment, AssessmentAccessContext actor) {
@@ -936,15 +1264,34 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
     requirePermission(actor, "AVALIACOES.REABRIR");
     requireAdministrativeDecisionRole(actor);
     requireAdministrativeDecisionWindow(assessment);
-    if (assessment.type() != AssessmentType.GESTOR) {
-      throw new AssessmentForbiddenException();
-    }
   }
 
   private static void requireAdministrativeDecisionRole(AssessmentAccessContext actor) {
     if (actor.hasRole("ADMINISTRADOR_PLATAFORMA")
         || (!actor.hasRole("GERENCIA_RH") && !actor.hasRole("DIRETORIA"))) {
       throw new AssessmentForbiddenException();
+    }
+  }
+
+  private static void requireDirectorRole(AssessmentAccessContext actor) {
+    if (!actor.hasRole("DIRETORIA") || actor.hasRole("ADMINISTRADOR_PLATAFORMA")) {
+      throw new AssessmentForbiddenException();
+    }
+  }
+
+  private void requireFeedbackCompletion(
+      LockedAssessment assessment, AssessmentAccessContext actor) {
+    requireActiveActor(actor.userId());
+    requireAuthor(assessment, actor);
+    requirePermission(actor, "AVALIACOES.REGISTRAR_FEEDBACK_PROPRIO");
+    if (assessment.type() == AssessmentType.AUTOAVALIACAO) {
+      throw new AssessmentForbiddenException();
+    }
+    if (assessment.type() == AssessmentType.GESTOR) {
+      requireActiveManagerLink(assessment, actor.userId());
+    } else {
+      requireDirectorRole(actor);
+      requireActiveDirectorManagerLink(assessment, actor.userId());
     }
   }
 
@@ -964,12 +1311,18 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
     if (!assessment.authorUserId().equals(actor.userId())) {
       return false;
     }
-    if (assessment.type() == AssessmentType.GESTOR) {
-      return actor.has("AVALIACOES.VISUALIZAR_PROPRIAS_RESPOSTAS")
-          && hasActiveManagerLink(assessment, actor.userId());
-    }
-    return actor.has("AUTOAVALIACOES.VISUALIZAR_PROPRIA")
-        && hasActiveUserCollaboratorLink(assessment, actor.userId());
+    return switch (assessment.type()) {
+      case GESTOR ->
+          actor.has("AVALIACOES.VISUALIZAR_PROPRIAS_RESPOSTAS")
+              && hasActiveManagerLink(assessment, actor.userId());
+      case DIRETORIA_GERENCIA ->
+          actor.has("AVALIACOES.AVALIAR_GERENCIAS_VINCULADAS")
+              && actor.hasRole("DIRETORIA")
+              && hasActiveDirectorManagerLink(assessment, actor.userId());
+      case AUTOAVALIACAO ->
+          actor.has("AUTOAVALIACOES.VISUALIZAR_PROPRIA")
+              && hasActiveUserCollaboratorLink(assessment, actor.userId());
+    };
   }
 
   private void requireActiveActor(UUID actorId) {
@@ -1031,6 +1384,38 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
             """,
             resultSet -> resultSet.next() && resultSet.getBoolean(1),
             assessment.managerLinkId(),
+            actorId,
+            assessment.collaboratorId()));
+  }
+
+  private void requireActiveDirectorManagerLink(LockedAssessment assessment, UUID actorId) {
+    if (!hasActiveDirectorManagerLink(assessment, actorId)) {
+      throw new AssessmentForbiddenException();
+    }
+  }
+
+  private boolean hasActiveDirectorManagerLink(LockedAssessment assessment, UUID actorId) {
+    if (assessment.directorManagerLinkId() == null) {
+      return false;
+    }
+    return Boolean.TRUE.equals(
+        jdbcTemplate.query(
+            """
+            SELECT CAST(CASE WHEN EXISTS (
+                SELECT 1
+                FROM dbo.vinculo_diretoria_gerencia AS director_link WITH (UPDLOCK, HOLDLOCK)
+                WHERE director_link.vinculo_diretoria_gerencia_id = ?
+                  AND director_link.diretoria_usuario_id = ?
+                  AND director_link.gerencia_colaborador_id = ?
+                  AND director_link.revogado_em_utc IS NULL
+                  AND (director_link.inicio_vigencia IS NULL
+                       OR director_link.inicio_vigencia <= CONVERT(date, SYSUTCDATETIME()))
+                  AND (director_link.fim_vigencia IS NULL
+                       OR director_link.fim_vigencia >= CONVERT(date, SYSUTCDATETIME()))
+            ) THEN 1 ELSE 0 END AS bit)
+            """,
+            resultSet -> resultSet.next() && resultSet.getBoolean(1),
+            assessment.directorManagerLinkId(),
             actorId,
             assessment.collaboratorId()));
   }
@@ -1144,6 +1529,14 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
     }
     if (normalized.length() > TEXT_MAXIMUM_LENGTH) {
       throw new AssessmentValidationException("O texto do rascunho excede o limite permitido.");
+    }
+    return normalized;
+  }
+
+  private String normalizeRequiredText(String text, String requiredMessage) {
+    String normalized = normalizeOptionalText(text);
+    if (normalized == null) {
+      throw new AssessmentValidationException(requiredMessage);
     }
     return normalized;
   }
@@ -1275,7 +1668,8 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
       UUID actorId,
       AssessmentType type,
       UUID managerLinkId,
-      UUID userCollaboratorLinkId) {
+      UUID userCollaboratorLinkId,
+      UUID directorManagerLinkId) {
     jdbcTemplate.update(
         """
         INSERT INTO dbo.avaliacao (
@@ -1290,8 +1684,9 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
             criada_por_usuario_id,
             ciclo_avaliacao_id,
             vinculo_usuario_colaborador_id,
-            atribuicao_questionario_colaborador_id
-        ) VALUES (?, ?, ?, ?, ?, ?, 'RASCUNHO', 1, ?, ?, ?, ?)
+            atribuicao_questionario_colaborador_id,
+            vinculo_diretoria_gerencia_id
+        ) VALUES (?, ?, ?, ?, ?, ?, 'RASCUNHO', 1, ?, ?, ?, ?, ?)
         """,
         assessmentId,
         scope.cycleQuestionnaireId(),
@@ -1302,7 +1697,40 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
         actorId,
         scope.cycleId(),
         userCollaboratorLinkId,
-        scope.assignmentId());
+        scope.assignmentId(),
+        directorManagerLinkId);
+  }
+
+  private void insertFeedbackStatus(
+      UUID assessmentId, UUID versionId, FeedbackStatus feedbackStatus) {
+    jdbcTemplate.update(
+        """
+        INSERT INTO dbo.feedback_avaliacao (
+            avaliacao_id, versao_avaliacao_id, situacao
+        ) VALUES (?, ?, ?)
+        """,
+        assessmentId,
+        versionId,
+        feedbackStatus.name());
+  }
+
+  private void ensureFeedbackStatus(LockedAssessment assessment, FeedbackStatus initialStatus) {
+    jdbcTemplate.update(
+        """
+        INSERT INTO dbo.feedback_avaliacao (
+            avaliacao_id, versao_avaliacao_id, situacao
+        )
+        SELECT ?, ?, ?
+        WHERE NOT EXISTS (
+            SELECT 1
+            FROM dbo.feedback_avaliacao WITH (UPDLOCK, HOLDLOCK)
+            WHERE versao_avaliacao_id = ?
+        )
+        """,
+        assessment.id(),
+        assessment.versionId(),
+        initialStatus.name(),
+        assessment.versionId());
   }
 
   private void insertVersion(
@@ -1629,6 +2057,7 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
             collaboratorDisplayName(assessment.collaboratorId()),
             assessment.type(),
             assessment.status().name(),
+            assessment.feedbackStatus(),
             AssessmentRevision.encode(assessment.versionRowVersion()),
             assessment.updatedAt());
     List<OptionView> options = loadOptions(assessment.cycleQuestionnaireId());
@@ -1656,7 +2085,28 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
         assessment.comment(),
         assessment.actionPlan(),
         result,
-        result == null ? List.of() : loadCompetencyScores(assessment.versionId()));
+        result == null ? List.of() : loadCompetencyScores(assessment.versionId()),
+        loadFeedback(assessment));
+  }
+
+  private FeedbackView loadFeedback(LockedAssessment assessment) {
+    if (assessment.feedbackStatus() != FeedbackStatus.CONCLUIDO) {
+      return null;
+    }
+    return jdbcTemplate.query(
+        """
+        SELECT data_feedback, comentario, concluido_em_utc
+        FROM dbo.feedback_avaliacao
+        WHERE versao_avaliacao_id = ? AND situacao = 'CONCLUIDO'
+        """,
+        resultSet ->
+            resultSet.next()
+                ? new FeedbackView(
+                    resultSet.getObject("data_feedback", LocalDate.class),
+                    resultSet.getString("comentario"),
+                    instant(resultSet, "concluido_em_utc"))
+                : null,
+        assessment.versionId());
   }
 
   private String collaboratorDisplayName(UUID collaboratorId) {
@@ -1728,25 +2178,20 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
         WHERE cycle_questionnaire.ciclo_questionario_id = ?
         ORDER BY questionnaire_competency.ordem, question.ordem
         """,
-        (RowCallbackHandler)
-            resultSet -> {
-              while (resultSet.next()) {
-                UUID competencyId = resultSet.getObject("competencia_id", UUID.class);
-                MutableCompetency competency =
-                    competencies.computeIfAbsent(
-                        competencyId,
-                        id ->
-                            new MutableCompetency(
-                                id, resultSetString(resultSet, "competency_name")));
-                competency.questions.add(
-                    new QuestionView(
-                        resultSet.getObject("pergunta_questionario_id", UUID.class),
-                        resultSet.getString("texto"),
-                        resultSet.getString("descricao"),
-                        resultSet.getBoolean("obrigatoria"),
-                        options));
-              }
-            },
+        resultSet -> {
+          UUID competencyId = resultSet.getObject("competencia_id", UUID.class);
+          MutableCompetency competency =
+              competencies.computeIfAbsent(
+                  competencyId,
+                  id -> new MutableCompetency(id, resultSetString(resultSet, "competency_name")));
+          competency.questions.add(
+              new QuestionView(
+                  resultSet.getObject("pergunta_questionario_id", UUID.class),
+                  resultSet.getString("texto"),
+                  resultSet.getString("descricao"),
+                  resultSet.getBoolean("obrigatoria"),
+                  options));
+        },
         cycleQuestionnaireId);
     return competencies.values().stream().map(MutableCompetency::toView).toList();
   }
@@ -1838,6 +2283,7 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
         resultSet.getString("collaborator_display_name"),
         assessmentType(resultSet.getString("tipo_avaliacao")),
         resultSet.getString("assessment_situation"),
+        feedbackStatus(resultSet.getString("feedback_situation")),
         AssessmentRevision.encode(resultSet.getBytes("version_row_version")),
         instant(resultSet, "atualizada_em_utc"));
   }
@@ -1852,8 +2298,10 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
         resultSet.getObject("avaliador_usuario_id", UUID.class),
         resultSet.getObject("vinculo_gestor_colaborador_id", UUID.class),
         resultSet.getObject("vinculo_usuario_colaborador_id", UUID.class),
+        resultSet.getObject("vinculo_diretoria_gerencia_id", UUID.class),
         assessmentType(resultSet.getString("tipo_avaliacao")),
         assessmentStatus(resultSet.getString("assessment_situacao")),
+        feedbackStatus(resultSet.getString("feedback_situacao")),
         resultSet.getInt("versao_atual_numero"),
         resultSet.getObject("versao_avaliacao_id", UUID.class),
         resultSet.getBytes("version_row_version"),
@@ -1875,6 +2323,7 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
         resultSet.getObject("atribuicao_questionario_colaborador_id", UUID.class),
         resultSet.getObject("colaborador_id", UUID.class),
         resultSet.getObject("vinculo_gestor_colaborador_id", UUID.class),
+        null,
         null);
   }
 
@@ -1885,7 +2334,19 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
         resultSet.getObject("atribuicao_questionario_colaborador_id", UUID.class),
         resultSet.getObject("colaborador_id", UUID.class),
         null,
-        resultSet.getObject("vinculo_usuario_colaborador_id", UUID.class));
+        resultSet.getObject("vinculo_usuario_colaborador_id", UUID.class),
+        null);
+  }
+
+  private static CreationScope mapDirectorCreationScope(ResultSet resultSet) throws SQLException {
+    return new CreationScope(
+        resultSet.getObject("cycle_id", UUID.class),
+        resultSet.getObject("ciclo_questionario_id", UUID.class),
+        resultSet.getObject("atribuicao_questionario_colaborador_id", UUID.class),
+        resultSet.getObject("colaborador_id", UUID.class),
+        null,
+        null,
+        resultSet.getObject("vinculo_diretoria_gerencia_id", UUID.class));
   }
 
   private static StoredResult mapStoredResult(ResultSet resultSet) throws SQLException {
@@ -1902,9 +2363,20 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
     return new IdempotencyRecord(
         resultSet.getObject("chave_idempotencia_id", UUID.class),
         resultSet.getString("requisicao_hash"),
-        (Integer) resultSet.getObject("status_resposta"),
+        nullableInteger(resultSet, "status_resposta"),
         resultSet.getObject("recurso_resposta_id", UUID.class),
         instant(resultSet, "expira_em_utc"));
+  }
+
+  static Integer nullableInteger(ResultSet resultSet, String columnLabel) throws SQLException {
+    Object value = resultSet.getObject(columnLabel);
+    if (value == null) {
+      return null;
+    }
+    if (value instanceof Number number) {
+      return number.intValue();
+    }
+    throw new SQLException("Coluna numérica retornou um tipo JDBC incompatível.");
   }
 
   private static AssessmentType assessmentType(String value) {
@@ -1920,6 +2392,14 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
       return AssessmentStatus.valueOf(value);
     } catch (IllegalArgumentException exception) {
       throw new IllegalStateException("Situação de avaliação persistida desconhecida.");
+    }
+  }
+
+  private static FeedbackStatus feedbackStatus(String value) {
+    try {
+      return FeedbackStatus.valueOf(value);
+    } catch (IllegalArgumentException exception) {
+      throw new IllegalStateException("Situação de feedback persistida desconhecida.");
     }
   }
 
@@ -2030,8 +2510,10 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
       UUID authorUserId,
       UUID managerLinkId,
       UUID userCollaboratorLinkId,
+      UUID directorManagerLinkId,
       AssessmentType type,
       AssessmentStatus status,
+      FeedbackStatus feedbackStatus,
       int versionNumber,
       UUID versionId,
       byte[] versionRowVersion,
@@ -2051,7 +2533,8 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
       UUID assignmentId,
       UUID collaboratorId,
       UUID managerLinkId,
-      UUID userCollaboratorLinkId) {}
+      UUID userCollaboratorLinkId,
+      UUID directorManagerLinkId) {}
 
   private record QuestionDefinition(UUID id, boolean required) {}
 

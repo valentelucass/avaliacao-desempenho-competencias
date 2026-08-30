@@ -23,7 +23,11 @@ public interface AdministrativeReadRepository {
 
   List<ActiveManagerAssignmentView> listActiveManagerAssignments();
 
+  List<ActiveDirectorManagerAssignmentView> listActiveDirectorManagerAssignments();
+
   List<SelectionOptionView> listEligibleManagerOptions();
+
+  List<SelectionOptionView> listEligibleDirectorOptions();
 
   List<SelectionOptionView> listActiveUserOptions();
 
@@ -79,6 +83,16 @@ public interface AdministrativeReadRepository {
     }
   }
 
+  record ActiveDirectorManagerAssignmentView(
+      UUID id, UUID directorUserId, UUID managerCollaboratorId, LocalDate startsOn) {
+
+    public ActiveDirectorManagerAssignmentView {
+      Objects.requireNonNull(id, "identificador do vínculo não pode ser nulo");
+      Objects.requireNonNull(directorUserId, "diretoria não pode ser nula");
+      Objects.requireNonNull(managerCollaboratorId, "gerência não pode ser nula");
+    }
+  }
+
   /** Escolha identificável por nome de exibição, sem login, situação ou credencial. */
   record SelectionOptionView(UUID id, String displayName) {
 
@@ -95,6 +109,16 @@ public interface AdministrativeReadRepository {
       managers = List.copyOf(Objects.requireNonNull(managers, "gestores não podem ser nulos"));
       collaborators =
           List.copyOf(Objects.requireNonNull(collaborators, "colaboradores não podem ser nulos"));
+    }
+  }
+
+  record DirectorManagerAssignmentOptionsView(
+      List<SelectionOptionView> directors, List<SelectionOptionView> collaborators) {
+
+    public DirectorManagerAssignmentOptionsView {
+      directors = List.copyOf(Objects.requireNonNull(directors, "diretorias não podem ser nulas"));
+      collaborators =
+          List.copyOf(Objects.requireNonNull(collaborators, "gerências não podem ser nulas"));
     }
   }
 

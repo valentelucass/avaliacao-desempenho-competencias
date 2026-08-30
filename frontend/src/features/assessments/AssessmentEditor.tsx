@@ -12,10 +12,12 @@ type AssessmentEditorProps = {
   api: ApiClient
   assessmentId: string
   canEditManagerAssessment: boolean
+  canEditDirectorAssessment: boolean
   canEditSelfAssessment: boolean
   canSubmitSelfAssessment: boolean
   canPublish: boolean
   canReopen: boolean
+  canRecordFeedback: boolean
   onBack: () => void
   onChanged: () => void
   onSessionExpired: () => void
@@ -25,10 +27,12 @@ export function AssessmentEditor({
   api,
   assessmentId,
   canEditManagerAssessment,
+  canEditDirectorAssessment,
   canEditSelfAssessment,
   canSubmitSelfAssessment,
   canPublish,
   canReopen,
+  canRecordFeedback,
   onBack,
   onChanged,
   onSessionExpired,
@@ -38,6 +42,8 @@ export function AssessmentEditor({
   const [comment, setComment] = useState('')
   const [actionPlan, setActionPlan] = useState('')
   const [reopenReason, setReopenReason] = useState('')
+  const [feedbackDate, setFeedbackDate] = useState('')
+  const [feedbackComment, setFeedbackComment] = useState('')
   const [error, setError] = useState<string>()
   const [status, setStatus] = useState<string>()
   const [missingQuestionIds, setMissingQuestionIds] = useState<readonly string[]>([])
@@ -84,10 +90,17 @@ export function AssessmentEditor({
     [assessment],
   )
   const isDraft = assessment?.status === 'RASCUNHO'
-  const canEditDraft =
-    isDraft && (assessment?.type === 'GESTOR' ? canEditManagerAssessment : canEditSelfAssessment)
+  const canEditDraft = isDraft && canEditAssessmentType(assessment?.type)
   const canSubmitDraft =
-    isDraft && (assessment?.type === 'GESTOR' ? canEditManagerAssessment : canSubmitSelfAssessment)
+    isDraft &&
+    (assessment?.type === 'AUTOAVALIACAO'
+      ? canSubmitSelfAssessment
+      : canEditAssessmentType(assessment?.type))
+  const canCompleteFeedback =
+    assessment?.status === 'PUBLICADA' &&
+    assessment.feedbackStatus === 'PENDENTE' &&
+    assessment.type !== 'AUTOAVALIACAO' &&
+    canRecordFeedback
   const hasPrintableSummary =
     (assessment?.status === 'ENVIADA' || assessment?.status === 'PUBLICADA') &&
     assessment.result !== undefined &&
@@ -101,6 +114,8 @@ export function AssessmentEditor({
     setComment(detail.comment ?? '')
     setActionPlan(detail.actionPlan ?? '')
     setReopenReason('')
+    setFeedbackDate('')
+    setFeedbackComment('')
     setMissingQuestionIds([])
   }
 
@@ -167,12 +182,7 @@ export function AssessmentEditor({
   }
 
   async function publishAssessment() {
-    if (
-      !assessment ||
-      assessment.type !== 'GESTOR' ||
-      assessment.status !== 'ENVIADA' ||
-      !canPublish
-    ) {
+    if (!assessment || assessment.status !== 'ENVIADA' || !canPublish) {
       return
     }
 
@@ -192,12 +202,7 @@ export function AssessmentEditor({
   }
 
   async function reopenAssessment() {
-    if (
-      !assessment ||
-      assessment.type !== 'GESTOR' ||
-      assessment.status !== 'PUBLICADA' ||
-      !canReopen
-    ) {
+    if (!assessment || assessment.status !== 'PUBLICADA' || !canReopen) {
       return
     }
     const reason = reopenReason.trim()
@@ -219,6 +224,43 @@ export function AssessmentEditor({
     } finally {
       setIsSaving(false)
     }
+  }
+
+  async function completeFeedback() {
+    if (!assessment || !canCompleteFeedback) {
+      return
+    }
+    if (!feedbackDate || !feedbackComment.trim()) {
+      setError('Informe a data e o comentário do feedback antes de concluir.')
+      return
+    }
+
+    setIsSaving(true)
+    setError(undefined)
+    setStatus(undefined)
+    try {
+      const updated = await api.completeAssessmentFeedback(assessment.id, {
+        feedbackDate,
+        comment: feedbackComment.trim(),
+      })
+      applyDetail(updated)
+      setStatus('Feedback registrado e concluído com sucesso.')
+      onChanged()
+    } catch (requestError) {
+      handleRequestError(requestError)
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  function canEditAssessmentType(type: AssessmentDetail['type'] | undefined) {
+    if (type === 'GESTOR') {
+      return canEditManagerAssessment
+    }
+    if (type === 'DIRETORIA_GERENCIA') {
+      return canEditDirectorAssessment
+    }
+    return canEditSelfAssessment
   }
 
   function handleRequestError(requestError: unknown) {
@@ -421,7 +463,7 @@ export function AssessmentEditor({
           </div>
         ) : null}
 
-        {assessment.type === 'GESTOR' && assessment.status === 'ENVIADA' && canPublish ? (
+        {assessment.status === 'ENVIADA' && canPublish ? (
           <div className="action-row">
             <button
               className="button button--success"
@@ -434,8 +476,11 @@ export function AssessmentEditor({
           </div>
         ) : null}
 
-        {assessment.type === 'GESTOR' && assessment.status === 'PUBLICADA' && canReopen ? (
-          <section className="card" aria-labelledby="reopen-assessment-title">
+        {assessment.status === 'PUBLICADA' && canReopen ? (
+          <section
+            className="assessment-editor__administrative-action"
+            aria-labelledby="reopen-assessment-title"
+          >
             <h3 id="reopen-assessment-title">Reabrir avaliação</h3>
             <p className="field-hint">
               A reabertura exige motivo e preserva a versão publicada no histórico.
@@ -465,10 +510,82 @@ export function AssessmentEditor({
           </section>
         ) : null}
 
+        {assessment.status === 'PUBLICADA' ? (
+          <section
+            className="assessment-editor__feedback"
+            aria-labelledby="assessment-feedback-title"
+          >
+            <div>
+              <h3 id="assessment-feedback-title">Feedback</h3>
+              <p className="field-hint">
+                {assessment.feedbackStatus === 'NAO_APLICAVEL'
+                  ? 'Não se aplica a autoavaliações.'
+                  : assessment.feedbackStatus === 'CONCLUIDO'
+                    ? 'O registro abaixo faz parte do histórico desta versão publicada.'
+                    : 'Registre a conversa com o colaborador para concluir esta etapa.'}
+              </p>
+            </div>
+            {assessment.feedback ? (
+              <dl className="assessment-editor__feedback-record">
+                <div>
+                  <dt>Data do feedback</dt>
+                  <dd>
+                    {new Intl.DateTimeFormat('pt-BR', { timeZone: 'UTC' }).format(
+                      new Date(`${assessment.feedback.feedbackDate}T00:00:00Z`),
+                    )}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Registro</dt>
+                  <dd>{assessment.feedback.comment}</dd>
+                </div>
+              </dl>
+            ) : null}
+            {canCompleteFeedback ? (
+              <div className="assessment-editor__feedback-form">
+                <div className="field">
+                  <label htmlFor="assessment-feedback-date">Data do feedback</label>
+                  <input
+                    id="assessment-feedback-date"
+                    type="date"
+                    value={feedbackDate}
+                    onChange={(event) => setFeedbackDate(event.target.value)}
+                    disabled={isSaving}
+                    required
+                  />
+                </div>
+                <div className="field">
+                  <label htmlFor="assessment-feedback-comment">Comentário do feedback</label>
+                  <textarea
+                    id="assessment-feedback-comment"
+                    value={feedbackComment}
+                    onChange={(event) => setFeedbackComment(event.target.value)}
+                    disabled={isSaving}
+                    maxLength={2000}
+                    rows={4}
+                    required
+                  />
+                </div>
+                <div className="action-row">
+                  <button
+                    className="button button--success"
+                    type="button"
+                    onClick={() => void completeFeedback()}
+                    disabled={isSaving || !feedbackDate || !feedbackComment.trim()}
+                  >
+                    {isSaving ? 'Salvando…' : 'Concluir feedback'}
+                  </button>
+                </div>
+              </div>
+            ) : null}
+          </section>
+        ) : null}
+
         {!canEditDraft &&
         !canSubmitDraft &&
-        !(assessment.type === 'GESTOR' && assessment.status === 'ENVIADA' && canPublish) &&
-        !(assessment.type === 'GESTOR' && assessment.status === 'PUBLICADA' && canReopen) ? (
+        !(assessment.status === 'ENVIADA' && canPublish) &&
+        !(assessment.status === 'PUBLICADA' && canReopen) &&
+        !canCompleteFeedback ? (
           <FeedbackMessage kind="status">
             Esta avaliação está disponível somente para consulta com as permissões atuais.
           </FeedbackMessage>

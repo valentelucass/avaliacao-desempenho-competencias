@@ -30,7 +30,7 @@ class EvaluationCycleReadServiceTests {
             cursor);
 
     assertThat(repository.actorUserId).isEqualTo(actorId);
-    assertThat(repository.scope).isEqualTo(new EvaluationCycleReadScope(false, true, false));
+    assertThat(repository.scope).isEqualTo(new EvaluationCycleReadScope(false, true, false, false));
     assertThat(repository.limit).isEqualTo(20);
     assertThat(repository.cursor).isEqualTo(cursor);
     assertThat(page.items()).hasSize(1);

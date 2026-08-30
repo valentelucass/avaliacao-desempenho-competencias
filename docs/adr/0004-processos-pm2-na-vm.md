@@ -27,6 +27,6 @@ A VM já possui processos PM2 de outros sistemas. A aplicação precisa de scrip
 - O manifesto configura reinício automático com backoff, limite de reinícios, mínimo de disponibilidade e arquivos de saída/erro no diretório externo de logs. A atualização do manifesto exige nova execução autorizada de `iniciar-prod.bat` para ser aplicada aos processos existentes.
 - Testes afetados: validação dos modos `--check`, disponibilidade das portas, início dos processos PM2 e verificação de saúde quando o contrato de uma rota de saúde for aprovado.
 
-## Estado operacional posterior — 2026-08-26
+## Estado operacional posterior — 2026-08-29
 
-Os processos `avaliacao-desempenho-backend-prod` e `avaliacao-desempenho-frontend-prod` foram observados online, e os hosts públicos responderam `200` na verificação anônima. Essa é uma evidência pontual de disponibilidade: não confirma jornada autenticada, operação com dados reais, aceite de negócio, backup/restauração nem a recuperação automática do PM2 após reinício da VM.
+Os processos `avaliacao-desempenho-backend-prod` e `avaliacao-desempenho-frontend-prod` foram recriados somente pelo launcher do projeto e observados online; os hosts públicos também responderam em verificação anônima. O cenário autenticado passou separadamente na API/SPA locais contra DEV, não no host público/`AVALIACAO_PROD`. Para a próxima mudança ainda é necessário revalidar ambiente mínimo do PM2, headers públicos e recuperação após reinício; operação com dados reais, backup/restauração e aceite de negócio permanecem externos.

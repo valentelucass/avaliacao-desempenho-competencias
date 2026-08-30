@@ -993,6 +993,7 @@ function sampleAssessment(): AssessmentDetail {
     evaluated: { displayName: 'Colaborador autorizado' },
     type: 'GESTOR',
     status: 'RASCUNHO',
+    feedbackStatus: 'NAO_APLICAVEL',
     revision: 'revision-1',
     questionnaire: {
       version: '2024.1',

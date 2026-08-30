@@ -28,9 +28,9 @@ O projeto precisa de segurança desde o início, mas não possui banco autorizad
 
 A identidade persistida, sessão/JWT, RBAC/ABAC, auditoria e limites locais foram implementados posteriormente sob a ADR-0012. O banco local dedicado foi reconciliado de `V0001` a `V0007` e recebeu uma conta técnica de desenvolvimento protegida, sem escopo de negócio. O launcher `iniciar-dev.bat` ativa esses módulos somente em loopback HTTPS com material de execução efêmero; a inicialização API/SPA/proxy foi verificada com CSRF `200` e rota protegida `401`, enquanto login interativo e navegador continuam pendentes.
 
-## Estado atual — 2026-08-27
+## Estado atual — 2026-08-29
 
-O parágrafo anterior é histórico. A evidência mais recente registra `V0001`–`V0010` reconciliadas em `AVALIACAO_DEV` e `AVALIACAO_PROD`, hosts públicos com resposta anônima `200` e processos PM2 online. A `V0011` está em fonte e aguarda aplicação autorizada. Isso não substitui validação autenticada, teste de escrita em produção, aceite de negócio ou certificação de segurança do proxy/Tunnel.
+O parágrafo anterior é histórico. `AVALIACAO_DEV` e `AVALIACAO_PROD` reconciliaram `V0001`–`V0013`. Um cenário autenticado com massa fictícia passou em DEV, cobrindo sessão/CSRF, autorização por recurso, feedback, indicadores/CSV, refresh e logout; teste autenticado em `AVALIACAO_PROD` foi retirado explicitamente do escopo técnico. HSTS e os demais headers passaram no runtime público em 2026-08-29; os hosts HTTP ainda não redirecionam para HTTPS, e WAF/limite de borda continuam externos ao repositório. Nada disso substitui aceite de negócio ou LGPD.
 
 ## Referências
 

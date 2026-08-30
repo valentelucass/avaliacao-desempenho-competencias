@@ -206,6 +206,18 @@ public class SqlIdentityAccessRepository implements IdentityAccessRepository {
     }
 
     UUID replacementId = UUID.randomUUID();
+    jdbcTemplate.update(
+        """
+        INSERT INTO dbo.token_renovacao (
+            token_renovacao_id, sessao_id, token_hash, emitido_em_utc, expira_em_utc
+        ) VALUES (?, ?, ?, ?, ?)
+        """,
+        replacementId,
+        current.sessionId(),
+        replacementRefreshTokenHash,
+        timestamp(now),
+        timestamp(replacementRefreshTokenExpiresAt));
+
     int revoked =
         jdbcTemplate.update(
             """
@@ -237,17 +249,6 @@ public class SqlIdentityAccessRepository implements IdentityAccessRepository {
       return Optional.empty();
     }
 
-    jdbcTemplate.update(
-        """
-        INSERT INTO dbo.token_renovacao (
-            token_renovacao_id, sessao_id, token_hash, emitido_em_utc, expira_em_utc
-        ) VALUES (?, ?, ?, ?, ?)
-        """,
-        replacementId,
-        current.sessionId(),
-        replacementRefreshTokenHash,
-        timestamp(now),
-        timestamp(replacementRefreshTokenExpiresAt));
     return Optional.of(
         new RefreshSession(
             new AuthenticationSession(

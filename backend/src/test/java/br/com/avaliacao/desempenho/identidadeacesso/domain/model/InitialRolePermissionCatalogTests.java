@@ -23,11 +23,15 @@ class InitialRolePermissionCatalogTests {
   }
 
   @Test
-  void grantsOnlyConfirmedPermissionsToManagers() {
+  void grantsManagersTheirOwnEvaluationSelfAssessmentAndFeedbackPermissions() {
     assertThat(InitialRolePermissionCatalog.permissionsFor(PlatformRole.GESTOR))
         .containsExactlyInAnyOrder(
             PlatformPermission.ASSESSMENTS_EVALUATE_LINKED,
-            PlatformPermission.ASSESSMENTS_VIEW_OWN_RESPONSES)
+            PlatformPermission.ASSESSMENTS_VIEW_OWN_RESPONSES,
+            PlatformPermission.ASSESSMENTS_RECORD_OWN_FEEDBACK,
+            PlatformPermission.SELF_ASSESSMENTS_FILL_OWN,
+            PlatformPermission.SELF_ASSESSMENTS_SUBMIT_OWN,
+            PlatformPermission.SELF_ASSESSMENTS_VIEW_OWN)
         .doesNotContain(PlatformPermission.DATA_EXPORT, PlatformPermission.ASSESSMENTS_VIEW_ALL);
   }
 
@@ -42,7 +46,8 @@ class InitialRolePermissionCatalogTests {
             PlatformPermission.INDICATORS_VIEW,
             PlatformPermission.DATA_EXPORT,
             PlatformPermission.CYCLES_MANAGE,
-            PlatformPermission.QUESTIONNAIRES_MANAGE);
+            PlatformPermission.QUESTIONNAIRES_MANAGE,
+            PlatformPermission.DIRECTOR_MANAGER_ASSIGNMENTS_MANAGE);
   }
 
   @Test
@@ -55,17 +60,17 @@ class InitialRolePermissionCatalogTests {
             PlatformPermission.ASSESSMENTS_REOPEN,
             PlatformPermission.INDICATORS_VIEW,
             PlatformPermission.DATA_EXPORT,
-            PlatformPermission.CYCLES_MANAGE)
+            PlatformPermission.CYCLES_MANAGE,
+            PlatformPermission.ASSESSMENTS_EVALUATE_LINKED_MANAGERS,
+            PlatformPermission.ASSESSMENTS_RECORD_OWN_FEEDBACK,
+            PlatformPermission.SELF_ASSESSMENTS_FILL_OWN,
+            PlatformPermission.SELF_ASSESSMENTS_SUBMIT_OWN,
+            PlatformPermission.SELF_ASSESSMENTS_VIEW_OWN)
         .doesNotContain(PlatformPermission.QUESTIONNAIRES_MANAGE);
   }
 
   @Test
-  void givesCollaboratorsOnlyTheirOwnSelfAssessmentPermissions() {
-    assertThat(InitialRolePermissionCatalog.permissionsFor(PlatformRole.COLABORADOR))
-        .containsExactlyInAnyOrder(
-            PlatformPermission.SELF_ASSESSMENTS_FILL_OWN,
-            PlatformPermission.SELF_ASSESSMENTS_SUBMIT_OWN,
-            PlatformPermission.SELF_ASSESSMENTS_VIEW_OWN)
-        .doesNotContain(PlatformPermission.ASSESSMENTS_VIEW_ALL, PlatformPermission.DATA_EXPORT);
+  void keepsCollaboratorsWithoutPlatformPermissions() {
+    assertThat(InitialRolePermissionCatalog.permissionsFor(PlatformRole.COLABORADOR)).isEmpty();
   }
 }

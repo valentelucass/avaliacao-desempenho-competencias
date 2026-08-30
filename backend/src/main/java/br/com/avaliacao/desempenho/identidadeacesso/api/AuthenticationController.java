@@ -15,6 +15,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import java.util.List;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.csrf.CsrfToken;
@@ -132,12 +133,22 @@ public class AuthenticationController {
 
   private static String findCookie(HttpServletRequest request, String name) {
     Cookie[] cookies = request.getCookies();
-    if (cookies == null) {
+    if (cookies != null) {
+      for (Cookie cookie : cookies) {
+        if (name.equals(cookie.getName())) {
+          return cookie.getValue();
+        }
+      }
+    }
+
+    String header = request.getHeader(HttpHeaders.COOKIE);
+    if (header == null || header.isBlank()) {
       return "";
     }
-    for (Cookie cookie : cookies) {
-      if (name.equals(cookie.getName())) {
-        return cookie.getValue();
+    for (String segment : header.split(";")) {
+      int separator = segment.indexOf('=');
+      if (separator > 0 && name.equals(segment.substring(0, separator).trim())) {
+        return segment.substring(separator + 1).trim();
       }
     }
     return "";

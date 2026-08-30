@@ -4,6 +4,30 @@ import { URL } from 'node:url'
 import { defineConfig } from 'vitest/config'
 
 const allowedPublicHosts = ['formulario.rodogarcia.com.br']
+const publicPreviewHeaders = {
+  'Content-Security-Policy': [
+    "default-src 'self'",
+    "base-uri 'self'",
+    "object-src 'none'",
+    "frame-ancestors 'none'",
+    "form-action 'self'",
+    "script-src 'self'",
+    "style-src 'self' 'unsafe-inline'",
+    "style-src-elem 'self'",
+    "style-src-attr 'unsafe-inline'",
+    "img-src 'self' data:",
+    "font-src 'self'",
+    "connect-src 'self' https://api-formulario.rodogarcia.com.br",
+    "frame-src 'none'",
+    "worker-src 'none'",
+    "manifest-src 'self'",
+  ].join('; '),
+  'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
+  'Referrer-Policy': 'no-referrer',
+  'Strict-Transport-Security': 'max-age=31536000',
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'DENY',
+}
 
 function publicPreviewHost(origin: string | undefined) {
   if (!origin) {
@@ -83,6 +107,7 @@ export default defineConfig({
   server: secureLocalDevelopmentServer(),
   preview: {
     allowedHosts: allowedPublicHosts,
+    headers: publicPreviewHeaders,
   },
   test: {
     environment: 'jsdom',

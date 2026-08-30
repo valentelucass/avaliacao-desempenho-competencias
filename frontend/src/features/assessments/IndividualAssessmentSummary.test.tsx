@@ -46,6 +46,7 @@ function sampleAssessment(): AssessmentDetail {
     evaluated: { displayName: 'Pessoa avaliada' },
     type: 'GESTOR',
     status: 'PUBLICADA',
+    feedbackStatus: 'PENDENTE',
     questionnaire: { version: '2024.1', competencies: [] },
     answers: [],
     comment: 'Comentário seguro',

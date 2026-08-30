@@ -10,6 +10,7 @@ public record AssessmentSummaryResponse(
     EvaluatedResponse evaluated,
     String type,
     String status,
+    String feedbackStatus,
     String revision,
     Instant updatedAt) {
 

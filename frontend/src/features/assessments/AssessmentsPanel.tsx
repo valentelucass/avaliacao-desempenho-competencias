@@ -20,10 +20,12 @@ import { IndividualAssessmentSummary } from './IndividualAssessmentSummary'
 type AssessmentsPanelProps = {
   api: ApiClient
   canCreateManagerAssessment: boolean
+  canCreateDirectorAssessment: boolean
   canCreateSelfAssessment: boolean
   canSubmitSelfAssessment: boolean
   canPublishAssessments: boolean
   canReopenAssessments: boolean
+  canRecordFeedback: boolean
   isAdministrativeView: boolean
   journey?: 'EQUIPE' | 'AUTOAVALIACAO'
   assessmentId?: string
@@ -37,10 +39,12 @@ const assessmentsPageSize = 12
 export function AssessmentsPanel({
   api,
   canCreateManagerAssessment,
+  canCreateDirectorAssessment,
   canCreateSelfAssessment,
   canSubmitSelfAssessment,
   canPublishAssessments,
   canReopenAssessments,
+  canRecordFeedback,
   isAdministrativeView,
   journey,
   assessmentId,
@@ -51,6 +55,8 @@ export function AssessmentsPanel({
   const selfCycleId = useId()
   const managerCycleId = useId()
   const managerCollaboratorId = useId()
+  const directorCycleId = useId()
+  const directorCollaboratorId = useId()
   const [assessmentPage, setAssessmentPage] = useState<Page<AssessmentSummary>>({
     items: [],
     page: { limit: assessmentsPageSize, nextCursor: null },
@@ -74,14 +80,22 @@ export function AssessmentsPanel({
     readonly ManagerAssessmentCreationOption[]
   >([])
   const [selectedManagerCollaboratorId, setSelectedManagerCollaboratorId] = useState('')
+  const [selectedDirectorCycleId, setSelectedDirectorCycleId] = useState('')
+  const [directorCollaborators, setDirectorCollaborators] = useState<
+    readonly ManagerAssessmentCreationOption[]
+  >([])
+  const [selectedDirectorCollaboratorId, setSelectedDirectorCollaboratorId] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [isLoadingCycles, setIsLoadingCycles] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
   const [isLoadingManagerCollaborators, setIsLoadingManagerCollaborators] = useState(false)
   const [isCreatingManagerAssessment, setIsCreatingManagerAssessment] = useState(false)
+  const [isLoadingDirectorCollaborators, setIsLoadingDirectorCollaborators] = useState(false)
+  const [isCreatingDirectorAssessment, setIsCreatingDirectorAssessment] = useState(false)
   const [error, setError] = useState<string>()
   const [creationError, setCreationError] = useState<string>()
   const [managerCreationError, setManagerCreationError] = useState<string>()
+  const [directorCreationError, setDirectorCreationError] = useState<string>()
   const isPageNavigationPending = useRef(false)
   const managerCreationCardRef = useRef<HTMLElement>(null)
   const selfCreationCardRef = useRef<HTMLElement>(null)
@@ -226,7 +240,7 @@ export function AssessmentsPanel({
   }, [api, onSessionExpired, previewedAssessmentId])
 
   useEffect(() => {
-    if (!canCreateSelfAssessment && !canCreateManagerAssessment) {
+    if (!canCreateSelfAssessment && !canCreateManagerAssessment && !canCreateDirectorAssessment) {
       return undefined
     }
 
@@ -259,7 +273,13 @@ export function AssessmentsPanel({
     return () => {
       isCurrent = false
     }
-  }, [api, canCreateManagerAssessment, canCreateSelfAssessment, onSessionExpired])
+  }, [
+    api,
+    canCreateDirectorAssessment,
+    canCreateManagerAssessment,
+    canCreateSelfAssessment,
+    onSessionExpired,
+  ])
 
   useEffect(() => {
     if (!canCreateManagerAssessment || !selectedManagerCycleId) {
@@ -298,6 +318,44 @@ export function AssessmentsPanel({
       isCurrent = false
     }
   }, [api, canCreateManagerAssessment, onSessionExpired, selectedManagerCycleId])
+
+  useEffect(() => {
+    if (!canCreateDirectorAssessment || !selectedDirectorCycleId) {
+      return undefined
+    }
+
+    let isCurrent = true
+    async function loadDirectorCollaborators() {
+      setIsLoadingDirectorCollaborators(true)
+      setDirectorCreationError(undefined)
+      try {
+        const collaborators =
+          await api.listDirectorAssessmentCreationOptions(selectedDirectorCycleId)
+        if (isCurrent) {
+          setDirectorCollaborators(collaborators)
+          setSelectedDirectorCollaboratorId('')
+        }
+      } catch (requestError) {
+        if (isAuthenticationError(requestError)) {
+          onSessionExpired()
+          return
+        }
+        if (isCurrent) {
+          setDirectorCollaborators([])
+          setDirectorCreationError(safeErrorMessage(requestError))
+        }
+      } finally {
+        if (isCurrent) {
+          setIsLoadingDirectorCollaborators(false)
+        }
+      }
+    }
+
+    void loadDirectorCollaborators()
+    return () => {
+      isCurrent = false
+    }
+  }, [api, canCreateDirectorAssessment, onSessionExpired, selectedDirectorCycleId])
 
   useEffect(() => {
     const destination =
@@ -364,6 +422,13 @@ export function AssessmentsPanel({
     setManagerCreationError(undefined)
   }
 
+  function selectDirectorCycle(cycleId: string) {
+    setSelectedDirectorCycleId(cycleId)
+    setDirectorCollaborators([])
+    setSelectedDirectorCollaboratorId('')
+    setDirectorCreationError(undefined)
+  }
+
   async function createSelfAssessment(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setCreationError(undefined)
@@ -425,15 +490,50 @@ export function AssessmentsPanel({
     }
   }
 
+  async function createDirectorAssessment(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setDirectorCreationError(undefined)
+    if (!selectedDirectorCycleId) {
+      setDirectorCreationError('Selecione o ciclo para criar a avaliação de Diretoria.')
+      return
+    }
+    if (!selectedDirectorCollaboratorId) {
+      setDirectorCreationError('Selecione uma gerência autorizada pelo servidor.')
+      return
+    }
+
+    setIsCreatingDirectorAssessment(true)
+    try {
+      const created = await api.createAssessment({
+        type: 'DIRETORIA_GERENCIA',
+        cycleId: selectedDirectorCycleId,
+        collaboratorId: selectedDirectorCollaboratorId,
+      })
+      setSelectedDirectorCollaboratorId('')
+      onSelectAssessment(created.id)
+      refreshAssessments()
+    } catch (requestError) {
+      if (isAuthenticationError(requestError)) {
+        onSessionExpired()
+        return
+      }
+      setDirectorCreationError(safeErrorMessage(requestError))
+    } finally {
+      setIsCreatingDirectorAssessment(false)
+    }
+  }
+
   if (assessmentId) {
     return (
       <AssessmentEditor
         api={api}
         assessmentId={assessmentId}
         canEditManagerAssessment={canCreateManagerAssessment}
+        canEditDirectorAssessment={canCreateDirectorAssessment}
         canEditSelfAssessment={canCreateSelfAssessment}
         canPublish={canPublishAssessments}
         canReopen={canReopenAssessments}
+        canRecordFeedback={canRecordFeedback}
         canSubmitSelfAssessment={canSubmitSelfAssessment}
         onBack={onExitEditor}
         onChanged={refreshAssessments}
@@ -558,7 +658,7 @@ export function AssessmentsPanel({
         </section>
       ) : null}
 
-      {canCreateManagerAssessment || canCreateSelfAssessment ? (
+      {canCreateManagerAssessment || canCreateDirectorAssessment || canCreateSelfAssessment ? (
         <div className="assessment-creation-grid">
           {canCreateManagerAssessment ? (
             <section
@@ -654,6 +754,95 @@ export function AssessmentsPanel({
             </section>
           ) : null}
 
+          {canCreateDirectorAssessment ? (
+            <section
+              className="card assessment-creation-card"
+              aria-labelledby="create-director-assessment-title"
+            >
+              <div className="assessment-creation-card__header">
+                <h3 id="create-director-assessment-title">Criar avaliação de Diretoria</h3>
+                <p className="muted">
+                  O servidor mostra somente gerências vinculadas à sua Diretoria, com questionário
+                  atribuído e vigência ativa no ciclo escolhido.
+                </p>
+              </div>
+              <form
+                className="stack-form assessment-creation-form assessment-creation-form--manager"
+                onSubmit={createDirectorAssessment}
+                noValidate
+                aria-busy={isCreatingDirectorAssessment}
+              >
+                {directorCreationError ? (
+                  <FeedbackMessage kind="error">{directorCreationError}</FeedbackMessage>
+                ) : null}
+                <div className="field">
+                  <label htmlFor={directorCycleId}>Ciclo para avaliação de Diretoria</label>
+                  <select
+                    id={directorCycleId}
+                    value={selectedDirectorCycleId}
+                    onChange={(event) => selectDirectorCycle(event.target.value)}
+                    disabled={isLoadingCycles || isCreatingDirectorAssessment}
+                    required
+                  >
+                    <option value="">Selecione um ciclo</option>
+                    {cycles.map((cycle) => (
+                      <option key={cycle.id} value={cycle.id}>
+                        {cycle.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="field">
+                  <label htmlFor={directorCollaboratorId}>Gerência autorizada</label>
+                  <select
+                    id={directorCollaboratorId}
+                    value={selectedDirectorCollaboratorId}
+                    onChange={(event) => setSelectedDirectorCollaboratorId(event.target.value)}
+                    disabled={
+                      !selectedDirectorCycleId ||
+                      isLoadingDirectorCollaborators ||
+                      isCreatingDirectorAssessment
+                    }
+                    required
+                  >
+                    <option value="">Selecione uma gerência</option>
+                    {directorCollaborators.map((collaborator) => (
+                      <option key={collaborator.id} value={collaborator.id}>
+                        {collaborator.displayName}
+                      </option>
+                    ))}
+                  </select>
+                  {isLoadingDirectorCollaborators ? (
+                    <p className="field-hint">Carregando gerências autorizadas…</p>
+                  ) : null}
+                  {selectedDirectorCycleId &&
+                  !isLoadingDirectorCollaborators &&
+                  directorCollaborators.length === 0 ? (
+                    <p className="field-hint">
+                      Não há gerências elegíveis para uma nova avaliação neste ciclo.
+                    </p>
+                  ) : null}
+                </div>
+                <div className="action-row">
+                  <button
+                    className="button button--success"
+                    type="submit"
+                    disabled={
+                      !selectedDirectorCycleId ||
+                      !selectedDirectorCollaboratorId ||
+                      isLoadingCycles ||
+                      isLoadingDirectorCollaborators ||
+                      isCreatingDirectorAssessment
+                    }
+                  >
+                    <Plus aria-hidden="true" size={17} strokeWidth={2} />
+                    {isCreatingDirectorAssessment ? 'Criando…' : 'Criar avaliação de Diretoria'}
+                  </button>
+                </div>
+              </form>
+            </section>
+          ) : null}
+
           {canCreateSelfAssessment ? (
             <section
               className="card assessment-creation-card"
@@ -736,8 +925,17 @@ export function AssessmentsPanel({
                 </span>
               </div>
               <p className="assessment-list__type">{formatAssessmentType(assessment.type)}</p>
+              {assessment.feedbackStatus !== 'NAO_APLICAVEL' ? (
+                <p className="assessment-list__feedback-status">
+                  Feedback {formatFeedbackStatus(assessment.feedbackStatus)}
+                </p>
+              ) : null}
               <span className="visually-hidden" id={`assessment-${assessment.id}-summary`}>
-                {`${formatAssessmentType(assessment.type)}. Situação: ${formatAssessmentStatus(assessment.status)}.`}
+                {`${formatAssessmentType(assessment.type)}. Situação: ${formatAssessmentStatus(assessment.status)}.${
+                  assessment.feedbackStatus === 'NAO_APLICAVEL'
+                    ? ''
+                    : ` Feedback ${formatFeedbackStatus(assessment.feedbackStatus)}.`
+                }`}
               </span>
             </div>
             <div className="assessment-list__actions">
@@ -800,5 +998,15 @@ function formatAssessmentStatus(status: string): string {
 }
 
 function formatAssessmentType(type: string): string {
-  return type === 'AUTOAVALIACAO' ? 'Autoavaliação' : 'Avaliação de gestor'
+  if (type === 'AUTOAVALIACAO') {
+    return 'Autoavaliação'
+  }
+  if (type === 'DIRETORIA_GERENCIA') {
+    return 'Avaliação de Diretoria'
+  }
+  return 'Avaliação de gestor'
+}
+
+function formatFeedbackStatus(status: 'PENDENTE' | 'CONCLUIDO'): string {
+  return status === 'CONCLUIDO' ? 'concluído' : 'pendente'
 }

@@ -17,6 +17,14 @@ public record CreateAssessmentRequest(
     return collaboratorId;
   }
 
+  public UUID directorCollaboratorId() {
+    if (type != AssessmentType.DIRETORIA_GERENCIA || collaboratorId == null) {
+      throw new AssessmentValidationException(
+          "Uma avaliação de Diretoria exige a Gerência e o tipo correspondente.");
+    }
+    return collaboratorId;
+  }
+
   public void requireSelfAssessment() {
     if (type != AssessmentType.AUTOAVALIACAO || collaboratorId != null) {
       throw new AssessmentValidationException(

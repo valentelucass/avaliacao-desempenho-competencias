@@ -49,6 +49,7 @@ const administrationPermissions = [
   'CICLOS.GERIR',
   'VINCULOS_GESTOR_COLABORADOR.GERIR',
   'VINCULOS_USUARIO_COLABORADOR.GERIR',
+  'VINCULOS_DIRETORIA_GERENCIA.GERIR',
 ] as const
 
 function App({ api = defaultApiClient }: AppProps) {
@@ -271,6 +272,7 @@ function App({ api = defaultApiClient }: AppProps) {
 
   const canViewAssessments = hasAnyPermission(user, [
     'AVALIACOES.AVALIAR_VINCULADOS',
+    'AVALIACOES.AVALIAR_GERENCIAS_VINCULADAS',
     'AVALIACOES.VISUALIZAR_PROPRIAS_RESPOSTAS',
     'AVALIACOES.VISUALIZAR_TODAS',
     'AUTOAVALIACOES.PREENCHER_PROPRIA',
@@ -280,8 +282,14 @@ function App({ api = defaultApiClient }: AppProps) {
   const canCreateSelfAssessment = hasAnyPermission(user, ['AUTOAVALIACOES.PREENCHER_PROPRIA'])
   const canSubmitSelfAssessment = hasAnyPermission(user, ['AUTOAVALIACOES.ENVIAR_PROPRIA'])
   const canCreateManagerAssessment = hasAnyPermission(user, ['AVALIACOES.AVALIAR_VINCULADOS'])
+  const canCreateDirectorAssessment = hasAnyPermission(user, [
+    'AVALIACOES.AVALIAR_GERENCIAS_VINCULADAS',
+  ])
   const canPublishAssessments = hasAnyPermission(user, ['AVALIACOES.PUBLICAR'])
   const canReopenAssessments = hasAnyPermission(user, ['AVALIACOES.REABRIR'])
+  const canRecordAssessmentFeedback = hasAnyPermission(user, [
+    'AVALIACOES.REGISTRAR_FEEDBACK_PROPRIO',
+  ])
   const canViewAllAssessments = hasAnyPermission(user, ['AVALIACOES.VISUALIZAR_TODAS'])
   const canViewIndicators = hasAnyPermission(user, ['INDICADORES.VISUALIZAR'])
   const canExportIndicators = hasAnyPermission(user, ['DADOS.EXPORTAR'])
@@ -312,6 +320,7 @@ function App({ api = defaultApiClient }: AppProps) {
       available: hasAnyPermission(user, [
         'VINCULOS_GESTOR_COLABORADOR.GERIR',
         'VINCULOS_USUARIO_COLABORADOR.GERIR',
+        'VINCULOS_DIRETORIA_GERENCIA.GERIR',
       ]),
     },
     {
@@ -546,7 +555,7 @@ function App({ api = defaultApiClient }: AppProps) {
           <div className="workspace__content">
             {activeWorkspace === 'dashboard' ? (
               <DashboardPanel
-                canCreateAssessment={canCreateManagerAssessment}
+                canCreateAssessment={canCreateManagerAssessment || canCreateDirectorAssessment}
                 canCreateSelfAssessment={canCreateSelfAssessment}
                 onOpenAssessments={beginAssessment}
               />
@@ -565,9 +574,11 @@ function App({ api = defaultApiClient }: AppProps) {
               <AssessmentsPanel
                 api={api}
                 canCreateManagerAssessment={canCreateManagerAssessment}
+                canCreateDirectorAssessment={canCreateDirectorAssessment}
                 canCreateSelfAssessment={canCreateSelfAssessment}
                 canPublishAssessments={canPublishAssessments}
                 canReopenAssessments={canReopenAssessments}
+                canRecordFeedback={canRecordAssessmentFeedback}
                 isAdministrativeView={canViewAdministration && canViewAllAssessments}
                 journey={assessmentJourney}
                 assessmentId={assessmentId}

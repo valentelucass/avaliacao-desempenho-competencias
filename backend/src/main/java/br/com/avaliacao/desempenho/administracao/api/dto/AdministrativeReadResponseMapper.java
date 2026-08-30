@@ -1,6 +1,7 @@
 package br.com.avaliacao.desempenho.administracao.api.dto;
 
 import br.com.avaliacao.desempenho.administracao.api.dto.AdministrativeReadResponses.ActiveAllocation;
+import br.com.avaliacao.desempenho.administracao.api.dto.AdministrativeReadResponses.ActiveDirectorManagerAssignment;
 import br.com.avaliacao.desempenho.administracao.api.dto.AdministrativeReadResponses.ActiveManagerAssignment;
 import br.com.avaliacao.desempenho.administracao.api.dto.AdministrativeReadResponses.ActiveQuestionnaireAssignment;
 import br.com.avaliacao.desempenho.administracao.api.dto.AdministrativeReadResponses.ActiveUserCollaboratorLink;
@@ -9,6 +10,7 @@ import br.com.avaliacao.desempenho.administracao.api.dto.AdministrativeReadRespo
 import br.com.avaliacao.desempenho.administracao.api.dto.AdministrativeReadResponses.ApprovedQuestionnaireVersion;
 import br.com.avaliacao.desempenho.administracao.api.dto.AdministrativeReadResponses.CalculationMatrixOption;
 import br.com.avaliacao.desempenho.administracao.api.dto.AdministrativeReadResponses.Collaborator;
+import br.com.avaliacao.desempenho.administracao.api.dto.AdministrativeReadResponses.DirectorManagerAssignmentOptions;
 import br.com.avaliacao.desempenho.administracao.api.dto.AdministrativeReadResponses.DraftCycleConfiguration;
 import br.com.avaliacao.desempenho.administracao.api.dto.AdministrativeReadResponses.ManagerAssignmentOptions;
 import br.com.avaliacao.desempenho.administracao.api.dto.AdministrativeReadResponses.NamedResource;
@@ -61,10 +63,29 @@ public final class AdministrativeReadResponseMapper {
         .toList();
   }
 
+  public List<ActiveDirectorManagerAssignment> toActiveDirectorManagerAssignments(
+      List<AdministrativeReadRepository.ActiveDirectorManagerAssignmentView> source) {
+    return source.stream()
+        .map(
+            value ->
+                new ActiveDirectorManagerAssignment(
+                    value.id(),
+                    value.directorUserId(),
+                    value.managerCollaboratorId(),
+                    value.startsOn()))
+        .toList();
+  }
+
   public ManagerAssignmentOptions toManagerAssignmentOptions(
       AdministrativeReadRepository.ManagerAssignmentOptionsView source) {
     return new ManagerAssignmentOptions(
         toSelectionOptions(source.managers()), toSelectionOptions(source.collaborators()));
+  }
+
+  public DirectorManagerAssignmentOptions toDirectorManagerAssignmentOptions(
+      AdministrativeReadRepository.DirectorManagerAssignmentOptionsView source) {
+    return new DirectorManagerAssignmentOptions(
+        toSelectionOptions(source.directors()), toSelectionOptions(source.collaborators()));
   }
 
   public UserCollaboratorLinkOptions toUserCollaboratorLinkOptions(

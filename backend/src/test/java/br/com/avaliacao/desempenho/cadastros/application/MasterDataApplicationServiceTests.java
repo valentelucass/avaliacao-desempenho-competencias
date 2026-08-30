@@ -7,6 +7,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import br.com.avaliacao.desempenho.cadastros.application.MasterDataRepository.DirectorManagerAssignmentRecord;
 import br.com.avaliacao.desempenho.cadastros.application.MasterDataRepository.ManagerAssignmentRecord;
 import java.time.LocalDate;
 import java.util.UUID;
@@ -65,6 +66,35 @@ class MasterDataApplicationServiceTests {
         .isInstanceOf(MasterDataException.class)
         .extracting(exception -> ((MasterDataException) exception).reason())
         .isEqualTo(MasterDataException.Reason.CONFLICT);
+  }
+
+  @Test
+  void createsAnAuditedDirectorManagerAssignmentWithTheAuthenticatedActor() {
+    UUID actor = UUID.randomUUID();
+    UUID director = UUID.randomUUID();
+    UUID manager = UUID.randomUUID();
+    MasterDataCommandContext context = new MasterDataCommandContext(actor, "request-director-1");
+    when(transactionTemplate.execute(any())).thenAnswer(this::runTransaction);
+    when(repository.createDirectorManagerAssignment(any())).thenReturn(true);
+
+    UUID assignmentId =
+        service.createDirectorManagerAssignment(
+            director, manager, LocalDate.of(2026, 9, 1), context);
+
+    ArgumentCaptor<DirectorManagerAssignmentRecord> assignment =
+        ArgumentCaptor.forClass(DirectorManagerAssignmentRecord.class);
+    verify(repository).createDirectorManagerAssignment(assignment.capture());
+    verify(repository)
+        .writeAdministrativeAudit(
+            actor,
+            "VINCULO.DIRETORIA_GERENCIA.CRIAR",
+            "VINCULO_DIRETORIA_GERENCIA",
+            assignmentId,
+            "request-director-1");
+    assertThat(assignment.getValue())
+        .isEqualTo(
+            new DirectorManagerAssignmentRecord(
+                assignmentId, director, manager, LocalDate.of(2026, 9, 1), actor));
   }
 
   @Test

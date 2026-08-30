@@ -20,6 +20,7 @@ public class SqlServerMasterDataRepository implements MasterDataRepository {
   private static final String MIGRATION_CADASTROS = "V0003";
   private static final String MIGRATION_REGRA_2024_1 = "V0005";
   private static final String MIGRATION_ATRIBUICOES = "V0007";
+  private static final String MIGRATION_FEEDBACK = "V0012";
 
   private final JdbcTemplate jdbcTemplate;
 
@@ -239,6 +240,79 @@ public class SqlServerMasterDataRepository implements MasterDataRepository {
                 revogado_por_usuario_id = ?,
                 revogado_em_utc = SYSUTCDATETIME()
             WHERE vinculo_gestor_colaborador_id = ?
+              AND revogado_em_utc IS NULL
+              AND (inicio_vigencia IS NULL OR inicio_vigencia <= ?)
+            """,
+            endsOn,
+            actorUserId,
+            assignmentId,
+            endsOn)
+        == 1;
+  }
+
+  @Override
+  public boolean createDirectorManagerAssignment(DirectorManagerAssignmentRecord assignment) {
+    requireMigration(MIGRATION_FEEDBACK);
+    return jdbcTemplate.update(
+            """
+            INSERT INTO dbo.vinculo_diretoria_gerencia (
+                vinculo_diretoria_gerencia_id,
+                diretoria_usuario_id,
+                gerencia_colaborador_id,
+                inicio_vigencia,
+                criado_por_usuario_id
+            )
+            SELECT ?, ?, ?, ?, ?
+            WHERE EXISTS (
+                SELECT 1 FROM dbo.usuario
+                WHERE usuario_id = ? AND situacao = 'ATIVO'
+            )
+              AND EXISTS (
+                SELECT 1
+                FROM dbo.atribuicao_papel AS assignment
+                INNER JOIN dbo.papel AS role ON role.papel_id = assignment.papel_id
+                WHERE assignment.usuario_id = ?
+                  AND assignment.revogado_em_utc IS NULL
+                  AND role.codigo = 'DIRETORIA'
+                  AND role.ativo = 1
+              )
+              AND NOT EXISTS (
+                SELECT 1
+                FROM dbo.atribuicao_papel AS assignment
+                INNER JOIN dbo.papel AS role ON role.papel_id = assignment.papel_id
+                WHERE assignment.usuario_id = ?
+                  AND assignment.revogado_em_utc IS NULL
+                  AND role.codigo = 'ADMINISTRADOR_PLATAFORMA'
+                  AND role.ativo = 1
+              )
+              AND EXISTS (
+                SELECT 1 FROM dbo.colaborador
+                WHERE colaborador_id = ? AND ativo = 1
+              )
+            """,
+            assignment.id(),
+            assignment.directorUserId(),
+            assignment.managerCollaboratorId(),
+            assignment.startsOn(),
+            assignment.createdByUserId(),
+            assignment.directorUserId(),
+            assignment.directorUserId(),
+            assignment.directorUserId(),
+            assignment.managerCollaboratorId())
+        == 1;
+  }
+
+  @Override
+  public boolean closeDirectorManagerAssignment(
+      UUID assignmentId, LocalDate endsOn, UUID actorUserId) {
+    requireMigration(MIGRATION_FEEDBACK);
+    return jdbcTemplate.update(
+            """
+            UPDATE dbo.vinculo_diretoria_gerencia
+            SET fim_vigencia = ?,
+                revogado_por_usuario_id = ?,
+                revogado_em_utc = SYSUTCDATETIME()
+            WHERE vinculo_diretoria_gerencia_id = ?
               AND revogado_em_utc IS NULL
               AND (inicio_vigencia IS NULL OR inicio_vigencia <= ?)
             """,

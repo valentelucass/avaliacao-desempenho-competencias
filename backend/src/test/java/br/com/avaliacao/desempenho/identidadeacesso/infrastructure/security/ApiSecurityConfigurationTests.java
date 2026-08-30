@@ -63,7 +63,13 @@ class ApiSecurityConfigurationTests {
         .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
         .andExpect(jsonPath("$.code").value("AUTHENTICATION_REQUIRED"))
         .andExpect(jsonPath("$.requestId").value("test-123"))
-        .andExpect(header().string("X-Content-Type-Options", "nosniff"));
+        .andExpect(header().string("X-Content-Type-Options", "nosniff"))
+        .andExpect(
+            header()
+                .string(
+                    "Permissions-Policy",
+                    "camera=(), microphone=(), geolocation=(), payment=(), usb=()"))
+        .andExpect(header().stringValues("Strict-Transport-Security", "max-age=31536000"));
   }
 
   @Test

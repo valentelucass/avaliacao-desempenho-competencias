@@ -4,7 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import br.com.avaliacao.desempenho.avaliacoes.application.AssessmentRepository;
 import br.com.avaliacao.desempenho.avaliacoes.domain.model.AssessmentType;
+import br.com.avaliacao.desempenho.avaliacoes.domain.model.FeedbackStatus;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -27,6 +29,7 @@ class AssessmentResponseMapperTests {
                 "Colaborador autorizado",
                 AssessmentType.GESTOR,
                 "ENVIADA",
+                FeedbackStatus.PENDENTE,
                 "AAAAAAAAAAE",
                 Instant.parse("2026-08-25T00:00:00Z")),
             "LIDERANCA v1",
@@ -49,12 +52,18 @@ class AssessmentResponseMapperTests {
                 "100.0", "WITHIN_EXPECTATIONS", "Acelerar e desenvolver"),
             List.of(
                 new AssessmentRepository.CompetencyScoreView(
-                    competencyId, "Liderança", new java.math.BigDecimal("100.0"))));
+                    competencyId, "Liderança", new java.math.BigDecimal("100.0"))),
+            new AssessmentRepository.FeedbackView(
+                LocalDate.parse("2026-08-29"),
+                "Conversa realizada.",
+                Instant.parse("2026-08-29T03:00:00Z")));
 
     AssessmentDetailResponse response = new AssessmentResponseMapper().toDetail(view);
 
     assertThat(response.id()).isEqualTo(assessmentId);
     assertThat(response.type()).isEqualTo("GESTOR");
+    assertThat(response.feedbackStatus()).isEqualTo("PENDENTE");
+    assertThat(response.feedback().comment()).isEqualTo("Conversa realizada.");
     assertThat(
             response
                 .questionnaire()

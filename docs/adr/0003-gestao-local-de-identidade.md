@@ -37,9 +37,9 @@ Por autorização explícita do usuário, foi criada uma conta técnica local de
 
 Em 2026-08-26, por autorização explícita, o primeiro administrador supremo protegido de `AVALIACAO_PROD` foi criado pela rotina transacional de bootstrap. Foram atribuídos os papéis técnico e de negócio necessários à verificação integral da plataforma, com troca obrigatória da senha no primeiro acesso e auditoria sem segredo. Identificação pessoal e credencial não são registradas nesta ADR. A segunda conta independente, aprovada pela Diretoria, permanece obrigatória.
 
-## Estado atual — 2026-08-27
+## Estado atual — 2026-08-29
 
-Os registros de bootstrap acima são históricos. O fluxo administrativo atual admite exatamente um perfil entre Administrador, Gestor, Gerência de RH, Diretoria e Colaborador, sem permissões individuais. A `V0011` em fonte preserva o histórico e normaliza contas administrativas legadas que acumulam papéis para o perfil único de Administrador; ela ainda aguarda aplicação autorizada em `AVALIACAO_DEV` e `AVALIACAO_PROD`. Publicação/reabertura, indicadores e exportação permanecem reservados a Gerência de RH ou Diretoria, e a segunda conta suprema independente continua obrigatória antes de uso operacional.
+Os registros de bootstrap acima são históricos. O fluxo administrativo atual admite exatamente um perfil entre Administrador, Gestor, Gerência de RH, Diretoria e Colaborador, sem permissões individuais. `AVALIACAO_DEV` e `AVALIACAO_PROD` reconciliaram `V0001`–`V0013`; `V0011` normaliza contas administrativas legadas e `V0013` impede que o Administrador técnico atue no domínio de avaliações. Publicação/reabertura, indicadores e exportação permanecem reservados a Gerência de RH ou Diretoria. A verificação operacional encontrou uma conta suprema ativa com a senha inicial já trocada; a segunda conta independente e os dois custodiantes continuam obrigatórios antes do uso real.
 
 ## Consequências e pendências
 

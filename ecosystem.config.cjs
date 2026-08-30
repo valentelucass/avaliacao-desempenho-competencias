@@ -30,11 +30,22 @@ const productionConfigPath = requiredEnvironment(
 const productionLogDirectory = requiredEnvironment(
   "ADC_PM2_PRODUCTION_LOG_DIRECTORY",
 );
-const javaToolOptions = requiredEnvironment("JAVA_TOOL_OPTIONS");
+const javaToolOptions = "-Djavax.net.ssl.trustStoreType=Windows-ROOT";
+
+function minimalWindowsEnvironment() {
+  return Object.fromEntries(
+    ["SystemRoot", "WINDIR", "TEMP", "TMP"]
+      .map((name) => [name, process.env[name]])
+      .filter(([, value]) => value && value.trim()),
+  );
+}
 
 const sharedProcessOptions = {
   autorestart: true,
   exp_backoff_restart_delay: 3000,
+  // O PM2 filtra por substring. O prefixo vazio remove todas as variáveis
+  // herdadas; cada processo recebe abaixo somente o ambiente mínimo explícito.
+  filter_env: [""],
   max_restarts: 10,
   min_uptime: "10s",
   time: true,
@@ -62,6 +73,7 @@ module.exports = {
         `${backendProcess}-error.log`,
       ),
       env: {
+        ...minimalWindowsEnvironment(),
         JAVA_TOOL_OPTIONS: javaToolOptions,
       },
     },
@@ -86,6 +98,7 @@ module.exports = {
         `${frontendProcess}-error.log`,
       ),
       env: {
+        ...minimalWindowsEnvironment(),
         NODE_ENV: "production",
       },
     },

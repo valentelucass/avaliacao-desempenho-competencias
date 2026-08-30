@@ -9,6 +9,7 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
+import tools.jackson.databind.json.JsonMapper;
 
 class IndicatorContractDtoTests {
 
@@ -65,6 +66,7 @@ class IndicatorContractDtoTests {
   void preservesOnlyAggregateFieldsInAnAvailableJsonResponse() {
     IndicatorResponse response =
         new IndicatorResponse.Available(
+            IndicatorResponse.IndicatorAvailability.AVAILABLE,
             "2024.1",
             IndicatorMetricRequest.FINAL_SCORE_AVERAGE,
             new BigDecimal("100.0"),
@@ -72,5 +74,22 @@ class IndicatorContractDtoTests {
 
     assertThat(response.availability())
         .isEqualTo(IndicatorResponse.IndicatorAvailability.AVAILABLE);
+  }
+
+  @Test
+  void serializesAvailabilityForTheSpaWithoutRawPopulationData() throws Exception {
+    IndicatorResponse response =
+        new IndicatorResponse.Available(
+            IndicatorResponse.IndicatorAvailability.AVAILABLE,
+            "2024.1",
+            IndicatorMetricRequest.FINAL_SCORE_AVERAGE,
+            new BigDecimal("100.0"),
+            List.of());
+
+    String json = JsonMapper.builder().build().writeValueAsString(response);
+
+    assertThat(json)
+        .contains("\"availability\":\"AVAILABLE\"", "\"policyVersion\":\"2024.1\"")
+        .doesNotContain("count", "collaborator", "cycleId");
   }
 }

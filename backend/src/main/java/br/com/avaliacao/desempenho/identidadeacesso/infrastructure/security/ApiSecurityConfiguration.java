@@ -27,6 +27,8 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.context.SecurityContextHolderFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy;
+import org.springframework.security.web.header.writers.StaticHeadersWriter;
+import org.springframework.security.web.util.matcher.AnyRequestMatcher;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -82,6 +84,15 @@ public class ApiSecurityConfiguration {
                         contentSecurityPolicy ->
                             contentSecurityPolicy.policyDirectives(
                                 "default-src 'none'; base-uri 'none'; frame-ancestors 'none'"))
+                    .addHeaderWriter(
+                        new StaticHeadersWriter(
+                            "Permissions-Policy",
+                            "camera=(), microphone=(), geolocation=(), payment=(), usb=()"))
+                    .httpStrictTransportSecurity(
+                        hsts ->
+                            hsts.requestMatcher(AnyRequestMatcher.INSTANCE)
+                                .includeSubDomains(false)
+                                .maxAgeInSeconds(31536000))
                     .cacheControl(Customizer.withDefaults()))
         .authorizeHttpRequests(
             authorization ->
@@ -123,6 +134,11 @@ public class ApiSecurityConfiguration {
                         HttpMethod.GET, "/api/v1/administration/manager-assignments/options")
                     .hasAuthority("PERMISSION:VINCULOS_GESTOR_COLABORADOR.GERIR")
                     .requestMatchers(
+                        HttpMethod.GET,
+                        "/api/v1/administration/director-manager-assignments/active",
+                        "/api/v1/administration/director-manager-assignments/options")
+                    .hasAuthority("PERMISSION:VINCULOS_DIRETORIA_GERENCIA.GERIR")
+                    .requestMatchers(
                         HttpMethod.GET, "/api/v1/master-data/user-collaborator-links/active")
                     .hasAuthority("PERMISSION:VINCULOS_USUARIO_COLABORADOR.GERIR")
                     .requestMatchers(
@@ -134,26 +150,32 @@ public class ApiSecurityConfiguration {
                         HttpMethod.GET, "/api/v1/evaluation-cycles/*/administration-draft")
                     .hasAuthority("PERMISSION:CICLOS.GERIR")
                     .requestMatchers(
-                        "/api/v1/master-data/**", "/api/v1/administration/manager-assignments/**")
+                        "/api/v1/master-data/**",
+                        "/api/v1/administration/manager-assignments/**",
+                        "/api/v1/administration/director-manager-assignments/**")
                     .hasAnyAuthority(
                         "PERMISSION:CADASTROS.GERIR",
                         "PERMISSION:VINCULOS_GESTOR_COLABORADOR.GERIR",
-                        "PERMISSION:VINCULOS_USUARIO_COLABORADOR.GERIR")
+                        "PERMISSION:VINCULOS_USUARIO_COLABORADOR.GERIR",
+                        "PERMISSION:VINCULOS_DIRETORIA_GERENCIA.GERIR")
                     .requestMatchers("/api/v1/questionnaire-versions/**")
                     .hasAuthority("PERMISSION:QUESTIONARIOS.GERIR")
                     .requestMatchers("/api/v1/evaluation-cycles/**")
                     .hasAnyAuthority(
                         "PERMISSION:CICLOS.GERIR",
                         "PERMISSION:AVALIACOES.AVALIAR_VINCULADOS",
+                        "PERMISSION:AVALIACOES.AVALIAR_GERENCIAS_VINCULADAS",
                         "PERMISSION:AUTOAVALIACOES.PREENCHER_PROPRIA",
                         "PERMISSION:INDICADORES.VISUALIZAR")
                     .requestMatchers("/api/v1/assessments/**")
                     .hasAnyAuthority(
                         "PERMISSION:AVALIACOES.AVALIAR_VINCULADOS",
+                        "PERMISSION:AVALIACOES.AVALIAR_GERENCIAS_VINCULADAS",
                         "PERMISSION:AVALIACOES.VISUALIZAR_PROPRIAS_RESPOSTAS",
                         "PERMISSION:AVALIACOES.VISUALIZAR_TODAS",
                         "PERMISSION:AVALIACOES.PUBLICAR",
                         "PERMISSION:AVALIACOES.REABRIR",
+                        "PERMISSION:AVALIACOES.REGISTRAR_FEEDBACK_PROPRIO",
                         "PERMISSION:AUTOAVALIACOES.PREENCHER_PROPRIA",
                         "PERMISSION:AUTOAVALIACOES.ENVIAR_PROPRIA",
                         "PERMISSION:AUTOAVALIACOES.VISUALIZAR_PROPRIA")

@@ -2,11 +2,13 @@ package br.com.avaliacao.desempenho.administracao.api;
 
 import br.com.avaliacao.desempenho.administracao.api.dto.AdministrativeReadResponseMapper;
 import br.com.avaliacao.desempenho.administracao.api.dto.AdministrativeReadResponses.ActiveAllocation;
+import br.com.avaliacao.desempenho.administracao.api.dto.AdministrativeReadResponses.ActiveDirectorManagerAssignment;
 import br.com.avaliacao.desempenho.administracao.api.dto.AdministrativeReadResponses.ActiveManagerAssignment;
 import br.com.avaliacao.desempenho.administracao.api.dto.AdministrativeReadResponses.ActiveQuestionnaireAssignment;
 import br.com.avaliacao.desempenho.administracao.api.dto.AdministrativeReadResponses.ActiveUserCollaboratorLink;
 import br.com.avaliacao.desempenho.administracao.api.dto.AdministrativeReadResponses.ApprovedQuestionnaireVersion;
 import br.com.avaliacao.desempenho.administracao.api.dto.AdministrativeReadResponses.Collaborator;
+import br.com.avaliacao.desempenho.administracao.api.dto.AdministrativeReadResponses.DirectorManagerAssignmentOptions;
 import br.com.avaliacao.desempenho.administracao.api.dto.AdministrativeReadResponses.DraftCycleConfiguration;
 import br.com.avaliacao.desempenho.administracao.api.dto.AdministrativeReadResponses.ManagerAssignmentOptions;
 import br.com.avaliacao.desempenho.administracao.api.dto.AdministrativeReadResponses.NamedResource;
@@ -37,6 +39,8 @@ public class AdministrativeReadController {
   private static final String MANAGE_MASTER_DATA = "hasAuthority('PERMISSION:CADASTROS.GERIR')";
   private static final String MANAGE_MANAGER_ASSIGNMENTS =
       "hasAuthority('PERMISSION:VINCULOS_GESTOR_COLABORADOR.GERIR')";
+  private static final String MANAGE_DIRECTOR_MANAGER_ASSIGNMENTS =
+      "hasAuthority('PERMISSION:VINCULOS_DIRETORIA_GERENCIA.GERIR')";
   private static final String MANAGE_USER_COLLABORATOR_LINKS =
       "hasAuthority('PERMISSION:VINCULOS_USUARIO_COLABORADOR.GERIR')";
   private static final String MANAGE_QUESTIONNAIRES_OR_CYCLES =
@@ -86,12 +90,28 @@ public class AdministrativeReadController {
         service.listActiveManagerAssignments(context(principal)));
   }
 
+  @GetMapping("/administration/director-manager-assignments/active")
+  @PreAuthorize(MANAGE_DIRECTOR_MANAGER_ASSIGNMENTS)
+  public List<ActiveDirectorManagerAssignment> listActiveDirectorManagerAssignments(
+      @AuthenticationPrincipal AuthenticatedPrincipal principal) {
+    return responseMapper.toActiveDirectorManagerAssignments(
+        service.listActiveDirectorManagerAssignments(context(principal)));
+  }
+
   @GetMapping("/administration/manager-assignments/options")
   @PreAuthorize(MANAGE_MANAGER_ASSIGNMENTS)
   public ManagerAssignmentOptions managerAssignmentOptions(
       @AuthenticationPrincipal AuthenticatedPrincipal principal) {
     return responseMapper.toManagerAssignmentOptions(
         service.managerAssignmentOptions(context(principal)));
+  }
+
+  @GetMapping("/administration/director-manager-assignments/options")
+  @PreAuthorize(MANAGE_DIRECTOR_MANAGER_ASSIGNMENTS)
+  public DirectorManagerAssignmentOptions directorManagerAssignmentOptions(
+      @AuthenticationPrincipal AuthenticatedPrincipal principal) {
+    return responseMapper.toDirectorManagerAssignmentOptions(
+        service.directorManagerAssignmentOptions(context(principal)));
   }
 
   @GetMapping("/master-data/user-collaborator-links/active")

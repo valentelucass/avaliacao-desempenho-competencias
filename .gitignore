@@ -12,7 +12,7 @@ backend/target/
 *.class
 
 # Node / Vite
-frontend/node_modules/
+node_modules/
 frontend/dist/
 frontend/coverage/
 frontend/*.tsbuildinfo

@@ -5,13 +5,13 @@ import br.com.avaliacao.desempenho.avaliacoes.api.dto.AssessmentDetailResponse;
 import br.com.avaliacao.desempenho.avaliacoes.api.dto.AssessmentPageResponse;
 import br.com.avaliacao.desempenho.avaliacoes.api.dto.AssessmentResponseMapper;
 import br.com.avaliacao.desempenho.avaliacoes.api.dto.AssessmentSummaryResponse;
+import br.com.avaliacao.desempenho.avaliacoes.api.dto.CompleteFeedbackRequest;
 import br.com.avaliacao.desempenho.avaliacoes.api.dto.CreateAssessmentRequest;
 import br.com.avaliacao.desempenho.avaliacoes.api.dto.ReopenAssessmentRequest;
 import br.com.avaliacao.desempenho.avaliacoes.api.dto.SaveAssessmentDraftRequest;
 import br.com.avaliacao.desempenho.avaliacoes.application.AssessmentApplicationService;
 import br.com.avaliacao.desempenho.avaliacoes.application.AssessmentRepository;
 import br.com.avaliacao.desempenho.avaliacoes.domain.model.AssessmentAccessContext;
-import br.com.avaliacao.desempenho.avaliacoes.domain.model.AssessmentType;
 import br.com.avaliacao.desempenho.identidadeacesso.infrastructure.persistence.ConditionalOnSqlServerPersistence;
 import br.com.avaliacao.desempenho.identidadeacesso.infrastructure.security.AuthenticatedPrincipal;
 import br.com.avaliacao.desempenho.identidadeacesso.infrastructure.security.RequestCorrelationFilter;
@@ -61,6 +61,7 @@ public class AssessmentController {
   @PreAuthorize(
       "hasAnyAuthority("
           + "'PERMISSION:AVALIACOES.VISUALIZAR_PROPRIAS_RESPOSTAS',"
+          + "'PERMISSION:AVALIACOES.AVALIAR_GERENCIAS_VINCULADAS',"
           + "'PERMISSION:AVALIACOES.VISUALIZAR_TODAS',"
           + "'PERMISSION:AUTOAVALIACOES.VISUALIZAR_PROPRIA')")
   public AssessmentPageResponse list(
@@ -99,10 +100,27 @@ public class AssessmentController {
             .toList());
   }
 
+  @GetMapping("/director-creation-options")
+  @PreAuthorize(
+      "hasAuthority('PERMISSION:AVALIACOES.AVALIAR_GERENCIAS_VINCULADAS')"
+          + " and hasAuthority('ROLE:DIRETORIA')"
+          + " and !hasAuthority('ROLE:ADMINISTRADOR_PLATAFORMA')")
+  public AssessmentCreationOptionsResponse directorCreationOptions(
+      @RequestParam UUID cycleId, @AuthenticationPrincipal AuthenticatedPrincipal principal) {
+    return new AssessmentCreationOptionsResponse(
+        service.listDirectorCreationOptions(cycleId, accessFor(principal)).stream()
+            .map(
+                item ->
+                    new AssessmentCreationOptionsResponse.CollaboratorResponse(
+                        item.id(), item.displayName()))
+            .toList());
+  }
+
   @GetMapping("/{assessmentId}")
   @PreAuthorize(
       "hasAnyAuthority("
           + "'PERMISSION:AVALIACOES.VISUALIZAR_PROPRIAS_RESPOSTAS',"
+          + "'PERMISSION:AVALIACOES.AVALIAR_GERENCIAS_VINCULADAS',"
           + "'PERMISSION:AVALIACOES.VISUALIZAR_TODAS',"
           + "'PERMISSION:AUTOAVALIACOES.VISUALIZAR_PROPRIA')")
   public ResponseEntity<AssessmentDetailResponse> get(
@@ -114,6 +132,7 @@ public class AssessmentController {
   @PreAuthorize(
       "hasAnyAuthority("
           + "'PERMISSION:AVALIACOES.VISUALIZAR_PROPRIAS_RESPOSTAS',"
+          + "'PERMISSION:AVALIACOES.AVALIAR_GERENCIAS_VINCULADAS',"
           + "'PERMISSION:AVALIACOES.VISUALIZAR_TODAS',"
           + "'PERMISSION:AUTOAVALIACOES.VISUALIZAR_PROPRIA')")
   public ResponseEntity<Void> recordPrint(
@@ -129,6 +148,7 @@ public class AssessmentController {
   @PreAuthorize(
       "hasAnyAuthority("
           + "'PERMISSION:AVALIACOES.AVALIAR_VINCULADOS',"
+          + "'PERMISSION:AVALIACOES.AVALIAR_GERENCIAS_VINCULADAS',"
           + "'PERMISSION:AUTOAVALIACOES.PREENCHER_PROPRIA')")
   public ResponseEntity<AssessmentDetailResponse> create(
       @Valid @RequestBody CreateAssessmentRequest request,
@@ -137,20 +157,28 @@ public class AssessmentController {
       HttpServletRequest servletRequest) {
     AssessmentAccessContext access = accessFor(principal);
     String requestId = RequestCorrelationFilter.getRequestId(servletRequest);
-    AssessmentRepository.AssessmentDetailView created;
-    if (request.type() == AssessmentType.GESTOR) {
-      created =
-          service.createManagerDraft(
-              request.cycleId(),
-              request.managerCollaboratorId(),
-              access,
-              idempotencyKey,
-              requestId);
-    } else {
-      request.requireSelfAssessment();
-      created =
-          service.createSelfAssessmentDraft(request.cycleId(), access, idempotencyKey, requestId);
-    }
+    AssessmentRepository.AssessmentDetailView created =
+        switch (request.type()) {
+          case GESTOR ->
+              service.createManagerDraft(
+                  request.cycleId(),
+                  request.managerCollaboratorId(),
+                  access,
+                  idempotencyKey,
+                  requestId);
+          case DIRETORIA_GERENCIA ->
+              service.createDirectorDraft(
+                  request.cycleId(),
+                  request.directorCollaboratorId(),
+                  access,
+                  idempotencyKey,
+                  requestId);
+          case AUTOAVALIACAO -> {
+            request.requireSelfAssessment();
+            yield service.createSelfAssessmentDraft(
+                request.cycleId(), access, idempotencyKey, requestId);
+          }
+        };
     AssessmentDetailResponse response = responseMapper.toDetail(created);
     return ResponseEntity.status(HttpStatus.CREATED)
         .header(HttpHeaders.LOCATION, "/api/v1/assessments/" + created.summary().id())
@@ -162,6 +190,7 @@ public class AssessmentController {
   @PreAuthorize(
       "hasAnyAuthority("
           + "'PERMISSION:AVALIACOES.AVALIAR_VINCULADOS',"
+          + "'PERMISSION:AVALIACOES.AVALIAR_GERENCIAS_VINCULADAS',"
           + "'PERMISSION:AUTOAVALIACOES.PREENCHER_PROPRIA')")
   public ResponseEntity<AssessmentDetailResponse> saveDraft(
       @PathVariable UUID assessmentId,
@@ -182,6 +211,7 @@ public class AssessmentController {
   @PreAuthorize(
       "hasAnyAuthority("
           + "'PERMISSION:AVALIACOES.AVALIAR_VINCULADOS',"
+          + "'PERMISSION:AVALIACOES.AVALIAR_GERENCIAS_VINCULADAS',"
           + "'PERMISSION:AUTOAVALIACOES.ENVIAR_PROPRIA')")
   public ResponseEntity<AssessmentDetailResponse> submit(
       @PathVariable UUID assessmentId,
@@ -211,6 +241,26 @@ public class AssessmentController {
     return response(
         service.publish(
             assessmentId,
+            accessFor(principal),
+            idempotencyKey,
+            RequestCorrelationFilter.getRequestId(servletRequest)));
+  }
+
+  @PostMapping("/{assessmentId}/feedback")
+  @PreAuthorize(
+      "hasAuthority('PERMISSION:AVALIACOES.REGISTRAR_FEEDBACK_PROPRIO')"
+          + " and !hasAuthority('ROLE:ADMINISTRADOR_PLATAFORMA')")
+  public ResponseEntity<AssessmentDetailResponse> completeFeedback(
+      @PathVariable UUID assessmentId,
+      @Valid @RequestBody CompleteFeedbackRequest request,
+      @RequestHeader("Idempotency-Key") @NotBlank @Size(max = 256) String idempotencyKey,
+      @AuthenticationPrincipal AuthenticatedPrincipal principal,
+      HttpServletRequest servletRequest) {
+    return response(
+        service.completeFeedback(
+            assessmentId,
+            request.feedbackDate(),
+            request.comment(),
             accessFor(principal),
             idempotencyKey,
             RequestCorrelationFilter.getRequestId(servletRequest)));

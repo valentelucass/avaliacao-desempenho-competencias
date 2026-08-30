@@ -6,13 +6,13 @@
 | Escopo | Persistência SQL Server, autenticação local, ciclos, avaliações e indicadores.                                                                             |
 | Origem | ADC-007 a ADC-011, ADR-0008 e ADR-0011.                                                                                                                    |
 
-> Estado observado em 2026-08-26: `AVALIACAO_DEV` e `AVALIACAO_PROD` reconciliaram `V0001`–`V0010`; a verificação anônima dos hosts retornou `200` e os processos PM2 do projeto estavam online. A `V0011` está em fonte e permanece pendente de aplicação autorizada nesses alvos. A observação não é aceite de negócio, nem teste autenticado de ponta a ponta, nem autorização para alterar os alvos.
+> Estado canônico em 2026-08-29: `AVALIACAO_DEV` e `AVALIACAO_PROD` reconciliaram `V0001`–`V0013`. A identidade SQL externa usada pela aplicação passou pelo validador de mínimo privilégio e a conexão exige TLS com certificado validado. O cenário autenticado automatizado passou somente em DEV, com massa fictícia; por decisão explícita, teste autenticado em `AVALIACAO_PROD` foi retirado do escopo do encerramento técnico. Isso não equivale a aceite de negócio ou autorização para carga de dados reais.
 
 ## Princípio
 
 O repositório inicia com persistência, autenticação, leitura de ciclos, avaliações e indicadores desabilitadas na configuração versionada. A ativação só é permitida quando a VM tiver recebido por canal protegido uma identidade SQL Server autorizada da aplicação — conta SQL ou identidade Windows do processo com autenticação integrada —, as configurações de emissão de sessão e uma chave aleatória de pelo menos 32 bytes codificada em Base64. Nenhum segredo deve ir para Git, `application.properties`, log, resposta HTTP, teste ou PM2 compartilhado.
 
-Nos bancos canônicos autorizados, `V0001` a `V0010` já foram aplicadas e as validações somente leitura do runner passaram; a fonte também contém a `V0011`, pendente de aplicação autorizada. Em qualquer alvo novo, aplique e valide todo o histórico disponível de forma autorizada antes de habilitar módulos; o código de leitura de ciclos falha na inicialização em vez de consultar schema incompleto.
+Nos bancos canônicos autorizados, `V0001` a `V0013` já foram aplicadas e as validações do runner passaram. Em qualquer alvo novo, aplique e valide todo o histórico disponível de forma autorizada antes de habilitar módulos; o código de leitura de ciclos falha na inicialização em vez de consultar schema incompleto.
 
 ## Desenvolvimento local autorizado
 
@@ -26,7 +26,7 @@ Ele é distinto de `iniciar-prod.bat`. O launcher chama `scripts/iniciar-dev-loc
 
 No desenvolvimento local, a API usa autenticação integrada da identidade Windows que executa a JVM. O launcher cria/usa um certificado HTTPS local somente no perfil Windows atual; o PFX exportado para a execução, a senha desse PFX e o material HMAC são efêmeros e não entram no repositório. Ele força `debug=false`, desabilita detalhes de requisição e restringe os loggers HTTP, segurança e JDBC para impedir que respostas CSRF, tokens ou credenciais sejam serializados no log local, mesmo quando a máquina tiver variáveis de ambiente amplas. A cada inicialização, ele compila a API em um diretório de release local exclusivo sob `backend/target/dev-local-releases`; não baixa a biblioteca de autenticação integrada, não executa `npm install` e não publica em produção. Antes de reiniciar processos, valida o JAR recém-gerado e as dependências atuais em `frontend/node_modules`, falhando sem interromper a instância em execução se algum pré-requisito estiver ausente ou desatualizado. O navegador não abre automaticamente; `iniciar-dev.bat --open-browser` é a opção explícita para abri-lo.
 
-Sem a opção de demonstração abaixo, esse modo não cria configuração de produção, conta SQL dedicada, rota de Cloudflare, serviço PM2 ou acesso público. A inicialização ativada foi verificada com API/SPA/proxy em execução, `GET /api/v1/auth/csrf` retornando `200` pelo front-end e rota protegida retornando `401`; o fluxo interativo de credencial, login e navegador ainda precisa de validação antes de ser considerado aceito.
+Sem a opção de demonstração abaixo, esse modo não cria configuração de produção, conta SQL dedicada, rota de Cloudflare, serviço PM2 ou acesso público. Além das verificações anônimas de API/SPA/proxy, o cenário automatizado `scripts/testar-fluxo-feedback-dev.ps1` comprovou em `AVALIACAO_DEV` login, sessão/CSRF, autorização, feedback, indicadores/CSV, auditoria, refresh rotativo e logout com dados exclusivamente fictícios. A conferência manual por navegador e tecnologia assistiva permanece uma condição externa de liberação.
 
 ### Demonstração temporária por Dev Tunnel
 
@@ -104,8 +104,10 @@ As origens permitidas por CORS são configuração separada e precisam correspon
 
 ## Sequência operacional segura
 
+Nos alvos canônicos, a identidade SQL dedicada já passou pelo validador de mínimo privilégio e o TLS foi comprovado com cadeia/nome do certificado validados. Os passos abaixo continuam obrigatórios para um alvo novo ou sempre que identidade, certificado ou permissões forem substituídos.
+
 1. Provisionar para produção a identidade SQL Server exclusiva da aplicação — conta SQL Server ou identidade Windows do processo —, sempre com mínimo privilégio sobre o banco dedicado, sem usar `sa` e sem acesso de leitura para contas de ferramenta. A identidade Windows usada no desenvolvimento local não equivale a esse provisionamento.
-2. Para qualquer alvo novo, aplicar migrations e executar `database\executar-database.bat --validate` com a conta administrativa autorizada; esse passo não é executado automaticamente pela aplicação. A evidência dos alvos canônicos registra reconciliação em `V0001`–`V0010`, enquanto a `V0011` permanece pendente de aplicação autorizada.
+2. Para qualquer alvo novo, aplicar migrations e executar `database\executar-database.bat --validate` com a conta administrativa autorizada; esse passo não é executado automaticamente pela aplicação. A evidência dos alvos canônicos registra reconciliação completa em `V0001`–`V0013`.
 3. Disponibilizar as propriedades externas sem imprimir seus valores e iniciar a API em ambiente não produtivo. No launcher local, elas existem somente no ambiente do processo e os segredos são gerados para a execução.
 4. Antes de operação com dados reais, executar o bootstrap controlado do primeiro administrador supremo quando aplicável e, em seguida, criar a segunda conta por aprovação independente da Diretoria. Atribua exatamente um dos perfis suportados por conta e confirme a troca obrigatória da senha inicial. A API normal não cria nem promove administradores supremos. Uma concessão de perfil de negócio requer outro alvo e `ACESSOS.NEGOCIO.GERIR`; o catálogo atual concede essa permissão a Administrador, RH e Diretoria para provisionamento controlado. Isso não permite ao Administrador elevar a própria conta nem se tornar autoridade de publicação, reabertura, indicadores ou exportação.
 5. Criar cadastros, questionários aprovados, configurações de cálculo, matrizes, ciclos e atribuições de questionário antes de abrir um ciclo; a macro não é importada automaticamente.
@@ -113,7 +115,7 @@ As origens permitidas por CORS são configuração separada e precisam correspon
 
 ## Bootstrap do primeiro administrador de produção
 
-O script `database\\scripts\\bootstrap-primeiro-administrador-producao.ps1` é a única rotina manual prevista para uma base `AVALIACAO_PROD` nova, sem usuários ou dados de negócio. A sequência segura é: `database\executar-database.bat --apply-bootstrap-prerequisites` prepara somente `V0001`–`V0009`; o bootstrap confirmado cria o administrador supremo; então `database\executar-database.bat --apply` publica `V0010`, a `V0011` — que normaliza contas administrativas legadas para perfil único — e futuras migrations pendentes; por fim, execute `--validate`. O bootstrap exige confirmação explícita, bloqueia execução concorrente, grava usuário protegido, credencial BCrypt com troca obrigatória de senha, o perfil inicial suportado e a auditoria em uma única transação. Ele se recusa a operar se a base já tiver usuários ou dados de negócio.
+O script `database\\scripts\\bootstrap-primeiro-administrador-producao.ps1` é a única rotina manual prevista para uma base `AVALIACAO_PROD` nova, sem usuários ou dados de negócio. A sequência segura é: `database\executar-database.bat --apply-bootstrap-prerequisites` prepara somente `V0001`–`V0009`; o bootstrap confirmado cria o administrador supremo; então `database\executar-database.bat --apply` publica `V0010`–`V0013` e futuras migrations pendentes; por fim, execute `--validate`. O bootstrap exige confirmação explícita, bloqueia execução concorrente, grava usuário protegido, credencial BCrypt com troca obrigatória de senha, o perfil inicial suportado e a auditoria em uma única transação. Ele se recusa a operar se a base já tiver usuários ou dados de negócio.
 
 Execute-o somente no console seguro da VM e informe a senha via `SecureString`; ela não deve constar de argumentos, arquivos, variáveis de ambiente, histórico, logs ou repositório:
 
@@ -131,4 +133,4 @@ No primeiro acesso, a conta deve trocar a senha. A segunda conta de administrado
 
 ## Limites pendentes
 
-Esta orientação não autoriza criação de conta SQL, aplicação em outro banco, configuração do Cloudflare Tunnel, firewall, TLS do SQL Server, backup, PM2 ou deploy. A origem confiável para limite de taxa atrás do Tunnel continua a usar o endereço remoto visto pela aplicação até que uma configuração de proxy confiável seja formalmente aprovada e testada.
+Esta orientação não autoriza criação ou troca de conta SQL, aplicação em outro banco, configuração do Cloudflare Tunnel, firewall, certificado/TLS do SQL Server, backup, PM2 ou deploy. Nos alvos canônicos, identidade mínima e TLS já foram validados; qualquer mudança nesses controles exige nova evidência. A origem confiável para limite de taxa atrás do Tunnel continua a usar o endereço remoto visto pela aplicação até que uma configuração de proxy confiável seja formalmente aprovada e testada. Redirecionamento HTTP→HTTPS, WAF/bot protection, limite de borda, firewall compartilhado da porta 1433, retenção/rotação e política de backup/criptografia/RPO-RTO permanecem externos.

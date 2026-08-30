@@ -4,9 +4,11 @@ import { Link2, RefreshCw, Unlink } from 'lucide-react'
 import { isAuthenticationError } from '../../api/client'
 import type { ApiClient } from '../../api/client'
 import type {
+  ActiveDirectorManagerAssignment,
   ActiveManagerAssignment,
   ActiveUserCollaboratorLink,
   AdministrativePersonOption,
+  DirectorManagerAssignmentOptions,
   ManagerAssignmentOptions,
   Permission,
   UserCollaboratorLinkOptions,
@@ -21,7 +23,9 @@ type RelationshipAdministrationPanelProps = {
 }
 
 type CloseTarget =
-  { kind: 'MANAGER'; id: string; label: string } | { kind: 'USER'; id: string; label: string }
+  | { kind: 'MANAGER'; id: string; label: string }
+  | { kind: 'DIRECTOR'; id: string; label: string }
+  | { kind: 'USER'; id: string; label: string }
 
 /** Vínculos ativos entre contas, gestores e colaboradores, sempre encerrados por data. */
 export function RelationshipAdministrationPanel({
@@ -32,6 +36,9 @@ export function RelationshipAdministrationPanel({
   const managerUserId = useId()
   const managerCollaboratorId = useId()
   const managerStartsOnId = useId()
+  const directorUserId = useId()
+  const directorManagerCollaboratorId = useId()
+  const directorStartsOnId = useId()
   const userId = useId()
   const userCollaboratorId = useId()
   const userStartsOnId = useId()
@@ -40,6 +47,11 @@ export function RelationshipAdministrationPanel({
     managers: [],
     collaborators: [],
   })
+  const [directorManagerOptions, setDirectorManagerOptions] =
+    useState<DirectorManagerAssignmentOptions>({
+      directors: [],
+      collaborators: [],
+    })
   const [userLinkOptions, setUserLinkOptions] = useState<UserCollaboratorLinkOptions>({
     users: [],
     collaborators: [],
@@ -47,10 +59,16 @@ export function RelationshipAdministrationPanel({
   const [managerAssignments, setManagerAssignments] = useState<readonly ActiveManagerAssignment[]>(
     [],
   )
+  const [directorManagerAssignments, setDirectorManagerAssignments] = useState<
+    readonly ActiveDirectorManagerAssignment[]
+  >([])
   const [userLinks, setUserLinks] = useState<readonly ActiveUserCollaboratorLink[]>([])
   const [managerUser, setManagerUser] = useState('')
   const [managerCollaborator, setManagerCollaborator] = useState('')
   const [managerStartsOn, setManagerStartsOn] = useState('')
+  const [directorUser, setDirectorUser] = useState('')
+  const [directorManagerCollaborator, setDirectorManagerCollaborator] = useState('')
+  const [directorStartsOn, setDirectorStartsOn] = useState('')
   const [linkedUser, setLinkedUser] = useState('')
   const [linkedCollaborator, setLinkedCollaborator] = useState('')
   const [linkedStartsOn, setLinkedStartsOn] = useState('')
@@ -62,8 +80,12 @@ export function RelationshipAdministrationPanel({
   const [notice, setNotice] = useState<string>()
 
   const canManageManagerAssignments = permissions.includes('VINCULOS_GESTOR_COLABORADOR.GERIR')
+  const canManageDirectorManagerAssignments = permissions.includes(
+    'VINCULOS_DIRETORIA_GERENCIA.GERIR',
+  )
   const canManageUserLinks = permissions.includes('VINCULOS_USUARIO_COLABORADOR.GERIR')
-  const canManageRelationships = canManageManagerAssignments || canManageUserLinks
+  const canManageRelationships =
+    canManageManagerAssignments || canManageDirectorManagerAssignments || canManageUserLinks
   const managerNamesById = useMemo(
     () => new Map(managerOptions.managers.map((person) => [person.id, person])),
     [managerOptions.managers],
@@ -71,6 +93,10 @@ export function RelationshipAdministrationPanel({
   const userNamesById = useMemo(
     () => new Map(userLinkOptions.users.map((person) => [person.id, person])),
     [userLinkOptions.users],
+  )
+  const directorNamesById = useMemo(
+    () => new Map(directorManagerOptions.directors.map((person) => [person.id, person])),
+    [directorManagerOptions.directors],
   )
   const collaboratorNamesById = useMemo(
     () =>
@@ -93,22 +119,32 @@ export function RelationshipAdministrationPanel({
     try {
       const [
         loadedManagerOptions,
+        loadedDirectorManagerOptions,
         loadedUserLinkOptions,
         loadedManagerAssignments,
+        loadedDirectorManagerAssignments,
         loadedUserLinks,
       ] = await Promise.all([
         canManageManagerAssignments
           ? api.getManagerAssignmentOptions()
           : Promise.resolve({ managers: [], collaborators: [] }),
+        canManageDirectorManagerAssignments
+          ? api.getDirectorManagerAssignmentOptions()
+          : Promise.resolve({ directors: [], collaborators: [] }),
         canManageUserLinks
           ? api.getUserCollaboratorLinkOptions()
           : Promise.resolve({ users: [], collaborators: [] }),
         canManageManagerAssignments ? api.listActiveManagerAssignments() : Promise.resolve([]),
+        canManageDirectorManagerAssignments
+          ? api.listActiveDirectorManagerAssignments()
+          : Promise.resolve([]),
         canManageUserLinks ? api.listActiveUserCollaboratorLinks() : Promise.resolve([]),
       ])
       setManagerOptions(loadedManagerOptions)
+      setDirectorManagerOptions(loadedDirectorManagerOptions)
       setUserLinkOptions(loadedUserLinkOptions)
       setManagerAssignments(loadedManagerAssignments)
+      setDirectorManagerAssignments(loadedDirectorManagerAssignments)
       setUserLinks(loadedUserLinks)
     } catch (requestError) {
       if (isAuthenticationError(requestError)) {
@@ -122,6 +158,7 @@ export function RelationshipAdministrationPanel({
   }, [
     api,
     canManageManagerAssignments,
+    canManageDirectorManagerAssignments,
     canManageRelationships,
     canManageUserLinks,
     onSessionExpired,
@@ -205,6 +242,41 @@ export function RelationshipAdministrationPanel({
     }
   }
 
+  async function createDirectorManagerAssignment(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!canManageDirectorManagerAssignments) {
+      return
+    }
+    setError(undefined)
+    setNotice(undefined)
+    if (!directorUser || !directorManagerCollaborator || !directorStartsOn) {
+      setError('Selecione a conta de Diretoria, a Gerência e a data de início do vínculo.')
+      return
+    }
+
+    setIsSaving(true)
+    try {
+      await api.createDirectorManagerAssignment({
+        directorUserId: directorUser,
+        managerCollaboratorId: directorManagerCollaborator,
+        startsOn: directorStartsOn,
+      })
+      setDirectorUser('')
+      setDirectorManagerCollaborator('')
+      setDirectorStartsOn('')
+      setNotice('Vínculo Diretoria–Gerência criado.')
+      await loadRelationships()
+    } catch (requestError) {
+      if (isAuthenticationError(requestError)) {
+        onSessionExpired()
+        return
+      }
+      setError(safeErrorMessage(requestError))
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
   async function closeRelationship(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!closeTarget) {
@@ -221,6 +293,8 @@ export function RelationshipAdministrationPanel({
     try {
       if (closeTarget.kind === 'MANAGER') {
         await api.closeManagerAssignment(closeTarget.id, { endsOn })
+      } else if (closeTarget.kind === 'DIRECTOR') {
+        await api.closeDirectorManagerAssignment(closeTarget.id, { endsOn })
       } else {
         await api.closeUserCollaboratorLink(closeTarget.id, { endsOn })
       }
@@ -251,6 +325,8 @@ export function RelationshipAdministrationPanel({
     managerOptions.managers.length > 0 && managerOptions.collaborators.length > 0
   const hasUserLinkSelectionOptions =
     userLinkOptions.users.length > 0 && userLinkOptions.collaborators.length > 0
+  const hasDirectorManagerSelectionOptions =
+    directorManagerOptions.directors.length > 0 && directorManagerOptions.collaborators.length > 0
 
   return (
     <section aria-labelledby="relationship-administration-title" className="stack-form">
@@ -281,6 +357,7 @@ export function RelationshipAdministrationPanel({
       ) : null}
       {!isLoading &&
       ((canManageManagerAssignments && !hasManagerSelectionOptions) ||
+        (canManageDirectorManagerAssignments && !hasDirectorManagerSelectionOptions) ||
         (canManageUserLinks && !hasUserLinkSelectionOptions)) ? (
         <FeedbackMessage kind="warning">
           Não há contas e colaboradores ativos suficientes para criar novos vínculos com este
@@ -372,6 +449,100 @@ export function RelationshipAdministrationPanel({
                 label: `${accountLabel(managerNamesById, entry.managerUserId)} · ${collaboratorLabel(
                   collaboratorNamesById,
                   entry.collaboratorId,
+                )}`,
+              })
+            }
+          />
+        </section>
+      ) : null}
+
+      {canManageDirectorManagerAssignments ? (
+        <section className="card stack-form" aria-labelledby="director-manager-assignment-title">
+          <div className="card-title-row">
+            <div>
+              <h3 id="director-manager-assignment-title">Vínculo Diretoria–Gerência</h3>
+              <p className="muted">
+                Define quais Gerências podem ser avaliadas pela conta de Diretoria selecionada.
+              </p>
+            </div>
+          </div>
+          <form
+            className="stack-form manager-assignment-form"
+            noValidate
+            onSubmit={createDirectorManagerAssignment}
+            aria-busy={isSaving}
+          >
+            <div className="form-grid">
+              <div className="field">
+                <label htmlFor={directorUserId}>Conta de Diretoria</label>
+                <select
+                  id={directorUserId}
+                  value={directorUser}
+                  disabled={!hasDirectorManagerSelectionOptions || isSaving}
+                  onChange={(event) => setDirectorUser(event.target.value)}
+                >
+                  <option value="">Selecione uma conta</option>
+                  {directorManagerOptions.directors.map((director) => (
+                    <option key={director.id} value={director.id}>
+                      {director.displayName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="field">
+                <label htmlFor={directorManagerCollaboratorId}>Gerência</label>
+                <select
+                  id={directorManagerCollaboratorId}
+                  value={directorManagerCollaborator}
+                  disabled={!hasDirectorManagerSelectionOptions || isSaving}
+                  onChange={(event) => setDirectorManagerCollaborator(event.target.value)}
+                >
+                  <option value="">Selecione uma Gerência</option>
+                  {directorManagerOptions.collaborators.map((collaborator) => (
+                    <option key={collaborator.id} value={collaborator.id}>
+                      {collaborator.displayName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="field">
+                <label htmlFor={directorStartsOnId}>Início</label>
+                <input
+                  id={directorStartsOnId}
+                  type="date"
+                  value={directorStartsOn}
+                  disabled={!hasDirectorManagerSelectionOptions || isSaving}
+                  onChange={(event) => setDirectorStartsOn(event.target.value)}
+                />
+              </div>
+            </div>
+            <div className="action-row">
+              <button
+                className="button button--success"
+                type="submit"
+                disabled={!hasDirectorManagerSelectionOptions || isSaving}
+              >
+                <Link2 aria-hidden="true" size={17} strokeWidth={2} />
+                Criar vínculo de Diretoria
+              </button>
+            </div>
+          </form>
+
+          <RelationshipTable
+            entries={directorManagerAssignments}
+            getAccountName={(entry) => accountLabel(directorNamesById, entry.directorUserId)}
+            getCollaboratorName={(entry) =>
+              collaboratorLabel(collaboratorNamesById, entry.managerCollaboratorId)
+            }
+            accountColumn="Diretoria"
+            collaboratorColumn="Gerência"
+            onClose={(entry) =>
+              setCloseTarget({
+                kind: 'DIRECTOR',
+                id: entry.id,
+                label: `${accountLabel(directorNamesById, entry.directorUserId)} · ${collaboratorLabel(
+                  collaboratorNamesById,
+                  entry.managerCollaboratorId,
                 )}`,
               })
             }
@@ -509,19 +680,19 @@ export function RelationshipAdministrationPanel({
   )
 }
 
-function RelationshipTable<
-  Entry extends { id: string; startsOn: string | null; collaboratorId: string },
->({
+function RelationshipTable<Entry extends { id: string; startsOn: string | null }>({
   entries,
   getAccountName,
   getCollaboratorName,
   accountColumn,
+  collaboratorColumn = 'Colaborador',
   onClose,
 }: {
   entries: readonly Entry[]
   getAccountName: (entry: Entry) => string
   getCollaboratorName: (entry: Entry) => string
   accountColumn: string
+  collaboratorColumn?: string
   onClose: (entry: Entry) => void
 }) {
   if (entries.length === 0) {
@@ -535,7 +706,7 @@ function RelationshipTable<
         <thead>
           <tr>
             <th scope="col">{accountColumn}</th>
-            <th scope="col">Colaborador</th>
+            <th scope="col">{collaboratorColumn}</th>
             <th scope="col">Início</th>
             <th scope="col">Ação</th>
           </tr>
@@ -544,7 +715,7 @@ function RelationshipTable<
           {entries.map((entry) => (
             <tr key={entry.id}>
               <td data-label={accountColumn}>{getAccountName(entry)}</td>
-              <td data-label="Colaborador">{getCollaboratorName(entry)}</td>
+              <td data-label={collaboratorColumn}>{getCollaboratorName(entry)}</td>
               <td data-label="Início">{entry.startsOn ?? 'Não informado'}</td>
               <td data-label="Ação">
                 <div className="table-actions">

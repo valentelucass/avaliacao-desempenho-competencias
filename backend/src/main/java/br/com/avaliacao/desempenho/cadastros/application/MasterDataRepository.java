@@ -31,6 +31,10 @@ public interface MasterDataRepository {
 
   boolean closeManagerAssignment(UUID assignmentId, LocalDate endsOn, UUID actorUserId);
 
+  boolean createDirectorManagerAssignment(DirectorManagerAssignmentRecord assignment);
+
+  boolean closeDirectorManagerAssignment(UUID assignmentId, LocalDate endsOn, UUID actorUserId);
+
   boolean createUserCollaboratorLink(UserCollaboratorLinkRecord link);
 
   boolean closeUserCollaboratorLink(UUID linkId, LocalDate endsOn, UUID actorUserId);
@@ -55,6 +59,13 @@ public interface MasterDataRepository {
 
   record ManagerAssignmentRecord(
       UUID id, UUID managerUserId, UUID collaboratorId, LocalDate startsOn, UUID createdByUserId) {}
+
+  record DirectorManagerAssignmentRecord(
+      UUID id,
+      UUID directorUserId,
+      UUID managerCollaboratorId,
+      LocalDate startsOn,
+      UUID createdByUserId) {}
 
   record UserCollaboratorLinkRecord(
       UUID id, UUID userId, UUID collaboratorId, LocalDate startsOn, UUID createdByUserId) {}

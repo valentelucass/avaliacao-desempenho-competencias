@@ -2,6 +2,7 @@ package br.com.avaliacao.desempenho.avaliacoes.api.dto;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -12,6 +13,7 @@ public record AssessmentDetailResponse(
     AssessmentSummaryResponse.EvaluatedResponse evaluated,
     String type,
     String status,
+    String feedbackStatus,
     String revision,
     Instant updatedAt,
     QuestionnaireResponse questionnaire,
@@ -19,7 +21,8 @@ public record AssessmentDetailResponse(
     String comment,
     String actionPlan,
     ResultResponse result,
-    List<CompetencyScoreResponse> competencyScores) {
+    List<CompetencyScoreResponse> competencyScores,
+    FeedbackResponse feedback) {
 
   public record QuestionnaireResponse(String version, List<CompetencyResponse> competencies) {}
 
@@ -37,4 +40,6 @@ public record AssessmentDetailResponse(
   public record CompetencyScoreResponse(UUID id, String name, BigDecimal score) {}
 
   public record ClassificationResponse(String label, String guidance) {}
+
+  public record FeedbackResponse(LocalDate feedbackDate, String comment, Instant completedAt) {}
 }

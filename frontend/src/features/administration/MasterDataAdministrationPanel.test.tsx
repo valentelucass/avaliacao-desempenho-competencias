@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
+import { axe } from 'vitest-axe'
 import { ApiError } from '../../api/client'
 import type { ApiClient } from '../../api/client'
 import type {
@@ -87,7 +88,7 @@ describe('MasterDataAdministrationPanel', () => {
   it('isola, mantém o foco e restaura o acionador ao fechar uma confirmação por Escape', async () => {
     const api = createApi()
 
-    render(
+    const { container } = render(
       <MasterDataAdministrationPanel
         api={api}
         permissions={['CADASTROS.GERIR']}
@@ -113,6 +114,13 @@ describe('MasterDataAdministrationPanel', () => {
     cancel.focus()
     fireEvent.keyDown(document, { key: 'Tab', shiftKey: true })
     expect(confirm).toHaveFocus()
+
+    const accessibilityResult = await axe(container, {
+      rules: {
+        'color-contrast': { enabled: false },
+      },
+    })
+    expect(accessibilityResult.violations).toHaveLength(0)
 
     fireEvent.keyDown(document, { key: 'Escape' })
 

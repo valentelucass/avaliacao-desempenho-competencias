@@ -31,7 +31,7 @@
   --shadow-card:
     inset 0 1px 0 rgb(255 255 255 / 72%), 0 1px 2px rgb(15 23 42 / 5%),
     0 8px 18px rgb(15 23 42 / 5%), 0 20px 42px rgb(15 23 42 / 7%);
-  --sans: 'Inter', 'Segoe UI', Arial, sans-serif;
+  --sans: system-ui, 'Segoe UI', Arial, sans-serif;
 
   background: var(--page-bg);
   color: var(--text);

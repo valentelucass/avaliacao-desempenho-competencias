@@ -7,6 +7,8 @@ public final class AdministrativeReadAuthorizationPolicy {
 
   public static final String MASTER_DATA_MANAGE = "CADASTROS.GERIR";
   public static final String MANAGER_ASSIGNMENTS_MANAGE = "VINCULOS_GESTOR_COLABORADOR.GERIR";
+  public static final String DIRECTOR_MANAGER_ASSIGNMENTS_MANAGE =
+      "VINCULOS_DIRETORIA_GERENCIA.GERIR";
   public static final String USER_COLLABORATOR_ASSIGNMENTS_MANAGE =
       "VINCULOS_USUARIO_COLABORADOR.GERIR";
   public static final String QUESTIONNAIRES_MANAGE = "QUESTIONARIOS.GERIR";
@@ -18,6 +20,10 @@ public final class AdministrativeReadAuthorizationPolicy {
 
   public boolean mayReadManagerAssignments(AdministrativeReadAccessContext actor) {
     return has(actor, MANAGER_ASSIGNMENTS_MANAGE);
+  }
+
+  public boolean mayReadDirectorManagerAssignments(AdministrativeReadAccessContext actor) {
+    return has(actor, DIRECTOR_MANAGER_ASSIGNMENTS_MANAGE);
   }
 
   public boolean mayReadUserCollaboratorAssignments(AdministrativeReadAccessContext actor) {

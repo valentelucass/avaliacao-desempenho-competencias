@@ -17,6 +17,7 @@ public final class AssessmentResponseMapper {
         new AssessmentSummaryResponse.EvaluatedResponse(safeSource.evaluatedDisplayName()),
         safeSource.type().name(),
         safeSource.status(),
+        safeSource.feedbackStatus().name(),
         safeSource.revision(),
         safeSource.updatedAt());
   }
@@ -32,6 +33,7 @@ public final class AssessmentResponseMapper {
             safeSource.summary().evaluatedDisplayName()),
         safeSource.summary().type().name(),
         safeSource.summary().status(),
+        safeSource.summary().feedbackStatus().name(),
         safeSource.summary().revision(),
         safeSource.summary().updatedAt(),
         new AssessmentDetailResponse.QuestionnaireResponse(
@@ -41,7 +43,8 @@ public final class AssessmentResponseMapper {
         safeSource.comment(),
         safeSource.actionPlan(),
         safeSource.result() == null ? null : toResult(safeSource.result()),
-        safeSource.competencyScores().stream().map(this::toCompetencyScore).toList());
+        safeSource.competencyScores().stream().map(this::toCompetencyScore).toList(),
+        safeSource.feedback() == null ? null : toFeedback(safeSource.feedback()));
   }
 
   private AssessmentDetailResponse.CompetencyResponse toCompetency(
@@ -82,5 +85,11 @@ public final class AssessmentResponseMapper {
       AssessmentRepository.CompetencyScoreView source) {
     return new AssessmentDetailResponse.CompetencyScoreResponse(
         source.id(), source.name(), source.score());
+  }
+
+  private AssessmentDetailResponse.FeedbackResponse toFeedback(
+      AssessmentRepository.FeedbackView source) {
+    return new AssessmentDetailResponse.FeedbackResponse(
+        source.feedbackDate(), source.comment(), source.completedAt());
   }
 }

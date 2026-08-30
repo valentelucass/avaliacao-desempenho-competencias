@@ -18,3 +18,5 @@ Cada ADR registra uma decisão arquitetural relevante, seu contexto e as consequ
 - [ADR-0014 — Base de produção e identidade SQL de mínimo privilégio](0014-base-de-producao-e-identidade-sql-minima.md)
 - [ADR-0015 — Nomes de banco por ambiente](0015-nomes-de-banco-por-ambiente.md)
 - [ADR-0016 — Perfis Administrador e Usuário comum](0016-perfis-administrador-e-usuario-comum.md)
+- [ADR-0017 — Feedback integrado e avaliação Diretoria–Gerência](0017-feedback-integrado-e-avaliacao-diretoria-gerencia.md)
+- [ADR-0018 — RLS não aplicável à topologia inicial](0018-rls-nao-aplicavel-na-topologia-inicial.md)

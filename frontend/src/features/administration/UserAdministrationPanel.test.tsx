@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
+import { axe } from 'vitest-axe'
 import type { ApiClient } from '../../api/client'
 import type { AdministrationUser } from '../../api/contracts'
 import { UserAdministrationPanel } from './UserAdministrationPanel'
@@ -189,7 +190,7 @@ describe('UserAdministrationPanel', () => {
       getAdministrationUser: vi.fn().mockResolvedValue(user),
     })
 
-    render(
+    const { container } = render(
       <UserAdministrationPanel
         api={api}
         currentUserId="another-user"
@@ -210,6 +211,14 @@ describe('UserAdministrationPanel', () => {
 
     fireEvent.keyDown(document, { key: 'Tab' })
     expect(closeButton).toHaveFocus()
+
+    const accessibilityResult = await axe(container, {
+      rules: {
+        'color-contrast': { enabled: false },
+      },
+    })
+    expect(accessibilityResult.violations).toHaveLength(0)
+
     fireEvent.click(closeButton)
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()

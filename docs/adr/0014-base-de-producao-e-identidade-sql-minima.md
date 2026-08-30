@@ -22,9 +22,11 @@ O banco de desenvolvimento já reconciliado não deve ser reutilizado para a pub
 - A senha do login é fornecida somente ao `sqlcmd` no terminal seguro e nunca é escrita nos scripts, `.env`, documentação, logs ou Git.
 - Antes de iniciar a API em produção, ainda é obrigatório configurar certificado SQL Server confiável, arquivo externo de propriedades, diretório de logs, backup/restauração e validar o preflight. Esta decisão não executa SQL Server, Cloudflare, PM2 ou publicação.
 
-## Estado posterior — 2026-08-27
+## Estado posterior — 2026-08-29
 
-A decisão acima registra o privilégio inicialmente previsto. Em fonte, o `DENY DELETE` global foi substituído por ausência de `DELETE` geral e `GRANT DELETE` explícito somente para `dbo.ciclo_questionario` e `dbo.filial`, que são as duas operações limitadas da aplicação que exigem remoção física. A alteração ainda depende de aplicação autorizada em cada alvo; este documento não afirma que `AVALIACAO_PROD` já recebeu a correção. O restante do princípio de mínimo privilégio, sem papéis administrativos, DDL ou acesso a outros bancos, permanece inalterado.
+A decisão acima registra o privilégio inicialmente previsto. No alvo canônico, o `DENY DELETE` global foi removido e `DELETE` ficou concedido somente sobre `dbo.ciclo_questionario` e `dbo.filial`, as duas operações administrativas limitadas que exigem remoção física. O validador confirmou login dedicado ativo, sem `sa`, `sysadmin`, papéis de servidor/banco, DDL, `CONTROL`, `ALTER`, acesso a outros bancos ou `DELETE` adicional. A aplicação também comprovou conexão criptografada com cadeia e nome do certificado validados, sem `trustServerCertificate=true`.
+
+A ADR-0018 classifica RLS como não aplicável à topologia inicial de API única com identidade técnica compartilhada; essa decisão não reduz RBAC/ABAC da aplicação nem resolve firewall, criptografia em repouso, backup ou proteção do segredo SQL.
 
 ## Referências
 

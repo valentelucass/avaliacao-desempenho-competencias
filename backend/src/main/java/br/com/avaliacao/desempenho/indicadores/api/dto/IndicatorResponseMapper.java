@@ -13,13 +13,15 @@ public final class IndicatorResponseMapper {
   public IndicatorResponse toResponse(IndicatorResult result) {
     IndicatorResult safeResult = Objects.requireNonNull(result, "resultado não pode ser nulo");
     if (safeResult instanceof IndicatorResult.InsufficientData) {
-      return new IndicatorResponse.InsufficientData(POLICY_VERSION);
+      return new IndicatorResponse.InsufficientData(
+          IndicatorResponse.IndicatorAvailability.INSUFFICIENT_DATA, POLICY_VERSION);
     }
 
     IndicatorResult.Available available = (IndicatorResult.Available) safeResult;
     List<IndicatorResponse.ClassificationPercentageResponse> distribution =
         available.classificationDistribution().stream().map(this::toDistributionResponse).toList();
     return new IndicatorResponse.Available(
+        IndicatorResponse.IndicatorAvailability.AVAILABLE,
         POLICY_VERSION,
         IndicatorMetricRequest.valueOf(available.metric().name()),
         available.averageScore(),

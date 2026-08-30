@@ -8,7 +8,7 @@
 
 > Atualização em 2026-08-25: a ADR-0011 definiu as regras de negócio antes pendentes. As estruturas adicionais foram versionadas nas migrations imutáveis `V0005` e `V0007`, posteriormente aplicadas e validadas no banco local dedicado, sem alterar `V0003` ou `V0004`.
 
-> Estado atual em 2026-08-27: a nota acima é histórica. Os bancos canônicos reconciliaram `V0001`–`V0010`, inclusive as extensões posteriores e o catálogo inicial `2024.1`; a `V0011` está em fonte e aguarda aplicação autorizada. Ainda não há ciclos, lotações, vínculos, atribuições ou avaliações. Isso não altera esta ADR nem equivale a aceite de negócio.
+> Estado atual em 2026-08-29: a nota acima é histórica. Os bancos canônicos reconciliaram `V0001`–`V0013`, inclusive as extensões de feedback e vínculo Diretoria–Gerência. O cenário integrado em `AVALIACAO_DEV` usa somente massa fictícia; não há carga de colaboradores, lotações, vínculos, ciclos ou avaliações aprovada para uso real. Isso não altera esta ADR nem equivale a aceite de negócio.
 
 ## Contexto
 

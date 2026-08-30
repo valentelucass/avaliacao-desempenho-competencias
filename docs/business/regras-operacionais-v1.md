@@ -62,7 +62,7 @@ O ciclo anual v1 abre em 1º de setembro às 00:00:00 e fecha em 16 de setembro 
 
 As listas de filiais e áreas de 2024 na especificação sanitizada são a base inicial do catálogo `2024.1`. Elas serão cadastradas somente por fluxo administrativo futuro, com histórico de vigência; não haverá importação de pessoas da macro. Administradores de plataforma manterão o catálogo mediante solicitação registrada da Gerência de RH.
 
-## ADC-002 — acesso, fluxo e autoavaliação
+## ADC-002 — acesso, fluxo, feedback e autoavaliação
 
 ### Autoridade de acesso
 
@@ -72,31 +72,44 @@ O perfil **Administrador** é representado pelo papel `ADMINISTRADOR_PLATAFORMA`
 
 No fluxo administrativo, toda conta possui exatamente um perfil: `ADMINISTRADOR_PLATAFORMA`, `GESTOR`, `GERENCIA_RH`, `DIRETORIA` ou `COLABORADOR`. A API rejeita papéis fora dessa lista e concessões de permissões individuais; mudanças de perfil revogam sessões e preservam a trilha de auditoria.
 
-| Perfil         | Escopo v1                                                                                                                                                            |
-| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Administrador  | Administra contas, acessos e operações técnicas autorizadas; não publica/reabre avaliações, não consulta indicadores e não exporta.                              |
-| Gestor         | Cria, edita, envia e consulta somente as avaliações de gestor para colaboradores com vínculo vigente; não consulta indicadores agregados nem exporta.             |
-| Gerência de RH | Administra o processo de negócio autorizado e, com as permissões aplicáveis, visualiza, publica/reabre avaliações, consulta indicadores e exporta agregados.       |
-| Diretoria      | Possui o mesmo escopo de autoridade de negócio da Gerência de RH, sujeito às permissões, ao recurso, à confidencialidade e à auditoria.                            |
-| Colaborador    | Com conta vinculada, preenche e lê apenas a própria autoavaliação; não visualiza a avaliação de gestor nesta versão.                                                |
+| Perfil         | Escopo v1                                                                                                                                                                                                               |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Administrador  | Administra contas, acessos e operações técnicas autorizadas; não cria, consulta, publica ou reabre avaliações, não registra feedback, não consulta indicadores e não exporta.                                           |
+| Gestor         | Cria, edita, envia e consulta somente avaliações que ele próprio realizou para colaboradores com vínculo vigente; preenche e consulta a própria autoavaliação; registra o feedback somente das avaliações que realizou. |
+| Gerência de RH | Visualiza todas as avaliações, inclusive autoavaliações; publica e reabre; consulta indicadores e exporta agregados. Não cria, altera ou substitui feedback.                                                            |
+| Diretoria      | Visualiza todas as avaliações, inclusive autoavaliações; publica e reabre; pode criar avaliações de Gerência quando possuir vínculo Diretoria–Gerência vigente. Não altera feedback de outro avaliador.                 |
+| Colaborador    | Sem acesso à plataforma nesta versão quando não for avaliador. Não consulta avaliação recebida, resultado ou feedback.                                                                                                  |
 
-### Autoavaliação e transições
+### Situações, feedback e transições
 
 A autoavaliação é uma avaliação independente do tipo `AUTOAVALIACAO`. Ela só é habilitada para um colaborador que tenha conta local ativa vinculada e cuja abertura tenha sido configurada no ciclo por Gerência de RH ou Diretoria. Usa a mesma versão de questionário da avaliação de gestor aplicável ao colaborador, possui uma única ocorrência por ciclo e não compõe a nota, a classificação ou os indicadores da avaliação de gestor.
 
-O colaborador pode manter rascunho e enviar a própria autoavaliação durante a janela do ciclo. O gestor não lê a autoavaliação. Gerência de RH e Diretoria podem lê-la para administração do processo. Não há recurso ou revisão por solicitação do avaliado.
+O acesso de colaborador comum foi retirado deste recorte: somente avaliadores possuem conta e entram na plataforma. Assim, a autoavaliação existe exclusivamente para quem também atua como Gestor ou Diretoria, mediante vínculo de conta–colaborador, ciclo e questionário válidos. Gerência de RH e Diretoria podem lê-la para administração do processo. Não há recurso ou revisão por solicitação do avaliado.
 
-O fluxo da avaliação de gestor é `RASCUNHO → ENVIADA → PUBLICADA`. Publicação exige respostas completas, cálculo válido e ação individual de Gerência de RH ou Diretoria. Reabertura só pode ser realizada por esses mesmos papéis, exige motivo obrigatório e cria nova versão em `RASCUNHO`, preservando a versão publicada e toda a trilha de auditoria. A reabertura administrativa não é recurso do colaborador.
+Cada avaliação possui duas dimensões independentes e persistidas:
+
+| Dimensão              | Valores                                  | Significado                                                                                           |
+| --------------------- | ---------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Situação da avaliação | `RASCUNHO`, `ENVIADA`, `PUBLICADA`       | Preenchimento, envio pelo avaliador e homologação por RH/Diretoria.                                   |
+| Situação do feedback  | `NAO_APLICAVEL`, `PENDENTE`, `CONCLUIDO` | Etapa posterior à publicação. É apresentada junto da situação principal, sem substituir a publicação. |
+
+As avaliações de Gestor e de Diretoria sobre Gerência seguem `RASCUNHO → ENVIADA → PUBLICADA`. Publicação exige respostas completas, cálculo válido e ação individual de Gerência de RH ou Diretoria; ao publicar, o feedback passa para `PENDENTE`. Somente o autor original da avaliação pode registrar uma única conclusão de feedback da respectiva versão publicada, informando data e comentário, o que a leva a `CONCLUIDO`. RH e Diretoria podem visualizar e reabrir, mas não podem editar, substituir ou concluir o feedback em nome do avaliador.
+
+A autoavaliação também segue `RASCUNHO → ENVIADA → PUBLICADA`, com publicação por RH ou Diretoria, mas recebe `NAO_APLICAVEL` e não expõe registro de feedback.
+
+Há também a avaliação do tipo `DIRETORIA_GERENCIA`. Ela exige vínculo Diretoria–Gerência vigente e não reutiliza vínculo gestor–colaborador. Mantém uma ocorrência por ciclo, avaliado e tipo, e segue o mesmo fluxo e feedback das avaliações de Gestor.
+
+Reabertura só pode ser realizada por RH ou Diretoria, exige motivo obrigatório e cria nova versão em `RASCUNHO`, preservando a versão publicada, seu feedback e toda a trilha de auditoria. Ao republicar a nova versão de Gestor ou Diretoria–Gerência, inicia-se um novo feedback `PENDENTE`. A reabertura administrativa não é recurso do colaborador.
 
 Publicação e reabertura administrativa podem ocorrer também depois do encerramento do ciclo. Quando RH ou Diretoria reabre uma avaliação de gestor já encerrada, essa reabertura registrada é a única exceção à janela: o gestor autor da avaliação pode corrigir e reenviar exclusivamente aquele rascunho reaberto; o ciclo inteiro, autoavaliações e novas avaliações continuam encerrados. Isso permite tratar uma correção administrativa sem reabrir a população ou alterar o histórico do ciclo.
 
-Há somente uma avaliação de gestor por combinação de ciclo e colaborador e uma autoavaliação por combinação de ciclo e colaborador. Reabrir cria versão da mesma avaliação, não outro registro lógico.
+Há somente uma avaliação de Gestor, uma de Diretoria–Gerência e uma autoavaliação por combinação de ciclo e colaborador. Reabrir cria versão da mesma avaliação, não outro registro lógico.
 
 ## ADC-003 — indicadores, exportação e confidencialidade
 
 ### População e métricas
 
-Indicadores usam somente avaliações de gestor publicadas da versão vigente da avaliação, uma por colaborador e ciclo. Autoavaliações, rascunhos, envios, comentários, planos de ação e identificadores individuais ficam fora da população e do resultado agregado.
+Indicadores usam somente avaliações de gestor publicadas da versão vigente da avaliação, uma por colaborador e ciclo. O feedback `PENDENTE` ou `CONCLUIDO` não altera essa população. Autoavaliações, avaliações de Diretoria–Gerência, rascunhos, envios, comentários, planos de ação e identificadores individuais ficam fora da população e do resultado agregado.
 
 As métricas v1 são:
 
@@ -136,3 +149,6 @@ Uma pessoa já autorizada a abrir o detalhe de uma avaliação pode solicitar a 
 4. Uma autoavaliação enviada não altera a nota nem a faixa da avaliação de gestor.
 5. Uma consulta de indicador com quatro colaboradores distintos não revela número algum; uma exportação recebe o mesmo bloqueio.
 6. Uma consulta de ciclo e área não pode ser combinada com gestor para tentar subtrair grupos; a API a rejeita antes de calcular agregados.
+7. RH publica uma avaliação de gestor completa: ela fica `PUBLICADA` com feedback `PENDENTE`; somente o gestor autor a conclui com data e comentário.
+8. RH reabre uma avaliação com feedback concluído: a versão anterior e sua conclusão permanecem consultáveis; ao publicar a nova versão, o feedback retorna a `PENDENTE`.
+9. Uma autoavaliação publicada fica com feedback `NAO_APLICAVEL`; tentar registrar feedback nela é negado.

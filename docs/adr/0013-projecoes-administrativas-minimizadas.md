@@ -46,6 +46,7 @@ consulta de contas ou cadastros.
 - A superfície HTTP administrativa aumenta de modo explícito e documentado em
   [Contrato HTTP v1](../api/contrato-http-v1.md); novos campos devem passar pela mesma análise de
   minimização e autorização.
-- Não houve migration, carga de dados, exclusão, alteração de ambiente, configuração externa ou
-  publicação por esta decisão. A validação de integração contra SQL Server autorizado continua
-  pendente antes de uso com dados reais.
+- Esta decisão não autorizou migration, carga de dados, exclusão, alteração de ambiente,
+  configuração externa ou publicação. Posteriormente, o cenário autenticado de DEV exercitou as
+  projeções e escritas administrativas cobertas contra SQL Server com massa fictícia; carga e aceite
+  de dados reais continuam exigindo procedimento externo próprio.

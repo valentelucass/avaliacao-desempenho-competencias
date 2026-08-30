@@ -24,8 +24,23 @@ Esta pasta contém scripts manuais para a base de produção `AVALIACAO_PROD`. E
    sqlcmd -S localhost,1433 -E -N -d master -i database\production\002_validar_login_e_usuario_da_aplicacao.sql
    ```
 
+   Se a identidade já existir sem os dois grants de exclusão restritos, reconcilie-a sem informar ou trocar a senha e valide novamente:
+
+   ```bat
+   sqlcmd -S localhost,1433 -E -N -d master -i database\production\003_conceder_delete_objetos_da_aplicacao.sql
+   sqlcmd -S localhost,1433 -E -N -d master -i database\production\002_validar_login_e_usuario_da_aplicacao.sql
+   ```
+
+   O rollback do reparo é `REVOKE DELETE ON OBJECT::dbo.ciclo_questionario` e `REVOKE DELETE ON OBJECT::dbo.filial` para o mesmo usuário, executados em `AVALIACAO_PROD` por uma conta administrativa autorizada.
+
 O login `rodogarcia_adc_app` recebe `CONNECT`, `SELECT`, `INSERT` e `UPDATE` no schema `dbo`, sem `DELETE` geral. Os únicos `DELETE` concedidos são em `dbo.ciclo_questionario` e `dbo.filial`, necessários às operações administrativas já limitadas pela API. Ele não recebe `db_owner`, `sysadmin`, DDL, acesso a outros bancos nem acesso aos scripts de migration.
 
 ## Configuração da API
 
 Depois da validação, a configuração externa de produção deve apontar para a base nova e usar apenas a conta SQL criada acima. A URL JDBC precisa exigir TLS com certificado válido e não pode conter `trustServerCertificate=true`. Não publique enquanto a conexão TLS, os backups e o preflight não estiverem validados.
+
+## Teste de backup e restauração
+
+O procedimento opt-in para gerar um backup `COPY_ONLY` com checksum e compressão, restaurá-lo em clone isolado, executar `DBCC CHECKDB`, reconciliar migrations e descartar exatamente o clone criado está documentado em [`../../docs/operations/backup-restauracao-sql-server.md`](../../docs/operations/backup-restauracao-sql-server.md).
+
+O script aceita somente `localhost,1433` e `AVALIACAO_PROD`, exige `-Execute` mais confirmação textual e não imprime caminhos ou identidades. O switch adicional `-RemoveBackupAfterValidation` remove de forma irreversível apenas o arquivo único criado pela execução, somente após todas as validações e a limpeza do clone; qualquer divergência falha fechada. Sua presença no repositório não autoriza execução; confirme janela, impacto em disco, proteção em repouso, retenção e recuperação antes de usá-lo.

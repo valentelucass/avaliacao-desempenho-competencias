@@ -44,6 +44,19 @@ class EvaluationCycleReadAuthorizationPolicyTests {
     assertThat(policy.scopeFor(actor())).isEmpty();
   }
 
+  @Test
+  void keepsDirectorManagerScopeBoundToTheSeparateRelationship() {
+    EvaluationCycleReadScope scope =
+        policy
+            .scopeFor(actor(EvaluationCycleReadAuthorizationPolicy.EVALUATE_LINKED_MANAGERS))
+            .orElseThrow();
+
+    assertThat(scope.allCycles()).isFalse();
+    assertThat(scope.managedCollaborators()).isFalse();
+    assertThat(scope.directorManagedCollaborators()).isTrue();
+    assertThat(scope.ownCollaborator()).isFalse();
+  }
+
   private static EvaluationCycleReadAccessContext actor(String... permissions) {
     return new EvaluationCycleReadAccessContext(UUID.randomUUID(), Set.of(permissions));
   }

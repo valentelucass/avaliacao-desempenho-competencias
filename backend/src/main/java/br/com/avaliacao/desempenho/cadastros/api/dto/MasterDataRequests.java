@@ -25,6 +25,11 @@ public final class MasterDataRequests {
   public record ManagerAssignment(
       @NotNull UUID managerUserId, @NotNull UUID collaboratorId, @NotNull LocalDate startsOn) {}
 
+  public record DirectorManagerAssignment(
+      @NotNull UUID directorUserId,
+      @NotNull UUID managerCollaboratorId,
+      @NotNull LocalDate startsOn) {}
+
   public record UserCollaboratorLink(
       @NotNull UUID userId, @NotNull UUID collaboratorId, @NotNull LocalDate startsOn) {}
 

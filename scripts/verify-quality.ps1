@@ -70,6 +70,10 @@ Invoke-Validation 'Repositorio: sintaxe PowerShell' {
     Assert-PowerShellSyntax -RepositoryRoot $repositoryRoot
 }
 
+Invoke-Validation 'Operacao: manifesto PM2 com ambiente minimo' {
+    & node (Join-Path $PSScriptRoot 'validate-pm2-manifest.cjs')
+}
+
 Invoke-Validation 'Banco: regras estaticas de migrations' {
     & (Join-Path $repositoryRoot 'database\scripts\validar-migrations.ps1') `
         -MigrationDirectory (Join-Path $repositoryRoot 'database\sql\migrations')
@@ -81,6 +85,16 @@ Invoke-Validation 'Aplicacao: build, testes, formatter e lint' {
     }
     else {
         & (Join-Path $PSScriptRoot 'verify.ps1') -BackendBuildDirectory $BackendBuildDirectory
+    }
+}
+
+Invoke-Validation 'Back-end: SBOM e vulnerabilidades conhecidas' {
+    if ([string]::IsNullOrWhiteSpace($BackendBuildDirectory)) {
+        & (Join-Path $PSScriptRoot 'verify-java-dependencies.ps1')
+    }
+    else {
+        & (Join-Path $PSScriptRoot 'verify-java-dependencies.ps1') `
+            -BackendBuildDirectory $BackendBuildDirectory
     }
 }
 

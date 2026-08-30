@@ -68,6 +68,12 @@ public class AdministrativeReadService {
     return read(repository::listActiveManagerAssignments);
   }
 
+  public List<AdministrativeReadRepository.ActiveDirectorManagerAssignmentView>
+      listActiveDirectorManagerAssignments(AdministrativeReadAccessContext actor) {
+    require(authorizationPolicy.mayReadDirectorManagerAssignments(actor));
+    return read(repository::listActiveDirectorManagerAssignments);
+  }
+
   public AdministrativeReadRepository.ManagerAssignmentOptionsView managerAssignmentOptions(
       AdministrativeReadAccessContext actor) {
     require(authorizationPolicy.mayReadManagerAssignments(actor));
@@ -75,6 +81,16 @@ public class AdministrativeReadService {
         () ->
             new AdministrativeReadRepository.ManagerAssignmentOptionsView(
                 repository.listEligibleManagerOptions(),
+                repository.listActiveCollaboratorOptions()));
+  }
+
+  public AdministrativeReadRepository.DirectorManagerAssignmentOptionsView
+      directorManagerAssignmentOptions(AdministrativeReadAccessContext actor) {
+    require(authorizationPolicy.mayReadDirectorManagerAssignments(actor));
+    return read(
+        () ->
+            new AdministrativeReadRepository.DirectorManagerAssignmentOptionsView(
+                repository.listEligibleDirectorOptions(),
                 repository.listActiveCollaboratorOptions()));
   }
 

@@ -36,6 +36,6 @@ O banco local dedicado foi posteriormente reconciliado de `V0001` a `V0007`, ap�
 - A autenticação usa BCrypt com custo 12 por compatibilidade já validada. A eventual mudança para Argon2id requer ADR, dependência controlada, migração de credenciais e validação de operação antes de uso.
 - Testes unitários cobrem cálculo, autorização, sessão e contratos. A validação de repositório contra SQL Server autorizado permanece obrigatória antes de liberação.
 
-## Estado atual — 2026-08-27
+## Estado atual — 2026-08-29
 
-O bloco de atualização de 2026-08-25 preserva o contexto daquela data. A evidência operacional mais recente registra `V0001`–`V0010` reconciliadas em `AVALIACAO_DEV` e `AVALIACAO_PROD`, hosts públicos com resposta anônima `200` e PM2 online. A `V0011` está em fonte e aguarda aplicação autorizada. Ainda faltam teste autenticado de ponta a ponta, validação por recurso em produção, backup/restauração e aceite de negócio; nenhuma dessas conclusões decorre da mera disponibilidade observada.
+O bloco de atualização de 2026-08-25 preserva o contexto daquela data. `AVALIACAO_DEV` e `AVALIACAO_PROD` reconciliaram `V0001`–`V0013`. O cenário autenticado automatizado passou em DEV com dados exclusivamente fictícios e cobriu sessão, CSRF, autorização por recurso, feedback, indicadores/CSV, refresh e logout. A identidade SQL externa passou pelo validador mínimo e a conexão exige TLS validado. Por decisão explícita, teste autenticado em `AVALIACAO_PROD` não faz parte do encerramento técnico. Backup/restauração, controles externos do Tunnel e aceite de negócio continuam exigindo evidência própria.

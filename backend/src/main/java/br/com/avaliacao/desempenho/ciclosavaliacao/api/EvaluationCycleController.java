@@ -44,6 +44,7 @@ public class EvaluationCycleController {
       "hasAnyAuthority("
           + "'PERMISSION:CICLOS.GERIR',"
           + "'PERMISSION:AVALIACOES.AVALIAR_VINCULADOS',"
+          + "'PERMISSION:AVALIACOES.AVALIAR_GERENCIAS_VINCULADAS',"
           + "'PERMISSION:AUTOAVALIACOES.PREENCHER_PROPRIA',"
           + "'PERMISSION:INDICADORES.VISUALIZAR')")
   public EvaluationCycleListResponse list(
@@ -58,6 +59,7 @@ public class EvaluationCycleController {
       "hasAnyAuthority("
           + "'PERMISSION:CICLOS.GERIR',"
           + "'PERMISSION:AVALIACOES.AVALIAR_VINCULADOS',"
+          + "'PERMISSION:AVALIACOES.AVALIAR_GERENCIAS_VINCULADAS',"
           + "'PERMISSION:AUTOAVALIACOES.PREENCHER_PROPRIA',"
           + "'PERMISSION:INDICADORES.VISUALIZAR')")
   public AppliedQuestionnaireResponse getAppliedQuestionnaire(

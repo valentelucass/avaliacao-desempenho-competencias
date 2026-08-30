@@ -24,9 +24,9 @@ A VM já possui uma instância SQL Server local em execução e bancos de outras
 - O banco exclusivo foi criado posteriormente sob confirmação explícita. O registro acima descreve o estágio inicial; veja o estado posterior abaixo.
 - Cadastro mestre, avaliações, questionários, indicadores e autenticação já têm implementação fonte associada às migrations posteriores. Retenção e workflow operacional de administrador supremo continuam dependentes de aceite e procedimento externo.
 
-## Estado operacional posterior — 2026-08-26
+## Estado operacional posterior — 2026-08-29
 
-Por autorização registrada no estado do projeto, `AVALIACAO_DEV` e `AVALIACAO_PROD` reconciliaram o histórico completo disponível à época, até `V0010`; as validações somente leitura confirmaram o catálogo inicial sem ciclos, lotações, vínculos, atribuições ou avaliações. A `V0011` já existe em fonte e aguarda aplicação autorizada. Esses fatos não autorizam aplicar migrations em outro alvo, nem substituem a verificação própria de bootstrap, privilégio SQL mínimo, backup/restauração ou aceite de negócio.
+Por autorização registrada no estado do projeto, `AVALIACAO_DEV` e `AVALIACAO_PROD` reconciliaram o histórico completo `V0001`–`V0013`. A identidade SQL externa da aplicação passou pelo validador de mínimo privilégio e a conexão exige TLS com certificado validado. O cenário autenticado de DEV usa somente massa fictícia e não autoriza migrations em outro alvo, carga de dados reais ou uso operacional. Backup/restauração, criptografia em repouso, firewall compartilhado da porta 1433 e aceite de negócio continuam externos.
 
 ## Referências
 

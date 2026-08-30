@@ -47,17 +47,19 @@ class AssessmentAuthorizationPolicyTests {
   }
 
   @Test
-  void publicationAndReopeningAreNeverAvailableForSelfAssessments() {
+  void publicationAndReopeningAreAvailableForEveryAssessmentTypeToRhAndDirectorate() {
     AssessmentAccessContext rh =
         new AssessmentAccessContext(
             UUID.randomUUID(),
             Set.of(AssessmentAuthorizationPolicy.PUBLISH, AssessmentAuthorizationPolicy.REOPEN),
             Set.of("GERENCIA_RH"));
 
-    assertThat(policy.canPublish(rh, AssessmentType.AUTOAVALIACAO)).isFalse();
-    assertThat(policy.canReopen(rh, AssessmentType.AUTOAVALIACAO)).isFalse();
+    assertThat(policy.canPublish(rh, AssessmentType.AUTOAVALIACAO)).isTrue();
+    assertThat(policy.canReopen(rh, AssessmentType.AUTOAVALIACAO)).isTrue();
     assertThat(policy.canPublish(rh, AssessmentType.GESTOR)).isTrue();
     assertThat(policy.canReopen(rh, AssessmentType.GESTOR)).isTrue();
+    assertThat(policy.canPublish(rh, AssessmentType.DIRETORIA_GERENCIA)).isTrue();
+    assertThat(policy.canReopen(rh, AssessmentType.DIRETORIA_GERENCIA)).isTrue();
 
     AssessmentAccessContext technicalAdministrator =
         new AssessmentAccessContext(
@@ -67,5 +69,39 @@ class AssessmentAuthorizationPolicyTests {
 
     assertThat(policy.canPublish(technicalAdministrator, AssessmentType.GESTOR)).isFalse();
     assertThat(policy.canReopen(technicalAdministrator, AssessmentType.GESTOR)).isFalse();
+  }
+
+  @Test
+  void feedbackRequiresTheOriginalEvaluatorAndDoesNotApplyToSelfAssessment() {
+    UUID director = UUID.randomUUID();
+    AssessmentAccessContext authorizedDirector =
+        new AssessmentAccessContext(
+            director,
+            Set.of(
+                AssessmentAuthorizationPolicy.EVALUATE_LINKED_MANAGERS,
+                AssessmentAuthorizationPolicy.RECORD_OWN_FEEDBACK),
+            Set.of("DIRETORIA"));
+
+    assertThat(
+            policy.canRecordOwnFeedback(
+                authorizedDirector,
+                new AssessmentAuthorizationPolicy.AssessmentOwnership(
+                    director, AssessmentType.DIRETORIA_GERENCIA),
+                FeedbackStatus.PENDENTE))
+        .isTrue();
+    assertThat(
+            policy.canRecordOwnFeedback(
+                authorizedDirector,
+                new AssessmentAuthorizationPolicy.AssessmentOwnership(
+                    director, AssessmentType.AUTOAVALIACAO),
+                FeedbackStatus.PENDENTE))
+        .isFalse();
+    assertThat(
+            policy.canRecordOwnFeedback(
+                authorizedDirector,
+                new AssessmentAuthorizationPolicy.AssessmentOwnership(
+                    UUID.randomUUID(), AssessmentType.DIRETORIA_GERENCIA),
+                FeedbackStatus.PENDENTE))
+        .isFalse();
   }
 }

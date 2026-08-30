@@ -94,14 +94,6 @@ if errorlevel 1 exit /b 1
 call :resolve_node_executable
 if errorlevel 1 exit /b 1
 
-rem O certificado SQL Server confiavel e administrado no repositório Windows-ROOT da VM.
-rem Isso mantém a validação TLS sem confiar cegamente no certificado do servidor.
-if defined JAVA_TOOL_OPTIONS (
-  set "JAVA_TOOL_OPTIONS=%JAVA_TOOL_OPTIONS% -Djavax.net.ssl.trustStoreType=Windows-ROOT"
-) else (
-  set "JAVA_TOOL_OPTIONS=-Djavax.net.ssl.trustStoreType=Windows-ROOT"
-)
-
 set "VITE_API_BASE_URL=%PRODUCTION_API_BASE_URL%"
 echo [Avaliacao PROD] Gerando o build final do front-end com a API publica autorizada...
 pushd frontend

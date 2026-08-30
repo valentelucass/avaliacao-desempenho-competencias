@@ -71,6 +71,17 @@ public class SqlServerAdministrativeReadRepository implements AdministrativeRead
       ORDER BY gestor_usuario_id, colaborador_id, vinculo_gestor_colaborador_id
       """;
 
+  static final String LIST_ACTIVE_DIRECTOR_MANAGER_ASSIGNMENTS_SQL =
+      """
+      SELECT vinculo_diretoria_gerencia_id,
+             diretoria_usuario_id,
+             gerencia_colaborador_id,
+             inicio_vigencia
+      FROM dbo.vinculo_diretoria_gerencia
+      WHERE revogado_em_utc IS NULL
+      ORDER BY diretoria_usuario_id, gerencia_colaborador_id, vinculo_diretoria_gerencia_id
+      """;
+
   static final String LIST_ELIGIBLE_MANAGER_OPTIONS_SQL =
       """
       SELECT usuario.usuario_id,
@@ -84,6 +95,32 @@ public class SqlServerAdministrativeReadRepository implements AdministrativeRead
         AND atribuicao.revogado_em_utc IS NULL
         AND papel.codigo = 'GESTOR'
         AND papel.ativo = 1
+      ORDER BY usuario.nome_exibicao, usuario.usuario_id
+      """;
+
+  static final String LIST_ELIGIBLE_DIRECTOR_OPTIONS_SQL =
+      """
+      SELECT usuario.usuario_id,
+             usuario.nome_exibicao
+      FROM dbo.usuario AS usuario
+      INNER JOIN dbo.atribuicao_papel AS atribuicao
+          ON atribuicao.usuario_id = usuario.usuario_id
+      INNER JOIN dbo.papel AS papel
+          ON papel.papel_id = atribuicao.papel_id
+      WHERE usuario.situacao = 'ATIVO'
+        AND atribuicao.revogado_em_utc IS NULL
+        AND papel.codigo = 'DIRETORIA'
+        AND papel.ativo = 1
+        AND NOT EXISTS (
+            SELECT 1
+            FROM dbo.atribuicao_papel AS administrador_atribuicao
+            INNER JOIN dbo.papel AS administrador_papel
+                ON administrador_papel.papel_id = administrador_atribuicao.papel_id
+            WHERE administrador_atribuicao.usuario_id = usuario.usuario_id
+              AND administrador_atribuicao.revogado_em_utc IS NULL
+              AND administrador_papel.codigo = 'ADMINISTRADOR_PLATAFORMA'
+              AND administrador_papel.ativo = 1
+        )
       ORDER BY usuario.nome_exibicao, usuario.usuario_id
       """;
 
@@ -290,10 +327,31 @@ public class SqlServerAdministrativeReadRepository implements AdministrativeRead
   }
 
   @Override
+  public List<ActiveDirectorManagerAssignmentView> listActiveDirectorManagerAssignments() {
+    requireMigration("V0012");
+    return jdbcTemplate.query(
+        LIST_ACTIVE_DIRECTOR_MANAGER_ASSIGNMENTS_SQL,
+        (resultSet, rowNumber) ->
+            new ActiveDirectorManagerAssignmentView(
+                resultSet.getObject("vinculo_diretoria_gerencia_id", UUID.class),
+                resultSet.getObject("diretoria_usuario_id", UUID.class),
+                resultSet.getObject("gerencia_colaborador_id", UUID.class),
+                resultSet.getObject("inicio_vigencia", java.time.LocalDate.class)));
+  }
+
+  @Override
   public List<SelectionOptionView> listEligibleManagerOptions() {
     requireRequiredMigrations();
     return jdbcTemplate.query(
         LIST_ELIGIBLE_MANAGER_OPTIONS_SQL,
+        (resultSet, rowNumber) -> selectionOption(resultSet, "usuario_id"));
+  }
+
+  @Override
+  public List<SelectionOptionView> listEligibleDirectorOptions() {
+    requireMigration("V0012");
+    return jdbcTemplate.query(
+        LIST_ELIGIBLE_DIRECTOR_OPTIONS_SQL,
         (resultSet, rowNumber) -> selectionOption(resultSet, "usuario_id"));
   }
 
@@ -468,6 +526,21 @@ public class SqlServerAdministrativeReadRepository implements AdministrativeRead
               """,
               Integer.class);
       if (applied == null || applied != REQUIRED_MIGRATIONS.length) {
+        throw unavailable();
+      }
+    } catch (DataAccessException exception) {
+      throw unavailable();
+    }
+  }
+
+  private void requireMigration(String version) {
+    try {
+      Integer applied =
+          jdbcTemplate.queryForObject(
+              "SELECT COUNT(*) FROM dbo.schema_migrations WHERE version = ?",
+              Integer.class,
+              version);
+      if (applied == null || applied != 1) {
         throw unavailable();
       }
     } catch (DataAccessException exception) {

@@ -27,7 +27,8 @@ public final class AssessmentCycleAccessPolicy {
       AssessmentStatus assessmentStatus,
       boolean hasAdministrativeReopen) {
     return cycleState == CycleState.CLOSED
-        && assessmentType == AssessmentType.GESTOR
+        && (assessmentType == AssessmentType.GESTOR
+            || assessmentType == AssessmentType.DIRETORIA_GERENCIA)
         && assessmentStatus == AssessmentStatus.RASCUNHO
         && hasAdministrativeReopen;
   }

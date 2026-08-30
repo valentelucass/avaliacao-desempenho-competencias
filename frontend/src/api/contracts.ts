@@ -91,9 +91,22 @@ export interface ActiveManagerAssignment {
   startsOn: string | null
 }
 
+/** Vínculo de escopo entre uma conta de Diretoria e uma Gerência avaliada. */
+export interface ActiveDirectorManagerAssignment {
+  id: string
+  directorUserId: string
+  managerCollaboratorId: string
+  startsOn: string | null
+}
+
 /** Opções sem dados de conta para administrar somente vínculos de gestão. */
 export interface ManagerAssignmentOptions {
   managers: readonly AdministrativePersonOption[]
+  collaborators: readonly AdministrativePersonOption[]
+}
+
+export interface DirectorManagerAssignmentOptions {
+  directors: readonly AdministrativePersonOption[]
   collaborators: readonly AdministrativePersonOption[]
 }
 
@@ -196,6 +209,12 @@ export interface CloseRecordInput {
 export interface CreateManagerAssignmentInput {
   managerUserId: string
   collaboratorId: string
+  startsOn: string
+}
+
+export interface CreateDirectorManagerAssignmentInput {
+  directorUserId: string
+  managerCollaboratorId: string
   startsOn: string
 }
 
@@ -346,6 +365,7 @@ export interface AssessmentSummary {
   }
   type: string
   status: string
+  feedbackStatus: 'NAO_APLICAVEL' | 'PENDENTE' | 'CONCLUIDO'
   revision?: string
   updatedAt?: string
 }
@@ -357,6 +377,11 @@ export type CreateAssessmentInput =
     }
   | {
       type: 'GESTOR'
+      cycleId: string
+      collaboratorId: string
+    }
+  | {
+      type: 'DIRETORIA_GERENCIA'
       cycleId: string
       collaboratorId: string
     }
@@ -411,6 +436,16 @@ export interface AssessmentDetail extends AssessmentSummary {
     name: string
     score: number
   }[]
+  feedback?: {
+    feedbackDate: string
+    comment: string
+    completedAt: string
+  }
+}
+
+export interface CompleteFeedbackInput {
+  feedbackDate: string
+  comment: string
 }
 
 export interface AssessmentDraftInput {

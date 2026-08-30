@@ -167,6 +167,52 @@ try {
     }
   }
 
+  $v0012 = $files | Where-Object {
+    $_.Name -eq 'V0012__feedback_integrado_e_vinculo_diretoria_gerencia.sql'
+  }
+  if ($null -ne $v0012) {
+    $feedbackValidation = Join-Path $PSScriptRoot 'testar-v0012-feedback-integrado.ps1'
+    $sqlValidation = Join-Path $resolvedDirectory '..\validation\012_validar_feedback_integrado_e_vinculo_diretoria_gerencia.sql'
+
+    if (-not (Test-Path -LiteralPath $feedbackValidation)) {
+      throw 'Teste estatico da V0012 nao encontrado.'
+    }
+    if (-not (Test-Path -LiteralPath $sqlValidation)) {
+      throw 'Validacao SQL da V0012 nao encontrada.'
+    }
+
+    $global:LASTEXITCODE = 0
+    & $feedbackValidation -MigrationPath $v0012.FullName -SqlValidationPath $sqlValidation
+    if ($LASTEXITCODE -ne 0) {
+      throw 'Teste estatico da V0012 falhou.'
+    }
+  }
+
+  $v0013 = $files | Where-Object {
+    $_.Name -eq 'V0013__restringir_acesso_avaliacoes_administrador_plataforma.sql'
+  }
+  if ($null -ne $v0013) {
+    $assessmentRestrictionValidation = Join-Path $PSScriptRoot 'testar-v0013-restricao-avaliacoes-administrador.ps1'
+    $sqlValidation = Join-Path $resolvedDirectory '..\validation\013_validar_restricao_avaliacoes_administrador_plataforma.sql'
+    $profileValidation = Join-Path $resolvedDirectory '..\validation\009_validar_perfis_administrador_integral_e_usuario_comum.sql'
+
+    if (-not (Test-Path -LiteralPath $assessmentRestrictionValidation)) {
+      throw 'Teste estatico da V0013 nao encontrado.'
+    }
+    if (-not (Test-Path -LiteralPath $sqlValidation)) {
+      throw 'Validacao SQL da V0013 nao encontrada.'
+    }
+    if (-not (Test-Path -LiteralPath $profileValidation)) {
+      throw 'Validacao SQL de perfis da V0009 nao encontrada.'
+    }
+
+    $global:LASTEXITCODE = 0
+    & $assessmentRestrictionValidation -MigrationPath $v0013.FullName -SqlValidationPath $sqlValidation -ProfileValidationPath $profileValidation
+    if ($LASTEXITCODE -ne 0) {
+      throw 'Teste estatico da V0013 falhou.'
+    }
+  }
+
   Write-Output "Migrations validas: $($files.Count)"
   Write-Output 'Conteudo de migrations compativel com o runner.'
 } catch {

@@ -1,5 +1,12 @@
 SET NOCOUNT ON;
 
+DECLARE @v0012_aplicada bit = CASE WHEN EXISTS (
+    SELECT 1
+    FROM dbo.schema_migrations
+    WHERE version = N'V0012'
+      AND script_name = N'V0012__feedback_integrado_e_vinculo_diretoria_gerencia'
+) THEN 1 ELSE 0 END;
+
 IF NOT EXISTS (
     SELECT 1
     FROM dbo.schema_migrations
@@ -78,6 +85,20 @@ VALUES
     (N'CK_transicao_avaliacao_motivo_reabertura_2024_1'),
     (N'CK_resultado_avaliacao_nota'),
     (N'CK_resultado_avaliacao_classificacao');
+
+IF @v0012_aplicada = 1
+BEGIN
+    DELETE FROM @checks_ativos
+    WHERE nome IN (
+        N'CK_avaliacao_tipo_2024_1',
+        N'CK_avaliacao_relacao_por_tipo_2024_1'
+    );
+
+    INSERT INTO @checks_ativos (nome)
+    VALUES
+        (N'CK_avaliacao_tipo_2026_feedback'),
+        (N'CK_avaliacao_relacao_por_tipo_2026_feedback');
+END;
 
 IF EXISTS (
     SELECT 1

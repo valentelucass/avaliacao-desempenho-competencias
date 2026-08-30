@@ -25,6 +25,9 @@ public final class AdministrativeReadResponses {
   public record ActiveManagerAssignment(
       UUID id, UUID managerUserId, UUID collaboratorId, LocalDate startsOn) {}
 
+  public record ActiveDirectorManagerAssignment(
+      UUID id, UUID directorUserId, UUID managerCollaboratorId, LocalDate startsOn) {}
+
   public record SelectionOption(UUID id, String displayName) {}
 
   public record ManagerAssignmentOptions(
@@ -32,6 +35,15 @@ public final class AdministrativeReadResponses {
 
     public ManagerAssignmentOptions {
       managers = List.copyOf(managers);
+      collaborators = List.copyOf(collaborators);
+    }
+  }
+
+  public record DirectorManagerAssignmentOptions(
+      List<SelectionOption> directors, List<SelectionOption> collaborators) {
+
+    public DirectorManagerAssignmentOptions {
+      directors = List.copyOf(directors);
       collaborators = List.copyOf(collaborators);
     }
   }

@@ -21,9 +21,9 @@ Os nomes anteriores descreviam o produto e não o ambiente. A mesma instância l
 - Qualquer processo externo conectado a uma das bases é interrompido; deve ser identificado e autorizado antes da execução.
 - A ADR-0014 permanece válida quanto à separação de ambientes e à identidade SQL mínima; apenas os nomes canônicos foram substituídos.
 
-## Estado operacional posterior — 2026-08-26
+## Estado operacional posterior — 2026-08-29
 
-`AVALIACAO_DEV` e `AVALIACAO_PROD` são os nomes em uso e seus históricos foram reconciliados até `V0010`. A `V0011` existe em fonte e aguarda aplicação autorizada; essa pendência não exige nem autoriza repetir o renomeio. A disponibilidade anônima observada dos hosts e os processos PM2 online também não substituem o aceite de negócio ou a validação autenticada por recurso.
+`AVALIACAO_DEV` e `AVALIACAO_PROD` são os nomes em uso e seus históricos foram reconciliados de `V0001` a `V0013`. O cenário autenticado por recurso foi executado somente em DEV com massa fictícia; teste autenticado em PROD foi retirado do escopo técnico. O estado atual não exige nem autoriza repetir o renomeio e não substitui o aceite de negócio.
 
 ## Referências
 

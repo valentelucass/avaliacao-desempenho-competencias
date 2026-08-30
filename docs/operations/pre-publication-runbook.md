@@ -1,6 +1,6 @@
 # Runbook de pré-publicação
 
-> Status: checklist de preparação. Este documento não autoriza publicação, alteração de Cloudflare, firewall, PM2 ou banco.
+> Status: checklist para uma nova publicação ou mudança operacional. O release técnico atual possui evidências próprias; este documento não autoriza alteração de Cloudflare, firewall, PM2 ou banco.
 
 ## Objetivo
 
@@ -33,16 +33,19 @@ O preflight de Java também pode ser chamado diretamente sem iniciar processo:
 
 ## Itens obrigatórios antes de uma nova publicação ou alteração operacional
 
-| Item                 | Evidência necessária                                                                                       | Situação atual                                                         |
-| -------------------- | ---------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| Configuração externa | Arquivo `.properties`, URL pública da API e diretório de logs fora do repositório validados pelo preflight | Configurada externamente; revalidar antes de qualquer alteração        |
-| Cloudflare Tunnel    | Rotas dos dois hosts apontando para os serviços corretos no loopback e teste externo HTTPS                 | Hosts responderam `200` anonimamente em 2026-08-26; validar novamente e sem inferir aceite |
-| Processos            | Processos PM2 exclusivos em execução, portas privadas e teste após reinício da VM                          | Online em 2026-08-26; recuperação após reinício da VM continua pendente |
-| Logs                 | Local definido, acesso restrito, retenção e consulta de erro/correlação                                    | Pendente                                                               |
-| Backup               | Procedimento do banco, responsável, retenção e restauração comprovada em ambiente seguro                   | Pendente                                                               |
-| Atualização          | Artefato identificado, responsável, janela e comunicação                                                   | Pendente                                                               |
-| Rollback             | Artefato anterior disponível e passo de retorno testado sem afetar outros processos PM2                    | Pendente                                                               |
-| Segurança            | Checklist de aceite preenchida e pendências bloqueadoras resolvidas                                        | Pendente                                                               |
+| Item                   | Evidência necessária                                                                                       | Situação atual                                                                                                       |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Configuração externa   | Arquivo `.properties`, URL pública da API e diretório de logs fora do repositório validados pelo preflight | Configurada externamente; revalidar antes de qualquer alteração                                                      |
+| Migrations             | Histórico completo e validações do runner nos alvos canônicos                                              | `V0001`–`V0013` reconciliadas em DEV e PROD em 2026-08-29                                                            |
+| Identidade SQL e TLS   | Login dedicado, mínimo privilégio, ausência de acesso cruzado e certificado validado                       | Validador mínimo e conexão TLS aprovados; repetir após qualquer troca                                                |
+| Cloudflare Tunnel      | HTTPS dos dois hosts, headers finais, HTTP→HTTPS, WAF/bot e limite de borda                                | HTTPS/headers finais validados; HTTP ainda retorna `200`, e redirecionamento/WAF/limite de borda permanecem externos |
+| Porta SQL e firewall   | Acesso à 1433 restrito ao escopo aprovado sem afetar os demais bancos da instância compartilhada           | Pendente de inventário, regra e recuperação de infraestrutura                                                        |
+| Processos              | Processos PM2 exclusivos, portas privadas, ambiente mínimo e teste após reinício da VM                     | Release e ambiente mínimo validados; recuperação após reinício da VM ainda precisa de ensaio operacional             |
+| Logs                   | Local definido, acesso restrito, retenção, rotação e consulta de erro/correlação                           | Diretório externo restrito existe; retenção, rotação e alertas pendentes                                             |
+| Dependências           | Scanner de segredos, auditorias npm/Java e SBOM no gate                                                    | Gate consolidado e gate do release aprovados em 2026-08-29                                                           |
+| Backup                 | Política, responsável, retenção, criptografia/RPO-RTO e restauração comprovada em ambiente seguro          | Restauração técnica comprovada; política, agenda, retenção, criptografia e RPO/RTO pendentes                         |
+| Atualização e rollback | Artefato identificado, responsável, janela, comunicação e retorno sem afetar outros processos PM2          | Evidência específica exigida em cada mudança                                                                         |
+| Segurança e negócio    | Checklist de aceite, RH/LGPD, segundo administrador/custodiantes e validação assistiva manual              | Condições externas pendentes                                                                                         |
 
 ## Publicação controlada
 
@@ -53,7 +56,14 @@ Somente depois de autorização explícita para o alvo correto:
 3. Configurar ou confirmar as duas rotas externas na Cloudflare. Não presumir que o túnel existente já pertence a este projeto.
 4. Iniciar ou atualizar somente os processos `avaliacao-desempenho-backend-prod` e `avaliacao-desempenho-frontend-prod` pelo script do repositório.
 5. Confirmar que cada processo escuta exclusivamente em loopback, que os hosts externos retornam o serviço esperado e que não há rota cruzada entre front-end e API.
-6. Salvar a evidência do teste, registrar a versão em operação e configurar/testar a restauração após reinício da VM.
+   A validação de ambiente pode ser repetida sem expor valores:
+
+   ```powershell
+   pm2 jlist | node .\scripts\validate-pm2-runtime.cjs
+   ```
+
+6. Confirmar no endereço final HSTS/CSP/headers defensivos e, no Cloudflare, redirecionamento HTTP→HTTPS, WAF/bot protection e limite de borda conforme a decisão aprovada.
+7. Salvar a evidência do teste, registrar a versão em operação e configurar/testar a restauração após reinício da VM.
 
 O script `iniciar-prod.bat` não configura Cloudflare, firewall, TLS de SQL Server, backup, política de logs, PM2 após reinício ou rollback automático.
 

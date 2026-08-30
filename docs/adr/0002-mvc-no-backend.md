@@ -24,4 +24,4 @@ Cada módulo usará MVC adaptado a uma API REST:
 - A regra de cálculo e a classificação continuam no domínio, nunca na view ou no controller.
 - DTOs, modelos de domínio e entidades de persistência continuam distintos.
 - Não há classes MVC vazias; a convenção é aplicada somente a casos de uso reais.
-- Os módulos de identidade, cadastros, ciclos, avaliações e indicadores agora aplicam essa convenção, com testes de controller, aplicação, domínio e persistência estática/por mock. A validação de integração SQL Server continua pendente de ambiente autorizado.
+- Os módulos de identidade, cadastros, ciclos, avaliações e indicadores agora aplicam essa convenção, com testes de controller, aplicação, domínio e persistência. Em 2026-08-29, o cenário autenticado de DEV acrescentou integração HTTP/SQL Server com massa fictícia às jornadas cobertas; carga de dados reais e aceite de outro alvo continuam externos a esta decisão arquitetural.

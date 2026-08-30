@@ -24,7 +24,7 @@ class AssessmentCycleAccessPolicyTests {
   }
 
   @Test
-  void permitsTheExplicitReopenExceptionAfterClosingOnlyForManagerDrafts() {
+  void permitsTheExplicitReopenExceptionAfterClosingForManagerAndDirectorDraftsOnly() {
     assertThat(
             policy.permitsPostClosingReopenedContribution(
                 CycleState.CLOSED, AssessmentType.GESTOR, AssessmentStatus.RASCUNHO, true))
@@ -33,6 +33,13 @@ class AssessmentCycleAccessPolicyTests {
             policy.permitsPostClosingReopenedContribution(
                 CycleState.CLOSED, AssessmentType.AUTOAVALIACAO, AssessmentStatus.RASCUNHO, true))
         .isFalse();
+    assertThat(
+            policy.permitsPostClosingReopenedContribution(
+                CycleState.CLOSED,
+                AssessmentType.DIRETORIA_GERENCIA,
+                AssessmentStatus.RASCUNHO,
+                true))
+        .isTrue();
     assertThat(
             policy.permitsPostClosingReopenedContribution(
                 CycleState.CLOSED, AssessmentType.GESTOR, AssessmentStatus.RASCUNHO, false))

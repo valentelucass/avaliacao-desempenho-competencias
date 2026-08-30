@@ -8,13 +8,13 @@
 
 ## Estado seguro de inicialização
 
-`application.properties` mantém persistência SQL Server, autenticação e módulos persistidos desabilitados. Assim, iniciar o repositório sem configuração externa não cria conexão, conta, sessão, JWT ou rota de negócio operacional. Em 2026-08-26, os bancos canônicos `AVALIACAO_DEV` e `AVALIACAO_PROD` estavam reconciliados de `V0001` a `V0010`; a `V0011` está em fonte, restringe a autoridade de Administrador e normaliza contas administrativas legadas para perfil único, mas ainda depende de aplicação autorizada. O launcher `iniciar-dev.bat` fornece a configuração necessária somente ao processo local de desenvolvimento.
+`application.properties` mantém persistência SQL Server, autenticação e módulos persistidos desabilitados. Assim, iniciar o repositório sem configuração externa não cria conexão, conta, sessão, JWT ou rota de negócio operacional. Em 2026-08-29, os bancos canônicos `AVALIACAO_DEV` e `AVALIACAO_PROD` reconciliaram o histórico completo `V0001`–`V0013`. O launcher `iniciar-dev.bat` fornece a configuração necessária somente ao processo local de desenvolvimento.
 
 Ativar a implementação em outro ambiente exige migrations autorizadas, identidade SQL de mínimo privilégio, segredo HMAC externo, emissor/audiência/durações, bootstrap controlado de administradores supremos e validação não produtiva. O modo local usa a identidade Windows atual e material efêmero de execução; isso está detalhado em [Configuração externa da aplicação](../operations/configuracao-externa-da-aplicacao.md) e não autoriza publicação ou configuração de produção.
 
 ## Controles implementados no código-fonte
 
-- Spring Security aplica negação por padrão, CORS com origens explícitas, CSRF, cabeçalhos defensivos, respostas `application/problem+json` e correlação por `X-Request-Id`.
+- Spring Security aplica negação por padrão, CORS com origens explícitas, CSRF, HSTS, políticas defensivas, respostas `application/problem+json` e correlação por `X-Request-Id`. A SPA também define CSP, proteção contra framing, `nosniff`, política de referência e Permissions Policy; esses controles foram confirmados no runtime público após a publicação final de 2026-08-29.
 - A sessão local expõe CSRF, login, refresh rotativo, logout, consulta do usuário atual e troca de senha. Credenciais ficam apenas em cookies host-only `HttpOnly`, `Secure`, `SameSite=Strict`; nunca em `localStorage` ou `sessionStorage`.
 - O JWT de acesso curto HS256 contém somente `iss`, `aud`, `sub`, `exp`, `nbf`, `jti` e `sid`. Cada chamada revalida assinatura, algoritmo, claims, sessão, situação da conta e permissões efetivas no banco.
 - Refresh tokens são opacos, rotativos e persistidos apenas por hash. Logout, alteração de senha, bloqueio, desativação ou mudança de acesso revogam as sessões aplicáveis.
@@ -35,11 +35,12 @@ Essas regras evitam que `ACESSOS.GERIR` seja usado para autoelevação ou para o
 
 ## Limites que ainda exigem ativação e aceite
 
-- As migrations `V0001`–`V0010` foram validadas por leitura em `AVALIACAO_DEV` e `AVALIACAO_PROD`; a `V0011`, que normaliza os papéis legados de contas administrativas, está pendente de aplicação autorizada. O catálogo inicial existe, mas não há ciclos, lotações, vínculos, atribuições ou avaliações. Identidades de bootstrap permanecem protegidas e seus dados não são documentados.
-- A verificação anônima mais recente do front-end e de CSRF público retornou `200`, e os processos PM2 estavam online. Ainda não há validação autenticada de ponta a ponta, teste de escrita em produção, aceite de negócio ou certificação de controles no proxy/Tunnel.
+- As migrations `V0001`–`V0013` foram reconciliadas em `AVALIACAO_DEV` e `AVALIACAO_PROD`. O cenário autenticado automatizado em DEV usa somente contas/registros fictícios e comprovou sessão, CSRF, autorização por recurso, feedback, indicadores/CSV e persistência SQL Server. Teste autenticado em `AVALIACAO_PROD` foi retirado explicitamente do escopo deste encerramento.
+- A identidade SQL externa da aplicação passou pelo validador de mínimo privilégio e a conexão exige TLS com certificado validado. A ADR-0018 classificou RLS como não aplicável à topologia inicial; autorização RBAC/ABAC no servidor permanece obrigatória.
+- HSTS, CSP e os demais headers passaram no runtime público após a publicação final. Os dois hosts HTTP ainda retornaram `200` sem redirecionar; HTTP→HTTPS, WAF/bot protection e limite de borda permanecem decisões do Cloudflare.
 - O rate limit vê o endereço remoto da aplicação até a configuração e o teste de proxy confiável atrás do Cloudflare Tunnel. O limiter de indicadores é local à instância.
-- ASVS/LGPD, TLS/túnel, backup/restauração, monitoração, retenção de logs/sessões e recuperação operacional de administradores supremos requerem aceite e validação operacional.
+- ASVS/LGPD, firewall compartilhado da porta 1433, criptografia em repouso, backup/restauração, monitoração, retenção/rotação de logs e sessões, segundo administrador supremo, custodiantes e validação assistiva manual requerem aceite e evidência operacional.
 
 ## Evidência técnica
 
-Os testes cobrem configuração HTTP, sessão/JWT, autorização e escopo, segregação de acesso administrativo, cálculo/classificação, transições de avaliação, privacidade de indicadores e contratos de controllers. A suíte Maven e o gate de qualidade registrado no [STATES.md](../../STATES.md) são a evidência executada desta fonte; eles não substituem a validação de integração SQL Server ou o aceite de produção.
+Os testes cobrem configuração HTTP, sessão/JWT, autorização e escopo, segregação de acesso administrativo, cálculo/classificação, transições de avaliação, privacidade de indicadores e contratos de controllers. O cenário autenticado de DEV acrescenta evidência de integração com SQL Server real e chamadas HTTP locais. A suíte Maven e o gate de qualidade registrados no [STATES.md](../../STATES.md) continuam sendo a evidência canônica; não substituem aceite de negócio, LGPD, infraestrutura de borda ou operação com dados reais.

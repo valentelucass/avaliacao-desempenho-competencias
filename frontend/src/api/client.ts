@@ -3,6 +3,7 @@ import type {
   AppliedCycleQuestionnaire,
   ActiveAllocation,
   ActiveManagerAssignment,
+  ActiveDirectorManagerAssignment,
   ActiveQuestionnaireAssignment,
   ActiveUserCollaboratorLink,
   AdministrativeCollaborator,
@@ -14,12 +15,14 @@ import type {
   AssessmentDraftInput,
   AssessmentSummary,
   CloseRecordInput,
+  CompleteFeedbackInput,
   CreateAdministrationUserInput,
   CreateAllocationInput,
   CreateAssessmentInput,
   CreateCollaboratorInput,
   CreateEvaluationCycleInput,
   CreateManagerAssignmentInput,
+  CreateDirectorManagerAssignmentInput,
   CreateQuestionnaireAssignmentInput,
   CreateQuestionnaireVersionInput,
   CreateUserCollaboratorLinkInput,
@@ -35,6 +38,7 @@ import type {
   IndicatorResponse,
   ManagerAssessmentCreationOption,
   ManagerAssignmentOptions,
+  DirectorManagerAssignmentOptions,
   NamedResourceInput,
   Page,
   QuestionnaireAssignmentOption,
@@ -99,6 +103,8 @@ export interface ApiClient {
   listActiveAllocations(): Promise<readonly ActiveAllocation[]>
   listActiveManagerAssignments(): Promise<readonly ActiveManagerAssignment[]>
   getManagerAssignmentOptions(): Promise<ManagerAssignmentOptions>
+  listActiveDirectorManagerAssignments(): Promise<readonly ActiveDirectorManagerAssignment[]>
+  getDirectorManagerAssignmentOptions(): Promise<DirectorManagerAssignmentOptions>
   listActiveUserCollaboratorLinks(): Promise<readonly ActiveUserCollaboratorLink[]>
   getUserCollaboratorLinkOptions(): Promise<UserCollaboratorLinkOptions>
   listActiveQuestionnaireAssignments(): Promise<readonly ActiveQuestionnaireAssignment[]>
@@ -115,6 +121,10 @@ export interface ApiClient {
   closeAllocation(allocationId: string, input: CloseRecordInput): Promise<void>
   createManagerAssignment(input: CreateManagerAssignmentInput): Promise<CreatedResource>
   closeManagerAssignment(assignmentId: string, input: CloseRecordInput): Promise<void>
+  createDirectorManagerAssignment(
+    input: CreateDirectorManagerAssignmentInput,
+  ): Promise<CreatedResource>
+  closeDirectorManagerAssignment(assignmentId: string, input: CloseRecordInput): Promise<void>
   createUserCollaboratorLink(input: CreateUserCollaboratorLinkInput): Promise<CreatedResource>
   closeUserCollaboratorLink(linkId: string, input: CloseRecordInput): Promise<void>
   createQuestionnaireAssignment(input: CreateQuestionnaireAssignmentInput): Promise<CreatedResource>
@@ -140,6 +150,9 @@ export interface ApiClient {
   listManagerAssessmentCreationOptions(
     cycleId: string,
   ): Promise<readonly ManagerAssessmentCreationOption[]>
+  listDirectorAssessmentCreationOptions(
+    cycleId: string,
+  ): Promise<readonly ManagerAssessmentCreationOption[]>
   createAssessment(input: CreateAssessmentInput): Promise<AssessmentDetail>
   getAssessment(assessmentId: string): Promise<AssessmentDetail>
   recordAssessmentPrint(assessmentId: string): Promise<void>
@@ -151,6 +164,10 @@ export interface ApiClient {
   submitAssessment(assessmentId: string, revision?: string): Promise<AssessmentDetail>
   publishAssessment(assessmentId: string): Promise<AssessmentDetail>
   reopenAssessment(assessmentId: string, reason: string): Promise<AssessmentDetail>
+  completeAssessmentFeedback(
+    assessmentId: string,
+    input: CompleteFeedbackInput,
+  ): Promise<AssessmentDetail>
   getIndicatorFilterOptions(cycleId: string): Promise<IndicatorFilterOptions>
   getIndicators(query: IndicatorQuery): Promise<IndicatorResponse>
   exportIndicators(query: IndicatorQuery): Promise<IndicatorExport | IndicatorResponse>
@@ -324,6 +341,18 @@ export class HttpApiClient implements ApiClient {
     return this.request<ManagerAssignmentOptions>('/administration/manager-assignments/options')
   }
 
+  listActiveDirectorManagerAssignments(): Promise<readonly ActiveDirectorManagerAssignment[]> {
+    return this.request<readonly ActiveDirectorManagerAssignment[]>(
+      '/administration/director-manager-assignments/active',
+    )
+  }
+
+  getDirectorManagerAssignmentOptions(): Promise<DirectorManagerAssignmentOptions> {
+    return this.request<DirectorManagerAssignmentOptions>(
+      '/administration/director-manager-assignments/options',
+    )
+  }
+
   listActiveUserCollaboratorLinks(): Promise<readonly ActiveUserCollaboratorLink[]> {
     return this.request<readonly ActiveUserCollaboratorLink[]>(
       '/master-data/user-collaborator-links/active',
@@ -435,6 +464,27 @@ export class HttpApiClient implements ApiClient {
   closeManagerAssignment(assignmentId: string, input: CloseRecordInput): Promise<void> {
     return this.request<void>(
       `/administration/manager-assignments/${encodeURIComponent(assignmentId)}/close`,
+      {
+        method: 'PATCH',
+        body: input,
+        requiresCsrf: true,
+      },
+    )
+  }
+
+  createDirectorManagerAssignment(
+    input: CreateDirectorManagerAssignmentInput,
+  ): Promise<CreatedResource> {
+    return this.request<CreatedResource>('/administration/director-manager-assignments', {
+      method: 'POST',
+      body: input,
+      requiresCsrf: true,
+    })
+  }
+
+  closeDirectorManagerAssignment(assignmentId: string, input: CloseRecordInput): Promise<void> {
+    return this.request<void>(
+      `/administration/director-manager-assignments/${encodeURIComponent(assignmentId)}/close`,
       {
         method: 'PATCH',
         body: input,
@@ -600,6 +650,15 @@ export class HttpApiClient implements ApiClient {
     return options.collaborators
   }
 
+  async listDirectorAssessmentCreationOptions(
+    cycleId: string,
+  ): Promise<readonly ManagerAssessmentCreationOption[]> {
+    const options = await this.request<{
+      collaborators: readonly ManagerAssessmentCreationOption[]
+    }>(`/assessments/director-creation-options?cycleId=${encodeURIComponent(cycleId)}`)
+    return options.collaborators
+  }
+
   createAssessment(input: CreateAssessmentInput): Promise<AssessmentDetail> {
     return this.request<AssessmentDetail>('/assessments', {
       method: 'POST',
@@ -668,6 +727,21 @@ export class HttpApiClient implements ApiClient {
       {
         method: 'POST',
         body: { reason },
+        headers: { 'Idempotency-Key': crypto.randomUUID() },
+        requiresCsrf: true,
+      },
+    )
+  }
+
+  completeAssessmentFeedback(
+    assessmentId: string,
+    input: CompleteFeedbackInput,
+  ): Promise<AssessmentDetail> {
+    return this.request<AssessmentDetail>(
+      `/assessments/${encodeURIComponent(assessmentId)}/feedback`,
+      {
+        method: 'POST',
+        body: input,
         headers: { 'Idempotency-Key': crypto.randomUUID() },
         requiresCsrf: true,
       },

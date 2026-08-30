@@ -3,6 +3,7 @@ package br.com.avaliacao.desempenho.avaliacoes.application;
 import br.com.avaliacao.desempenho.avaliacoes.domain.model.AssessmentAccessContext;
 import br.com.avaliacao.desempenho.avaliacoes.domain.model.AssessmentAuthorizationPolicy;
 import br.com.avaliacao.desempenho.identidadeacesso.infrastructure.persistence.ConditionalOnSqlServerPersistence;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -50,6 +51,16 @@ public class AssessmentApplicationService {
         Objects.requireNonNull(cycleId, "cycleId"), safeActor);
   }
 
+  public List<AssessmentRepository.ManagerCreationOptionView> listDirectorCreationOptions(
+      UUID cycleId, AssessmentAccessContext actor) {
+    AssessmentAccessContext safeActor = Objects.requireNonNull(actor, "actor");
+    if (!authorizationPolicy.canCreateDirectorAssessment(safeActor)) {
+      throw new AssessmentForbiddenException();
+    }
+    return repository.listDirectorCreationOptions(
+        Objects.requireNonNull(cycleId, "cycleId"), safeActor);
+  }
+
   public AssessmentRepository.AssessmentDetailView get(
       UUID assessmentId, AssessmentAccessContext actor) {
     return repository
@@ -86,6 +97,19 @@ public class AssessmentApplicationService {
     return repository.createSelfAssessmentDraft(cycleId, actor, idempotencyKey, requestId);
   }
 
+  public AssessmentRepository.AssessmentDetailView createDirectorDraft(
+      UUID cycleId,
+      UUID collaboratorId,
+      AssessmentAccessContext actor,
+      String idempotencyKey,
+      String requestId) {
+    if (!authorizationPolicy.canCreateDirectorAssessment(actor)) {
+      throw new AssessmentForbiddenException();
+    }
+    return repository.createDirectorDraft(
+        cycleId, collaboratorId, actor, idempotencyKey, requestId);
+  }
+
   public AssessmentRepository.AssessmentDetailView saveDraft(
       UUID assessmentId,
       AssessmentRepository.DraftContent draft,
@@ -119,5 +143,19 @@ public class AssessmentApplicationService {
       throw new AssessmentValidationException("A reabertura exige motivo.");
     }
     return repository.reopen(assessmentId, reason.strip(), actor, idempotencyKey, requestId);
+  }
+
+  public AssessmentRepository.AssessmentDetailView completeFeedback(
+      UUID assessmentId,
+      LocalDate feedbackDate,
+      String comment,
+      AssessmentAccessContext actor,
+      String idempotencyKey,
+      String requestId) {
+    if (feedbackDate == null || comment == null || comment.isBlank()) {
+      throw new AssessmentValidationException("O feedback exige data e comentário.");
+    }
+    return repository.completeFeedback(
+        assessmentId, feedbackDate, comment.strip(), actor, idempotencyKey, requestId);
   }
 }

@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 
 import br.com.avaliacao.desempenho.avaliacoes.domain.model.AssessmentAccessContext;
 import br.com.avaliacao.desempenho.avaliacoes.domain.model.AssessmentAuthorizationPolicy;
+import br.com.avaliacao.desempenho.avaliacoes.domain.model.FeedbackStatus;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -65,6 +66,7 @@ class AssessmentApplicationServiceTests {
                 "Colaborador",
                 br.com.avaliacao.desempenho.avaliacoes.domain.model.AssessmentType.GESTOR,
                 "PUBLICADA",
+                FeedbackStatus.PENDENTE,
                 "revision",
                 java.time.Instant.now()),
             "2024.1",
@@ -73,7 +75,8 @@ class AssessmentApplicationServiceTests {
             null,
             null,
             null,
-            List.of());
+            List.of(),
+            null);
     when(repository.findAccessible(assessmentId, actor)).thenReturn(Optional.of(accessible));
 
     service.recordPrint(assessmentId, actor, "request-correlation-id");

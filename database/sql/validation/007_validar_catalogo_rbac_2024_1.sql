@@ -1,5 +1,12 @@
 SET NOCOUNT ON;
 
+DECLARE @v0012_aplicada bit = CASE WHEN EXISTS (
+    SELECT 1
+    FROM dbo.schema_migrations
+    WHERE version = N'V0012'
+      AND script_name = N'V0012__feedback_integrado_e_vinculo_diretoria_gerencia'
+) THEN 1 ELSE 0 END;
+
 IF NOT EXISTS (
     SELECT 1
     FROM dbo.schema_migrations
@@ -52,6 +59,15 @@ VALUES
     (N'GERENCIA_RH', N'QUESTIONARIOS.GERIR'),
     (N'DIRETORIA', N'ACESSOS.NEGOCIO.GERIR'),
     (N'DIRETORIA', N'CICLOS.GERIR');
+
+IF @v0012_aplicada = 1
+    DELETE FROM @concessoes
+    WHERE papel_codigo = N'COLABORADOR'
+      AND permissao_codigo IN (
+          N'AUTOAVALIACOES.PREENCHER_PROPRIA',
+          N'AUTOAVALIACOES.ENVIAR_PROPRIA',
+          N'AUTOAVALIACOES.VISUALIZAR_PROPRIA'
+      );
 
 IF EXISTS (
     SELECT 1

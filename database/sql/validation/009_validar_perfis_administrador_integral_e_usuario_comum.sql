@@ -7,6 +7,20 @@ DECLARE @v0011_aplicada bit = CASE WHEN EXISTS (
       AND script_name = N'V0011__restringir_autoridade_administrador_plataforma'
 ) THEN 1 ELSE 0 END;
 
+DECLARE @v0012_aplicada bit = CASE WHEN EXISTS (
+    SELECT 1
+    FROM dbo.schema_migrations
+    WHERE version = N'V0012'
+      AND script_name = N'V0012__feedback_integrado_e_vinculo_diretoria_gerencia'
+) THEN 1 ELSE 0 END;
+
+DECLARE @v0013_aplicada bit = CASE WHEN EXISTS (
+    SELECT 1
+    FROM dbo.schema_migrations
+    WHERE version = N'V0013'
+      AND script_name = N'V0013__restringir_acesso_avaliacoes_administrador_plataforma'
+) THEN 1 ELSE 0 END;
+
 IF NOT EXISTS (
     SELECT 1
     FROM dbo.schema_migrations
@@ -31,17 +45,21 @@ VALUES
     (N'USUARIOS.ALTERAR'),
     (N'ACESSOS.GERIR'),
     (N'ACESSOS.NEGOCIO.GERIR'),
-    (N'AVALIACOES.AVALIAR_VINCULADOS'),
-    (N'AVALIACOES.VISUALIZAR_PROPRIAS_RESPOSTAS'),
-    (N'AVALIACOES.VISUALIZAR_TODAS'),
-    (N'AUTOAVALIACOES.PREENCHER_PROPRIA'),
-    (N'AUTOAVALIACOES.ENVIAR_PROPRIA'),
-    (N'AUTOAVALIACOES.VISUALIZAR_PROPRIA'),
     (N'CADASTROS.GERIR'),
     (N'CICLOS.GERIR'),
     (N'QUESTIONARIOS.GERIR'),
     (N'VINCULOS_GESTOR_COLABORADOR.GERIR'),
     (N'VINCULOS_USUARIO_COLABORADOR.GERIR');
+
+IF @v0013_aplicada = 0
+    INSERT INTO @permissoes_administrador (codigo)
+    VALUES
+        (N'AVALIACOES.AVALIAR_VINCULADOS'),
+        (N'AVALIACOES.VISUALIZAR_PROPRIAS_RESPOSTAS'),
+        (N'AVALIACOES.VISUALIZAR_TODAS'),
+        (N'AUTOAVALIACOES.PREENCHER_PROPRIA'),
+        (N'AUTOAVALIACOES.ENVIAR_PROPRIA'),
+        (N'AUTOAVALIACOES.VISUALIZAR_PROPRIA');
 
 IF @v0011_aplicada = 0
     INSERT INTO @permissoes_administrador (codigo)
@@ -50,6 +68,10 @@ IF @v0011_aplicada = 0
         (N'AVALIACOES.REABRIR'),
         (N'INDICADORES.VISUALIZAR'),
         (N'DADOS.EXPORTAR');
+
+IF @v0012_aplicada = 1
+    INSERT INTO @permissoes_administrador (codigo)
+    VALUES (N'VINCULOS_DIRETORIA_GERENCIA.GERIR');
 
 DECLARE @papel_administrador_id uniqueidentifier = (
     SELECT papel_id
@@ -81,6 +103,8 @@ IF (SELECT COUNT(*)
 
 SELECT
     @v0011_aplicada AS v0011_aplicada,
+    @v0012_aplicada AS v0012_aplicada,
+    @v0013_aplicada AS v0013_aplicada,
     (SELECT COUNT(*) FROM @permissoes_administrador) AS permissoes_administrador_ativas_esperadas,
     (SELECT COUNT(*)
      FROM dbo.papel_permissao

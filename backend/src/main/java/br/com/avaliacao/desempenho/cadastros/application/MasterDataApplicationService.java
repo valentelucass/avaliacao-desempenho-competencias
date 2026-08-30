@@ -184,6 +184,48 @@ public class MasterDataApplicationService {
         });
   }
 
+  public UUID createDirectorManagerAssignment(
+      UUID directorUserId,
+      UUID managerCollaboratorId,
+      LocalDate startsOn,
+      MasterDataCommandContext context) {
+    MasterDataCommandContext commandContext = context(context);
+    UUID id = UUID.randomUUID();
+    MasterDataRepository.DirectorManagerAssignmentRecord assignment =
+        new MasterDataRepository.DirectorManagerAssignmentRecord(
+            id,
+            MasterDataInput.requiredId(directorUserId, "diretoria"),
+            MasterDataInput.requiredId(managerCollaboratorId, "gerência"),
+            MasterDataInput.requiredDate(startsOn, "inicioVigencia"),
+            commandContext.actorUserId());
+    return write(
+        () -> {
+          requireChange(repository.createDirectorManagerAssignment(assignment));
+          audit(
+              commandContext, "VINCULO.DIRETORIA_GERENCIA.CRIAR", "VINCULO_DIRETORIA_GERENCIA", id);
+          return id;
+        });
+  }
+
+  public void closeDirectorManagerAssignment(
+      UUID assignmentId, LocalDate endsOn, MasterDataCommandContext context) {
+    UUID id = MasterDataInput.requiredId(assignmentId, "vínculo Diretoria-Gerência");
+    LocalDate closingDate = MasterDataInput.requiredDate(endsOn, "fimVigencia");
+    MasterDataCommandContext commandContext = context(context);
+    write(
+        () -> {
+          requireChange(
+              repository.closeDirectorManagerAssignment(
+                  id, closingDate, commandContext.actorUserId()));
+          audit(
+              commandContext,
+              "VINCULO.DIRETORIA_GERENCIA.ENCERRAR",
+              "VINCULO_DIRETORIA_GERENCIA",
+              id);
+          return Boolean.TRUE;
+        });
+  }
+
   public UUID createUserCollaboratorLink(
       UUID userId, UUID collaboratorId, LocalDate startsOn, MasterDataCommandContext context) {
     MasterDataCommandContext commandContext = context(context);
