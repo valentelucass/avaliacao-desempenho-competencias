@@ -15,6 +15,7 @@ import { FeedbackMessage } from '../../ui/Feedback'
 import { Pagination } from '../../ui/Pagination'
 import { safeErrorMessage } from '../../ui/safeErrorMessage'
 import { useAccessibleDialog } from '../../ui/useAccessibleDialog'
+import { useClientPagination } from '../../ui/useClientPagination'
 
 type MasterDataAdministrationPanelProps = {
   api: ApiClient
@@ -919,12 +920,8 @@ function NamedResourcesTable({
   onDeactivate: (resource: AdministrativeNamedResource) => void
   onDeleteInactive?: (resource: AdministrativeNamedResource) => void
 }) {
-  const pageSize = 5
-  const [currentPage, setCurrentPage] = useState(1)
-  const totalPages = Math.max(1, Math.ceil(resources.length / pageSize))
-  const displayedPage = Math.min(currentPage, totalPages)
-  const currentResources = resources.slice((displayedPage - 1) * pageSize, displayedPage * pageSize)
-  const emptyRowsCount = pageSize - currentResources.length
+  const pagination = useClientPagination(resources, 5)
+  const emptyRowsCount = 5 - pagination.items.length
 
   if (resources.length === 0) {
     return (
@@ -946,7 +943,7 @@ function NamedResourcesTable({
           </tr>
         </thead>
         <tbody>
-          {currentResources.map((resource) => (
+          {pagination.items.map((resource) => (
             <tr key={resource.id}>
               <td data-label="Nome">{resource.name}</td>
               <td data-label="Situação">
@@ -1002,14 +999,14 @@ function NamedResourcesTable({
         </tbody>
       </table>
       <Pagination
-        currentPage={displayedPage}
-        hasNextPage={displayedPage < totalPages}
+        currentPage={pagination.currentPage}
+        hasNextPage={pagination.hasNextPage}
         isLoading={isBusy}
-        itemCountOnPage={currentResources.length}
+        itemCountOnPage={pagination.items.length}
         itemLabel={resourceLabel === 'filial' ? 'filiais' : 'áreas'}
-        onNextPage={() => setCurrentPage((page) => Math.min(page + 1, totalPages))}
-        onPreviousPage={() => setCurrentPage((page) => Math.max(page - 1, 1))}
-        totalPages={totalPages}
+        onNextPage={pagination.onNextPage}
+        onPreviousPage={pagination.onPreviousPage}
+        totalPages={pagination.totalPages}
       />
     </div>
   )
@@ -1024,6 +1021,8 @@ function CollaboratorsTable({
   isBusy: boolean
   onDeactivate: (collaborator: AdministrativeCollaborator) => void
 }) {
+  const pagination = useClientPagination(collaborators, 10)
+
   if (collaborators.length === 0) {
     return <FeedbackMessage kind="warning">Não há colaboradores cadastrados.</FeedbackMessage>
   }
@@ -1040,7 +1039,7 @@ function CollaboratorsTable({
           </tr>
         </thead>
         <tbody>
-          {collaborators.map((collaborator) => (
+          {pagination.items.map((collaborator) => (
             <tr key={collaborator.id}>
               <td data-label="Nome">{collaborator.displayName}</td>
               <td data-label="Situação">
@@ -1077,6 +1076,16 @@ function CollaboratorsTable({
           ))}
         </tbody>
       </table>
+      <Pagination
+        currentPage={pagination.currentPage}
+        hasNextPage={pagination.hasNextPage}
+        isLoading={isBusy}
+        itemCountOnPage={pagination.items.length}
+        itemLabel="colaboradores"
+        onNextPage={pagination.onNextPage}
+        onPreviousPage={pagination.onPreviousPage}
+        totalPages={pagination.totalPages}
+      />
     </div>
   )
 }
@@ -1096,6 +1105,8 @@ function AllocationsTable({
   isBusy: boolean
   onClose: (allocation: ActiveAllocation) => void
 }) {
+  const pagination = useClientPagination(allocations, 5)
+
   if (allocations.length === 0) {
     return <FeedbackMessage kind="warning">Não há lotações ativas.</FeedbackMessage>
   }
@@ -1115,7 +1126,7 @@ function AllocationsTable({
           </tr>
         </thead>
         <tbody>
-          {allocations.map((allocation) => {
+          {pagination.items.map((allocation) => {
             const collaborator = nameFor(
               collaboratorNames,
               allocation.collaboratorId,
@@ -1148,6 +1159,16 @@ function AllocationsTable({
           })}
         </tbody>
       </table>
+      <Pagination
+        currentPage={pagination.currentPage}
+        hasNextPage={pagination.hasNextPage}
+        isLoading={isBusy}
+        itemCountOnPage={pagination.items.length}
+        itemLabel="lotações"
+        onNextPage={pagination.onNextPage}
+        onPreviousPage={pagination.onPreviousPage}
+        totalPages={pagination.totalPages}
+      />
     </div>
   )
 }
@@ -1163,6 +1184,8 @@ function QuestionnaireAssignmentsTable({
   isBusy: boolean
   onRevoke: (assignment: ActiveQuestionnaireAssignment) => void
 }) {
+  const pagination = useClientPagination(assignments, 5)
+
   if (assignments.length === 0) {
     return (
       <FeedbackMessage kind="warning">Não há atribuições de questionário ativas.</FeedbackMessage>
@@ -1181,7 +1204,7 @@ function QuestionnaireAssignmentsTable({
           </tr>
         </thead>
         <tbody>
-          {assignments.map((assignment) => {
+          {pagination.items.map((assignment) => {
             const subject = questionnaireAssignmentSubject(assignment, collaboratorNames)
             return (
               <tr key={assignment.id}>
@@ -1211,6 +1234,16 @@ function QuestionnaireAssignmentsTable({
           })}
         </tbody>
       </table>
+      <Pagination
+        currentPage={pagination.currentPage}
+        hasNextPage={pagination.hasNextPage}
+        isLoading={isBusy}
+        itemCountOnPage={pagination.items.length}
+        itemLabel="atribuições de questionário"
+        onNextPage={pagination.onNextPage}
+        onPreviousPage={pagination.onPreviousPage}
+        totalPages={pagination.totalPages}
+      />
     </div>
   )
 }

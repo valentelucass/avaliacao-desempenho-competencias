@@ -14,7 +14,9 @@ import type {
   UserCollaboratorLinkOptions,
 } from '../../api/contracts'
 import { FeedbackMessage } from '../../ui/Feedback'
+import { Pagination } from '../../ui/Pagination'
 import { safeErrorMessage } from '../../ui/safeErrorMessage'
+import { useClientPagination } from '../../ui/useClientPagination'
 
 type RelationshipAdministrationPanelProps = {
   api: ApiClient
@@ -695,6 +697,8 @@ function RelationshipTable<Entry extends { id: string; startsOn: string | null }
   collaboratorColumn?: string
   onClose: (entry: Entry) => void
 }) {
+  const pagination = useClientPagination(entries, 5)
+
   if (entries.length === 0) {
     return <p className="muted">Não há vínculos ativos.</p>
   }
@@ -712,7 +716,7 @@ function RelationshipTable<Entry extends { id: string; startsOn: string | null }
           </tr>
         </thead>
         <tbody>
-          {entries.map((entry) => (
+          {pagination.items.map((entry) => (
             <tr key={entry.id}>
               <td data-label={accountColumn}>{getAccountName(entry)}</td>
               <td data-label={collaboratorColumn}>{getCollaboratorName(entry)}</td>
@@ -733,6 +737,15 @@ function RelationshipTable<Entry extends { id: string; startsOn: string | null }
           ))}
         </tbody>
       </table>
+      <Pagination
+        currentPage={pagination.currentPage}
+        hasNextPage={pagination.hasNextPage}
+        itemCountOnPage={pagination.items.length}
+        itemLabel={`vínculos de ${accountColumn.toLocaleLowerCase('pt-BR')}`}
+        onNextPage={pagination.onNextPage}
+        onPreviousPage={pagination.onPreviousPage}
+        totalPages={pagination.totalPages}
+      />
     </div>
   )
 }

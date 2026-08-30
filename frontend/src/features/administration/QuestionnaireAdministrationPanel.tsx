@@ -10,7 +10,9 @@ import type {
   QuestionnaireCompetencyInput,
 } from '../../api/contracts'
 import { FeedbackMessage } from '../../ui/Feedback'
+import { Pagination } from '../../ui/Pagination'
 import { safeErrorMessage } from '../../ui/safeErrorMessage'
+import { useClientPagination } from '../../ui/useClientPagination'
 import {
   assessmentScale,
   questionnaireTemplates,
@@ -63,6 +65,7 @@ export function QuestionnaireAdministrationPanel({
   const [submitError, setSubmitError] = useState<string>()
   const [notice, setNotice] = useState<string>()
   const canManageQuestionnaires = permissions.includes('QUESTIONARIOS.GERIR')
+  const versionsPagination = useClientPagination(versions, 5)
 
   const loadApprovedVersions = useCallback(async () => {
     if (!canManageQuestionnaires) {
@@ -267,7 +270,7 @@ export function QuestionnaireAdministrationPanel({
                     </tr>
                   </thead>
                   <tbody>
-                    {versions.map((version) => (
+                    {versionsPagination.items.map((version) => (
                       <tr key={version.questionnaireVersionId}>
                         <td data-label="Questionário">
                           <strong>{version.questionnaireName}</strong>
@@ -288,6 +291,16 @@ export function QuestionnaireAdministrationPanel({
                     ))}
                   </tbody>
                 </table>
+                <Pagination
+                  currentPage={versionsPagination.currentPage}
+                  hasNextPage={versionsPagination.hasNextPage}
+                  isLoading={isLoadingVersions || isCreating}
+                  itemCountOnPage={versionsPagination.items.length}
+                  itemLabel="versões aprovadas"
+                  onNextPage={versionsPagination.onNextPage}
+                  onPreviousPage={versionsPagination.onPreviousPage}
+                  totalPages={versionsPagination.totalPages}
+                />
               </div>
             ) : null}
           </section>

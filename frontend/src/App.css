@@ -352,11 +352,11 @@
 .auth-brand {
   color: var(--primary);
   font-size: 0.72rem;
-  font-weight: 700;
+  font-weight: 600;
   gap: 0.75rem;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.02em;
   margin-bottom: 1.25rem;
-  text-transform: uppercase;
+  text-transform: none;
 }
 .section-heading {
   align-items: flex-start;
@@ -369,19 +369,20 @@
 }
 .eyebrow {
   color: var(--primary);
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.09em;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
   margin: 0 0 0.35rem;
-  text-transform: uppercase;
+  text-transform: none;
 }
 h1,
 h2,
 h3,
 h4 {
   color: var(--text-h);
-  font-family: var(--sans);
-  letter-spacing: -0.025em;
+  font-family: var(--display);
+  font-weight: 650;
+  letter-spacing: -0.018em;
   margin: 0;
 }
 h1 {
@@ -515,7 +516,7 @@ textarea:focus-visible,
   display: inline-flex;
   font: inherit;
   font-size: 0.82rem;
-  font-weight: 700;
+  font-weight: 650;
   gap: 0.45rem;
   justify-content: center;
   min-height: 2.45rem;
@@ -736,14 +737,14 @@ textarea:focus-visible,
   border-radius: 999px;
   color: var(--muted);
   display: inline-flex;
-  font-size: 0.64rem;
-  font-weight: 800;
-  letter-spacing: 0.025em;
+  font-size: 0.7rem;
+  font-weight: 650;
+  letter-spacing: 0.01em;
   line-height: 1;
   margin: 0;
   min-height: 1.65rem;
   padding: 0.2rem 0.62rem;
-  text-transform: uppercase;
+  text-transform: none;
   white-space: nowrap;
 }
 .status-badge--publicada,
@@ -903,10 +904,10 @@ dd {
 .filter-panel__title {
   color: var(--text-h);
   font-size: 0.8rem;
-  font-weight: 700;
+  font-weight: 600;
   gap: 0.45rem;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  text-transform: none;
 }
 .action-row {
   flex-wrap: wrap;
@@ -1064,10 +1065,10 @@ tbody tr:last-child td {
 thead th {
   background: var(--surface-muted);
   color: var(--muted);
-  font-size: 0.65rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.015em;
+  text-transform: none;
 }
 .distribution-value {
   display: block;
@@ -1122,7 +1123,7 @@ thead th {
   cursor: pointer;
   display: inline-flex;
   font-size: 0.78rem;
-  font-weight: 700;
+  font-weight: 650;
   height: 2.15rem;
   justify-content: center;
   min-height: 0;
@@ -1139,7 +1140,7 @@ thead th {
   cursor: pointer;
   display: inline-flex;
   font-size: 0.78rem;
-  font-weight: 700;
+  font-weight: 650;
   height: 2.25rem;
   justify-content: center;
   min-height: 0;
@@ -1161,8 +1162,8 @@ thead th {
 }
 .pagination__page[aria-current='page'] {
   background: var(--primary);
-  box-shadow: 0 0.2rem 0.45rem color-mix(in srgb, var(--primary) 28%, transparent);
-  color: #fff;
+  box-shadow: 0 0.15rem 0.35rem color-mix(in srgb, var(--primary) 22%, transparent);
+  color: var(--on-primary);
 }
 .pagination__page--with-total {
   min-width: 3.8rem;

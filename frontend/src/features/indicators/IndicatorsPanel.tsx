@@ -14,7 +14,9 @@ import type {
   PopulationDimension,
 } from '../../api/contracts'
 import { FeedbackMessage } from '../../ui/Feedback'
+import { Pagination } from '../../ui/Pagination'
 import { safeErrorMessage } from '../../ui/safeErrorMessage'
+import { useClientPagination } from '../../ui/useClientPagination'
 
 type IndicatorsPanelProps = {
   api: ApiClient
@@ -472,6 +474,8 @@ function ClassificationDistribution({
 }: {
   distribution: NonNullable<AvailableIndicatorResponse['classificationDistribution']>
 }) {
+  const pagination = useClientPagination(distribution, 5)
+
   return (
     <section className="card indicator-results" aria-labelledby="indicator-results-title">
       <div className="card-title-row">
@@ -487,7 +491,7 @@ function ClassificationDistribution({
           </tr>
         </thead>
         <tbody>
-          {distribution.map((item) => (
+          {pagination.items.map((item) => (
             <tr key={item.classification}>
               <th data-label="Classificação" scope="row">
                 {item.classification}
@@ -504,6 +508,15 @@ function ClassificationDistribution({
           ))}
         </tbody>
       </table>
+      <Pagination
+        currentPage={pagination.currentPage}
+        hasNextPage={pagination.hasNextPage}
+        itemCountOnPage={pagination.items.length}
+        itemLabel="classificações"
+        onNextPage={pagination.onNextPage}
+        onPreviousPage={pagination.onPreviousPage}
+        totalPages={pagination.totalPages}
+      />
     </section>
   )
 }

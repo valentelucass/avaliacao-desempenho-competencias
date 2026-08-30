@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { Pagination } from './Pagination'
+import { useClientPagination } from './useClientPagination'
 
 describe('Pagination', () => {
   it('navega entre páginas e anuncia o intervalo visível', () => {
@@ -25,5 +26,32 @@ describe('Pagination', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Próxima página' }))
     expect(screen.getByText('Página 2 · 2 registros exibidos')).toBeInTheDocument()
     expect(screen.getByText('2')).toHaveAttribute('aria-current', 'page')
+  })
+
+  it('divide listas locais sem permitir uma página fora do intervalo', () => {
+    function Example() {
+      const pagination = useClientPagination(['Registro 1', 'Registro 2', 'Registro 3'], 2)
+      return (
+        <>
+          <p>{pagination.items.join(', ')}</p>
+          <Pagination
+            currentPage={pagination.currentPage}
+            hasNextPage={pagination.hasNextPage}
+            itemCountOnPage={pagination.items.length}
+            itemLabel="registros"
+            onNextPage={pagination.onNextPage}
+            onPreviousPage={pagination.onPreviousPage}
+            totalPages={pagination.totalPages}
+          />
+        </>
+      )
+    }
+
+    render(<Example />)
+
+    expect(screen.getByText('Registro 1, Registro 2')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Próxima página' }))
+    expect(screen.getByText('Registro 3')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Próxima página' })).toBeDisabled()
   })
 })

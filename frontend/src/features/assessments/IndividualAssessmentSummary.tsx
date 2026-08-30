@@ -1,4 +1,6 @@
 import type { AssessmentDetail } from '../../api/contracts'
+import { Pagination } from '../../ui/Pagination'
+import { useClientPagination } from '../../ui/useClientPagination'
 
 type IndividualAssessmentSummaryProps = {
   assessment: AssessmentDetail
@@ -20,6 +22,9 @@ export function IndividualAssessmentSummary({
   displayMode = 'complete',
 }: IndividualAssessmentSummaryProps) {
   const competencyScores = assessment.competencyScores ?? []
+  const competencyScorePairs = pairCompetencyScores(competencyScores)
+  const pagination = useClientPagination(competencyScorePairs, 5)
+
   if (
     !assessment.result ||
     competencyScores.length === 0 ||
@@ -31,7 +36,6 @@ export function IndividualAssessmentSummary({
   const points = competencyScores.map((competency, index) =>
     polarPoint(index, competencyScores.length, radiusFor(competency.score)),
   )
-  const competencyScorePairs = pairCompetencyScores(competencyScores)
   const shape = points.map(({ x, y }) => `${x},${y}`).join(' ')
   const score = formatScore(assessment.result.finalScore)
 
@@ -188,7 +192,7 @@ export function IndividualAssessmentSummary({
             </tr>
           </thead>
           <tbody>
-            {competencyScorePairs.map(([first, second]) => (
+            {pagination.items.map(([first, second]) => (
               <tr key={first.id}>
                 <td data-label="Competência">{first.name}</td>
                 <td data-label="Pontuação">{formatScore(first.score)}</td>
@@ -205,6 +209,15 @@ export function IndividualAssessmentSummary({
           </tbody>
         </table>
       </div>
+      <Pagination
+        currentPage={pagination.currentPage}
+        hasNextPage={pagination.hasNextPage}
+        itemCountOnPage={pagination.items.length}
+        itemLabel="pares de competências"
+        onNextPage={pagination.onNextPage}
+        onPreviousPage={pagination.onPreviousPage}
+        totalPages={pagination.totalPages}
+      />
     </section>
   )
 }

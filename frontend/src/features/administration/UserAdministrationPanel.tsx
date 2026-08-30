@@ -10,8 +10,10 @@ import type {
   PermissionGrantEffect,
 } from '../../api/contracts'
 import { FeedbackMessage } from '../../ui/Feedback'
+import { Pagination } from '../../ui/Pagination'
 import { safeErrorMessage } from '../../ui/safeErrorMessage'
 import { useAccessibleDialog } from '../../ui/useAccessibleDialog'
+import { useClientPagination } from '../../ui/useClientPagination'
 
 type UserAdministrationPanelProps = {
   api: ApiClient
@@ -184,6 +186,7 @@ export function UserAdministrationPanel({
   const canManageTechnicalAccess = permissions.includes('ACESSOS.GERIR')
   const canManageBusinessAccess = permissions.includes('ACESSOS.NEGOCIO.GERIR')
   const canManageAccess = canManageTechnicalAccess || canManageBusinessAccess
+  const usersPagination = useClientPagination(users, 10)
 
   const accountProfiles = useMemo<ReadonlyArray<InitialAccountProfileOption>>(() => {
     return accountProfileCatalog.filter(
@@ -639,7 +642,7 @@ export function UserAdministrationPanel({
                   </tr>
                 </thead>
                 <tbody>
-                  {users.map((user) => (
+                  {usersPagination.items.map((user) => (
                     <tr key={user.id}>
                       <td data-label="Nome">{user.displayName}</td>
                       <td data-label="Login">{user.login}</td>
@@ -659,6 +662,16 @@ export function UserAdministrationPanel({
                   ))}
                 </tbody>
               </table>
+              <Pagination
+                currentPage={usersPagination.currentPage}
+                hasNextPage={usersPagination.hasNextPage}
+                isLoading={isLoadingUsers || isLoadingDetail || isUpdating || isDeleting}
+                itemCountOnPage={usersPagination.items.length}
+                itemLabel="contas locais"
+                onNextPage={usersPagination.onNextPage}
+                onPreviousPage={usersPagination.onPreviousPage}
+                totalPages={usersPagination.totalPages}
+              />
             </div>
           ) : null}
         </section>

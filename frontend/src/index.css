@@ -1,7 +1,7 @@
 :root {
-  --primary: #21478a;
-  --primary-strong: #17386f;
-  --primary-soft: #e9f0fb;
+  --primary: #315d7d;
+  --primary-strong: #24465f;
+  --primary-soft: #edf3f7;
   --on-primary: #ffffff;
   --page-bg: #edf3f8;
   --surface: #ffffff;
@@ -15,9 +15,9 @@
   --text-h: #1e293b;
   --muted: #64748b;
   --focus: #3b82f6;
-  --success: #166534;
-  --success-strong: #14532d;
-  --success-bg: #edf9f0;
+  --success: #2d6a57;
+  --success-strong: #215144;
+  --success-bg: #edf6f2;
   --on-success: #ffffff;
   --warning: #a16207;
   --warning-bg: #fff9e6;
@@ -31,7 +31,8 @@
   --shadow-card:
     inset 0 1px 0 rgb(255 255 255 / 72%), 0 1px 2px rgb(15 23 42 / 5%),
     0 8px 18px rgb(15 23 42 / 5%), 0 20px 42px rgb(15 23 42 / 7%);
-  --sans: system-ui, 'Segoe UI', Arial, sans-serif;
+  --sans: 'Source Sans 3 Variable', 'Source Sans 3', system-ui, sans-serif;
+  --display: 'Source Sans 3 Variable', 'Source Sans 3', system-ui, sans-serif;
 
   background: var(--page-bg);
   color: var(--text);
@@ -60,9 +61,9 @@ textarea {
 }
 
 :root[data-theme='dark'] {
-  --primary: #60a5fa;
-  --primary-strong: #93c5fd;
-  --primary-soft: #152948;
+  --primary: #9ab7cf;
+  --primary-strong: #bdd0e0;
+  --primary-soft: #172b3d;
   --on-primary: #08111f;
   --page-bg: #0b1220;
   --surface: #111b2d;
@@ -76,9 +77,9 @@ textarea {
   --text-h: #f1f5f9;
   --muted: #aab9ce;
   --focus: #93c5fd;
-  --success: #86efac;
-  --success-strong: #4ade80;
-  --success-bg: #12361f;
+  --success: #87bda7;
+  --success-strong: #aad2bf;
+  --success-bg: #15352e;
   --on-success: #08111f;
   --warning: #fcd34d;
   --warning-bg: #3b2c0b;

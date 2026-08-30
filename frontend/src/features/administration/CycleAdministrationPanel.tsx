@@ -12,7 +12,9 @@ import type {
   Permission,
 } from '../../api/contracts'
 import { FeedbackMessage } from '../../ui/Feedback'
+import { Pagination } from '../../ui/Pagination'
 import { safeErrorMessage } from '../../ui/safeErrorMessage'
+import { useClientPagination } from '../../ui/useClientPagination'
 
 type CycleAdministrationPanelProps = {
   api: ApiClient
@@ -92,6 +94,8 @@ export function CycleAdministrationPanel({
         .filter((option): option is CycleQuestionnaireInput => option !== undefined),
     [optionIndex, selectedOptionKeys],
   )
+  const cyclesPagination = useClientPagination(cycles, 10)
+  const versionsPagination = useClientPagination(versions, 5)
 
   const loadData = useCallback(async () => {
     if (!canManageCycles) {
@@ -400,7 +404,7 @@ export function CycleAdministrationPanel({
                 </tr>
               </thead>
               <tbody>
-                {cycles.map((cycle) => (
+                {cyclesPagination.items.map((cycle) => (
                   <tr key={cycle.id}>
                     <td data-label="Ciclo">{cycle.name}</td>
                     <td data-label="Situação">
@@ -425,6 +429,16 @@ export function CycleAdministrationPanel({
                 ))}
               </tbody>
             </table>
+            <Pagination
+              currentPage={cyclesPagination.currentPage}
+              hasNextPage={cyclesPagination.hasNextPage}
+              isLoading={isLoading || isLoadingDraft}
+              itemCountOnPage={cyclesPagination.items.length}
+              itemLabel="ciclos"
+              onNextPage={cyclesPagination.onNextPage}
+              onPreviousPage={cyclesPagination.onPreviousPage}
+              totalPages={cyclesPagination.totalPages}
+            />
           </div>
         ) : null}
       </section>
@@ -543,7 +557,7 @@ export function CycleAdministrationPanel({
                 </tr>
               </thead>
               <tbody>
-                {versions.map((version) => (
+                {versionsPagination.items.map((version) => (
                   <tr key={version.questionnaireVersionId}>
                     <td data-label="Questionário">
                       <strong>{version.questionnaireName}</strong>
@@ -588,6 +602,16 @@ export function CycleAdministrationPanel({
                 ))}
               </tbody>
             </table>
+            <Pagination
+              currentPage={versionsPagination.currentPage}
+              hasNextPage={versionsPagination.hasNextPage}
+              isLoading={isLoading || isLoadingDraft}
+              itemCountOnPage={versionsPagination.items.length}
+              itemLabel="questionários aprovados"
+              onNextPage={versionsPagination.onNextPage}
+              onPreviousPage={versionsPagination.onPreviousPage}
+              totalPages={versionsPagination.totalPages}
+            />
           </div>
         </fieldset>
 
