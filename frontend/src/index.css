@@ -28,6 +28,8 @@
   --on-danger: #ffffff;
   --shadow-sm: 0 1px 2px rgb(15 23 42 / 5%), 0 5px 12px rgb(15 23 42 / 3%);
   --shadow-md: 0 12px 28px rgb(15 23 42 / 8%);
+  --shadow-lg: 0 18px 42px rgb(15 23 42 / 12%);
+  --radius-sm: 0.5rem;
   --shadow-card:
     inset 0 1px 0 rgb(255 255 255 / 72%), 0 1px 2px rgb(15 23 42 / 5%),
     0 8px 18px rgb(15 23 42 / 5%), 0 20px 42px rgb(15 23 42 / 7%);
@@ -90,6 +92,8 @@ textarea {
   --on-danger: #08111f;
   --shadow-sm: 0 1px 2px rgb(0 0 0 / 24%);
   --shadow-md: 0 16px 36px rgb(0 0 0 / 30%);
+  --shadow-lg: 0 20px 46px rgb(0 0 0 / 38%);
+  --radius-sm: 0.5rem;
   --shadow-card:
     inset 0 1px 0 rgb(255 255 255 / 4%), 0 1px 2px rgb(0 0 0 / 30%), 0 10px 22px rgb(0 0 0 / 28%),
     0 22px 46px rgb(0 0 0 / 36%);

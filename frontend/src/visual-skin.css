@@ -1,0 +1,555 @@
+/*
+ * Camada visual progressiva Rodogarcia.
+ *
+ * Não modifica JSX, dimensões, posicionamento, espaçamento, breakpoints,
+ * paginação, navegação ou comportamento. Tailwind compila apenas tokens
+ * semânticos usados por @apply; o Preflight permanece desativado.
+ */
+:root {
+  --visual-radius-card: 1.125rem;
+  --visual-radius-control: 0.75rem;
+  --visual-focus-outline: 0 0 0 3px color-mix(in srgb, var(--focus) 28%, transparent);
+  --visual-shell-background:
+    radial-gradient(
+      circle at 4% 0%,
+      color-mix(in srgb, var(--primary-soft) 94%, #ffffff) 0,
+      transparent 30rem
+    ),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--page-bg) 54%, #ffffff) 0%,
+      var(--page-bg) 54rem
+    );
+  --visual-auth-background:
+    radial-gradient(
+      circle at 50% 0%,
+      color-mix(in srgb, var(--primary) 12%, #ffffff) 0,
+      transparent 34rem
+    ),
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--primary-soft) 70%, #ffffff),
+      var(--page-bg) 58%
+    );
+  --visual-sidebar-background: linear-gradient(
+    180deg,
+    #ffffff 0%,
+    color-mix(in srgb, var(--surface) 90%, var(--primary-soft)) 100%
+  );
+  --visual-card-background: linear-gradient(
+    145deg,
+    #ffffff 0%,
+    color-mix(in srgb, var(--surface) 94%, var(--primary-soft)) 100%
+  );
+  --visual-muted-background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--surface-subtle) 84%, #ffffff),
+    var(--surface-subtle)
+  );
+  --visual-card-border: color-mix(in srgb, var(--primary) 20%, var(--border));
+  --visual-control-border: color-mix(in srgb, var(--primary) 27%, var(--border));
+  --visual-card-shadow: 0 1px 2px rgb(31 61 84 / 5%), 0 0.85rem 2.25rem rgb(31 61 84 / 9%);
+  --visual-raised-shadow: 0 0.2rem 0.6rem rgb(31 61 84 / 8%), 0 1rem 2.5rem rgb(31 61 84 / 14%);
+  --visual-primary-shadow: 0 0.55rem 1.2rem color-mix(in srgb, var(--primary) 28%, transparent);
+  --visual-table-heading: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--primary-soft) 76%, #ffffff),
+    var(--table-header)
+  );
+  --visual-active-background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--primary-soft) 78%, #ffffff),
+    var(--primary-soft)
+  );
+}
+
+:root[data-theme='dark'] {
+  --visual-focus-outline: 0 0 0 3px color-mix(in srgb, var(--focus) 34%, transparent);
+  --visual-shell-background:
+    radial-gradient(
+      circle at 5% 0%,
+      color-mix(in srgb, var(--primary-soft) 78%, var(--page-bg)) 0,
+      transparent 30rem
+    ),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--page-bg) 88%, #000000) 0%,
+      var(--page-bg) 54rem
+    );
+  --visual-auth-background:
+    radial-gradient(
+      circle at 50% 0%,
+      color-mix(in srgb, var(--primary) 19%, var(--page-bg)) 0,
+      transparent 34rem
+    ),
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--primary-soft) 74%, var(--page-bg)),
+      var(--page-bg) 58%
+    );
+  --visual-sidebar-background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--surface) 94%, var(--page-bg)),
+    var(--page-bg)
+  );
+  --visual-card-background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--surface) 94%, #ffffff),
+    var(--surface)
+  );
+  --visual-muted-background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--surface-subtle) 90%, var(--surface)),
+    var(--surface-subtle)
+  );
+  --visual-card-border: color-mix(in srgb, var(--primary) 24%, var(--border));
+  --visual-control-border: color-mix(in srgb, var(--primary) 30%, var(--border));
+  --visual-card-shadow: 0 1px 2px rgb(0 0 0 / 26%), 0 1rem 2.5rem rgb(0 0 0 / 30%);
+  --visual-raised-shadow: 0 0.25rem 0.8rem rgb(0 0 0 / 32%), 0 1.2rem 2.75rem rgb(0 0 0 / 38%);
+  --visual-primary-shadow: 0 0.65rem 1.35rem color-mix(in srgb, var(--primary) 24%, transparent);
+  --visual-table-heading: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--primary-soft) 62%, var(--surface)),
+    var(--table-header)
+  );
+  --visual-active-background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--primary-soft) 86%, var(--surface)),
+    var(--primary-soft)
+  );
+}
+
+@media screen {
+  .application-shell {
+    @apply bg-rodo-canvas text-rodo-text;
+    background: var(--visual-shell-background);
+  }
+
+  .auth-page.application-shell--narrow {
+    background: var(--visual-auth-background);
+  }
+
+  .application-header {
+    @apply bg-rodo-surface text-rodo-heading;
+    background: color-mix(in srgb, var(--surface) 93%, transparent);
+    border-bottom-color: color-mix(in srgb, var(--primary) 24%, var(--border));
+    box-shadow: 0 0.6rem 1.8rem rgb(31 61 84 / 8%);
+  }
+
+  .workspace-sidebar {
+    @apply text-rodo-heading;
+    background: var(--visual-sidebar-background);
+    border-color: color-mix(in srgb, var(--primary) 22%, var(--border));
+    box-shadow: var(--visual-raised-shadow);
+  }
+
+  .workspace-sidebar__account {
+    background: transparent;
+    border: 0;
+    border-bottom: 1px solid color-mix(in srgb, var(--primary) 24%, var(--border));
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .workspace-sidebar__account .user-chip__avatar {
+    background: color-mix(in srgb, var(--primary-soft) 72%, var(--surface));
+    border: 1px solid color-mix(in srgb, var(--primary) 42%, var(--border));
+    box-shadow: none;
+    color: var(--primary-strong);
+  }
+
+  .workspace-sidebar__account-label {
+    color: var(--muted);
+  }
+
+  .workspace-sidebar__account strong {
+    color: var(--text-h);
+  }
+
+  .workspace-sidebar .workspace-nav__item:hover,
+  .workspace-sidebar__heading .icon-button:hover,
+  .workspace-sidebar__sign-out:hover {
+    background: color-mix(in srgb, var(--primary-soft) 72%, var(--surface));
+    color: var(--primary-strong);
+  }
+
+  .workspace-sidebar .workspace-nav__item[aria-current='page'],
+  .theme-toggle[aria-pressed='true'] {
+    background: var(--visual-active-background);
+    border-color: color-mix(in srgb, var(--primary) 35%, var(--border));
+    box-shadow: 0 0.35rem 0.9rem color-mix(in srgb, var(--primary) 13%, transparent);
+    color: var(--primary-strong);
+  }
+
+  .workspace-sidebar .workspace-nav__item--primary {
+    background: linear-gradient(135deg, var(--primary), var(--primary-strong));
+    border-color: var(--primary);
+    box-shadow: var(--visual-primary-shadow);
+    color: var(--on-primary);
+  }
+
+  .workspace-sidebar .workspace-nav__item--primary:hover {
+    background: linear-gradient(135deg, var(--primary-strong), var(--primary));
+    border-color: var(--primary-strong);
+    color: var(--on-primary);
+  }
+
+  .card,
+  .competency-card,
+  .assessment-kind-card,
+  .auth-about-panel,
+  .auth-security-panel,
+  .account-dialog,
+  .confirmation-dialog {
+    @apply border-rodo-border bg-rodo-surface text-rodo-text;
+    background: var(--visual-card-background);
+    border-color: var(--visual-card-border);
+    border-radius: var(--visual-radius-card);
+    box-shadow: var(--visual-card-shadow);
+  }
+
+  .card > .section-heading,
+  .card > .card-title-row,
+  .auth-about-panel__note {
+    border-color: color-mix(in srgb, var(--primary) 18%, var(--border));
+  }
+
+  :root[data-theme='dark'] .auth-about-panel {
+    background: linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--primary-soft) 68%, var(--surface)),
+      color-mix(in srgb, var(--surface) 88%, var(--page-bg))
+    );
+    border-color: color-mix(in srgb, var(--primary) 44%, var(--border));
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 7%),
+      0 1rem 2.5rem rgb(0 0 0 / 25%);
+  }
+
+  :root[data-theme='dark'] .auth-about-panel__icon {
+    background: linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--primary) 22%, var(--primary-soft)),
+      color-mix(in srgb, var(--primary-soft) 82%, var(--surface))
+    );
+    border: 1px solid color-mix(in srgb, var(--primary) 44%, var(--border));
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 8%);
+    color: var(--primary-strong);
+  }
+
+  :root[data-theme='dark'] .auth-about-panel .eyebrow {
+    color: var(--primary-strong);
+  }
+
+  :root[data-theme='dark'] .auth-about-panel__note {
+    border-color: color-mix(in srgb, var(--primary) 30%, var(--border));
+  }
+
+  .dashboard-hero,
+  .assessment-kind-card {
+    border-color: color-mix(in srgb, var(--primary) 30%, var(--border));
+  }
+
+  .assessment-kind-card {
+    background: linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--primary-soft) 42%, #ffffff),
+      var(--surface)
+    );
+    box-shadow: 0 0.35rem 1rem rgb(31 61 84 / 6%);
+  }
+
+  .assessment-kind-card:hover {
+    background: linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--primary-soft) 70%, #ffffff),
+      var(--surface)
+    );
+    border-color: var(--primary);
+    box-shadow: var(--visual-raised-shadow);
+  }
+
+  .kpi-card {
+    background: linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--primary-soft) 50%, #ffffff),
+      var(--surface)
+    );
+    border-color: color-mix(in srgb, var(--primary) 22%, var(--border));
+    border-radius: var(--visual-radius-card);
+    box-shadow: 0 0.45rem 1.25rem rgb(31 61 84 / 7%);
+  }
+
+  .kpi-card__icon,
+  .auth-about-panel__icon {
+    background: color-mix(in srgb, var(--primary-soft) 76%, var(--surface));
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 65%);
+    color: var(--primary);
+  }
+
+  .filter-fieldset,
+  .questionnaire-response-scale li,
+  .cycle-questionnaire-table,
+  .selected-user-overview .definition-list div,
+  .access-summary .field {
+    @apply border-rodo-border;
+    background: var(--visual-muted-background);
+    border-color: color-mix(in srgb, var(--primary) 16%, var(--border));
+    border-radius: var(--visual-radius-control);
+  }
+
+  input,
+  select,
+  textarea {
+    @apply border-rodo-border bg-rodo-surface text-rodo-text;
+    background: color-mix(in srgb, var(--surface) 92%, var(--surface-subtle));
+    border-color: var(--visual-control-border);
+    border-radius: var(--visual-radius-control);
+    box-shadow: inset 0 1px 1px rgb(31 61 84 / 4%);
+  }
+
+  input:hover:not(:disabled),
+  select:hover:not(:disabled),
+  textarea:hover:not(:disabled) {
+    border-color: color-mix(in srgb, var(--primary) 58%, var(--border));
+  }
+
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    background: var(--surface);
+    border-color: var(--focus);
+  }
+
+  input[type='checkbox'],
+  input[type='radio'] {
+    accent-color: var(--primary);
+  }
+
+  .answer-option {
+    background: var(--visual-muted-background);
+    border-color: color-mix(in srgb, var(--primary) 18%, var(--border));
+    border-radius: var(--visual-radius-control);
+  }
+
+  .answer-option:hover {
+    background: color-mix(in srgb, var(--primary-soft) 62%, var(--surface));
+    border-color: color-mix(in srgb, var(--primary) 48%, var(--border));
+  }
+
+  .answer-option:has(input:checked) {
+    background: var(--visual-active-background);
+    border-color: var(--primary);
+    box-shadow: 0 0.35rem 0.95rem color-mix(in srgb, var(--primary) 14%, transparent);
+  }
+
+  .answer-option__points {
+    background: color-mix(in srgb, var(--surface) 82%, var(--primary-soft));
+    border-color: color-mix(in srgb, var(--primary) 22%, var(--border));
+  }
+
+  .button,
+  .icon-button,
+  .pagination .icon-button,
+  .pagination__page {
+    @apply border-rodo-border bg-rodo-surface text-rodo-primary;
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--surface) 97%, #ffffff),
+      color-mix(in srgb, var(--surface) 89%, var(--primary-soft))
+    );
+    border-color: var(--visual-control-border);
+    border-radius: var(--visual-radius-control);
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, var(--surface) 88%, transparent),
+      0 1px 2px rgb(31 61 84 / 8%);
+    color: var(--primary-strong);
+  }
+
+  .button:not(:disabled):hover,
+  .icon-button:not(:disabled):hover,
+  .pagination .icon-button:not(:disabled):hover,
+  .pagination__page:not(:disabled):hover {
+    background: var(--visual-active-background);
+    border-color: var(--primary);
+    box-shadow: 0 0.35rem 0.9rem color-mix(in srgb, var(--primary) 15%, transparent);
+    color: var(--primary-strong);
+  }
+
+  .button.button--primary {
+    background: linear-gradient(135deg, var(--primary), var(--primary-strong));
+    border-color: var(--primary);
+    box-shadow: var(--visual-primary-shadow);
+    color: var(--on-primary);
+  }
+
+  .button.button--primary:hover:not(:disabled) {
+    background: linear-gradient(135deg, var(--primary-strong), var(--primary));
+    border-color: var(--primary-strong);
+    color: var(--on-primary);
+  }
+
+  .button.button--success {
+    background: linear-gradient(135deg, var(--success), var(--success-strong));
+    border-color: var(--success);
+    box-shadow: 0 0.5rem 1rem color-mix(in srgb, var(--success) 20%, transparent);
+    color: var(--on-success);
+  }
+
+  .button.button--success:hover:not(:disabled) {
+    background: linear-gradient(135deg, var(--success-strong), var(--success));
+    border-color: var(--success-strong);
+    color: var(--on-success);
+  }
+
+  .button.button--danger {
+    background: linear-gradient(
+      135deg,
+      var(--error-bg),
+      color-mix(in srgb, var(--error-bg) 76%, var(--surface))
+    );
+    border-color: color-mix(in srgb, var(--error) 58%, var(--border));
+    color: var(--error-text);
+  }
+
+  .button.button--danger:hover:not(:disabled) {
+    background: linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--error-bg) 82%, var(--surface)),
+      var(--error-bg)
+    );
+    border-color: var(--error);
+    box-shadow: 0 0.45rem 1rem color-mix(in srgb, var(--error) 15%, transparent);
+    color: var(--error-text);
+  }
+
+  .button.button--quiet {
+    background: color-mix(in srgb, var(--surface) 88%, var(--primary-soft));
+    border-color: transparent;
+    box-shadow: none;
+  }
+
+  .button.button--quiet:hover:not(:disabled) {
+    background: var(--visual-active-background);
+    border-color: color-mix(in srgb, var(--primary) 38%, var(--border));
+    box-shadow: 0 0.25rem 0.65rem color-mix(in srgb, var(--primary) 10%, transparent);
+  }
+
+  .feedback,
+  .status-badge {
+    border-color: color-mix(in srgb, currentColor 26%, var(--border));
+    border-radius: var(--visual-radius-control);
+  }
+
+  .feedback {
+    box-shadow: 0 0.4rem 1rem color-mix(in srgb, var(--text-h) 7%, transparent);
+  }
+
+  .feedback--info {
+    background: color-mix(in srgb, var(--primary-soft) 58%, var(--surface));
+    color: var(--primary-strong);
+  }
+
+  .administration-users,
+  .indicator-results,
+  .cycle-questionnaire-table {
+    background: var(--visual-card-background);
+    border-color: var(--visual-card-border);
+    border-radius: var(--visual-radius-card);
+    box-shadow: var(--visual-card-shadow);
+  }
+
+  .administration-users table,
+  .indicator-results table {
+    background: transparent;
+  }
+
+  thead th {
+    background: var(--visual-table-heading);
+    border-bottom-color: color-mix(in srgb, var(--primary) 28%, var(--border-strong));
+    color: color-mix(in srgb, var(--text-h) 80%, var(--primary));
+  }
+
+  tbody tr {
+    background: color-mix(in srgb, var(--surface) 96%, var(--primary-soft));
+  }
+
+  tbody tr:nth-child(even) {
+    background: color-mix(in srgb, var(--table-stripe) 86%, var(--primary-soft));
+  }
+
+  .administration-users td,
+  .indicator-results td {
+    border-bottom-color: color-mix(in srgb, var(--primary) 10%, var(--border));
+  }
+
+  @media (hover: hover) {
+    .administration-users tbody tr:hover,
+    .indicator-results tbody tr:hover {
+      background: color-mix(in srgb, var(--primary-soft) 68%, var(--surface));
+    }
+  }
+
+  .pagination {
+    border-top-color: color-mix(in srgb, var(--primary) 24%, var(--border));
+  }
+
+  .pagination__page[aria-current='page'] {
+    background: linear-gradient(135deg, var(--primary), var(--primary-strong));
+    border-color: var(--primary);
+    box-shadow: var(--visual-primary-shadow);
+    color: var(--on-primary);
+  }
+
+  .account-dialog-backdrop,
+  .confirmation-dialog-backdrop,
+  .sidebar-backdrop {
+    background: rgb(15 35 55 / 48%);
+    backdrop-filter: blur(3px);
+  }
+
+  .competency-radar__ring,
+  .competency-radar__axis {
+    stroke: color-mix(in srgb, var(--primary) 24%, var(--border));
+  }
+
+  .competency-radar__shape {
+    fill: color-mix(in srgb, var(--primary) 20%, transparent);
+    stroke: var(--primary);
+  }
+
+  .competency-radar__point {
+    fill: var(--primary);
+    stroke: var(--surface);
+  }
+
+  .competency-radar__ring-label,
+  .competency-radar__label {
+    fill: var(--muted);
+  }
+
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible,
+  a:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+    box-shadow: var(--visual-focus-outline);
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--primary) 25%, var(--primary-soft));
+    color: var(--text-h);
+  }
+
+  @media (max-width: 48rem) {
+    .indicator-results tbody tr,
+    .administration-users tbody tr,
+    .individual-assessment-summary__table td {
+      background: color-mix(in srgb, var(--surface) 86%, var(--primary-soft));
+      border-color: color-mix(in srgb, var(--primary) 20%, var(--border));
+      box-shadow: var(--shadow-sm);
+    }
+  }
+}

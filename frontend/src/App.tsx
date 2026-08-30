@@ -29,6 +29,7 @@ import { DashboardPanel } from './features/dashboard/DashboardPanel'
 import { BrandLogo } from './ui/BrandLogo'
 import { safeErrorMessage } from './ui/safeErrorMessage'
 import './App.css'
+import './visual-skin.css'
 
 type AppProps = {
   api?: ApiClient

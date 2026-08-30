@@ -20,3 +20,4 @@ Cada ADR registra uma decisão arquitetural relevante, seu contexto e as consequ
 - [ADR-0016 — Perfis Administrador e Usuário comum](0016-perfis-administrador-e-usuario-comum.md)
 - [ADR-0017 — Feedback integrado e avaliação Diretoria–Gerência](0017-feedback-integrado-e-avaliacao-diretoria-gerencia.md)
 - [ADR-0018 — RLS não aplicável à topologia inicial](0018-rls-nao-aplicavel-na-topologia-inicial.md)
+- [ADR-0019 — Tailwind como compilador visual sem migração de interface](0019-tailwind-como-compilador-visual-sem-migracao-de-interface.md)
