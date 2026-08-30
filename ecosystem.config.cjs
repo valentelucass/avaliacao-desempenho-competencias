@@ -14,8 +14,8 @@ function requiredEnvironment(name) {
   return value;
 }
 
-const backendProcess = "avaliacao-desempenho-backend-prod";
-const frontendProcess = "avaliacao-desempenho-frontend-prod";
+const backendProcess = "avaliacao-api-18081";
+const frontendProcess = "avaliacao-front-18080";
 const backendHost = requiredEnvironment("ADC_PM2_BACKEND_HOST");
 const backendPort = requiredEnvironment("ADC_PM2_BACKEND_PORT");
 const frontendHost = requiredEnvironment("ADC_PM2_FRONTEND_HOST");

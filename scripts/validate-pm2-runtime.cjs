@@ -7,13 +7,13 @@ process.stdin.on("data", (chunk) => chunks.push(chunk));
 process.stdin.on("end", () => {
   const applications = JSON.parse(Buffer.concat(chunks).toString("utf8"));
   const expected = {
-    "avaliacao-desempenho-backend-prod": {
+    "avaliacao-api-18081": {
       keys: ["JAVA_TOOL_OPTIONS", "SystemRoot", "TEMP", "TMP", "WINDIR"],
       values: {
         JAVA_TOOL_OPTIONS: "-Djavax.net.ssl.trustStoreType=Windows-ROOT",
       },
     },
-    "avaliacao-desempenho-frontend-prod": {
+    "avaliacao-front-18080": {
       keys: ["NODE_ENV", "SystemRoot", "TEMP", "TMP", "WINDIR"],
       values: { NODE_ENV: "production" },
     },
@@ -70,7 +70,7 @@ process.stdin.on("end", () => {
       Array.isArray(application.pm2_env?.filter_env) &&
       application.pm2_env.filter_env.length === 1 &&
       application.pm2_env.filter_env[0] === "" &&
-      (application.name === "avaliacao-desempenho-backend-prod"
+      (application.name === "avaliacao-api-18081"
         ? Array.isArray(argumentsList) &&
           argumentsList[0] === "-jar" &&
           typeof backendJar === "string" &&

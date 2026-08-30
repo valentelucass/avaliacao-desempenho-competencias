@@ -12,7 +12,7 @@ A VM já possui processos PM2 de outros sistemas. A aplicação precisa de scrip
 
 - Reservar `127.0.0.1:18081` para a API Java e `127.0.0.1:18080` para o front-end React.
 - Reservar `https://localhost:5181` para a API e `https://localhost:5180` para a SPA no desenvolvimento; o launcher local não verifica, encerra ou ocupa as portas privadas de produção.
-- Usar os nomes PM2 `avaliacao-desempenho-backend-prod` e `avaliacao-desempenho-frontend-prod` exclusivamente para esta aplicação.
+- Usar os nomes PM2 `avaliacao-api-18081` e `avaliacao-front-18080` exclusivamente para esta aplicação.
 - `ecosystem.config.cjs` é o manifesto canônico do PM2. Ele recebe caminhos, portas, logs e configuração externa somente do `iniciar-prod.bat` depois do preflight; não contém segredos, não lê `.env` e falha se for chamado sem o ambiente obrigatório.
 - O script de produção somente inicia ou reinicia processos com esses dois nomes por meio do manifesto; ele nunca encerra processos de terceiros para liberar portas.
 - O script de desenvolvimento não usa PM2 e falha se qualquer porta escolhida já estiver em uso.
@@ -29,4 +29,4 @@ A VM já possui processos PM2 de outros sistemas. A aplicação precisa de scrip
 
 ## Estado operacional posterior — 2026-08-29
 
-Os processos `avaliacao-desempenho-backend-prod` e `avaliacao-desempenho-frontend-prod` foram recriados somente pelo launcher do projeto e observados online; os hosts públicos também responderam em verificação anônima. O cenário autenticado passou separadamente na API/SPA locais contra DEV, não no host público/`AVALIACAO_PROD`. Para a próxima mudança ainda é necessário revalidar ambiente mínimo do PM2, headers públicos e recuperação após reinício; operação com dados reais, backup/restauração e aceite de negócio permanecem externos.
+Os processos `avaliacao-api-18081` e `avaliacao-front-18080` são recriados somente pelo launcher do projeto e observados online; os hosts públicos também respondem em verificação anônima. O cenário autenticado passa separadamente na API/SPA locais contra DEV, não no host público/`AVALIACAO_PROD`. Para cada mudança, revalidar ambiente mínimo do PM2, headers públicos e recuperação após reinício; operação com dados reais, backup/restauração e aceite de negócio permanecem externos.

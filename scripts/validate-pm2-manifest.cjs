@@ -50,14 +50,14 @@ if (!Array.isArray(manifest.apps) || manifest.apps.length !== 2) {
 }
 
 const expectedEnvironmentKeys = {
-  "avaliacao-desempenho-backend-prod": [
+  "avaliacao-api-18081": [
     "JAVA_TOOL_OPTIONS",
     "SystemRoot",
     "TEMP",
     "TMP",
     "WINDIR",
   ],
-  "avaliacao-desempenho-frontend-prod": [
+  "avaliacao-front-18080": [
     "NODE_ENV",
     "SystemRoot",
     "TEMP",
@@ -100,7 +100,7 @@ for (const app of manifest.apps) {
   }
 
   if (
-    app.name === "avaliacao-desempenho-backend-prod" &&
+    app.name === "avaliacao-api-18081" &&
     app.env.JAVA_TOOL_OPTIONS !==
       "-Djavax.net.ssl.trustStoreType=Windows-ROOT"
   ) {

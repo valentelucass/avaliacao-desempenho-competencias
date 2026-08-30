@@ -54,7 +54,7 @@ Somente depois de autorização explícita para o alvo correto:
 1. Registrar o responsável, horário, versão/artefato e forma de retorno.
 2. Executar novamente as verificações sem alteração.
 3. Configurar ou confirmar as duas rotas externas na Cloudflare. Não presumir que o túnel existente já pertence a este projeto.
-4. Iniciar ou atualizar somente os processos `avaliacao-desempenho-backend-prod` e `avaliacao-desempenho-frontend-prod` pelo script do repositório.
+4. Iniciar ou atualizar somente os processos `avaliacao-api-18081` e `avaliacao-front-18080` pelo script do repositório.
 5. Confirmar que cada processo escuta exclusivamente em loopback, que os hosts externos retornam o serviço esperado e que não há rota cruzada entre front-end e API.
    A validação de ambiente pode ser repetida sem expor valores:
 
