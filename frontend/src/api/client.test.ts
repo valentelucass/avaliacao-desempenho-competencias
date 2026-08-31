@@ -313,6 +313,33 @@ describe('HttpApiClient', () => {
     expect(secondHeaders.get('X-CSRF-TOKEN')).toBe('csrf-atualizado')
   })
 
+  it('renova a sessão expirada antes de encerrar a sessão atual', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ token: 'csrf-test-token' }))
+      .mockResolvedValueOnce(new Response(null, { status: 401 }))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
+      .mockResolvedValueOnce(jsonResponse({ id: 'user-1', displayName: 'Pessoa' }))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const api = new HttpApiClient()
+
+    await expect(api.signOut()).resolves.toBeUndefined()
+    expect(fetchMock).toHaveBeenCalledTimes(5)
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      3,
+      '/api/v1/auth/sessions/refresh',
+      expect.objectContaining({ credentials: 'include', method: 'POST' }),
+    )
+    expect(fetchMock).toHaveBeenNthCalledWith(5, '/api/v1/auth/sessions/current', {
+      body: undefined,
+      credentials: 'include',
+      headers: expect.any(Headers),
+      method: 'DELETE',
+    })
+  })
+
   it('cria autoavaliação com CSRF e chave de idempotência', async () => {
     const fetchMock = vi
       .fn()

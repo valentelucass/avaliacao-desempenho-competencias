@@ -14,6 +14,7 @@ import type {
   PopulationDimension,
 } from '../../api/contracts'
 import { FeedbackMessage } from '../../ui/Feedback'
+import { ContextHelp } from '../../ui/ContextHelp'
 import { Pagination } from '../../ui/Pagination'
 import { safeErrorMessage } from '../../ui/safeErrorMessage'
 import { useClientPagination } from '../../ui/useClientPagination'
@@ -252,7 +253,18 @@ export function IndicatorsPanel({ api, canExport, onSessionExpired }: Indicators
       <div className="section-heading">
         <div>
           <p className="eyebrow">Dados agregados</p>
-          <h2 id="indicators-title">Indicadores de avaliação</h2>
+          <div className="context-help__heading">
+            <h2 id="indicators-title">Indicadores de avaliação</h2>
+            <ContextHelp title="Por que alguns indicadores não aparecem">
+              <p>
+                Para preservar a confidencialidade, a plataforma só exibe um indicador quando o
+                grupo filtrado reúne pelo menos cinco colaboradores distintos.
+              </p>
+              <p className="context-help__note">
+                A mesma proteção vale para médias, totais, classificações, gráficos e exportações.
+              </p>
+            </ContextHelp>
+          </div>
           <p className="muted">
             Somente grupos confidenciais são exibidos. Nenhuma contagem ou resultado individual é
             apresentado.

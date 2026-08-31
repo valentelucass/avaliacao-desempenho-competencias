@@ -48,7 +48,7 @@ export function AuthPageFrame({
 
       <footer className="application-footer auth-page__footer">
         <p>
-          Desenvolvido por{' '}
+          Todos os direitos reservados à Rodogarcia. Desenvolvido por{' '}
           <a href="https://www.linkedin.com/in/dev-lucasandrade/" target="_blank" rel="noreferrer">
             <strong>Lucas Andrade</strong>
           </a>

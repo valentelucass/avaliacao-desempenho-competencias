@@ -12,6 +12,8 @@ import type {
   Permission,
 } from '../../api/contracts'
 import { FeedbackMessage } from '../../ui/Feedback'
+import { EmptyState } from '../../ui/EmptyState'
+import { ContextHelp } from '../../ui/ContextHelp'
 import { Pagination } from '../../ui/Pagination'
 import { safeErrorMessage } from '../../ui/safeErrorMessage'
 import { useClientPagination } from '../../ui/useClientPagination'
@@ -358,7 +360,28 @@ export function CycleAdministrationPanel({
       <div className="section-heading">
         <div>
           <p className="eyebrow">Administração de ciclos</p>
-          <h2 id="cycle-administration-title">Ciclos de avaliação</h2>
+          <div className="context-help__heading">
+            <h2 id="cycle-administration-title">Ciclos de avaliação</h2>
+            <ContextHelp title="Como funciona o ciclo">
+              <ul>
+                <li>
+                  <span>Rascunho: </span>
+                  permite revisar a janela e os questionários aplicados.
+                </li>
+                <li>
+                  <span>Aberto: </span>
+                  permite criar avaliações dentro da vigência configurada.
+                </li>
+                <li>
+                  <span>Encerrado: </span>
+                  impede novas avaliações para aquele ciclo.
+                </li>
+              </ul>
+              <p className="context-help__note">
+                Versões aprovadas de questionário ficam vinculadas ao ciclo e não são alteradas.
+              </p>
+            </ContextHelp>
+          </div>
           <p className="muted">
             Um ciclo usa versões aprovadas e imutáveis de questionário. A API valida o estado e
             registra cada alteração administrativa.
@@ -390,7 +413,10 @@ export function CycleAdministrationPanel({
       <section className="card" aria-labelledby="cycle-list-title">
         <h3 id="cycle-list-title">Ciclos disponíveis</h3>
         {!isLoading && cycles.length === 0 ? (
-          <p className="muted">Nenhum ciclo disponível para este acesso.</p>
+          <EmptyState className="empty-state--compact" title="Nenhum ciclo disponível">
+            Ainda não há ciclos que esta conta possa consultar. Crie um ciclo para iniciar a
+            configuração de questionários e jornadas.
+          </EmptyState>
         ) : null}
         {cycles.length > 0 ? (
           <div className="administration-users">
@@ -541,78 +567,82 @@ export function CycleAdministrationPanel({
         >
           <legend>Questionários aplicados</legend>
           {versions.length === 0 && !isLoading ? (
-            <p className="muted">Não há versões aprovadas disponíveis para aplicar a um ciclo.</p>
-          ) : null}
-          <div className="cycle-questionnaire-table">
-            <table>
-              <caption className="visually-hidden">
-                Questionários e configurações disponíveis para o ciclo
-              </caption>
-              <thead>
-                <tr>
-                  <th scope="col">Questionário</th>
-                  <th scope="col">Versão</th>
-                  <th scope="col">Configuração</th>
-                  <th scope="col">Aplicar</th>
-                </tr>
-              </thead>
-              <tbody>
-                {versionsPagination.items.map((version) => (
-                  <tr key={version.questionnaireVersionId}>
-                    <td data-label="Questionário">
-                      <strong>{version.questionnaireName}</strong>
-                      <span className="cycle-questionnaire-table__title">{version.title}</span>
-                    </td>
-                    <td data-label="Versão">v{version.versionNumber}</td>
-                    <td data-label="Configuração">
-                      {version.configurationOptions.map((option) => (
-                        <span
-                          className="cycle-questionnaire-table__configuration"
-                          key={optionKey(version.questionnaireVersionId, option)}
-                        >
-                          {formatConfigurationOption(option)}
-                        </span>
-                      ))}
-                    </td>
-                    <td data-label="Aplicar">
-                      {version.configurationOptions.map((option) => {
-                        const key = optionKey(version.questionnaireVersionId, option)
-                        const configurationLabel = formatConfigurationOption(option)
-                        return (
-                          <label
-                            className="cycle-questionnaire-table__selection"
-                            htmlFor={key}
-                            key={key}
-                          >
-                            <input
-                              aria-label={configurationLabel}
-                              id={key}
-                              type="checkbox"
-                              checked={selectedOptionKeys.includes(key)}
-                              onChange={(event) =>
-                                toggleQuestionnaireOption(key, event.target.checked)
-                              }
-                            />
-                            <span>Aplicar</span>
-                          </label>
-                        )
-                      })}
-                    </td>
+            <EmptyState className="empty-state--compact" title="Nenhuma versão aprovada">
+              Não há versões aprovadas disponíveis para aplicar a um ciclo. Aprove um questionário
+              antes de configurar este ciclo.
+            </EmptyState>
+          ) : (
+            <div className="cycle-questionnaire-table">
+              <table>
+                <caption className="visually-hidden">
+                  Questionários e configurações disponíveis para o ciclo
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Questionário</th>
+                    <th scope="col">Versão</th>
+                    <th scope="col">Configuração</th>
+                    <th scope="col">Aplicar</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-            <Pagination
-              currentPage={versionsPagination.currentPage}
-              hasNextPage={versionsPagination.hasNextPage}
-              isLoading={isLoading || isLoadingDraft}
-              itemCountOnPage={versionsPagination.items.length}
-              itemLabel="questionários aprovados"
-              onNextPage={versionsPagination.onNextPage}
-              onPreviousPage={versionsPagination.onPreviousPage}
-              totalPages={versionsPagination.totalPages}
-            />
-          </div>
+                </thead>
+                <tbody>
+                  {versionsPagination.items.map((version) => (
+                    <tr key={version.questionnaireVersionId}>
+                      <td data-label="Questionário">
+                        <strong>{version.questionnaireName}</strong>
+                        <span className="cycle-questionnaire-table__title">{version.title}</span>
+                      </td>
+                      <td data-label="Versão">v{version.versionNumber}</td>
+                      <td data-label="Configuração">
+                        {version.configurationOptions.map((option) => (
+                          <span
+                            className="cycle-questionnaire-table__configuration"
+                            key={optionKey(version.questionnaireVersionId, option)}
+                          >
+                            {formatConfigurationOption(option)}
+                          </span>
+                        ))}
+                      </td>
+                      <td data-label="Aplicar">
+                        {version.configurationOptions.map((option) => {
+                          const key = optionKey(version.questionnaireVersionId, option)
+                          const configurationLabel = formatConfigurationOption(option)
+                          return (
+                            <label
+                              className="cycle-questionnaire-table__selection"
+                              htmlFor={key}
+                              key={key}
+                            >
+                              <input
+                                aria-label={configurationLabel}
+                                id={key}
+                                type="checkbox"
+                                checked={selectedOptionKeys.includes(key)}
+                                onChange={(event) =>
+                                  toggleQuestionnaireOption(key, event.target.checked)
+                                }
+                              />
+                              <span>Aplicar</span>
+                            </label>
+                          )
+                        })}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <Pagination
+                currentPage={versionsPagination.currentPage}
+                hasNextPage={versionsPagination.hasNextPage}
+                isLoading={isLoading || isLoadingDraft}
+                itemCountOnPage={versionsPagination.items.length}
+                itemLabel="questionários aprovados"
+                onNextPage={versionsPagination.onNextPage}
+                onPreviousPage={versionsPagination.onPreviousPage}
+                totalPages={versionsPagination.totalPages}
+              />
+            </div>
+          )}
         </fieldset>
 
         {selectedCycle?.status === 'RASCUNHO' || !selectedCycle ? (

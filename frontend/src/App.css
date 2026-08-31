@@ -1178,23 +1178,87 @@ thead th {
   width: 1.3rem;
 }
 
-.administration-users > .pagination {
+.administration-users > .pagination,
+.cycle-questionnaire-table > .pagination {
   border-top: 1px solid var(--border);
   margin-top: 0;
-  padding: 0.7rem 0.8rem;
+  padding: 0.85rem clamp(1rem, 1.5vw, 1.35rem);
 }
 
 .pagination-placeholder {
   visibility: hidden;
 }
+
 .empty-state {
+  align-content: center;
   display: grid;
-  gap: 0.65rem;
-  justify-items: start;
+  gap: 0.85rem;
+  justify-items: center;
+  min-block-size: clamp(15rem, 42vh, 28rem);
+  padding: clamp(1.5rem, 4vw, 3rem);
+  text-align: center;
 }
-.empty-state svg {
+
+.empty-state__icon {
+  align-items: center;
+  background: var(--primary-soft);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--primary);
+  display: inline-flex;
+  height: 3rem;
+  justify-content: center;
+  width: 3rem;
+}
+
+.empty-state__icon svg {
   color: var(--primary);
 }
+
+.empty-state__body {
+  display: grid;
+  gap: 0.45rem;
+  justify-items: center;
+  max-width: 40rem;
+}
+
+.empty-state__body h2,
+.empty-state__body h3,
+.empty-state__body p {
+  margin: 0;
+}
+
+.empty-state__body h2,
+.empty-state__body h3 {
+  color: var(--heading);
+  font-size: 1.1rem;
+}
+
+.empty-state__body p {
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.empty-state__action {
+  display: flex;
+  justify-content: center;
+  margin-top: 0.55rem;
+}
+
+.empty-state--compact {
+  min-block-size: clamp(9rem, 20vh, 13rem);
+  padding: clamp(1.1rem, 2.5vw, 2rem);
+}
+
+.empty-state--route {
+  min-block-size: clamp(20rem, 55vh, 34rem);
+}
+
+.empty-state--route .empty-state__body h2,
+.empty-state--route .empty-state__body h3 {
+  font-size: clamp(1.35rem, 2vw, 1.7rem);
+}
+
 .visually-hidden {
   clip: rect(0 0 0 0);
   clip-path: inset(50%);
@@ -2261,14 +2325,16 @@ thead th {
 
   .assessment-list__item {
     align-items: stretch;
+    display: flex;
+    flex-direction: column;
     gap: 0.75rem;
-    grid-template-columns: minmax(0, 1fr);
     padding: 0.95rem 1rem;
   }
 
   .assessment-list__actions {
     align-items: stretch;
     flex-direction: row;
+    margin-top: auto;
   }
 
   .assessment-list__actions .button {

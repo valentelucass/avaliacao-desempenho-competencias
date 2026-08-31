@@ -4,6 +4,8 @@ export interface CurrentUser {
   id: string
   displayName: string
   permissions: readonly Permission[]
+  /** Perfis efetivos resolvidos pelo servidor para identificar a conta na interface. */
+  roles?: readonly string[]
   passwordChangeRequired?: boolean
   supremeAdministrator?: boolean
 }

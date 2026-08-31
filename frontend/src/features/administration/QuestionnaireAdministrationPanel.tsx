@@ -10,6 +10,8 @@ import type {
   QuestionnaireCompetencyInput,
 } from '../../api/contracts'
 import { FeedbackMessage } from '../../ui/Feedback'
+import { EmptyState } from '../../ui/EmptyState'
+import { ContextHelp } from '../../ui/ContextHelp'
 import { Pagination } from '../../ui/Pagination'
 import { safeErrorMessage } from '../../ui/safeErrorMessage'
 import { useClientPagination } from '../../ui/useClientPagination'
@@ -208,7 +210,19 @@ export function QuestionnaireAdministrationPanel({
       <div className="section-heading">
         <div>
           <p className="eyebrow">Administração de conteúdo</p>
-          <h2 id="questionnaire-administration-title">Questionários</h2>
+          <div className="context-help__heading">
+            <h2 id="questionnaire-administration-title">Questionários</h2>
+            <ContextHelp title="Por que as versões são imutáveis">
+              <p>
+                Ao aprovar uma versão, o conteúdo, as competências e a escala daquela versão ficam
+                preservados para os ciclos que a utilizarem.
+              </p>
+              <p className="context-help__note">
+                Uma versão nova não reinterpreta nem recalcula avaliações que já usam uma versão
+                anterior.
+              </p>
+            </ContextHelp>
+          </div>
           <p className="muted">
             Escolha um modelo, confira cada competência e crie uma versão imutável. A resposta e a
             nota de cada avaliação continuam validadas pelo servidor.
@@ -253,7 +267,10 @@ export function QuestionnaireAdministrationPanel({
             ) : null}
             {loadError ? <FeedbackMessage kind="error">{loadError}</FeedbackMessage> : null}
             {!isLoadingVersions && !loadError && versions.length === 0 ? (
-              <FeedbackMessage kind="warning">Ainda não há versões aprovadas.</FeedbackMessage>
+              <EmptyState className="empty-state--compact" title="Nenhuma versão aprovada">
+                Ainda não há questionários aprovados para consulta. Uma versão precisa ser criada,
+                validada e aprovada antes de aparecer nesta lista.
+              </EmptyState>
             ) : null}
             {!isLoadingVersions && !loadError && versions.length > 0 ? (
               <div className="administration-users">

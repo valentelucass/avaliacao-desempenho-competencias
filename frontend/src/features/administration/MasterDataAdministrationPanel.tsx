@@ -12,6 +12,8 @@ import type {
   QuestionnaireAssignmentOption,
 } from '../../api/contracts'
 import { FeedbackMessage } from '../../ui/Feedback'
+import { EmptyState } from '../../ui/EmptyState'
+import { ContextHelp } from '../../ui/ContextHelp'
 import { Pagination } from '../../ui/Pagination'
 import { safeErrorMessage } from '../../ui/safeErrorMessage'
 import { useAccessibleDialog } from '../../ui/useAccessibleDialog'
@@ -417,7 +419,18 @@ export function MasterDataAdministrationPanel({
       <div className="section-heading">
         <div>
           <p className="eyebrow">Administração de cadastros</p>
-          <h2 id="master-data-administration-title">Cadastros e atribuições</h2>
+          <div className="context-help__heading">
+            <h2 id="master-data-administration-title">Cadastros e atribuições</h2>
+            <ContextHelp title="Cadastros não concedem acesso por si só">
+              <p>
+                Filiais, áreas, colaboradores e lotações organizam a base. O acesso às avaliações
+                depende também dos vínculos de gestão e da identidade da conta.
+              </p>
+              <p className="context-help__note">
+                O servidor valida vigência, integridade e duplicidade antes de gravar mudanças.
+              </p>
+            </ContextHelp>
+          </div>
           <p className="muted">
             Use os nomes disponíveis nas listas. O servidor valida permissão, vigência, duplicidade
             e integridade antes de gravar cada alteração.
@@ -925,9 +938,13 @@ function NamedResourcesTable({
 
   if (resources.length === 0) {
     return (
-      <FeedbackMessage kind="warning">
-        Não há {resourceLabel === 'filial' ? 'filiais' : 'áreas'} cadastradas.
-      </FeedbackMessage>
+      <EmptyState
+        className="empty-state--compact"
+        title={`Nenhuma ${resourceLabel === 'filial' ? 'filial' : 'área'} cadastrada`}
+      >
+        Cadastre uma {resourceLabel} para que ela possa ser usada nas lotações e nos filtros
+        autorizados.
+      </EmptyState>
     )
   }
 
@@ -1024,7 +1041,11 @@ function CollaboratorsTable({
   const pagination = useClientPagination(collaborators, 10)
 
   if (collaborators.length === 0) {
-    return <FeedbackMessage kind="warning">Não há colaboradores cadastrados.</FeedbackMessage>
+    return (
+      <EmptyState className="empty-state--compact" title="Nenhum colaborador cadastrado">
+        Cadastre um colaborador antes de criar lotações, vínculos ou atribuições de questionário.
+      </EmptyState>
+    )
   }
 
   return (
@@ -1108,7 +1129,12 @@ function AllocationsTable({
   const pagination = useClientPagination(allocations, 5)
 
   if (allocations.length === 0) {
-    return <FeedbackMessage kind="warning">Não há lotações ativas.</FeedbackMessage>
+    return (
+      <EmptyState className="empty-state--compact" title="Nenhuma lotação ativa">
+        Ainda não há lotações vigentes. Cadastre uma lotação para associar o colaborador à sua
+        filial e área.
+      </EmptyState>
+    )
   }
 
   return (
@@ -1188,7 +1214,9 @@ function QuestionnaireAssignmentsTable({
 
   if (assignments.length === 0) {
     return (
-      <FeedbackMessage kind="warning">Não há atribuições de questionário ativas.</FeedbackMessage>
+      <EmptyState className="empty-state--compact" title="Nenhuma atribuição ativa">
+        Atribua um questionário a um colaborador e ciclo para habilitar a criação de avaliações.
+      </EmptyState>
     )
   }
 

@@ -233,7 +233,6 @@ export class HttpApiClient implements ApiClient {
       await this.request<void>('/auth/sessions/current', {
         method: 'DELETE',
         requiresCsrf: true,
-        skipSessionRecovery: true,
       })
     } finally {
       this.csrfToken = undefined

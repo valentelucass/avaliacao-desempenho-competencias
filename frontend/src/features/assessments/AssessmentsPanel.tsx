@@ -12,6 +12,8 @@ import type {
   Page,
 } from '../../api/contracts'
 import { FeedbackMessage } from '../../ui/Feedback'
+import { ContextHelp } from '../../ui/ContextHelp'
+import { EmptyState } from '../../ui/EmptyState'
 import { Pagination } from '../../ui/Pagination'
 import { safeErrorMessage } from '../../ui/safeErrorMessage'
 import { AssessmentEditor } from './AssessmentEditor'
@@ -27,6 +29,7 @@ type AssessmentsPanelProps = {
   canReopenAssessments: boolean
   canRecordFeedback: boolean
   isAdministrativeView: boolean
+  canUseAdministrativeFilters: boolean
   journey?: 'EQUIPE' | 'AUTOAVALIACAO'
   assessmentId?: string
   onExitEditor: () => void
@@ -46,6 +49,7 @@ export function AssessmentsPanel({
   canReopenAssessments,
   canRecordFeedback,
   isAdministrativeView,
+  canUseAdministrativeFilters,
   journey,
   assessmentId,
   onExitEditor,
@@ -118,15 +122,17 @@ export function AssessmentsPanel({
         const loadedPage = await api.listAssessments({
           limit: assessmentsPageSize,
           cursor,
-          cycleId: administrativeCycleId || undefined,
-          collaboratorId: administrativeCollaboratorId || undefined,
+          cycleId: canUseAdministrativeFilters ? administrativeCycleId || undefined : undefined,
+          collaboratorId: canUseAdministrativeFilters
+            ? administrativeCollaboratorId || undefined
+            : undefined,
         })
         // Compatibilidade transitória com respostas de builds locais anteriores ao cursor.
         const page = Array.isArray(loadedPage)
           ? { items: loadedPage, page: { limit: assessmentsPageSize, nextCursor: null } }
           : loadedPage
         setAssessmentPage(page)
-        if (isAdministrativeView && administrativeCycleId && administrativeCollaboratorId) {
+        if (canUseAdministrativeFilters && administrativeCycleId && administrativeCollaboratorId) {
           const completedAssessments = page.items.filter(
             (assessment) => assessment.status === 'ENVIADA' || assessment.status === 'PUBLICADA',
           )
@@ -159,7 +165,7 @@ export function AssessmentsPanel({
       administrativeCollaboratorId,
       administrativeCycleId,
       api,
-      isAdministrativeView,
+      canUseAdministrativeFilters,
       onSessionExpired,
     ],
   )
@@ -170,7 +176,7 @@ export function AssessmentsPanel({
   }, [loadAssessments])
 
   useEffect(() => {
-    if (!isAdministrativeView) {
+    if (!canUseAdministrativeFilters) {
       return undefined
     }
 
@@ -200,7 +206,7 @@ export function AssessmentsPanel({
     return () => {
       isCurrent = false
     }
-  }, [api, isAdministrativeView, onSessionExpired])
+  }, [api, canUseAdministrativeFilters, onSessionExpired])
 
   useEffect(() => {
     if (!previewedAssessmentId) {
@@ -547,12 +553,35 @@ export function AssessmentsPanel({
       <div className="section-heading">
         <div>
           <p className="eyebrow">{isAdministrativeView ? 'Administração' : 'Minhas avaliações'}</p>
-          <h2 id="assessments-title">
-            {isAdministrativeView ? 'Avaliações individuais' : 'Avaliações autorizadas'}
-          </h2>
+          <div className="context-help__heading">
+            <h2 id="assessments-title">
+              {isAdministrativeView ? 'Avaliações individuais' : 'Avaliações autorizadas'}
+            </h2>
+            <ContextHelp title="Entenda a situação das avaliações">
+              <ul>
+                <li>
+                  <span>Rascunho: </span>
+                  permanece em preenchimento pelo responsável.
+                </li>
+                <li>
+                  <span>Enviada: </span>
+                  aguarda a decisão de publicação dentro do escopo autorizado.
+                </li>
+                <li>
+                  <span>Publicada: </span>
+                  mantém o resultado disponível; qualquer reabertura é registrada.
+                </li>
+              </ul>
+              <p className="context-help__note">
+                A lista e as ações possíveis são definidas pelo seu perfil, vínculos e ciclo.
+              </p>
+            </ContextHelp>
+          </div>
           <p className="muted">
             {isAdministrativeView
-              ? 'Selecione o ciclo e o colaborador para pré-visualizar o resumo individual; a lista continua disponível para abrir o formulário completo.'
+              ? canUseAdministrativeFilters
+                ? 'Selecione o ciclo e o colaborador para pré-visualizar o resumo individual; a lista continua disponível para abrir o formulário completo.'
+                : 'A lista é definida pelo servidor conforme seu escopo de supervisão, vínculos e permissões.'
               : 'A lista é definida pelo servidor conforme seu vínculo e suas permissões.'}
           </p>
         </div>
@@ -571,7 +600,7 @@ export function AssessmentsPanel({
         </dl>
       ) : null}
 
-      {isAdministrativeView ? (
+      {canUseAdministrativeFilters ? (
         <section
           className="card assessment-creation-card"
           aria-labelledby="individual-filter-title"
@@ -628,7 +657,7 @@ export function AssessmentsPanel({
         </section>
       ) : null}
 
-      {isAdministrativeView && administrativeCycleId && administrativeCollaboratorId ? (
+      {canUseAdministrativeFilters && administrativeCycleId && administrativeCollaboratorId ? (
         <section
           aria-label="Pré-visualização da avaliação individual"
           className="assessment-preview"
@@ -906,9 +935,10 @@ export function AssessmentsPanel({
       {error ? <FeedbackMessage kind="error">{error}</FeedbackMessage> : null}
 
       {!isLoading && !error && assessmentPage.items.length === 0 ? (
-        <FeedbackMessage kind="warning">
-          Não há avaliações disponíveis para sua conta neste momento.
-        </FeedbackMessage>
+        <EmptyState title="Nenhuma avaliação disponível">
+          Não há avaliações no seu escopo neste momento. A disponibilidade depende do perfil, dos
+          vínculos ativos, do ciclo e do questionário atribuídos pelo servidor.
+        </EmptyState>
       ) : null}
 
       <ul className="assessment-list" aria-busy={isLoading}>
@@ -947,7 +977,7 @@ export function AssessmentsPanel({
               >
                 Abrir avaliação
               </button>
-              {isAdministrativeView &&
+              {canUseAdministrativeFilters &&
               administrativeCycleId &&
               administrativeCollaboratorId &&
               (assessment.status === 'ENVIADA' || assessment.status === 'PUBLICADA') ? (

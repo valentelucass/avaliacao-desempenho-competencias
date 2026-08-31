@@ -30,6 +30,9 @@ describe('App', () => {
     expect(screen.getByLabelText('Senha')).toHaveAttribute('type', 'password')
     expect(screen.getByRole('img', { name: 'Rodogarcia' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Ativar modo escuro' })).toBeInTheDocument()
+    expect(screen.getByRole('contentinfo')).toHaveTextContent(
+      'Todos os direitos reservados à Rodogarcia.',
+    )
     expect(screen.getByRole('contentinfo')).toHaveTextContent('Desenvolvido por Lucas Andrade')
     expect(screen.getByRole('complementary', { name: 'Sobre esta página' })).toHaveTextContent(
       'Avaliações de desempenho',
@@ -57,6 +60,28 @@ describe('App', () => {
     expect(api.currentUser).not.toHaveBeenCalled()
   })
 
+  it('volta ao login ao sair mesmo que o servidor não confirme o encerramento', async () => {
+    const api = createApi({
+      currentUser: vi.fn().mockResolvedValue({
+        id: 'user-1',
+        displayName: 'Pessoa autenticada',
+        permissions: [],
+      }),
+      signOut: vi.fn().mockRejectedValue(new ApiError({ status: 401 })),
+    })
+
+    renderWithExistingSession(api)
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Abrir menu' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Sair da conta' }))
+
+    expect(await screen.findByLabelText('E-mail ou login')).toBeInTheDocument()
+    expect(api.signOut).toHaveBeenCalledTimes(1)
+    expect(
+      screen.getByText('Sua sessão não está disponível. Entre novamente para continuar.'),
+    ).toBeInTheDocument()
+  })
+
   it('leva ao início ao selecionar a marca no cabeçalho', async () => {
     const api = createApi({
       currentUser: vi.fn().mockResolvedValue({
@@ -72,6 +97,57 @@ describe('App', () => {
 
     await waitFor(() => expect(window.location.pathname).toBe('/'))
     expect(screen.getByRole('heading', { name: 'Avaliações de desempenho' })).toBeInTheDocument()
+  })
+
+  it('mantém a sessão e explica quando a rota interna não existe', async () => {
+    const api = createApi({
+      currentUser: vi.fn().mockResolvedValue({
+        id: 'indicator-reader-1',
+        displayName: 'Leitor de indicadores',
+        permissions: ['INDICADORES.VISUALIZAR'],
+      }),
+    })
+
+    const { container } = renderWithExistingSession(api, '/endereco-inexistente')
+
+    expect(
+      await screen.findByRole('heading', { name: 'Página não encontrada' }),
+    ).toBeInTheDocument()
+    expect(screen.getByText(/Sua sessão continua ativa\./)).toBeInTheDocument()
+    expect(screen.queryByLabelText('E-mail ou login')).not.toBeInTheDocument()
+
+    const accessibilityResult = await axe(container, {
+      rules: {
+        'color-contrast': { enabled: false },
+      },
+    })
+    expect(accessibilityResult.violations).toHaveLength(0)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Ir para a página inicial' }))
+
+    await waitFor(() => expect(window.location.pathname).toBe('/'))
+    expect(screen.getByRole('heading', { name: 'Avaliações de desempenho' })).toBeInTheDocument()
+  })
+
+  it('mantém a sessão e explica ao abrir um módulo não autorizado', async () => {
+    const api = createApi({
+      currentUser: vi.fn().mockResolvedValue({
+        id: 'indicator-reader-1',
+        displayName: 'Leitor de indicadores',
+        permissions: ['INDICADORES.VISUALIZAR'],
+      }),
+    })
+
+    renderWithExistingSession(api, '/administracao/usuarios')
+
+    expect(
+      await screen.findByRole('heading', { name: 'Acesso não disponível' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(/Sua sessão continua ativa, mas seu perfil não possui permissão/),
+    ).toBeInTheDocument()
+    expect(api.listAdministrationUsers).not.toHaveBeenCalled()
+    expect(screen.queryByLabelText('E-mail ou login')).not.toBeInTheDocument()
   })
 
   it('informa quando não há sessão disponível para retomar', async () => {
@@ -467,6 +543,40 @@ describe('App', () => {
       await screen.findByRole('img', { name: /Pontuação por competência/ }),
     ).toBeInTheDocument()
     expect(api.getAssessment).toHaveBeenCalledWith(completedAssessment.id)
+  })
+
+  it('não carrega o catálogo administrativo de colaboradores para Diretoria', async () => {
+    const listCollaborators = vi.fn().mockRejectedValue(new ApiError({ status: 403 }))
+    const api = createApi({
+      currentUser: vi.fn().mockResolvedValue({
+        id: 'director-1',
+        displayName: 'Diretoria autorizada',
+        permissions: [
+          'ACESSOS.NEGOCIO.GERIR',
+          'AVALIACOES.VISUALIZAR_TODAS',
+          'AVALIACOES.AVALIAR_GERENCIAS_VINCULADAS',
+          'AUTOAVALIACOES.PREENCHER_PROPRIA',
+          'AUTOAVALIACOES.ENVIAR_PROPRIA',
+          'AUTOAVALIACOES.VISUALIZAR_PROPRIA',
+        ],
+        roles: ['DIRETORIA'],
+      }),
+      listCollaborators,
+      listAssessments: vi.fn().mockResolvedValue([]),
+    })
+
+    renderWithExistingSession(api, '/avaliacoes')
+
+    expect(
+      await screen.findByRole('heading', { name: 'Avaliações individuais' }),
+    ).toBeInTheDocument()
+    expect(listCollaborators).not.toHaveBeenCalled()
+    expect(screen.queryByText('Você não possui acesso a esta operação.')).not.toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { name: 'Criar avaliação de Diretoria' }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Criar autoavaliação' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Localizar avaliação' })).not.toBeInTheDocument()
   })
 
   it('mantém um rascunho em consulta quando a permissão não autoriza sua edição', async () => {
@@ -898,13 +1008,17 @@ describe('App', () => {
       currentUser: vi.fn().mockResolvedValue({
         id: 'theme-user',
         displayName: 'Pessoa',
-        permissions: ['INDICADORES.VISUALIZAR'],
+        permissions: ['USUARIOS.LER'],
+        roles: ['ADMINISTRADOR_PLATAFORMA'],
       }),
     })
 
     renderWithExistingSession(api)
 
     await screen.findByRole('button', { name: 'Ativar modo escuro' })
+    expect(screen.getByRole('contentinfo')).toHaveTextContent(
+      'Todos os direitos reservados à Rodogarcia.',
+    )
     expect(screen.getByRole('contentinfo')).toHaveTextContent('Desenvolvido por Lucas Andrade')
     expect(screen.getByRole('link', { name: 'Lucas Andrade' })).toHaveAttribute(
       'href',
@@ -915,6 +1029,22 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Abrir menu' }))
     const drawer = await screen.findByRole('dialog', { name: 'Menu de módulos' })
     expect(within(drawer).getByLabelText('Conta ativa')).toHaveTextContent('Pessoa')
+    expect(within(drawer).getByText('Perfil: Administrador técnico')).toBeInTheDocument()
+    const profileHelp = within(drawer).getByRole('button', {
+      name: 'Entenda o que esta conta pode acessar',
+    })
+    fireEvent.mouseEnter(profileHelp)
+    const profileTooltip = await screen.findByRole('tooltip')
+    expect(profileTooltip).toHaveTextContent('contas e acessos')
+    fireEvent.mouseLeave(profileHelp)
+    fireEvent.mouseEnter(profileTooltip)
+    await new Promise((resolve) => window.setTimeout(resolve, 220))
+    expect(profileTooltip).toBeInTheDocument()
+    fireEvent.mouseLeave(profileTooltip)
+    fireEvent.click(profileHelp)
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(
+      'Vínculos, ciclo, questionário e escopo continuam validados pelo servidor.',
+    )
     expect(within(drawer).getByRole('button', { name: 'Sair da conta' })).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Ativar modo escuro' }))

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { axe } from 'vitest-axe'
 import type { ApiClient } from '../../api/client'
@@ -6,6 +6,26 @@ import type { AdministrationUser } from '../../api/contracts'
 import { UserAdministrationPanel } from './UserAdministrationPanel'
 
 describe('UserAdministrationPanel', () => {
+  it('explica a permissão parcial que não libera nenhuma operação de contas', () => {
+    const api = createApi()
+
+    render(
+      <UserAdministrationPanel
+        api={api}
+        currentUserId="technical-operator"
+        isSupremeAdministrator={false}
+        permissions={['ACESSOS.GERIR']}
+        onSessionExpired={vi.fn()}
+      />,
+    )
+
+    expect(
+      screen.getByRole('heading', { name: 'Nenhuma operação de contas disponível' }),
+    ).toBeInTheDocument()
+    expect(screen.getByText(/Solicite o acesso “Consultar contas”/)).toBeInTheDocument()
+    expect(api.listAdministrationUsers).not.toHaveBeenCalled()
+  })
+
   it('cria uma conta sem consultar a lista e limpa a senha inicial após o envio', async () => {
     const initial = ['senha', 'inicial', 'de', 'teste'].join('-')
     const createdUser = sampleUser({
@@ -95,6 +115,10 @@ describe('UserAdministrationPanel', () => {
     expect(await screen.findByRole('cell', { name: otherUser.displayName })).toBeInTheDocument()
 
     await viewAccountDetails(currentUser.displayName)
+    const currentUserDialog = await screen.findByRole('dialog', {
+      name: `Detalhes de ${currentUser.displayName}`,
+    })
+    expect(within(currentUserDialog).getByText('Administrador técnico')).toBeInTheDocument()
     expect(
       await screen.findByText(
         'A configuração de acesso da sua própria conta não pode ser exibida para edição nesta tela.',
@@ -148,9 +172,9 @@ describe('UserAdministrationPanel', () => {
     const profile = await screen.findByLabelText('Perfil de acesso')
     expect(profile).toHaveValue('HUMAN_RESOURCES')
     expect(screen.getByRole('option', { name: 'Gestor' })).toBeInTheDocument()
-    expect(screen.getByRole('option', { name: 'Gerência de RH' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'RH' })).toBeInTheDocument()
     expect(screen.getByRole('option', { name: 'Diretoria' })).toBeInTheDocument()
-    expect(screen.queryByRole('option', { name: 'Administrador' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('option', { name: 'Administrador técnico' })).not.toBeInTheDocument()
   })
 
   it('cria um gestor por um perfil suportado', async () => {

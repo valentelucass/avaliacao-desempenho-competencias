@@ -94,10 +94,12 @@ public class AuthenticationController {
   public CurrentUserResponse currentUser(Authentication authentication) {
     AuthenticatedPrincipal principal = principal(authentication);
     List<String> permissions = principal.user().permissions().stream().sorted().toList();
+    List<String> roles = principal.user().roleCodes().stream().sorted().toList();
     return new CurrentUserResponse(
         principal.userId().toString(),
         principal.user().displayName(),
         permissions,
+        roles,
         principal.user().passwordChangeRequired(),
         principal.user().supremeAdministrator());
   }
@@ -165,6 +167,7 @@ public class AuthenticationController {
       String id,
       String displayName,
       List<String> permissions,
+      List<String> roles,
       boolean passwordChangeRequired,
       boolean supremeAdministrator) {}
 

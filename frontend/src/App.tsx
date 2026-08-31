@@ -1,15 +1,26 @@
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from 'react'
 import {
   BarChart3,
   BookOpenCheck,
   BriefcaseBusiness,
+  ChevronDown,
+  ChevronUp,
   ClipboardCheck,
+  FileQuestion,
   LayoutDashboard,
   Link2,
   LogOut,
   Menu,
   Moon,
   ShieldCheck,
+  ShieldAlert,
   Sun,
   UsersRound,
   X,
@@ -27,6 +38,8 @@ import { AssessmentsPanel } from './features/assessments/AssessmentsPanel'
 import { IndicatorsPanel } from './features/indicators/IndicatorsPanel'
 import { DashboardPanel } from './features/dashboard/DashboardPanel'
 import { BrandLogo } from './ui/BrandLogo'
+import { ContextHelp } from './ui/ContextHelp'
+import { EmptyState } from './ui/EmptyState'
 import { safeErrorMessage } from './ui/safeErrorMessage'
 import './App.css'
 import './visual-skin.css'
@@ -52,6 +65,14 @@ const administrationPermissions = [
   'VINCULOS_USUARIO_COLABORADOR.GERIR',
   'VINCULOS_DIRETORIA_GERENCIA.GERIR',
 ] as const
+
+const profileLabels: Readonly<Record<string, string>> = {
+  ADMINISTRADOR_PLATAFORMA: 'Administrador técnico',
+  GESTOR: 'Gestor',
+  GERENCIA_RH: 'RH',
+  DIRETORIA: 'Diretoria',
+  COLABORADOR: 'Colaborador',
+}
 
 function App({ api = defaultApiClient }: AppProps) {
   const [user, setUser] = useState<CurrentUser | null>(null)
@@ -234,11 +255,15 @@ function App({ api = defaultApiClient }: AppProps) {
     setStartupError(undefined)
     try {
       await api.signOut()
-      setUser(null)
       setNotice('Você saiu da sessão com segurança.')
     } catch (requestError) {
       setStartupError(safeErrorMessage(requestError))
     } finally {
+      // Uma sessão expirada, sem conexão ou já revogada não pode manter a pessoa presa na
+      // tela autenticada. Quando possível, o cliente primeiro renova a sessão e pede a
+      // revogação ao servidor; de todo modo, encerra imediatamente o estado desta interface.
+      setUser(null)
+      setPasswordChangeUsername(undefined)
       setIsSigningOut(false)
     }
   }
@@ -292,6 +317,7 @@ function App({ api = defaultApiClient }: AppProps) {
     'AVALIACOES.REGISTRAR_FEEDBACK_PROPRIO',
   ])
   const canViewAllAssessments = hasAnyPermission(user, ['AVALIACOES.VISUALIZAR_TODAS'])
+  const canUseAdministrativeAssessmentFilters = hasAnyPermission(user, ['CADASTROS.GERIR'])
   const canViewIndicators = hasAnyPermission(user, ['INDICADORES.VISUALIZAR'])
   const canExportIndicators = hasAnyPermission(user, ['DADOS.EXPORTAR'])
   const canViewAdministration = hasAnyPermission(user, administrationPermissions)
@@ -337,29 +363,17 @@ function App({ api = defaultApiClient }: AppProps) {
       available: hasAnyPermission(user, ['CICLOS.GERIR']),
     },
   ].filter((item) => item.available)
-  const availableWorkspaceCount = [
-    canViewAdministration,
-    canViewAssessments,
-    canViewIndicators,
-  ].filter(Boolean).length
-  const fallbackWorkspace =
-    availableWorkspaceCount > 1
-      ? 'dashboard'
-      : canViewAdministration
-        ? 'administration'
-        : canViewAssessments
-          ? 'assessments'
-          : canViewIndicators
-            ? 'indicators'
-            : 'dashboard'
   const requestedWorkspace = workspaceFromPath(location.pathname)
-  const activeWorkspace = isWorkspaceAvailable(requestedWorkspace, {
-    canViewAdministration,
-    canViewAssessments,
-    canViewIndicators,
-  })
-    ? requestedWorkspace
-    : fallbackWorkspace
+  const activeWorkspace =
+    requestedWorkspace &&
+    isWorkspaceAvailable(requestedWorkspace, {
+      canViewAdministration,
+      canViewAssessments,
+      canViewIndicators,
+    })
+      ? requestedWorkspace
+      : undefined
+  const routeState = requestedWorkspace ? (activeWorkspace ? undefined : 'forbidden') : 'not-found'
   const assessmentJourney = journeyFromSearch(location.search)
   const assessmentId = assessmentIdFromPath(location.pathname)
   const administrationSection = administrationSectionFromPath(location.pathname)
@@ -466,9 +480,13 @@ function App({ api = defaultApiClient }: AppProps) {
           <div>
             <span className="workspace-sidebar__account-label">Conta ativa</span>
             <strong title={user.displayName}>{user.displayName}</strong>
+            <div className="workspace-sidebar__profile-line">
+              <span className="workspace-sidebar__account-profile">{profileDescription(user)}</span>
+              {isSidebarOpen ? <ProfileAccessHelp user={user} /> : null}
+            </div>
           </div>
         </section>
-        <nav aria-label="Módulos disponíveis" className="workspace-nav" id="workspace-sidebar">
+        <SidebarNavigation>
           <div className="workspace-nav__section">
             <p className="workspace-nav__label">Visão geral</p>
             <button
@@ -537,7 +555,7 @@ function App({ api = defaultApiClient }: AppProps) {
               ) : null}
             </div>
           ) : null}
-        </nav>
+        </SidebarNavigation>
         <div className="workspace-sidebar__footer">
           <button
             className="button workspace-sidebar__sign-out"
@@ -552,7 +570,9 @@ function App({ api = defaultApiClient }: AppProps) {
       </div>
 
       <main className="workspace" aria-labelledby="page-title" ref={workspaceRef} tabIndex={-1}>
-        {canViewAdministration || canViewAssessments || canViewIndicators ? (
+        {routeState ? (
+          <WorkspaceRouteState kind={routeState} onGoToDashboard={() => navigate('dashboard')} />
+        ) : canViewAdministration || canViewAssessments || canViewIndicators ? (
           <div className="workspace__content">
             {activeWorkspace === 'dashboard' ? (
               <DashboardPanel
@@ -581,6 +601,11 @@ function App({ api = defaultApiClient }: AppProps) {
                 canReopenAssessments={canReopenAssessments}
                 canRecordFeedback={canRecordAssessmentFeedback}
                 isAdministrativeView={canViewAdministration && canViewAllAssessments}
+                canUseAdministrativeFilters={
+                  canViewAdministration &&
+                  canViewAllAssessments &&
+                  canUseAdministrativeAssessmentFilters
+                }
                 journey={assessmentJourney}
                 assessmentId={assessmentId}
                 canSubmitSelfAssessment={canSubmitSelfAssessment}
@@ -598,11 +623,14 @@ function App({ api = defaultApiClient }: AppProps) {
             ) : null}
           </div>
         ) : (
-          <section className="card empty-state" aria-labelledby="no-workspace-title">
-            <LayoutDashboard aria-hidden="true" size={28} strokeWidth={1.5} />
-            <h2 id="no-workspace-title">Nenhum módulo disponível</h2>
-            <p>Esta conta não possui permissões de negócio ativas.</p>
-          </section>
+          <EmptyState
+            className="card empty-state--route"
+            headingLevel={2}
+            title="Nenhum módulo disponível"
+          >
+            Esta conta não possui permissões de negócio ativas. Solicite ao responsável o perfil
+            necessário para acessar um módulo.
+          </EmptyState>
         )}
       </main>
       <footer className="application-footer application-footer--workspace">
@@ -612,7 +640,7 @@ function App({ api = defaultApiClient }: AppProps) {
             <span>Ambiente interno</span>
           </p>
           <p className="application-footer__credit">
-            Desenvolvido por{' '}
+            Todos os direitos reservados à Rodogarcia. Desenvolvido por{' '}
             <a
               href="https://www.linkedin.com/in/dev-lucasandrade/"
               target="_blank"
@@ -631,6 +659,287 @@ function hasAnyPermission(user: CurrentUser, expectedPermissions: readonly strin
   return expectedPermissions.some((permission) => user.permissions.includes(permission))
 }
 
+function WorkspaceRouteState({
+  kind,
+  onGoToDashboard,
+}: {
+  kind: 'forbidden' | 'not-found'
+  onGoToDashboard: () => void
+}) {
+  const isNotFound = kind === 'not-found'
+
+  return (
+    <EmptyState
+      className="card empty-state--route"
+      headingLevel={2}
+      icon={
+        isNotFound ? (
+          <FileQuestion size={30} strokeWidth={1.6} />
+        ) : (
+          <ShieldAlert size={30} strokeWidth={1.6} />
+        )
+      }
+      title={isNotFound ? 'Página não encontrada' : 'Acesso não disponível'}
+      action={
+        <button className="button button--primary" type="button" onClick={onGoToDashboard}>
+          Ir para a página inicial
+        </button>
+      }
+    >
+      {isNotFound
+        ? 'O endereço informado não existe ou foi movido. Sua sessão continua ativa.'
+        : 'Sua sessão continua ativa, mas seu perfil não possui permissão para abrir esta página.'}
+    </EmptyState>
+  )
+}
+
+function profileDescription(user: CurrentUser): string {
+  const labels = (user.roles ?? [])
+    .map((role) => profileLabels[role])
+    .filter((label): label is string => Boolean(label))
+
+  if (labels.length === 0) {
+    if (user.supremeAdministrator) {
+      return 'Perfil: Administrador técnico'
+    }
+    return 'Perfil: acesso configurado'
+  }
+
+  return `${labels.length === 1 ? 'Perfil' : 'Perfis'}: ${labels.join(' · ')}`
+}
+
+type ProfileCapability = {
+  label: string
+  description: string
+}
+
+function ProfileAccessHelp({ user }: { user: CurrentUser }) {
+  const capabilities = profileCapabilities(user)
+
+  return (
+    <ContextHelp
+      ariaLabel="Entenda o que esta conta pode acessar"
+      estimatedHeight={Math.min(432, 108 + capabilities.length * 52)}
+      title="O que esta conta pode acessar"
+    >
+      <ul>
+        {capabilities.map((capability) => (
+          <li key={capability.label}>
+            <span>{capability.label}: </span>
+            {capability.description}
+          </li>
+        ))}
+      </ul>
+      <p className="context-help__note">
+        Vínculos, ciclo, questionário e escopo continuam validados pelo servidor.
+      </p>
+    </ContextHelp>
+  )
+}
+
+function profileCapabilities(user: CurrentUser): readonly ProfileCapability[] {
+  const capabilities: ProfileCapability[] = []
+  const administrationSections = [
+    hasAnyPermission(user, [
+      'USUARIOS.LER',
+      'USUARIOS.CRIAR',
+      'USUARIOS.ALTERAR',
+      'ACESSOS.GERIR',
+      'ACESSOS.NEGOCIO.GERIR',
+    ])
+      ? 'contas e acessos'
+      : undefined,
+    hasAnyPermission(user, ['CADASTROS.GERIR']) ? 'cadastros' : undefined,
+    hasAnyPermission(user, [
+      'VINCULOS_GESTOR_COLABORADOR.GERIR',
+      'VINCULOS_USUARIO_COLABORADOR.GERIR',
+      'VINCULOS_DIRETORIA_GERENCIA.GERIR',
+    ])
+      ? 'vínculos'
+      : undefined,
+    hasAnyPermission(user, ['QUESTIONARIOS.GERIR']) ? 'questionários' : undefined,
+    hasAnyPermission(user, ['CICLOS.GERIR']) ? 'ciclos' : undefined,
+  ].filter((section): section is string => Boolean(section))
+
+  if (administrationSections.length > 0) {
+    capabilities.push({
+      label: 'Administração',
+      description: `acessar ${administrationSections.join(', ')}.`,
+    })
+  }
+  if (hasAnyPermission(user, ['AVALIACOES.AVALIAR_VINCULADOS'])) {
+    capabilities.push({
+      label: 'Avaliações de equipe',
+      description: 'criar e acompanhar avaliações de colaboradores vinculados.',
+    })
+  }
+  if (hasAnyPermission(user, ['AVALIACOES.AVALIAR_GERENCIAS_VINCULADAS'])) {
+    capabilities.push({
+      label: 'Avaliações de gerência',
+      description: 'criar e acompanhar avaliações de gerências vinculadas.',
+    })
+  }
+  if (
+    hasAnyPermission(user, [
+      'AUTOAVALIACOES.PREENCHER_PROPRIA',
+      'AUTOAVALIACOES.ENVIAR_PROPRIA',
+      'AUTOAVALIACOES.VISUALIZAR_PROPRIA',
+    ])
+  ) {
+    capabilities.push({
+      label: 'Autoavaliação',
+      description:
+        'preencher, enviar ou consultar a própria avaliação quando ela estiver atribuída.',
+    })
+  }
+  if (hasAnyPermission(user, ['AVALIACOES.VISUALIZAR_PROPRIAS_RESPOSTAS'])) {
+    capabilities.push({
+      label: 'Próprias respostas',
+      description: 'consultar avaliações feitas por esta conta como avaliadora.',
+    })
+  }
+  if (hasAnyPermission(user, ['AVALIACOES.VISUALIZAR_TODAS'])) {
+    capabilities.push({
+      label: 'Avaliações individuais',
+      description: 'consultar avaliações dentro do escopo administrativo autorizado.',
+    })
+  }
+  if (hasAnyPermission(user, ['AVALIACOES.PUBLICAR', 'AVALIACOES.REABRIR'])) {
+    capabilities.push({
+      label: 'Decisões de avaliação',
+      description: 'publicar ou reabrir avaliações dentro do escopo autorizado.',
+    })
+  }
+  if (hasAnyPermission(user, ['AVALIACOES.REGISTRAR_FEEDBACK_PROPRIO'])) {
+    capabilities.push({
+      label: 'Feedback',
+      description: 'registrar o feedback das avaliações feitas por esta conta.',
+    })
+  }
+  if (hasAnyPermission(user, ['INDICADORES.VISUALIZAR'])) {
+    capabilities.push({
+      label: 'Indicadores',
+      description: 'consultar resultados agregados que atendam à regra de confidencialidade.',
+    })
+  }
+  if (hasAnyPermission(user, ['DADOS.EXPORTAR'])) {
+    capabilities.push({
+      label: 'Exportação',
+      description: 'exportar dados agregados quando a consulta for permitida.',
+    })
+  }
+
+  return capabilities.length > 0
+    ? capabilities
+    : [{ label: 'Acesso disponível', description: 'usar somente a página inicial da plataforma.' }]
+}
+
+function SidebarNavigation({ children }: { children: ReactNode }) {
+  const navigationRef = useRef<HTMLElement>(null)
+  const [canScrollUp, setCanScrollUp] = useState(false)
+  const [canScrollDown, setCanScrollDown] = useState(false)
+
+  useEffect(() => {
+    const navigation = navigationRef.current
+    if (!navigation) {
+      return undefined
+    }
+
+    function syncScrollAffordances() {
+      const scrollableNavigation = navigationRef.current
+      if (!scrollableNavigation) {
+        return
+      }
+
+      const maximumScroll = scrollableNavigation.scrollHeight - scrollableNavigation.clientHeight
+      const nextCanScrollUp = scrollableNavigation.scrollTop > 1
+      const nextCanScrollDown = maximumScroll - scrollableNavigation.scrollTop > 1
+      setCanScrollUp((current) => (current === nextCanScrollUp ? current : nextCanScrollUp))
+      setCanScrollDown((current) => (current === nextCanScrollDown ? current : nextCanScrollDown))
+    }
+
+    syncScrollAffordances()
+    navigation.addEventListener('scroll', syncScrollAffordances, { passive: true })
+    window.addEventListener('resize', syncScrollAffordances)
+
+    const contentObserver = new MutationObserver(syncScrollAffordances)
+    contentObserver.observe(navigation, { childList: true, subtree: true })
+    const resizeObserver =
+      typeof ResizeObserver === 'undefined' ? undefined : new ResizeObserver(syncScrollAffordances)
+    resizeObserver?.observe(navigation)
+
+    return () => {
+      navigation.removeEventListener('scroll', syncScrollAffordances)
+      window.removeEventListener('resize', syncScrollAffordances)
+      contentObserver.disconnect()
+      resizeObserver?.disconnect()
+    }
+  }, [])
+
+  function scrollNavigation(direction: 'up' | 'down') {
+    const navigation = navigationRef.current
+    if (!navigation) {
+      return
+    }
+
+    const amount = Math.max(120, Math.round(navigation.clientHeight * 0.62))
+    const top = direction === 'up' ? -amount : amount
+    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    if (typeof navigation.scrollBy === 'function') {
+      navigation.scrollBy({ top, behavior: reduceMotion ? 'auto' : 'smooth' })
+      return
+    }
+    navigation.scrollTop += top
+  }
+
+  return (
+    <div
+      className="workspace-sidebar__navigation"
+      data-scroll-down={canScrollDown || undefined}
+      data-scroll-up={canScrollUp || undefined}
+    >
+      <div
+        aria-hidden="true"
+        className="workspace-sidebar__navigation-fade workspace-sidebar__navigation-fade--top"
+      />
+      {canScrollUp ? (
+        <button
+          aria-controls="workspace-sidebar"
+          aria-label="Subir no menu"
+          className="workspace-sidebar__navigation-control workspace-sidebar__navigation-control--up"
+          onClick={() => scrollNavigation('up')}
+          type="button"
+        >
+          <ChevronUp aria-hidden="true" size={18} strokeWidth={2} />
+        </button>
+      ) : null}
+      <nav
+        aria-label="Módulos disponíveis"
+        className="workspace-nav"
+        id="workspace-sidebar"
+        ref={navigationRef}
+      >
+        {children}
+      </nav>
+      <div
+        aria-hidden="true"
+        className="workspace-sidebar__navigation-fade workspace-sidebar__navigation-fade--bottom"
+      />
+      {canScrollDown ? (
+        <button
+          aria-controls="workspace-sidebar"
+          aria-label="Descer no menu"
+          className="workspace-sidebar__navigation-control workspace-sidebar__navigation-control--down"
+          onClick={() => scrollNavigation('down')}
+          type="button"
+        >
+          <ChevronDown aria-hidden="true" size={18} strokeWidth={2} />
+        </button>
+      ) : null}
+    </div>
+  )
+}
+
 function useLocation(): { pathname: string; search: string } {
   const locationKey = useSyncExternalStore(
     subscribeToLocation,
@@ -646,17 +955,32 @@ function subscribeToLocation(onStoreChange: () => void): () => void {
   return () => window.removeEventListener('popstate', onStoreChange)
 }
 
-function workspaceFromPath(pathname: string): Workspace {
-  if (pathname === '/administracao' || pathname.startsWith('/administracao/')) {
+function workspaceFromPath(pathname: string): Workspace | undefined {
+  const normalizedPath =
+    pathname.length > 1 && pathname.endsWith('/') ? pathname.slice(0, -1) : pathname
+
+  if (
+    normalizedPath === '/administracao' ||
+    /^\/administracao\/(usuarios|cadastros|vinculos|questionarios|ciclos)$/.test(normalizedPath)
+  ) {
     return 'administration'
   }
-  if (pathname === '/avaliacoes' || pathname.startsWith('/avaliacoes/')) {
+  if (normalizedPath === '/avaliacoes') {
     return 'assessments'
   }
-  if (pathname === '/indicadores') {
+  if (/^\/avaliacoes\/[^/]+$/.test(normalizedPath)) {
+    try {
+      return decodeURIComponent(normalizedPath.slice('/avaliacoes/'.length))
+        ? 'assessments'
+        : undefined
+    } catch {
+      return undefined
+    }
+  }
+  if (normalizedPath === '/indicadores') {
     return 'indicators'
   }
-  return 'dashboard'
+  return normalizedPath === '/' ? 'dashboard' : undefined
 }
 
 function workspacePath(

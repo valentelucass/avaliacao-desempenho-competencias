@@ -14,6 +14,8 @@ import type {
   UserCollaboratorLinkOptions,
 } from '../../api/contracts'
 import { FeedbackMessage } from '../../ui/Feedback'
+import { EmptyState } from '../../ui/EmptyState'
+import { ContextHelp } from '../../ui/ContextHelp'
 import { Pagination } from '../../ui/Pagination'
 import { safeErrorMessage } from '../../ui/safeErrorMessage'
 import { useClientPagination } from '../../ui/useClientPagination'
@@ -335,7 +337,19 @@ export function RelationshipAdministrationPanel({
       <div className="section-heading">
         <div>
           <p className="eyebrow">Administração de vínculos</p>
-          <h2 id="relationship-administration-title">Gestão e identidade dos colaboradores</h2>
+          <div className="context-help__heading">
+            <h2 id="relationship-administration-title">Gestão e identidade dos colaboradores</h2>
+            <ContextHelp title="Como os vínculos definem o escopo">
+              <p>
+                O vínculo gestor-colaborador define quem o gestor pode avaliar. O vínculo entre
+                Diretoria e Gerência aplica a mesma regra para avaliações de gerência.
+              </p>
+              <p className="context-help__note">
+                Encerrar um vínculo preserva o histórico; não exclui avaliações nem registros
+                anteriores.
+              </p>
+            </ContextHelp>
+          </div>
           <p className="muted">
             Vínculos determinam escopo de acesso. Encerrar mantém o histórico e é validado pelo
             servidor em cada operação.
@@ -700,7 +714,12 @@ function RelationshipTable<Entry extends { id: string; startsOn: string | null }
   const pagination = useClientPagination(entries, 5)
 
   if (entries.length === 0) {
-    return <p className="muted">Não há vínculos ativos.</p>
+    return (
+      <EmptyState className="empty-state--compact" title="Nenhum vínculo ativo">
+        Não há vínculos registrados neste tipo. Crie um vínculo usando os dados ativos disponíveis
+        acima.
+      </EmptyState>
+    )
   }
 
   return (

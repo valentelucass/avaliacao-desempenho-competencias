@@ -10,6 +10,8 @@ import type {
   PermissionGrantEffect,
 } from '../../api/contracts'
 import { FeedbackMessage } from '../../ui/Feedback'
+import { ContextHelp } from '../../ui/ContextHelp'
+import { EmptyState } from '../../ui/EmptyState'
 import { Pagination } from '../../ui/Pagination'
 import { safeErrorMessage } from '../../ui/safeErrorMessage'
 import { useAccessibleDialog } from '../../ui/useAccessibleDialog'
@@ -40,7 +42,7 @@ type InitialAccountProfileOption = {
 const accountProfileCatalog: readonly InitialAccountProfileOption[] = [
   {
     value: 'ADMINISTRATOR',
-    label: 'Administrador',
+    label: 'Administrador técnico',
     hint: 'Administra a plataforma e os cadastros. Publicação, reabertura, indicadores e exportação são reservados a RH ou Diretoria.',
     roles: ['ADMINISTRADOR_PLATAFORMA'],
   },
@@ -52,7 +54,7 @@ const accountProfileCatalog: readonly InitialAccountProfileOption[] = [
   },
   {
     value: 'HUMAN_RESOURCES',
-    label: 'Gerência de RH',
+    label: 'RH',
     hint: 'Pode tomar decisões de publicação e reabertura e consultar ou exportar indicadores dentro das regras de privacidade.',
     roles: ['GERENCIA_RH'],
   },
@@ -64,7 +66,7 @@ const accountProfileCatalog: readonly InitialAccountProfileOption[] = [
   },
   {
     value: 'USER',
-    label: 'Usuário comum',
+    label: 'Colaborador',
     hint: 'Acessa somente a própria autoavaliação quando houver vínculo, ciclo e questionário.',
     roles: ['COLABORADOR'],
   },
@@ -75,12 +77,12 @@ const passwordResetField = ['temporary', 'Password'].join('')
 const roleCatalog: readonly AccessCatalogItem[] = [
   {
     code: 'ADMINISTRADOR_PLATAFORMA',
-    label: 'Administrador',
+    label: 'Administrador técnico',
   },
   { code: 'GESTOR', label: 'Gestor' },
-  { code: 'GERENCIA_RH', label: 'Gerência de RH' },
+  { code: 'GERENCIA_RH', label: 'RH' },
   { code: 'DIRETORIA', label: 'Diretoria' },
-  { code: 'COLABORADOR', label: 'Usuário comum' },
+  { code: 'COLABORADOR', label: 'Colaborador' },
 ]
 
 const permissionCatalog: readonly AccessCatalogItem[] = [
@@ -480,6 +482,7 @@ export function UserAdministrationPanel({
     !selectedUser?.logicallyDeleted
   const hasAnyAdministrationPermission =
     canReadUsers || canCreateUsers || canUpdateUsers || canManageAccess
+  const hasVisibleUserOperation = canReadUsers || (canCreateUsers && accountProfiles.length > 0)
 
   useAccessibleDialog({
     dialogRef: selectedUserDialogRef,
@@ -492,7 +495,19 @@ export function UserAdministrationPanel({
       <div className="section-heading">
         <div>
           <p className="eyebrow">Administração de acesso</p>
-          <h2 id="user-administration-title">Contas e concessões</h2>
+          <div className="context-help__heading">
+            <h2 id="user-administration-title">Contas e concessões</h2>
+            <ContextHelp title="Perfil, concessões e acesso efetivo">
+              <p>
+                Cada conta recebe um perfil de negócio. Ele orienta as ações disponíveis, mas não
+                substitui as validações de vínculo, escopo e segregação feitas pelo servidor.
+              </p>
+              <p className="context-help__note">
+                Alterar uma conta não dá acesso retroativo a avaliações nem revela dados fora do
+                escopo autorizado.
+              </p>
+            </ContextHelp>
+          </div>
           <p className="muted">
             Cada conta recebe exatamente um perfil. A autorização efetiva e a segregação de funções
             são sempre verificadas no servidor.
@@ -517,6 +532,14 @@ export function UserAdministrationPanel({
         <FeedbackMessage kind="error">
           Você não possui permissão para consultar ou administrar contas locais.
         </FeedbackMessage>
+      ) : null}
+
+      {hasAnyAdministrationPermission && !hasVisibleUserOperation ? (
+        <EmptyState title="Nenhuma operação de contas disponível">
+          Esta conta possui uma permissão administrativa, mas não pode consultar contas nem conceder
+          um perfil disponível. Solicite o acesso “Consultar contas” ao administrador técnico
+          responsável.
+        </EmptyState>
       ) : null}
 
       {canCreateUsers && accountProfiles.length > 0 ? (
@@ -624,7 +647,10 @@ export function UserAdministrationPanel({
           ) : null}
           {listError ? <FeedbackMessage kind="error">{listError}</FeedbackMessage> : null}
           {!isLoadingUsers && !listError && users.length === 0 ? (
-            <FeedbackMessage kind="warning">Não há contas locais cadastradas.</FeedbackMessage>
+            <EmptyState className="empty-state--compact" title="Nenhuma conta local cadastrada">
+              Ainda não há contas que esta sessão possa consultar. Crie uma conta ou atualize a
+              lista para verificar novamente.
+            </EmptyState>
           ) : null}
 
           {!isLoadingUsers && !listError && users.length > 0 ? (

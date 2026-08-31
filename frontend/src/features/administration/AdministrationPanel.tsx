@@ -1,6 +1,6 @@
 import type { ApiClient } from '../../api/client'
 import type { Permission } from '../../api/contracts'
-import { FeedbackMessage } from '../../ui/Feedback'
+import { EmptyState } from '../../ui/EmptyState'
 import { CycleAdministrationPanel } from './CycleAdministrationPanel'
 import { MasterDataAdministrationPanel } from './MasterDataAdministrationPanel'
 import { QuestionnaireAdministrationPanel } from './QuestionnaireAdministrationPanel'
@@ -58,6 +58,7 @@ export function AdministrationPanel({
       isAvailable: hasAny(
         'VINCULOS_GESTOR_COLABORADOR.GERIR',
         'VINCULOS_USUARIO_COLABORADOR.GERIR',
+        'VINCULOS_DIRETORIA_GERENCIA.GERIR',
       ),
     },
     {
@@ -76,15 +77,15 @@ export function AdministrationPanel({
 
   if (!activeSection) {
     return (
-      <section aria-labelledby="administration-title" className="administration-shell">
-        <div className="section-heading">
-          <div>
-            <h2 id="administration-title">Administração indisponível</h2>
-          </div>
-        </div>
-        <FeedbackMessage kind="error">
-          Você não possui uma permissão administrativa disponível.
-        </FeedbackMessage>
+      <section aria-label="Administração indisponível" className="administration-shell">
+        <EmptyState
+          className="card empty-state--route"
+          headingLevel={2}
+          title="Administração indisponível"
+        >
+          Esta conta não possui uma permissão administrativa disponível. Solicite ao administrador
+          técnico o perfil ou a concessão necessária.
+        </EmptyState>
       </section>
     )
   }
