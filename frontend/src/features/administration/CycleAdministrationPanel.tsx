@@ -17,6 +17,7 @@ import { ContextHelp } from '../../ui/ContextHelp'
 import { Pagination } from '../../ui/Pagination'
 import { safeErrorMessage } from '../../ui/safeErrorMessage'
 import { useClientPagination } from '../../ui/useClientPagination'
+import { useInlinePanelFocus } from '../../ui/useInlinePanelFocus'
 
 type CycleAdministrationPanelProps = {
   api: ApiClient
@@ -57,6 +58,7 @@ export function CycleAdministrationPanel({
   const closingId = useId()
   const timeZoneId = useId()
   const selfAssessmentId = useId()
+  const questionnairesFieldsetId = useId()
   const [cycles, setCycles] = useState<readonly EvaluationCycle[]>([])
   const [versions, setVersions] = useState<readonly ApprovedQuestionnaireVersion[]>([])
   const [selectedCycle, setSelectedCycle] = useState<EvaluationCycle>()
@@ -71,6 +73,25 @@ export function CycleAdministrationPanel({
   const [isTransitioning, setIsTransitioning] = useState(false)
   const [error, setError] = useState<string>()
   const [notice, setNotice] = useState<string>()
+  const {
+    highlightPulse,
+    isFieldHighlighted,
+    isHighlighted,
+    panelRef: configurationPanelRef,
+    revealInlinePanel,
+  } = useInlinePanelFocus<HTMLFormElement>()
+  const configurationFieldIds = useMemo(
+    () => [
+      codeId,
+      nameId,
+      timeZoneId,
+      openingId,
+      closingId,
+      selfAssessmentId,
+      questionnairesFieldsetId,
+    ],
+    [closingId, codeId, nameId, openingId, questionnairesFieldsetId, selfAssessmentId, timeZoneId],
+  )
 
   const canManageCycles = permissions.includes('CICLOS.GERIR')
   const optionIndex = useMemo(
@@ -142,6 +163,11 @@ export function CycleAdministrationPanel({
     setNotice(undefined)
   }, [])
 
+  const startNewCycle = useCallback(() => {
+    resetForm()
+    revealInlinePanel([codeId])
+  }, [codeId, resetForm, revealInlinePanel])
+
   const selectCycle = useCallback(
     async (cycle: EvaluationCycle) => {
       setSelectedCycle(cycle)
@@ -153,6 +179,7 @@ export function CycleAdministrationPanel({
       if (cycle.status !== 'RASCUNHO') {
         setForm(emptyForm)
         setSelectedOptionKeys([])
+        revealInlinePanel()
         return
       }
 
@@ -173,6 +200,7 @@ export function CycleAdministrationPanel({
             optionKey(questionnaire.questionnaireVersionId, questionnaire),
           ),
         )
+        revealInlinePanel(configurationFieldIds)
       } catch (requestError) {
         if (isAuthenticationError(requestError)) {
           onSessionExpired()
@@ -183,7 +211,7 @@ export function CycleAdministrationPanel({
         setIsLoadingDraft(false)
       }
     },
-    [api, onSessionExpired],
+    [api, configurationFieldIds, onSessionExpired, revealInlinePanel],
   )
 
   async function saveCycle(event: FormEvent<HTMLFormElement>) {
@@ -355,6 +383,23 @@ export function CycleAdministrationPanel({
     )
   }
 
+  const inlineRevealClassName = (fieldId: string, baseClassName: string) => {
+    if (!isFieldHighlighted(fieldId)) {
+      return baseClassName
+    }
+
+    return `${baseClassName} field--inline-reveal inline-reveal-pulse--${highlightPulse % 2 === 0 ? 'even' : 'odd'}`
+  }
+
+  const fieldClassName = (fieldId: string) => inlineRevealClassName(fieldId, 'field')
+  const questionnairesAreHighlighted = isFieldHighlighted(questionnairesFieldsetId)
+  const questionnaireRevealClassName = (isSelected: boolean) =>
+    questionnairesAreHighlighted && isSelected
+      ? `cycle-questionnaire-table__row--inline-reveal inline-reveal-pulse--${
+          highlightPulse % 2 === 0 ? 'even' : 'odd'
+        }`
+      : undefined
+
   return (
     <section aria-labelledby="cycle-administration-title" className="stack-form">
       <div className="section-heading">
@@ -397,7 +442,7 @@ export function CycleAdministrationPanel({
             <RefreshCw aria-hidden="true" size={17} strokeWidth={2} />
             Atualizar
           </button>
-          <button className="button button--primary" type="button" onClick={resetForm}>
+          <button className="button button--primary" type="button" onClick={startNewCycle}>
             <Plus aria-hidden="true" size={17} strokeWidth={2} />
             Novo ciclo
           </button>
@@ -411,7 +456,15 @@ export function CycleAdministrationPanel({
       ) : null}
 
       <section className="card" aria-labelledby="cycle-list-title">
-        <h3 id="cycle-list-title">Ciclos disponíveis</h3>
+        <div className="context-help__heading">
+          <h3 id="cycle-list-title">Ciclos disponíveis</h3>
+          <ContextHelp title="Quando consultar ou configurar um ciclo">
+            <p>
+              Ciclos em rascunho podem ser configurados. Ciclos abertos ou encerrados ficam
+              disponíveis somente para consulta, preservando a regra aplicada às avaliações.
+            </p>
+          </ContextHelp>
+        </div>
         {!isLoading && cycles.length === 0 ? (
           <EmptyState className="empty-state--compact" title="Nenhum ciclo disponível">
             Ainda não há ciclos que esta conta possa consultar. Crie um ciclo para iniciar a
@@ -470,14 +523,29 @@ export function CycleAdministrationPanel({
       </section>
 
       <form
-        className="card stack-form cycle-configuration-form"
+        aria-labelledby="cycle-configuration-title"
+        className={`card stack-form cycle-configuration-form inline-panel-focus${
+          isHighlighted ? ' inline-panel-focus--highlighted' : ''
+        }`}
         onSubmit={saveCycle}
         noValidate
         aria-busy={isSaving}
+        ref={configurationPanelRef}
+        tabIndex={-1}
       >
         <div className="card-title-row">
           <div>
-            <h3>{selectedCycle ? `Configuração: ${selectedCycle.name}` : 'Novo ciclo'}</h3>
+            <div className="context-help__heading">
+              <h3 id="cycle-configuration-title">
+                {selectedCycle ? `Configuração: ${selectedCycle.name}` : 'Novo ciclo'}
+              </h3>
+              <ContextHelp title="O que pode ser configurado">
+                <p>
+                  Código, vigência, autoavaliação e questionários são definidos apenas no rascunho.
+                  Depois da abertura, a configuração é preservada para manter o histórico.
+                </p>
+              </ContextHelp>
+            </div>
             {selectedCycle && selectedCycle.status !== 'RASCUNHO' ? (
               <p className="muted">
                 Ciclos abertos ou encerrados são apenas consultáveis nesta tela.
@@ -491,7 +559,7 @@ export function CycleAdministrationPanel({
           <FeedbackMessage kind="info">Carregando configuração do rascunho…</FeedbackMessage>
         ) : null}
         <div className="cycle-configuration-form__details-grid">
-          <div className="field">
+          <div className={fieldClassName(codeId)}>
             <label htmlFor={codeId}>Código do ciclo</label>
             <input
               id={codeId}
@@ -501,7 +569,7 @@ export function CycleAdministrationPanel({
               onChange={(event) => setForm((current) => ({ ...current, code: event.target.value }))}
             />
           </div>
-          <div className="field">
+          <div className={fieldClassName(nameId)}>
             <label htmlFor={nameId}>Nome do ciclo</label>
             <input
               id={nameId}
@@ -511,7 +579,7 @@ export function CycleAdministrationPanel({
               onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
             />
           </div>
-          <div className="field">
+          <div className={fieldClassName(timeZoneId)}>
             <label htmlFor={timeZoneId}>Fuso horário</label>
             <input
               id={timeZoneId}
@@ -523,7 +591,7 @@ export function CycleAdministrationPanel({
               }
             />
           </div>
-          <div className="field">
+          <div className={fieldClassName(openingId)}>
             <label htmlFor={openingId}>Abertura</label>
             <input
               id={openingId}
@@ -535,7 +603,7 @@ export function CycleAdministrationPanel({
               }
             />
           </div>
-          <div className="field">
+          <div className={fieldClassName(closingId)}>
             <label htmlFor={closingId}>Encerramento</label>
             <input
               id={closingId}
@@ -547,7 +615,10 @@ export function CycleAdministrationPanel({
               }
             />
           </div>
-          <label className="checkbox-field" htmlFor={selfAssessmentId}>
+          <label
+            className={inlineRevealClassName(selfAssessmentId, 'checkbox-field')}
+            htmlFor={selfAssessmentId}
+          >
             <input
               id={selfAssessmentId}
               type="checkbox"
@@ -562,8 +633,15 @@ export function CycleAdministrationPanel({
         </div>
 
         <fieldset
-          className="filter-fieldset"
+          className={`filter-fieldset${
+            questionnairesAreHighlighted
+              ? ` fieldset--inline-reveal inline-reveal-pulse--${
+                  highlightPulse % 2 === 0 ? 'even' : 'odd'
+                }`
+              : ''
+          }`}
           disabled={selectedCycle?.status !== undefined && selectedCycle.status !== 'RASCUNHO'}
+          id={questionnairesFieldsetId}
         >
           <legend>Questionários aplicados</legend>
           {versions.length === 0 && !isLoading ? (
@@ -586,49 +664,60 @@ export function CycleAdministrationPanel({
                   </tr>
                 </thead>
                 <tbody>
-                  {versionsPagination.items.map((version) => (
-                    <tr key={version.questionnaireVersionId}>
-                      <td data-label="Questionário">
-                        <strong>{version.questionnaireName}</strong>
-                        <span className="cycle-questionnaire-table__title">{version.title}</span>
-                      </td>
-                      <td data-label="Versão">v{version.versionNumber}</td>
-                      <td data-label="Configuração">
-                        {version.configurationOptions.map((option) => (
-                          <span
-                            className="cycle-questionnaire-table__configuration"
-                            key={optionKey(version.questionnaireVersionId, option)}
-                          >
-                            {formatConfigurationOption(option)}
-                          </span>
-                        ))}
-                      </td>
-                      <td data-label="Aplicar">
-                        {version.configurationOptions.map((option) => {
-                          const key = optionKey(version.questionnaireVersionId, option)
-                          const configurationLabel = formatConfigurationOption(option)
-                          return (
-                            <label
-                              className="cycle-questionnaire-table__selection"
-                              htmlFor={key}
-                              key={key}
+                  {versionsPagination.items.map((version) => {
+                    const isSelected = version.configurationOptions.some((option) =>
+                      selectedOptionKeys.includes(
+                        optionKey(version.questionnaireVersionId, option),
+                      ),
+                    )
+
+                    return (
+                      <tr
+                        className={questionnaireRevealClassName(isSelected)}
+                        key={version.questionnaireVersionId}
+                      >
+                        <td data-label="Questionário">
+                          <strong>{version.questionnaireName}</strong>
+                          <span className="cycle-questionnaire-table__title">{version.title}</span>
+                        </td>
+                        <td data-label="Versão">v{version.versionNumber}</td>
+                        <td data-label="Configuração">
+                          {version.configurationOptions.map((option) => (
+                            <span
+                              className="cycle-questionnaire-table__configuration"
+                              key={optionKey(version.questionnaireVersionId, option)}
                             >
-                              <input
-                                aria-label={configurationLabel}
-                                id={key}
-                                type="checkbox"
-                                checked={selectedOptionKeys.includes(key)}
-                                onChange={(event) =>
-                                  toggleQuestionnaireOption(key, event.target.checked)
-                                }
-                              />
-                              <span>Aplicar</span>
-                            </label>
-                          )
-                        })}
-                      </td>
-                    </tr>
-                  ))}
+                              {formatConfigurationOption(option)}
+                            </span>
+                          ))}
+                        </td>
+                        <td data-label="Aplicar">
+                          {version.configurationOptions.map((option) => {
+                            const key = optionKey(version.questionnaireVersionId, option)
+                            const configurationLabel = formatConfigurationOption(option)
+                            return (
+                              <label
+                                className="cycle-questionnaire-table__selection"
+                                htmlFor={key}
+                                key={key}
+                              >
+                                <input
+                                  aria-label={configurationLabel}
+                                  id={key}
+                                  type="checkbox"
+                                  checked={selectedOptionKeys.includes(key)}
+                                  onChange={(event) =>
+                                    toggleQuestionnaireOption(key, event.target.checked)
+                                  }
+                                />
+                                <span>Aplicar</span>
+                              </label>
+                            )
+                          })}
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
               <Pagination
@@ -661,7 +750,15 @@ export function CycleAdministrationPanel({
 
       {selectedCycle?.status === 'RASCUNHO' ? (
         <section className="card stack-form" aria-labelledby="cycle-transition-title">
-          <h3 id="cycle-transition-title">Abrir ciclo</h3>
+          <div className="context-help__heading">
+            <h3 id="cycle-transition-title">Abrir ciclo</h3>
+            <ContextHelp title="O efeito de abrir o ciclo">
+              <p>
+                A abertura inicia a vigência e bloqueia a edição da configuração. Confirme somente
+                quando a janela e os questionários aplicados estiverem revisados.
+              </p>
+            </ContextHelp>
+          </div>
           <p className="muted">
             Ao abrir, a configuração do ciclo deixa de ser editável. Confirme somente após revisar a
             janela e os questionários aplicados.
@@ -681,7 +778,15 @@ export function CycleAdministrationPanel({
       ) : null}
       {selectedCycle?.status === 'ABERTO' ? (
         <section className="card stack-form" aria-labelledby="cycle-close-title">
-          <h3 id="cycle-close-title">Encerrar ciclo</h3>
+          <div className="context-help__heading">
+            <h3 id="cycle-close-title">Encerrar ciclo</h3>
+            <ContextHelp title="O efeito de encerrar o ciclo">
+              <p>
+                O encerramento impede a criação de novas avaliações naquele ciclo. A transição é
+                validada e auditada pelo servidor.
+              </p>
+            </ContextHelp>
+          </div>
           <p className="muted">
             O encerramento impede novas avaliações. A API confirma a transição e a audita.
           </p>
@@ -702,7 +807,15 @@ export function CycleAdministrationPanel({
         <section className="card stack-form" aria-labelledby="applied-questionnaire-title">
           <div className="card-title-row">
             <div>
-              <h3 id="applied-questionnaire-title">Questionário aplicado</h3>
+              <div className="context-help__heading">
+                <h3 id="applied-questionnaire-title">Questionário aplicado</h3>
+                <ContextHelp title="Por que este conteúdo é somente leitura">
+                  <p>
+                    Esta é a versão que ficou vinculada ao ciclo. Ela pode ser consultada para
+                    conferência, mas perguntas, opções e cálculo não podem ser alterados aqui.
+                  </p>
+                </ContextHelp>
+              </div>
               <p className="muted">
                 Consulte o conteúdo que ficará vinculado ao ciclo. Esta visualização não permite
                 alterar perguntas, opções ou regras de cálculo.

@@ -5,6 +5,7 @@ import { isAuthenticationError } from '../../api/client'
 import type { ApiClient } from '../../api/client'
 import type {
   AssessmentDetail,
+  AssessmentCreationCycleOption,
   AssessmentSummary,
   AdministrativeCollaborator,
   EvaluationCycle,
@@ -67,7 +68,15 @@ export function AssessmentsPanel({
   })
   const [pageNumber, setPageNumber] = useState(1)
   const [cursorHistory, setCursorHistory] = useState<readonly string[]>([])
-  const [cycles, setCycles] = useState<readonly EvaluationCycle[]>([])
+  const [selfCreationCycles, setSelfCreationCycles] = useState<
+    readonly AssessmentCreationCycleOption[]
+  >([])
+  const [managerCreationCycles, setManagerCreationCycles] = useState<
+    readonly AssessmentCreationCycleOption[]
+  >([])
+  const [directorCreationCycles, setDirectorCreationCycles] = useState<
+    readonly AssessmentCreationCycleOption[]
+  >([])
   const [administrativeCycles, setAdministrativeCycles] = useState<readonly EvaluationCycle[]>([])
   const [administrativeCollaborators, setAdministrativeCollaborators] = useState<
     readonly AdministrativeCollaborator[]
@@ -251,13 +260,25 @@ export function AssessmentsPanel({
     }
 
     let isCurrent = true
-    async function loadCycles() {
+    async function loadCreationCycles() {
       setIsLoadingCycles(true)
       setCreationError(undefined)
       try {
-        const availableCycles = await api.listAllCycles()
+        const [selfCycles, managerCycles, directorCycles] = await Promise.all([
+          canCreateSelfAssessment
+            ? api.listAssessmentCreationCycleOptions('AUTOAVALIACAO')
+            : Promise.resolve([]),
+          canCreateManagerAssessment
+            ? api.listAssessmentCreationCycleOptions('GESTOR')
+            : Promise.resolve([]),
+          canCreateDirectorAssessment
+            ? api.listAssessmentCreationCycleOptions('DIRETORIA_GERENCIA')
+            : Promise.resolve([]),
+        ])
         if (isCurrent) {
-          setCycles(availableCycles)
+          setSelfCreationCycles(selfCycles)
+          setManagerCreationCycles(managerCycles)
+          setDirectorCreationCycles(directorCycles)
         }
       } catch (requestError) {
         if (isAuthenticationError(requestError)) {
@@ -275,7 +296,7 @@ export function AssessmentsPanel({
     }
 
     // oxlint-disable-next-line react/set-state-in-effect -- Network loading is asynchronous.
-    void loadCycles()
+    void loadCreationCycles()
     return () => {
       isCurrent = false
     }
@@ -591,12 +612,32 @@ export function AssessmentsPanel({
         </button>
       </div>
 
-      {!isLoading && !error ? (
+      {(!isLoading || assessmentPage.items.length > 0) && !error ? (
         <dl className="kpi-grid kpi-grid--summary" aria-label="Resumo de avaliações">
-          <Metric label="Total" value={assessmentMetrics.total} icon={<ClipboardList />} />
-          <Metric label="Rascunhos" value={assessmentMetrics.drafts} icon={<Plus />} />
-          <Metric label="Enviadas" value={assessmentMetrics.submitted} icon={<Send />} />
-          <Metric label="Publicadas" value={assessmentMetrics.published} icon={<CheckCircle2 />} />
+          <Metric
+            label="Total"
+            value={assessmentMetrics.total}
+            icon={<ClipboardList />}
+            help="Mostra as avaliações exibidas nesta página da lista, já respeitando o seu escopo."
+          />
+          <Metric
+            label="Rascunhos"
+            value={assessmentMetrics.drafts}
+            icon={<Plus />}
+            help="Ainda estão em preenchimento e não possuem resultado final nem classificação."
+          />
+          <Metric
+            label="Enviadas"
+            value={assessmentMetrics.submitted}
+            icon={<Send />}
+            help="Foram enviadas pelo responsável e aguardam a publicação dentro do escopo de RH ou Diretoria autorizado."
+          />
+          <Metric
+            label="Publicadas"
+            value={assessmentMetrics.published}
+            icon={<CheckCircle2 />}
+            help="O resultado está concluído para consulta no escopo permitido. Uma reabertura preserva o histórico."
+          />
         </dl>
       ) : null}
 
@@ -606,7 +647,15 @@ export function AssessmentsPanel({
           aria-labelledby="individual-filter-title"
         >
           <div className="assessment-creation-card__header">
-            <h3 id="individual-filter-title">Localizar avaliação</h3>
+            <div className="context-help__heading">
+              <h3 id="individual-filter-title">Localizar avaliação</h3>
+              <ContextHelp title="Como funcionam estes filtros">
+                <p>
+                  Os filtros reduzem somente a lista visualizada. Eles não ampliam seu acesso e são
+                  reaplicados pelo servidor a cada consulta.
+                </p>
+              </ContextHelp>
+            </div>
             <p className="muted">
               Selecione o ciclo, o colaborador ou ambos. O servidor só devolve avaliações dentro do
               seu escopo autorizado.
@@ -697,7 +746,15 @@ export function AssessmentsPanel({
               tabIndex={-1}
             >
               <div className="assessment-creation-card__header">
-                <h3 id="create-manager-assessment-title">Criar avaliação de gestor</h3>
+                <div className="context-help__heading">
+                  <h3 id="create-manager-assessment-title">Criar avaliação de gestor</h3>
+                  <ContextHelp title="Quem pode ser avaliado">
+                    <p>
+                      A lista contém apenas colaboradores com vínculo ativo à sua gestão e
+                      questionário atribuído ao ciclo selecionado.
+                    </p>
+                  </ContextHelp>
+                </div>
                 <p className="muted">
                   {journey === 'EQUIPE' ? (
                     <span className="assessment-creation-card__journey">Jornada: Equipe</span>
@@ -715,70 +772,83 @@ export function AssessmentsPanel({
                 {managerCreationError ? (
                   <FeedbackMessage kind="error">{managerCreationError}</FeedbackMessage>
                 ) : null}
-                <div className="field">
-                  <label htmlFor={managerCycleId}>Ciclo para avaliação de gestor</label>
-                  <select
-                    id={managerCycleId}
-                    value={selectedManagerCycleId}
-                    onChange={(event) => selectManagerCycle(event.target.value)}
-                    disabled={isLoadingCycles || isCreatingManagerAssessment}
-                    required
-                  >
-                    <option value="">Selecione um ciclo</option>
-                    {cycles.map((cycle) => (
-                      <option key={cycle.id} value={cycle.id}>
-                        {cycle.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="field">
-                  <label htmlFor={managerCollaboratorId}>Colaborador autorizado</label>
-                  <select
-                    id={managerCollaboratorId}
-                    value={selectedManagerCollaboratorId}
-                    onChange={(event) => setSelectedManagerCollaboratorId(event.target.value)}
-                    disabled={
-                      !selectedManagerCycleId ||
-                      isLoadingManagerCollaborators ||
-                      isCreatingManagerAssessment
-                    }
-                    required
-                  >
-                    <option value="">Selecione um colaborador</option>
-                    {managerCollaborators.map((collaborator) => (
-                      <option key={collaborator.id} value={collaborator.id}>
-                        {collaborator.displayName}
-                      </option>
-                    ))}
-                  </select>
-                  {isLoadingManagerCollaborators ? (
-                    <p className="field-hint">Carregando colaboradores autorizados…</p>
-                  ) : null}
-                  {selectedManagerCycleId &&
-                  !isLoadingManagerCollaborators &&
-                  managerCollaborators.length === 0 ? (
-                    <p className="field-hint">
-                      Não há colaboradores elegíveis para uma nova avaliação neste ciclo.
-                    </p>
-                  ) : null}
-                </div>
-                <div className="action-row">
-                  <button
-                    className="button button--success"
-                    type="submit"
-                    disabled={
-                      !selectedManagerCycleId ||
-                      !selectedManagerCollaboratorId ||
-                      isLoadingCycles ||
-                      isLoadingManagerCollaborators ||
-                      isCreatingManagerAssessment
-                    }
-                  >
-                    <Plus aria-hidden="true" size={17} strokeWidth={2} />
-                    {isCreatingManagerAssessment ? 'Criando…' : 'Criar avaliação de gestor'}
-                  </button>
-                </div>
+                {isLoadingCycles ? (
+                  <p className="field-hint">Verificando ciclos elegíveis…</p>
+                ) : null}
+                {!isLoadingCycles && managerCreationCycles.length === 0 ? (
+                  <FeedbackMessage kind="info">
+                    Não há ciclos disponíveis para uma nova avaliação de gestor. Quando houver um
+                    vínculo ativo, questionário atribuído e ciclo vigente, ele aparecerá aqui.
+                  </FeedbackMessage>
+                ) : null}
+                {managerCreationCycles.length > 0 ? (
+                  <>
+                    <div className="field">
+                      <label htmlFor={managerCycleId}>Ciclo para avaliação de gestor</label>
+                      <select
+                        id={managerCycleId}
+                        value={selectedManagerCycleId}
+                        onChange={(event) => selectManagerCycle(event.target.value)}
+                        disabled={isLoadingCycles || isCreatingManagerAssessment}
+                        required
+                      >
+                        <option value="">Selecione um ciclo</option>
+                        {managerCreationCycles.map((cycle) => (
+                          <option key={cycle.id} value={cycle.id}>
+                            {cycle.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="field">
+                      <label htmlFor={managerCollaboratorId}>Colaborador autorizado</label>
+                      <select
+                        id={managerCollaboratorId}
+                        value={selectedManagerCollaboratorId}
+                        onChange={(event) => setSelectedManagerCollaboratorId(event.target.value)}
+                        disabled={
+                          !selectedManagerCycleId ||
+                          isLoadingManagerCollaborators ||
+                          isCreatingManagerAssessment
+                        }
+                        required
+                      >
+                        <option value="">Selecione um colaborador</option>
+                        {managerCollaborators.map((collaborator) => (
+                          <option key={collaborator.id} value={collaborator.id}>
+                            {collaborator.displayName}
+                          </option>
+                        ))}
+                      </select>
+                      {isLoadingManagerCollaborators ? (
+                        <p className="field-hint">Carregando colaboradores autorizados…</p>
+                      ) : null}
+                      {selectedManagerCycleId &&
+                      !isLoadingManagerCollaborators &&
+                      managerCollaborators.length === 0 ? (
+                        <p className="field-hint">
+                          As opções mudaram. Escolha outro ciclo elegível para continuar.
+                        </p>
+                      ) : null}
+                    </div>
+                    <div className="action-row">
+                      <button
+                        className="button button--success"
+                        type="submit"
+                        disabled={
+                          !selectedManagerCycleId ||
+                          !selectedManagerCollaboratorId ||
+                          isLoadingCycles ||
+                          isLoadingManagerCollaborators ||
+                          isCreatingManagerAssessment
+                        }
+                      >
+                        <Plus aria-hidden="true" size={17} strokeWidth={2} />
+                        {isCreatingManagerAssessment ? 'Criando…' : 'Criar avaliação de gestor'}
+                      </button>
+                    </div>
+                  </>
+                ) : null}
               </form>
             </section>
           ) : null}
@@ -789,7 +859,15 @@ export function AssessmentsPanel({
               aria-labelledby="create-director-assessment-title"
             >
               <div className="assessment-creation-card__header">
-                <h3 id="create-director-assessment-title">Criar avaliação de Diretoria</h3>
+                <div className="context-help__heading">
+                  <h3 id="create-director-assessment-title">Criar avaliação de Diretoria</h3>
+                  <ContextHelp title="Como a Diretoria escolhe uma gerência">
+                    <p>
+                      A plataforma mostra somente as gerências vinculadas à Diretoria ativa e
+                      elegíveis no ciclo. Essa relação é validada pelo servidor.
+                    </p>
+                  </ContextHelp>
+                </div>
                 <p className="muted">
                   O servidor mostra somente gerências vinculadas à sua Diretoria, com questionário
                   atribuído e vigência ativa no ciclo escolhido.
@@ -804,70 +882,84 @@ export function AssessmentsPanel({
                 {directorCreationError ? (
                   <FeedbackMessage kind="error">{directorCreationError}</FeedbackMessage>
                 ) : null}
-                <div className="field">
-                  <label htmlFor={directorCycleId}>Ciclo para avaliação de Diretoria</label>
-                  <select
-                    id={directorCycleId}
-                    value={selectedDirectorCycleId}
-                    onChange={(event) => selectDirectorCycle(event.target.value)}
-                    disabled={isLoadingCycles || isCreatingDirectorAssessment}
-                    required
-                  >
-                    <option value="">Selecione um ciclo</option>
-                    {cycles.map((cycle) => (
-                      <option key={cycle.id} value={cycle.id}>
-                        {cycle.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="field">
-                  <label htmlFor={directorCollaboratorId}>Gerência autorizada</label>
-                  <select
-                    id={directorCollaboratorId}
-                    value={selectedDirectorCollaboratorId}
-                    onChange={(event) => setSelectedDirectorCollaboratorId(event.target.value)}
-                    disabled={
-                      !selectedDirectorCycleId ||
-                      isLoadingDirectorCollaborators ||
-                      isCreatingDirectorAssessment
-                    }
-                    required
-                  >
-                    <option value="">Selecione uma gerência</option>
-                    {directorCollaborators.map((collaborator) => (
-                      <option key={collaborator.id} value={collaborator.id}>
-                        {collaborator.displayName}
-                      </option>
-                    ))}
-                  </select>
-                  {isLoadingDirectorCollaborators ? (
-                    <p className="field-hint">Carregando gerências autorizadas…</p>
-                  ) : null}
-                  {selectedDirectorCycleId &&
-                  !isLoadingDirectorCollaborators &&
-                  directorCollaborators.length === 0 ? (
-                    <p className="field-hint">
-                      Não há gerências elegíveis para uma nova avaliação neste ciclo.
-                    </p>
-                  ) : null}
-                </div>
-                <div className="action-row">
-                  <button
-                    className="button button--success"
-                    type="submit"
-                    disabled={
-                      !selectedDirectorCycleId ||
-                      !selectedDirectorCollaboratorId ||
-                      isLoadingCycles ||
-                      isLoadingDirectorCollaborators ||
-                      isCreatingDirectorAssessment
-                    }
-                  >
-                    <Plus aria-hidden="true" size={17} strokeWidth={2} />
-                    {isCreatingDirectorAssessment ? 'Criando…' : 'Criar avaliação de Diretoria'}
-                  </button>
-                </div>
+                {isLoadingCycles ? (
+                  <p className="field-hint">Verificando ciclos elegíveis…</p>
+                ) : null}
+                {!isLoadingCycles && directorCreationCycles.length === 0 ? (
+                  <FeedbackMessage kind="info">
+                    Não há ciclos disponíveis para uma nova avaliação de Diretoria. Quando houver
+                    uma gerência vinculada, questionário atribuído e ciclo vigente, ele aparecerá
+                    aqui.
+                  </FeedbackMessage>
+                ) : null}
+                {directorCreationCycles.length > 0 ? (
+                  <>
+                    <div className="field">
+                      <label htmlFor={directorCycleId}>Ciclo para avaliação de Diretoria</label>
+                      <select
+                        id={directorCycleId}
+                        value={selectedDirectorCycleId}
+                        onChange={(event) => selectDirectorCycle(event.target.value)}
+                        disabled={isLoadingCycles || isCreatingDirectorAssessment}
+                        required
+                      >
+                        <option value="">Selecione um ciclo</option>
+                        {directorCreationCycles.map((cycle) => (
+                          <option key={cycle.id} value={cycle.id}>
+                            {cycle.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="field">
+                      <label htmlFor={directorCollaboratorId}>Gerência autorizada</label>
+                      <select
+                        id={directorCollaboratorId}
+                        value={selectedDirectorCollaboratorId}
+                        onChange={(event) => setSelectedDirectorCollaboratorId(event.target.value)}
+                        disabled={
+                          !selectedDirectorCycleId ||
+                          isLoadingDirectorCollaborators ||
+                          isCreatingDirectorAssessment
+                        }
+                        required
+                      >
+                        <option value="">Selecione uma gerência</option>
+                        {directorCollaborators.map((collaborator) => (
+                          <option key={collaborator.id} value={collaborator.id}>
+                            {collaborator.displayName}
+                          </option>
+                        ))}
+                      </select>
+                      {isLoadingDirectorCollaborators ? (
+                        <p className="field-hint">Carregando gerências autorizadas…</p>
+                      ) : null}
+                      {selectedDirectorCycleId &&
+                      !isLoadingDirectorCollaborators &&
+                      directorCollaborators.length === 0 ? (
+                        <p className="field-hint">
+                          As opções mudaram. Escolha outro ciclo elegível para continuar.
+                        </p>
+                      ) : null}
+                    </div>
+                    <div className="action-row">
+                      <button
+                        className="button button--success"
+                        type="submit"
+                        disabled={
+                          !selectedDirectorCycleId ||
+                          !selectedDirectorCollaboratorId ||
+                          isLoadingCycles ||
+                          isLoadingDirectorCollaborators ||
+                          isCreatingDirectorAssessment
+                        }
+                      >
+                        <Plus aria-hidden="true" size={17} strokeWidth={2} />
+                        {isCreatingDirectorAssessment ? 'Criando…' : 'Criar avaliação de Diretoria'}
+                      </button>
+                    </div>
+                  </>
+                ) : null}
               </form>
             </section>
           ) : null}
@@ -880,7 +972,15 @@ export function AssessmentsPanel({
               tabIndex={-1}
             >
               <div className="assessment-creation-card__header">
-                <h3 id="create-self-assessment-title">Criar autoavaliação</h3>
+                <div className="context-help__heading">
+                  <h3 id="create-self-assessment-title">Criar autoavaliação</h3>
+                  <ContextHelp title="Quando a autoavaliação fica disponível">
+                    <p>
+                      Ela depende de o ciclo permitir autoavaliação e de haver questionário
+                      atribuído à sua conta. A criação começa sempre em rascunho.
+                    </p>
+                  </ContextHelp>
+                </div>
                 <p className="muted">
                   Escolha um ciclo autorizado. Sua avaliação será criada em rascunho para
                   preenchimento.
@@ -895,43 +995,56 @@ export function AssessmentsPanel({
                 {creationError ? (
                   <FeedbackMessage kind="error">{creationError}</FeedbackMessage>
                 ) : null}
-                <div className="field">
-                  <label htmlFor={selfCycleId}>Ciclo para autoavaliação</label>
-                  <select
-                    id={selfCycleId}
-                    value={selectedCycleId}
-                    onChange={(event) => setSelectedCycleId(event.target.value)}
-                    disabled={isLoadingCycles || isCreating}
-                    required
-                  >
-                    <option value="">Selecione um ciclo</option>
-                    {cycles.map((cycle) => (
-                      <option key={cycle.id} value={cycle.id}>
-                        {cycle.name}
-                      </option>
-                    ))}
-                  </select>
-                  {isLoadingCycles ? (
-                    <p className="field-hint">Carregando ciclos autorizados…</p>
-                  ) : null}
-                </div>
-                <div className="action-row">
-                  <button
-                    className="button button--success"
-                    type="submit"
-                    disabled={isLoadingCycles || isCreating || cycles.length === 0}
-                  >
-                    <Plus aria-hidden="true" size={17} strokeWidth={2} />
-                    {isCreating ? 'Criando…' : 'Criar autoavaliação'}
-                  </button>
-                </div>
+                {isLoadingCycles ? (
+                  <p className="field-hint">Verificando ciclos elegíveis…</p>
+                ) : null}
+                {!isLoadingCycles && selfCreationCycles.length === 0 ? (
+                  <FeedbackMessage kind="info">
+                    Não há ciclos disponíveis para sua autoavaliação. Ela aparece quando sua conta
+                    possui vínculo ativo, questionário atribuído e autoavaliação habilitada em um
+                    ciclo vigente.
+                  </FeedbackMessage>
+                ) : null}
+                {selfCreationCycles.length > 0 ? (
+                  <>
+                    <div className="field">
+                      <label htmlFor={selfCycleId}>Ciclo para autoavaliação</label>
+                      <select
+                        id={selfCycleId}
+                        value={selectedCycleId}
+                        onChange={(event) => setSelectedCycleId(event.target.value)}
+                        disabled={isLoadingCycles || isCreating}
+                        required
+                      >
+                        <option value="">Selecione um ciclo</option>
+                        {selfCreationCycles.map((cycle) => (
+                          <option key={cycle.id} value={cycle.id}>
+                            {cycle.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="action-row">
+                      <button
+                        className="button button--success"
+                        type="submit"
+                        disabled={isLoadingCycles || isCreating || selfCreationCycles.length === 0}
+                      >
+                        <Plus aria-hidden="true" size={17} strokeWidth={2} />
+                        {isCreating ? 'Criando…' : 'Criar autoavaliação'}
+                      </button>
+                    </div>
+                  </>
+                ) : null}
               </form>
             </section>
           ) : null}
         </div>
       ) : null}
 
-      {isLoading ? <FeedbackMessage kind="info">Carregando avaliações…</FeedbackMessage> : null}
+      {isLoading && assessmentPage.items.length === 0 ? (
+        <FeedbackMessage kind="info">Carregando avaliações…</FeedbackMessage>
+      ) : null}
       {error ? <FeedbackMessage kind="error">{error}</FeedbackMessage> : null}
 
       {!isLoading && !error && assessmentPage.items.length === 0 ? (
@@ -941,7 +1054,10 @@ export function AssessmentsPanel({
         </EmptyState>
       ) : null}
 
-      <ul className="assessment-list" aria-busy={isLoading}>
+      <ul
+        className={`assessment-list${isLoading ? ' assessment-list--loading' : ''}`}
+        aria-busy={isLoading}
+      >
         {assessmentPage.items.map((assessment) => (
           <li className="card assessment-list__item" key={assessment.id}>
             <div className="assessment-list__details">
@@ -1006,10 +1122,27 @@ export function AssessmentsPanel({
   )
 }
 
-function Metric({ label, value, icon }: { label: string; value: number; icon: ReactNode }) {
+function Metric({
+  label,
+  value,
+  icon,
+  help,
+}: {
+  label: string
+  value: number
+  icon: ReactNode
+  help: string
+}) {
   return (
     <div className="kpi-card">
-      <dt>{label}</dt>
+      <dt>
+        <span className="kpi-card__label">
+          {label}
+          <ContextHelp title={`O que representa ${label}`}>
+            <p>{help}</p>
+          </ContextHelp>
+        </span>
+      </dt>
       <dd>{value}</dd>
       <span aria-hidden="true" className="kpi-card__icon">
         {icon}

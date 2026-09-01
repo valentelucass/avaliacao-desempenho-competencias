@@ -4,10 +4,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import br.com.avaliacao.desempenho.avaliacoes.api.dto.AssessmentCreationCycleOptionsResponse;
 import br.com.avaliacao.desempenho.avaliacoes.api.dto.AssessmentCreationOptionsResponse;
 import br.com.avaliacao.desempenho.avaliacoes.application.AssessmentApplicationService;
 import br.com.avaliacao.desempenho.avaliacoes.application.AssessmentRepository;
 import br.com.avaliacao.desempenho.avaliacoes.domain.model.AssessmentAuthorizationPolicy;
+import br.com.avaliacao.desempenho.avaliacoes.domain.model.AssessmentType;
 import br.com.avaliacao.desempenho.identidadeacesso.domain.model.AuthorizedUser;
 import br.com.avaliacao.desempenho.identidadeacesso.infrastructure.security.AuthenticatedPrincipal;
 import java.util.List;
@@ -37,6 +39,27 @@ class AssessmentControllerTests {
         .containsExactly(
             new AssessmentCreationOptionsResponse.CollaboratorResponse(
                 collaboratorId, "Ana Silva"));
+    assertThat(response.toString()).doesNotContain("assessment", "result", "score", "answer");
+  }
+
+  @Test
+  void mapsOnlyIdentifierAndNameForEligibleCreationCycles() {
+    AssessmentRepository repository = mock(AssessmentRepository.class);
+    AssessmentApplicationService service = new AssessmentApplicationService(repository);
+    AssessmentController controller = new AssessmentController(service);
+    UUID cycleId = UUID.randomUUID();
+    when(repository.listCreationCycleOptions(
+            org.mockito.ArgumentMatchers.eq(AssessmentType.GESTOR),
+            org.mockito.ArgumentMatchers.any()))
+        .thenReturn(
+            List.of(new AssessmentRepository.CreationCycleOptionView(cycleId, "Ciclo elegível")));
+
+    AssessmentCreationCycleOptionsResponse response =
+        controller.creationCycleOptions(AssessmentType.GESTOR, managerPrincipal());
+
+    assertThat(response.cycles())
+        .containsExactly(
+            new AssessmentCreationCycleOptionsResponse.CycleResponse(cycleId, "Ciclo elegível"));
     assertThat(response.toString()).doesNotContain("assessment", "result", "score", "answer");
   }
 

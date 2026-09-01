@@ -1,4 +1,5 @@
 import type { AssessmentDetail } from '../../api/contracts'
+import { ContextHelp } from '../../ui/ContextHelp'
 import { Pagination } from '../../ui/Pagination'
 import { useClientPagination } from '../../ui/useClientPagination'
 
@@ -48,16 +49,44 @@ export function IndividualAssessmentSummary({
         <div className="section-heading">
           <div>
             <p className="eyebrow">Resumo individual</p>
-            <h3 id="individual-summary-title">Resultado de {assessment.evaluated.displayName}</h3>
+            <div className="context-help__heading">
+              <h3 id="individual-summary-title">Resultado de {assessment.evaluated.displayName}</h3>
+              <ContextHelp title="Como o resultado é formado">
+                <p>
+                  A nota e a classificação são calculadas exclusivamente pelo servidor, com a
+                  configuração vigente no ciclo e as respostas registradas nesta avaliação.
+                </p>
+              </ContextHelp>
+            </div>
             <p className="muted">Ciclo: {assessment.cycle.name}</p>
           </div>
           <dl className="individual-assessment-summary__result">
             <div>
-              <dt>Nota final</dt>
+              <dt>
+                <span className="kpi-card__label">
+                  Nota final
+                  <ContextHelp title="Escala da nota final">
+                    <p>
+                      A escala válida vai de 80 a 120. Rascunhos não possuem nota final até serem
+                      enviados e calculados pelo servidor.
+                    </p>
+                  </ContextHelp>
+                </span>
+              </dt>
               <dd>{score}</dd>
             </div>
             <div>
-              <dt>Classificação</dt>
+              <dt>
+                <span className="kpi-card__label">
+                  Classificação
+                  <ContextHelp title="Como ler a classificação">
+                    <p>
+                      A classificação traduz a nota final para a faixa aprovada no ciclo e indica
+                      uma orientação inicial de desenvolvimento.
+                    </p>
+                  </ContextHelp>
+                </span>
+              </dt>
               <dd>{assessment.result.classification.label}</dd>
             </div>
           </dl>

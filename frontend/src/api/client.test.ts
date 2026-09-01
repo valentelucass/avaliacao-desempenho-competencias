@@ -170,6 +170,23 @@ describe('HttpApiClient', () => {
     })
   })
 
+  it('obtém somente os ciclos elegíveis para a jornada de criação solicitada', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ cycles: [{ id: 'cycle-1', name: 'Ciclo elegível' }] }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const api = new HttpApiClient()
+
+    await expect(api.listAssessmentCreationCycleOptions('DIRETORIA_GERENCIA')).resolves.toEqual([
+      { id: 'cycle-1', name: 'Ciclo elegível' },
+    ])
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v1/assessments/creation-cycle-options?type=DIRETORIA_GERENCIA',
+      expect.objectContaining({ credentials: 'include' }),
+    )
+  })
+
   it('envia os filtros de exportação no corpo JSON documentado', async () => {
     const fetchMock = vi
       .fn()

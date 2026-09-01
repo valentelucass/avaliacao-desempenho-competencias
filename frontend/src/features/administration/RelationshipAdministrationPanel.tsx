@@ -385,7 +385,15 @@ export function RelationshipAdministrationPanel({
         <section className="card stack-form" aria-labelledby="manager-assignment-title">
           <div className="card-title-row">
             <div>
-              <h3 id="manager-assignment-title">Vínculo gestor-colaborador</h3>
+              <div className="context-help__heading">
+                <h3 id="manager-assignment-title">Vínculo gestor-colaborador</h3>
+                <ContextHelp title="O que este vínculo autoriza">
+                  <p>
+                    Ele delimita quais colaboradores o gestor pode avaliar. A conta do gestor, a
+                    vigência e o escopo continuam verificados no servidor.
+                  </p>
+                </ContextHelp>
+              </div>
               <p className="muted">Define quais colaboradores podem ser avaliados pelo gestor.</p>
             </div>
           </div>
@@ -476,7 +484,15 @@ export function RelationshipAdministrationPanel({
         <section className="card stack-form" aria-labelledby="director-manager-assignment-title">
           <div className="card-title-row">
             <div>
-              <h3 id="director-manager-assignment-title">Vínculo Diretoria–Gerência</h3>
+              <div className="context-help__heading">
+                <h3 id="director-manager-assignment-title">Vínculo Diretoria–Gerência</h3>
+                <ContextHelp title="O que este vínculo autoriza">
+                  <p>
+                    Ele determina quais gerências a Diretoria pode avaliar. Não concede acesso a
+                    resultados individuais fora do escopo aprovado.
+                  </p>
+                </ContextHelp>
+              </div>
               <p className="muted">
                 Define quais Gerências podem ser avaliadas pela conta de Diretoria selecionada.
               </p>
@@ -570,7 +586,15 @@ export function RelationshipAdministrationPanel({
         <section className="card stack-form" aria-labelledby="user-link-title">
           <div className="card-title-row">
             <div>
-              <h3 id="user-link-title">Vínculo conta-colaborador</h3>
+              <div className="context-help__heading">
+                <h3 id="user-link-title">Vínculo conta-colaborador</h3>
+                <ContextHelp title="Por que associar a conta a uma pessoa">
+                  <p>
+                    Essa associação permite identificar a própria autoavaliação quando ela estiver
+                    liberada. Ela não substitui o perfil nem os vínculos de gestão.
+                  </p>
+                </ContextHelp>
+              </div>
               <p className="muted">Associa a identidade de acesso à pessoa correspondente.</p>
             </div>
           </div>
@@ -659,7 +683,15 @@ export function RelationshipAdministrationPanel({
 
       {closeTarget ? (
         <section className="card stack-form" aria-labelledby="close-relationship-title">
-          <h3 id="close-relationship-title">Confirmar encerramento de vínculo</h3>
+          <div className="context-help__heading">
+            <h3 id="close-relationship-title">Confirmar encerramento de vínculo</h3>
+            <ContextHelp title="O que é preservado ao encerrar">
+              <p>
+                O vínculo deixa de valer para novas operações, mas avaliações e decisões feitas no
+                período anterior permanecem registradas no histórico.
+              </p>
+            </ContextHelp>
+          </div>
           <p className="muted">
             {closeTarget.label}. O encerramento conserva o histórico; não exclui avaliações nem
             registros anteriores.

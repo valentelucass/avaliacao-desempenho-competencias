@@ -26,6 +26,11 @@ describe('Pagination', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Próxima página' }))
     expect(screen.getByText('Página 2 · 2 registros exibidos')).toBeInTheDocument()
     expect(screen.getByText('2')).toHaveAttribute('aria-current', 'page')
+    expect(screen.getByRole('navigation', { name: 'Paginação de registros' })).toHaveAttribute(
+      'aria-busy',
+      'true',
+    )
+    expect(screen.getByRole('button', { name: 'Página anterior' })).toBeDisabled()
   })
 
   it('divide listas locais sem permitir uma página fora do intervalo', () => {

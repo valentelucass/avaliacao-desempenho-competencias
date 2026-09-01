@@ -11,6 +11,8 @@ import type {
   ApprovedQuestionnaireVersion,
   ApiProblem,
   AssessmentDetail,
+  AssessmentCreationCycleOption,
+  AssessmentCreationType,
   AssessmentListRequest,
   AssessmentDraftInput,
   AssessmentSummary,
@@ -147,6 +149,9 @@ export interface ApiClient {
   openEvaluationCycle(cycleId: string): Promise<void>
   closeEvaluationCycle(cycleId: string): Promise<void>
   listAssessments(request?: AssessmentListRequest): Promise<Page<AssessmentSummary>>
+  listAssessmentCreationCycleOptions(
+    type: AssessmentCreationType,
+  ): Promise<readonly AssessmentCreationCycleOption[]>
   listManagerAssessmentCreationOptions(
     cycleId: string,
   ): Promise<readonly ManagerAssessmentCreationOption[]>
@@ -647,6 +652,15 @@ export class HttpApiClient implements ApiClient {
       collaborators: readonly ManagerAssessmentCreationOption[]
     }>(`/assessments/creation-options?cycleId=${encodeURIComponent(cycleId)}`)
     return options.collaborators
+  }
+
+  async listAssessmentCreationCycleOptions(
+    type: AssessmentCreationType,
+  ): Promise<readonly AssessmentCreationCycleOption[]> {
+    const options = await this.request<{
+      cycles: readonly AssessmentCreationCycleOption[]
+    }>(`/assessments/creation-cycle-options?type=${encodeURIComponent(type)}`)
+    return options.cycles
   }
 
   async listDirectorAssessmentCreationOptions(

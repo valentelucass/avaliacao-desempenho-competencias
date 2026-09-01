@@ -256,7 +256,15 @@ export function QuestionnaireAdministrationPanel({
             aria-labelledby="questionnaire-versions-title"
           >
             <div className="section-heading questionnaire-versions__heading">
-              <h3 id="questionnaire-versions-title">Versões aprovadas</h3>
+              <div className="context-help__heading">
+                <h3 id="questionnaire-versions-title">Versões aprovadas</h3>
+                <ContextHelp title="Como uma versão pode ser usada">
+                  <p>
+                    Apenas versões aprovadas aparecem para aplicação em ciclos. Elas são mantidas
+                    como registro imutável para que resultados históricos continuem reproduzíveis.
+                  </p>
+                </ContextHelp>
+              </div>
               <p className="muted">
                 A lista serve para conferir o catálogo disponível aos ciclos, sem expor
                 identificadores técnicos ou conteúdo sensível.
@@ -324,7 +332,15 @@ export function QuestionnaireAdministrationPanel({
 
           <section className="card" aria-labelledby="create-questionnaire-version-title">
             <div>
-              <h3 id="create-questionnaire-version-title">Criar versão a partir de um modelo</h3>
+              <div className="context-help__heading">
+                <h3 id="create-questionnaire-version-title">Criar versão a partir de um modelo</h3>
+                <ContextHelp title="O que o modelo cria">
+                  <p>
+                    O modelo oferece o ponto de partida das competências e da escala. A versão em
+                    criação pode ser revisada antes de ser aprovada para uso nos ciclos.
+                  </p>
+                </ContextHelp>
+              </div>
               <p className="muted">
                 Cada competência vira um item obrigatório de avaliação. A autoavaliação usa o
                 questionário aplicável do ciclo; ela não precisa de um quarto modelo separado.

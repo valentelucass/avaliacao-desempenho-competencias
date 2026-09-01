@@ -1,5 +1,6 @@
 package br.com.avaliacao.desempenho.avaliacoes.api;
 
+import br.com.avaliacao.desempenho.avaliacoes.api.dto.AssessmentCreationCycleOptionsResponse;
 import br.com.avaliacao.desempenho.avaliacoes.api.dto.AssessmentCreationOptionsResponse;
 import br.com.avaliacao.desempenho.avaliacoes.api.dto.AssessmentDetailResponse;
 import br.com.avaliacao.desempenho.avaliacoes.api.dto.AssessmentPageResponse;
@@ -12,6 +13,7 @@ import br.com.avaliacao.desempenho.avaliacoes.api.dto.SaveAssessmentDraftRequest
 import br.com.avaliacao.desempenho.avaliacoes.application.AssessmentApplicationService;
 import br.com.avaliacao.desempenho.avaliacoes.application.AssessmentRepository;
 import br.com.avaliacao.desempenho.avaliacoes.domain.model.AssessmentAccessContext;
+import br.com.avaliacao.desempenho.avaliacoes.domain.model.AssessmentType;
 import br.com.avaliacao.desempenho.identidadeacesso.infrastructure.persistence.ConditionalOnSqlServerPersistence;
 import br.com.avaliacao.desempenho.identidadeacesso.infrastructure.security.AuthenticatedPrincipal;
 import br.com.avaliacao.desempenho.identidadeacesso.infrastructure.security.RequestCorrelationFilter;
@@ -97,6 +99,24 @@ public class AssessmentController {
                 item ->
                     new AssessmentCreationOptionsResponse.CollaboratorResponse(
                         item.id(), item.displayName()))
+            .toList());
+  }
+
+  @GetMapping("/creation-cycle-options")
+  @PreAuthorize(
+      "hasAnyAuthority("
+          + "'PERMISSION:AVALIACOES.AVALIAR_VINCULADOS',"
+          + "'PERMISSION:AVALIACOES.AVALIAR_GERENCIAS_VINCULADAS',"
+          + "'PERMISSION:AUTOAVALIACOES.PREENCHER_PROPRIA')")
+  public AssessmentCreationCycleOptionsResponse creationCycleOptions(
+      @RequestParam AssessmentType type,
+      @AuthenticationPrincipal AuthenticatedPrincipal principal) {
+    return new AssessmentCreationCycleOptionsResponse(
+        service.listCreationCycleOptions(type, accessFor(principal)).stream()
+            .map(
+                item ->
+                    new AssessmentCreationCycleOptionsResponse.CycleResponse(
+                        item.id(), item.name()))
             .toList());
   }
 

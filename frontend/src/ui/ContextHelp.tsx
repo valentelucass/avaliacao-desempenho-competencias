@@ -20,19 +20,20 @@ type PopoverPosition = {
 
 const viewportInset = 16
 const popoverGap = 8
+const preferredPopoverWidth = 420
 
 export function ContextHelp({
   title,
   children,
   ariaLabel,
   className,
-  estimatedHeight = 220,
+  estimatedHeight = 190,
 }: ContextHelpProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [position, setPosition] = useState<PopoverPosition>({
     top: viewportInset,
     left: viewportInset,
-    width: 304,
+    width: preferredPopoverWidth,
     side: 'below',
   })
   const buttonRef = useRef<HTMLButtonElement>(null)
@@ -54,7 +55,7 @@ export function ContextHelp({
       return
     }
 
-    const width = Math.min(304, window.innerWidth - viewportInset * 2)
+    const width = Math.min(preferredPopoverWidth, window.innerWidth - viewportInset * 2)
     const bounds = trigger.getBoundingClientRect()
     const availableHeight = window.innerHeight - viewportInset * 2
     const measuredHeight = popoverRef.current?.getBoundingClientRect().height

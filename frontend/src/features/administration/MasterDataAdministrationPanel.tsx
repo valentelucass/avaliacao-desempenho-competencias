@@ -457,7 +457,15 @@ export function MasterDataAdministrationPanel({
       <div className="master-data-quick-grid">
         <section className="card" aria-labelledby="branches-title">
           <div className="card-title-row">
-            <h3 id="branches-title">Filiais</h3>
+            <div className="context-help__heading">
+              <h3 id="branches-title">Filiais</h3>
+              <ContextHelp title="Como a filial é usada">
+                <p>
+                  A filial organiza lotações e filtros de indicadores. Criá-la não concede acesso a
+                  avaliações nem altera os vínculos de gestão.
+                </p>
+              </ContextHelp>
+            </div>
             <MapPin aria-hidden="true" size={19} strokeWidth={2} />
           </div>
           <form
@@ -512,7 +520,15 @@ export function MasterDataAdministrationPanel({
 
         <section className="card" aria-labelledby="areas-title">
           <div className="card-title-row">
-            <h3 id="areas-title">Áreas</h3>
+            <div className="context-help__heading">
+              <h3 id="areas-title">Áreas</h3>
+              <ContextHelp title="Como a área é usada">
+                <p>
+                  A área classifica a lotação do colaborador e pode ser usada em indicadores
+                  agregados. Ela não concede por si só permissão de consulta.
+                </p>
+              </ContextHelp>
+            </div>
             <ClipboardList aria-hidden="true" size={19} strokeWidth={2} />
           </div>
           <form
@@ -557,7 +573,15 @@ export function MasterDataAdministrationPanel({
 
       <section className="card" aria-labelledby="collaborators-title">
         <div className="card-title-row">
-          <h3 id="collaborators-title">Colaboradores</h3>
+          <div className="context-help__heading">
+            <h3 id="collaborators-title">Colaboradores</h3>
+            <ContextHelp title="O que este cadastro representa">
+              <p>
+                O colaborador representa a pessoa avaliada. Para realizar uma jornada, ainda são
+                necessários identidade de acesso, vínculos ativos e questionário atribuído.
+              </p>
+            </ContextHelp>
+          </div>
           <ClipboardList aria-hidden="true" size={19} strokeWidth={2} />
         </div>
         <form
@@ -603,7 +627,15 @@ export function MasterDataAdministrationPanel({
 
       <section className="card" aria-labelledby="allocations-title">
         <div className="card-title-row">
-          <h3 id="allocations-title">Lotações</h3>
+          <div className="context-help__heading">
+            <h3 id="allocations-title">Lotações</h3>
+            <ContextHelp title="O que a lotação organiza">
+              <p>
+                A lotação registra a posição organizacional do colaborador no período informado. Ela
+                ajuda a compor filtros e histórico, mas não substitui os vínculos de avaliação.
+              </p>
+            </ContextHelp>
+          </div>
           <MapPin aria-hidden="true" size={19} strokeWidth={2} />
         </div>
         <p className="muted">
@@ -717,7 +749,15 @@ export function MasterDataAdministrationPanel({
 
       <section className="card" aria-labelledby="questionnaire-assignments-title">
         <div className="card-title-row">
-          <h3 id="questionnaire-assignments-title">Atribuições de questionário</h3>
+          <div className="context-help__heading">
+            <h3 id="questionnaire-assignments-title">Atribuições de questionário</h3>
+            <ContextHelp title="Por que atribuir um questionário">
+              <p>
+                A atribuição informa qual questionário pode ser usado por cada colaborador no ciclo.
+                Sem ela, a plataforma não libera a criação da avaliação correspondente.
+              </p>
+            </ContextHelp>
+          </div>
           <ClipboardList aria-hidden="true" size={19} strokeWidth={2} />
         </div>
         <p className="muted">

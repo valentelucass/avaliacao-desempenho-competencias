@@ -281,6 +281,12 @@ export function IndicatorsPanel({ api, canExport, onSessionExpired }: Indicators
         <div className="filter-panel__title">
           <Filter aria-hidden="true" size={18} strokeWidth={2} />
           <span>Filtros da consulta</span>
+          <ContextHelp title="Como os filtros preservam a confidencialidade">
+            <p>
+              Cada filtro é aplicado pelo servidor. Se a combinação deixar menos de cinco
+              colaboradores distintos, nenhum resultado agregado é exibido.
+            </p>
+          </ContextHelp>
         </div>
         {error ? <FeedbackMessage kind="error">{error}</FeedbackMessage> : null}
         {status ? (
@@ -290,7 +296,15 @@ export function IndicatorsPanel({ api, canExport, onSessionExpired }: Indicators
         ) : null}
 
         <div className="field">
-          <label htmlFor={cycleId}>Ciclo de avaliação</label>
+          <div className="context-help__heading">
+            <label htmlFor={cycleId}>Ciclo de avaliação</label>
+            <ContextHelp title="Por que escolher um ciclo">
+              <p>
+                O ciclo define quais avaliações publicadas podem compor o indicador. A lista contém
+                somente ciclos que você pode consultar.
+              </p>
+            </ContextHelp>
+          </div>
           <select
             id={cycleId}
             value={selectedCycleId}
@@ -315,7 +329,15 @@ export function IndicatorsPanel({ api, canExport, onSessionExpired }: Indicators
         </div>
 
         <div className="field">
-          <label htmlFor={metricId}>Métrica</label>
+          <div className="context-help__heading">
+            <label htmlFor={metricId}>Métrica</label>
+            <ContextHelp title="O que muda ao escolher uma métrica">
+              <p>
+                A métrica define se a consulta mostra uma média ou a distribuição por classificação.
+                Ela não altera avaliações nem a população autorizada.
+              </p>
+            </ContextHelp>
+          </div>
           <select
             id={metricId}
             value={metric}
@@ -371,7 +393,15 @@ export function IndicatorsPanel({ api, canExport, onSessionExpired }: Indicators
 
           {populationDimension ? (
             <div className="field">
-              <label htmlFor={dimensionValueId}>Opção autorizada</label>
+              <div className="context-help__heading">
+                <label htmlFor={dimensionValueId}>Opção autorizada</label>
+                <ContextHelp title="Por que algumas opções não aparecem">
+                  <p>
+                    A lista contém somente opções que permanecem confidenciais para esta dimensão e
+                    este ciclo. A ausência de opções protege dados individuais.
+                  </p>
+                </ContextHelp>
+              </div>
               <select
                 id={dimensionValueId}
                 value={populationValueId}
@@ -400,7 +430,15 @@ export function IndicatorsPanel({ api, canExport, onSessionExpired }: Indicators
 
         {needsCompetency ? (
           <div className="field">
-            <label htmlFor={competencyId}>Competência</label>
+            <div className="context-help__heading">
+              <label htmlFor={competencyId}>Competência</label>
+              <ContextHelp title="Como a competência é usada">
+                <p>
+                  Ela seleciona a média daquela competência nas avaliações publicadas; não muda a
+                  população nem expõe respostas individuais.
+                </p>
+              </ContextHelp>
+            </div>
             <select
               id={competencyId}
               value={competencyValueId}
@@ -466,12 +504,28 @@ function AvailableIndicators({ indicator }: { indicator: AvailableIndicatorRespo
       : 'Média da nota final'
 
   return (
-    <section className="card indicator-results" aria-labelledby="indicator-results-title">
-      <div className="card-title-row">
-        <h3 id="indicator-results-title">Resultado agregado</h3>
-        <BarChart3 aria-hidden="true" size={19} strokeWidth={2} />
+    <section
+      className="card indicator-results indicator-results--metric"
+      aria-labelledby="indicator-results-title"
+    >
+      <div className="card-title-row indicator-results__header">
+        <div>
+          <p className="eyebrow">Indicador disponível</p>
+          <div className="context-help__heading">
+            <h3 id="indicator-results-title">Resultado agregado</h3>
+            <ContextHelp title="Como interpretar este resultado">
+              <p>
+                Este valor é calculado no servidor a partir das avaliações publicadas do grupo
+                confidencial. Nenhuma resposta ou resultado individual é mostrado.
+              </p>
+            </ContextHelp>
+          </div>
+        </div>
+        <span className="indicator-results__icon">
+          <BarChart3 aria-hidden="true" size={19} strokeWidth={2} />
+        </span>
       </div>
-      <dl className="metric-list">
+      <dl className="metric-list indicator-results__metric">
         <div>
           <dt>{label}</dt>
           <dd className="metric-list__value">{formatDecimal(indicator.averageScore)}</dd>
@@ -491,7 +545,15 @@ function ClassificationDistribution({
   return (
     <section className="card indicator-results" aria-labelledby="indicator-results-title">
       <div className="card-title-row">
-        <h3 id="indicator-results-title">Resultado agregado</h3>
+        <div className="context-help__heading">
+          <h3 id="indicator-results-title">Resultado agregado</h3>
+          <ContextHelp title="Como interpretar a distribuição">
+            <p>
+              Cada percentual representa a participação de uma classificação no grupo confidencial
+              consultado. A tabela não identifica pessoas.
+            </p>
+          </ContextHelp>
+        </div>
         <BarChart3 aria-hidden="true" size={19} strokeWidth={2} />
       </div>
       <h4>Distribuição por classificação</h4>

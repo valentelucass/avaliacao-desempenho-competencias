@@ -1,4 +1,7 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+
+const pageTransitionDurationMs = 220
 
 type PaginationProps = {
   currentPage: number
@@ -21,12 +24,61 @@ export function Pagination({
   onPreviousPage,
   totalPages,
 }: PaginationProps) {
+  const [isTransitioning, setIsTransitioning] = useState(false)
+  const paginationRef = useRef<HTMLElement>(null)
+  const anchorTopRef = useRef<number | undefined>(undefined)
+  const isBusy = isLoading || isTransitioning
+
+  function beginPageNavigation(onPageChange: () => void) {
+    anchorTopRef.current = paginationRef.current?.getBoundingClientRect().top
+    setIsTransitioning(true)
+    onPageChange()
+  }
+
+  useLayoutEffect(() => {
+    const pagination = paginationRef.current
+    const anchorTop = anchorTopRef.current
+    if (!isTransitioning || !pagination || anchorTop === undefined) {
+      return
+    }
+
+    const offset = pagination.getBoundingClientRect().top - anchorTop
+    if (Math.abs(offset) > 1 && typeof window.scrollBy === 'function') {
+      window.scrollBy({ top: offset, behavior: 'auto' })
+    }
+    anchorTopRef.current = pagination.getBoundingClientRect().top
+  }, [currentPage, isLoading, isTransitioning, itemCountOnPage])
+
+  useEffect(() => {
+    if (!isTransitioning || isLoading) {
+      return undefined
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      anchorTopRef.current = undefined
+      setIsTransitioning(false)
+    }, pageTransitionDurationMs)
+    return () => window.clearTimeout(timeoutId)
+  }, [isLoading, isTransitioning])
+
   if (currentPage === 1 && !hasNextPage) {
     return null
   }
 
   return (
-    <nav className="pagination" aria-label={`Paginação de ${itemLabel}`}>
+    <nav
+      ref={paginationRef}
+      aria-busy={isBusy}
+      aria-label={`Paginação de ${itemLabel}`}
+      className={`pagination${isTransitioning ? ' pagination--transitioning' : ''}`}
+    >
+      <span aria-live="polite" className="visually-hidden">
+        {isTransitioning
+          ? isLoading
+            ? `Carregando página ${currentPage}.`
+            : `Página ${currentPage} atualizada.`
+          : ''}
+      </span>
       <p className="pagination__summary">
         Página {currentPage}
         {totalPages !== undefined ? ` de ${totalPages}` : ''} · {itemCountOnPage} {itemLabel}{' '}
@@ -36,8 +88,8 @@ export function Pagination({
         <button
           aria-label="Página anterior"
           className="icon-button"
-          disabled={isLoading || currentPage === 1}
-          onClick={onPreviousPage}
+          disabled={isBusy || currentPage === 1}
+          onClick={() => beginPageNavigation(onPreviousPage)}
           type="button"
         >
           <ChevronLeft aria-hidden="true" size={18} strokeWidth={2} />
@@ -51,8 +103,8 @@ export function Pagination({
         <button
           aria-label="Próxima página"
           className="icon-button"
-          disabled={isLoading || !hasNextPage}
-          onClick={onNextPage}
+          disabled={isBusy || !hasNextPage}
+          onClick={() => beginPageNavigation(onNextPage)}
           type="button"
         >
           <ChevronRight aria-hidden="true" size={18} strokeWidth={2} />

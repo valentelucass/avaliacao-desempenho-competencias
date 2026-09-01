@@ -79,6 +79,35 @@ class SqlServerAssessmentRepositoryTests {
   }
 
   @Test
+  void creationCycleOptionsOnlyReturnCyclesWithAnImmediatelyEligibleJourney() {
+    assertThat(SqlServerAssessmentRepository.managerCreationCyclesSql())
+        .contains(
+            "manager_link.gestor_usuario_id = ?",
+            "assignment.revogado_em_utc IS NULL",
+            "assessment.tipo_avaliacao = 'GESTOR'",
+            "cycle.situacao = 'ABERTO'",
+            "NOT EXISTS")
+        .doesNotContain("resultado_avaliacao", "nota_final", "resposta_avaliacao");
+    assertThat(SqlServerAssessmentRepository.directorCreationCyclesSql())
+        .contains(
+            "director_link.diretoria_usuario_id = ?",
+            "assignment.revogado_em_utc IS NULL",
+            "assessment.tipo_avaliacao = 'DIRETORIA_GERENCIA'",
+            "cycle.situacao = 'ABERTO'",
+            "NOT EXISTS")
+        .doesNotContain("resultado_avaliacao", "nota_final", "resposta_avaliacao");
+    assertThat(SqlServerAssessmentRepository.selfCreationCyclesSql())
+        .contains(
+            "cycle.autoavaliacao_habilitada = 1",
+            "user_link.usuario_id = ?",
+            "assignment.revogado_em_utc IS NULL",
+            "assessment.tipo_avaliacao = 'AUTOAVALIACAO'",
+            "cycle.situacao = 'ABERTO'",
+            "NOT EXISTS")
+        .doesNotContain("resultado_avaliacao", "nota_final", "resposta_avaliacao");
+  }
+
+  @Test
   void nullableIntegerAcceptsTheSmallintTypeReturnedBySqlServer() throws Exception {
     ResultSet resultSet = mock(ResultSet.class);
     when(resultSet.getObject("status_resposta")).thenReturn(Short.valueOf((short) 201));

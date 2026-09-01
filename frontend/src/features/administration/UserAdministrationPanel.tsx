@@ -544,7 +544,15 @@ export function UserAdministrationPanel({
 
       {canCreateUsers && accountProfiles.length > 0 ? (
         <section className="card" aria-labelledby="create-user-title">
-          <h3 id="create-user-title">Criar conta local</h3>
+          <div className="context-help__heading">
+            <h3 id="create-user-title">Criar conta local</h3>
+            <ContextHelp title="O que é criado para a nova conta">
+              <p>
+                A conta recebe um perfil e uma senha inicial de uso único. O perfil orienta as ações
+                disponíveis, mas vínculos e escopo continuam verificados pelo servidor.
+              </p>
+            </ContextHelp>
+          </div>
           <p className="muted">
             A nova conta receberá uma senha inicial de uso único e deverá alterá-la no primeiro
             acesso.
@@ -637,7 +645,15 @@ export function UserAdministrationPanel({
         <section className="card" aria-labelledby="local-users-title">
           <div className="section-heading">
             <div>
-              <h3 id="local-users-title">Contas locais</h3>
+              <div className="context-help__heading">
+                <h3 id="local-users-title">Contas locais</h3>
+                <ContextHelp title="O que é possível consultar aqui">
+                  <p>
+                    A lista mostra somente contas no seu escopo administrativo. Abrir uma conta
+                    permite consultar dados e concessões; ações sensíveis continuam restritas.
+                  </p>
+                </ContextHelp>
+              </div>
               <p className="muted">Selecione uma conta para consultar dados e concessões atuais.</p>
             </div>
           </div>

@@ -113,6 +113,74 @@ describe('CycleAdministrationPanel', () => {
     )
   })
 
+  it('leva até o painel em linha ao consultar, configurar ou iniciar um ciclo', async () => {
+    const scrollIntoView = vi.fn()
+    const originalScrollIntoView = HTMLElement.prototype.scrollIntoView
+    Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
+      configurable: true,
+      value: scrollIntoView,
+    })
+    const draftCycle = sampleCycle()
+    const openCycle = sampleCycle({ id: 'cycle-open-1', name: 'Ciclo aberto', status: 'ABERTO' })
+    const api = createApi({
+      listAllCycles: vi.fn().mockResolvedValue([draftCycle, openCycle]),
+      getEvaluationCycleAdministrationDraft: vi.fn().mockResolvedValue(sampleDraft()),
+    })
+
+    try {
+      render(
+        <CycleAdministrationPanel
+          api={api}
+          permissions={['CICLOS.GERIR']}
+          onSessionExpired={vi.fn()}
+        />,
+      )
+
+      fireEvent.click(await screen.findByRole('button', { name: 'Configurar' }))
+      const configurationPanel = await screen.findByRole('form', {
+        name: 'Configuração: Ciclo de avaliação 2026.2',
+      })
+      await waitFor(() =>
+        expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start' }),
+      )
+      expect(configurationPanel).toHaveFocus()
+      await waitFor(() => expect(configurationPanel).toHaveClass('inline-panel-focus--highlighted'))
+      expect(screen.getByLabelText('Código do ciclo').closest('.field')).toHaveClass(
+        'field--inline-reveal',
+      )
+      expect(screen.getByLabelText('Nome do ciclo').closest('.field')).toHaveClass(
+        'field--inline-reveal',
+      )
+      expect(screen.getByRole('group', { name: 'Questionários aplicados' })).toHaveClass(
+        'fieldset--inline-reveal',
+      )
+      expect(document.querySelector('.cycle-questionnaire-table tbody tr')).toHaveClass(
+        'cycle-questionnaire-table__row--inline-reveal',
+      )
+
+      fireEvent.click(screen.getByRole('button', { name: 'Consultar' }))
+      await screen.findByRole('form', { name: 'Configuração: Ciclo aberto' })
+      await waitFor(() => expect(scrollIntoView).toHaveBeenCalledTimes(2))
+
+      fireEvent.click(screen.getByRole('button', { name: 'Novo ciclo' }))
+      await screen.findByRole('form', { name: 'Novo ciclo' })
+      await waitFor(() => expect(scrollIntoView).toHaveBeenCalledTimes(3))
+      await waitFor(() =>
+        expect(screen.getByLabelText('Código do ciclo').closest('.field')).toHaveClass(
+          'field--inline-reveal',
+        ),
+      )
+      expect(screen.getByLabelText('Nome do ciclo').closest('.field')).not.toHaveClass(
+        'field--inline-reveal',
+      )
+    } finally {
+      Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
+        configurable: true,
+        value: originalScrollIntoView,
+      })
+    }
+  })
+
   it('mantém rótulos de dados nos ciclos para a apresentação móvel', async () => {
     const api = createApi({ listAllCycles: vi.fn().mockResolvedValue([sampleCycle()]) })
 

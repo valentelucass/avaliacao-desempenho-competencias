@@ -15,6 +15,7 @@ describe('ContextHelp', () => {
 
     const popover = screen.getByRole('tooltip')
     expect(popover).toHaveTextContent('Um ciclo aberto aceita avaliações dentro da sua vigência.')
+    expect(popover).toHaveStyle({ width: '420px' })
     expect(trigger).toHaveAttribute('aria-expanded', 'true')
 
     fireEvent.keyDown(trigger, { key: 'Escape' })

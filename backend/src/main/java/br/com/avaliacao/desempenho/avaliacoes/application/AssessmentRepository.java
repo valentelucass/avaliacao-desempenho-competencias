@@ -27,6 +27,9 @@ public interface AssessmentRepository {
   List<ManagerCreationOptionView> listDirectorCreationOptions(
       UUID cycleId, AssessmentAccessContext actor);
 
+  List<CreationCycleOptionView> listCreationCycleOptions(
+      AssessmentType assessmentType, AssessmentAccessContext actor);
+
   Optional<AssessmentDetailView> findAccessible(UUID assessmentId, AssessmentAccessContext actor);
 
   /** Registra a impressão já autorizada de uma avaliação, sem persistir seu conteúdo. */
@@ -105,6 +108,9 @@ public interface AssessmentRepository {
   record AssessmentCursor(Instant updatedAt, UUID id) {}
 
   record ManagerCreationOptionView(UUID id, String displayName) {}
+
+  /** Ciclo que já possui ao menos uma criação possível para a jornada solicitada. */
+  record CreationCycleOptionView(UUID id, String name) {}
 
   record AssessmentDetailView(
       AssessmentSummaryView summary,

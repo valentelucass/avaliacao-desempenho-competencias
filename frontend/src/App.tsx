@@ -16,6 +16,7 @@ import {
   FileQuestion,
   LayoutDashboard,
   Link2,
+  LoaderCircle,
   LogOut,
   Menu,
   Moon,
@@ -28,6 +29,7 @@ import {
 import type { ApiClient } from './api/client'
 import { defaultApiClient } from './api/client'
 import type { CurrentUser } from './api/contracts'
+import { AuthPageFrame } from './features/auth/AuthPageFrame'
 import { LoginForm } from './features/auth/LoginForm'
 import { PasswordChangeForm } from './features/auth/PasswordChangeForm'
 import {
@@ -81,7 +83,7 @@ function App({ api = defaultApiClient }: AppProps) {
   const [notice, setNotice] = useState<string>()
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [isSigningOut, setIsSigningOut] = useState(false)
-  const [isRestoringSession, setIsRestoringSession] = useState(false)
+  const [isRestoringSession, setIsRestoringSession] = useState(true)
   const [theme, setTheme] = useState<Theme>(initialTheme)
   const menuButtonRef = useRef<HTMLButtonElement>(null)
   const sidebarRef = useRef<HTMLDivElement>(null)
@@ -181,8 +183,8 @@ function App({ api = defaultApiClient }: AppProps) {
       setNotice(undefined)
 
       try {
-        // Os cookies de credencial são HttpOnly. A verificação só ocorre por ação
-        // explícita do usuário para não gerar respostas 401 esperadas ao abrir o login.
+        // Os cookies de credencial são HttpOnly; a API é a única autoridade para
+        // confirmar se ainda há uma sessão que possa ser retomada.
         const restoredUser = await api.refreshSession()
         if (restoredUser) {
           setUser(restoredUser)
@@ -202,6 +204,38 @@ function App({ api = defaultApiClient }: AppProps) {
     },
     [api],
   )
+
+  useEffect(() => {
+    // A atualização da SPA descarta apenas o estado React, não os cookies HttpOnly.
+    // Primeiro recupere a identidade pelo token de acesso ainda válido. Só então use
+    // o refresh quando esse token curto tiver expirado, evitando uma rotação de sessão
+    // desnecessária a cada recarregamento.
+    let cancelled = false
+
+    void Promise.resolve()
+      .then(() => api.currentUser())
+      .then((currentUser) => currentUser ?? api.refreshSession())
+      .then((restoredUser) => {
+        if (cancelled || !restoredUser) {
+          return
+        }
+        setUser(restoredUser)
+      })
+      .catch((requestError) => {
+        if (!cancelled) {
+          setStartupError(safeErrorMessage(requestError))
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsRestoringSession(false)
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [api])
 
   const handleSessionExpired = useCallback(() => {
     if (sessionRecoveryRef.current) {
@@ -268,6 +302,15 @@ function App({ api = defaultApiClient }: AppProps) {
     }
   }
 
+  if (user === null && isRestoringSession) {
+    return (
+      <SessionRestoringScreen
+        onToggleTheme={() => setTheme((current) => (current === 'light' ? 'dark' : 'light'))}
+        theme={theme}
+      />
+    )
+  }
+
   if (user === null) {
     return (
       <LoginForm
@@ -308,9 +351,10 @@ function App({ api = defaultApiClient }: AppProps) {
   const canCreateSelfAssessment = hasAnyPermission(user, ['AUTOAVALIACOES.PREENCHER_PROPRIA'])
   const canSubmitSelfAssessment = hasAnyPermission(user, ['AUTOAVALIACOES.ENVIAR_PROPRIA'])
   const canCreateManagerAssessment = hasAnyPermission(user, ['AVALIACOES.AVALIAR_VINCULADOS'])
-  const canCreateDirectorAssessment = hasAnyPermission(user, [
-    'AVALIACOES.AVALIAR_GERENCIAS_VINCULADAS',
-  ])
+  const canCreateDirectorAssessment =
+    hasAnyPermission(user, ['AVALIACOES.AVALIAR_GERENCIAS_VINCULADAS']) &&
+    user.roles?.includes('DIRETORIA') === true &&
+    !(user.roles ?? []).includes('ADMINISTRADOR_PLATAFORMA')
   const canPublishAssessments = hasAnyPermission(user, ['AVALIACOES.PUBLICAR'])
   const canReopenAssessments = hasAnyPermission(user, ['AVALIACOES.REABRIR'])
   const canRecordAssessmentFeedback = hasAnyPermission(user, [
@@ -652,6 +696,32 @@ function App({ api = defaultApiClient }: AppProps) {
         </div>
       </footer>
     </div>
+  )
+}
+
+function SessionRestoringScreen({
+  onToggleTheme,
+  theme,
+}: {
+  onToggleTheme: () => void
+  theme: Theme
+}) {
+  return (
+    <AuthPageFrame
+      contentClassName="auth-layout--restoring"
+      labelledBy="session-restoring-title"
+      onToggleTheme={onToggleTheme}
+      theme={theme}
+    >
+      <section aria-live="polite" className="card session-restoring" role="status">
+        <LoaderCircle aria-hidden="true" className="session-restoring__spinner" size={23} />
+        <div>
+          <p className="eyebrow">Área interna</p>
+          <h1 id="session-restoring-title">Restaurando sua sessão</h1>
+          <p className="muted">Verificando seu acesso com segurança.</p>
+        </div>
+      </section>
+    </AuthPageFrame>
   )
 }
 

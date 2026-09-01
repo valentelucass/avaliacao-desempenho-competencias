@@ -40,7 +40,19 @@ export function DashboardPanel({
       <section className="dashboard-hero card" aria-labelledby="assessment-kind-title">
         <div>
           <p className="eyebrow">Nova avaliação</p>
-          <h3 id="assessment-kind-title">Qual avaliação deseja realizar?</h3>
+          <div className="context-help__heading">
+            <h3 id="assessment-kind-title">Qual avaliação deseja realizar?</h3>
+            <ContextHelp title="Como escolher a jornada">
+              <p>
+                Avaliação de equipe é destinada às pessoas vinculadas à sua gestão. A autoavaliação
+                é o preenchimento da sua própria avaliação.
+              </p>
+              <p className="context-help__note">
+                As opções só aparecem quando o perfil permite a jornada; o servidor confirma as
+                demais condições ao iniciar.
+              </p>
+            </ContextHelp>
+          </div>
           <p className="muted">
             A seleção não altera dados nem permissões. Ao criar, o sistema valida vínculo, ciclo e
             questionário atribuído.
@@ -84,7 +96,15 @@ export function DashboardPanel({
       </section>
 
       <section className="card dashboard-info" aria-labelledby="storage-title">
-        <h3 id="storage-title">Dados protegidos</h3>
+        <div className="context-help__heading">
+          <h3 id="storage-title">Dados protegidos</h3>
+          <ContextHelp title="Como a plataforma protege este registro">
+            <p>
+              O rascunho fica associado à sua conta e só as pessoas com escopo autorizado podem
+              acessá-lo. A nota e a classificação não são calculadas no navegador.
+            </p>
+          </ContextHelp>
+        </div>
         <p className="muted">
           Rascunhos e respostas são salvos no banco interno pela API. A nota e a classificação são
           calculadas exclusivamente no servidor.

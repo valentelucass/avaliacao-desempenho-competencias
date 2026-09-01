@@ -5,6 +5,7 @@ import { isAuthenticationError } from '../../api/client'
 import type { ApiClient } from '../../api/client'
 import type { AssessmentDetail, AssessmentDraftInput } from '../../api/contracts'
 import { FeedbackMessage } from '../../ui/Feedback'
+import { ContextHelp } from '../../ui/ContextHelp'
 import { safeErrorMessage } from '../../ui/safeErrorMessage'
 import { IndividualAssessmentSummary } from './IndividualAssessmentSummary'
 
@@ -316,7 +317,15 @@ export function AssessmentEditor({
       <div className="section-heading">
         <div>
           <p className="eyebrow">{assessment.type}</p>
-          <h2 id="assessment-title">Avaliação de {assessment.evaluated.displayName}</h2>
+          <div className="context-help__heading">
+            <h2 id="assessment-title">Avaliação de {assessment.evaluated.displayName}</h2>
+            <ContextHelp title="Como preencher esta avaliação">
+              <p>
+                Salve o rascunho para continuar depois. A nota, a classificação e as permissões são
+                confirmadas pelo servidor quando a avaliação é enviada.
+              </p>
+            </ContextHelp>
+          </div>
           <p className="muted">Ciclo: {assessment.cycle.name}</p>
         </div>
         <div className="action-row print-hidden">
@@ -413,29 +422,47 @@ export function AssessmentEditor({
           </fieldset>
         ))}
 
-        <div className="field assessment-editor__narrative-field">
-          <label htmlFor="assessment-comment">Comentário opcional</label>
-          <textarea
-            id="assessment-comment"
-            value={comment}
-            onChange={(event) => setComment(event.target.value)}
-            disabled={!canEditDraft || isSaving}
-            rows={4}
-          />
-        </div>
+        <div className="assessment-editor__narrative-fields">
+          <div className="field assessment-editor__narrative-field">
+            <label htmlFor="assessment-comment">Comentário opcional</label>
+            <textarea
+              id="assessment-comment"
+              value={comment}
+              onChange={(event) => setComment(event.target.value)}
+              disabled={!canEditDraft || isSaving}
+              rows={4}
+            />
+          </div>
 
-        <div className="field assessment-editor__narrative-field">
-          <label htmlFor="assessment-action-plan">Plano de ação opcional</label>
-          <textarea
-            id="assessment-action-plan"
-            value={actionPlan}
-            onChange={(event) => setActionPlan(event.target.value)}
-            disabled={!canEditDraft || isSaving}
-            rows={4}
-          />
+          <div className="field assessment-editor__narrative-field">
+            <label htmlFor="assessment-action-plan">Plano de ação opcional</label>
+            <textarea
+              id="assessment-action-plan"
+              value={actionPlan}
+              onChange={(event) => setActionPlan(event.target.value)}
+              disabled={!canEditDraft || isSaving}
+              rows={4}
+            />
+          </div>
         </div>
 
         <div className="assessment-editor__print-sheet">
+          <header className="assessment-editor__print-heading" aria-hidden="true">
+            <div>
+              <p>Resumo individual de desempenho</p>
+              <h2>Avaliação de {assessment.evaluated.displayName}</h2>
+            </div>
+            <dl>
+              <div>
+                <dt>Ciclo</dt>
+                <dd>{assessment.cycle.name}</dd>
+              </div>
+              <div>
+                <dt>Tipo</dt>
+                <dd>{assessmentTypeLabel(assessment.type)}</dd>
+              </div>
+            </dl>
+          </header>
           <IndividualAssessmentSummary assessment={assessment} displayMode="chart" />
           <section className="assessment-print-signature" aria-label="Assinatura do colaborador">
             <span>Assinatura do colaborador</span>
@@ -481,7 +508,15 @@ export function AssessmentEditor({
             className="assessment-editor__administrative-action"
             aria-labelledby="reopen-assessment-title"
           >
-            <h3 id="reopen-assessment-title">Reabrir avaliação</h3>
+            <div className="context-help__heading">
+              <h3 id="reopen-assessment-title">Reabrir avaliação</h3>
+              <ContextHelp title="O que acontece na reabertura">
+                <p>
+                  A reabertura exige motivo e mantém a versão publicada no histórico. O resultado
+                  anterior não é sobrescrito silenciosamente.
+                </p>
+              </ContextHelp>
+            </div>
             <p className="field-hint">
               A reabertura exige motivo e preserva a versão publicada no histórico.
             </p>
@@ -516,7 +551,15 @@ export function AssessmentEditor({
             aria-labelledby="assessment-feedback-title"
           >
             <div>
-              <h3 id="assessment-feedback-title">Feedback</h3>
+              <div className="context-help__heading">
+                <h3 id="assessment-feedback-title">Feedback</h3>
+                <ContextHelp title="Como registrar o feedback">
+                  <p>
+                    O feedback registra a conversa entre avaliador e avaliado. Ao concluí-lo, ele
+                    passa a integrar o histórico da versão publicada.
+                  </p>
+                </ContextHelp>
+              </div>
               <p className="field-hint">
                 {assessment.feedbackStatus === 'NAO_APLICAVEL'
                   ? 'Não se aplica a autoavaliações.'
@@ -593,4 +636,14 @@ export function AssessmentEditor({
       </form>
     </section>
   )
+}
+
+function assessmentTypeLabel(type: AssessmentDetail['type']): string {
+  const labels: Record<AssessmentDetail['type'], string> = {
+    AUTOAVALIACAO: 'Autoavaliação',
+    DIRETORIA_GERENCIA: 'Avaliação de Diretoria',
+    GESTOR: 'Avaliação de gestor',
+  }
+
+  return labels[type]
 }

@@ -2,6 +2,7 @@ package br.com.avaliacao.desempenho.avaliacoes.application;
 
 import br.com.avaliacao.desempenho.avaliacoes.domain.model.AssessmentAccessContext;
 import br.com.avaliacao.desempenho.avaliacoes.domain.model.AssessmentAuthorizationPolicy;
+import br.com.avaliacao.desempenho.avaliacoes.domain.model.AssessmentType;
 import br.com.avaliacao.desempenho.identidadeacesso.infrastructure.persistence.ConditionalOnSqlServerPersistence;
 import java.time.LocalDate;
 import java.util.List;
@@ -59,6 +60,23 @@ public class AssessmentApplicationService {
     }
     return repository.listDirectorCreationOptions(
         Objects.requireNonNull(cycleId, "cycleId"), safeActor);
+  }
+
+  /** Lista somente ciclos em que há uma criação possível para a jornada do ator. */
+  public List<AssessmentRepository.CreationCycleOptionView> listCreationCycleOptions(
+      AssessmentType assessmentType, AssessmentAccessContext actor) {
+    AssessmentType safeType = Objects.requireNonNull(assessmentType, "tipo");
+    AssessmentAccessContext safeActor = Objects.requireNonNull(actor, "actor");
+    boolean allowed =
+        switch (safeType) {
+          case GESTOR -> authorizationPolicy.canCreateManagerAssessment(safeActor);
+          case DIRETORIA_GERENCIA -> authorizationPolicy.canCreateDirectorAssessment(safeActor);
+          case AUTOAVALIACAO -> authorizationPolicy.canCreateOrEditSelfAssessment(safeActor);
+        };
+    if (!allowed) {
+      throw new AssessmentForbiddenException();
+    }
+    return repository.listCreationCycleOptions(safeType, safeActor);
   }
 
   public AssessmentRepository.AssessmentDetailView get(

@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 
 import br.com.avaliacao.desempenho.avaliacoes.domain.model.AssessmentAccessContext;
 import br.com.avaliacao.desempenho.avaliacoes.domain.model.AssessmentAuthorizationPolicy;
+import br.com.avaliacao.desempenho.avaliacoes.domain.model.AssessmentType;
 import br.com.avaliacao.desempenho.avaliacoes.domain.model.FeedbackStatus;
 import java.util.List;
 import java.util.Optional;
@@ -44,6 +45,40 @@ class AssessmentApplicationServiceTests {
             () ->
                 service.listManagerCreationOptions(
                     UUID.randomUUID(), new AssessmentAccessContext(UUID.randomUUID(), Set.of())))
+        .isInstanceOf(AssessmentForbiddenException.class);
+
+    verifyNoInteractions(repository);
+  }
+
+  @Test
+  void returnsOnlyCycleOptionsThatTheRepositoryConfirmedForSelfAssessment() {
+    AssessmentRepository repository = mock(AssessmentRepository.class);
+    AssessmentApplicationService service = new AssessmentApplicationService(repository);
+    AssessmentAccessContext actor =
+        new AssessmentAccessContext(
+            UUID.randomUUID(), Set.of(AssessmentAuthorizationPolicy.FILL_OWN_SELF_ASSESSMENT));
+    List<AssessmentRepository.CreationCycleOptionView> options =
+        List.of(
+            new AssessmentRepository.CreationCycleOptionView(UUID.randomUUID(), "Ciclo elegível"));
+    when(repository.listCreationCycleOptions(AssessmentType.AUTOAVALIACAO, actor))
+        .thenReturn(options);
+
+    assertThat(service.listCreationCycleOptions(AssessmentType.AUTOAVALIACAO, actor))
+        .containsExactlyElementsOf(options);
+
+    verify(repository).listCreationCycleOptions(AssessmentType.AUTOAVALIACAO, actor);
+  }
+
+  @Test
+  void rejectsDirectorCycleOptionsWhenTheActorIsNotDirectoria() {
+    AssessmentRepository repository = mock(AssessmentRepository.class);
+    AssessmentApplicationService service = new AssessmentApplicationService(repository);
+    AssessmentAccessContext actor =
+        new AssessmentAccessContext(
+            UUID.randomUUID(), Set.of(AssessmentAuthorizationPolicy.EVALUATE_LINKED_MANAGERS));
+
+    assertThatThrownBy(
+            () -> service.listCreationCycleOptions(AssessmentType.DIRETORIA_GERENCIA, actor))
         .isInstanceOf(AssessmentForbiddenException.class);
 
     verifyNoInteractions(repository);

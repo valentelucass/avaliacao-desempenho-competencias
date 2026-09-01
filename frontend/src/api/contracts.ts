@@ -388,6 +388,14 @@ export type CreateAssessmentInput =
       collaboratorId: string
     }
 
+export type AssessmentCreationType = CreateAssessmentInput['type']
+
+/** Ciclo em que o servidor confirmou ao menos uma criação possível para a jornada. */
+export interface AssessmentCreationCycleOption {
+  id: string
+  name: string
+}
+
 export interface ManagerAssessmentCreationOption {
   id: string
   displayName: string

@@ -336,6 +336,123 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
     return LIST_DIRECTOR_CREATION_OPTIONS_SQL;
   }
 
+  private static final String LIST_MANAGER_CREATION_CYCLES_SQL =
+      """
+      SELECT cycle.ciclo_avaliacao_id AS cycle_id,
+             cycle.nome AS cycle_name
+      FROM dbo.ciclo_avaliacao AS cycle
+      INNER JOIN dbo.usuario AS actor_user
+          ON actor_user.usuario_id = ?
+         AND actor_user.situacao = 'ATIVO'
+      WHERE cycle.situacao = 'ABERTO'
+        AND cycle.janela_abertura_em_utc <= SYSUTCDATETIME()
+        AND cycle.janela_encerramento_em_utc > SYSUTCDATETIME()
+        AND EXISTS (
+            SELECT 1
+            FROM dbo.atribuicao_questionario_colaborador AS assignment
+            INNER JOIN dbo.vinculo_gestor_colaborador AS manager_link
+                ON manager_link.colaborador_id = assignment.colaborador_id
+               AND manager_link.gestor_usuario_id = ?
+               AND manager_link.revogado_em_utc IS NULL
+               AND (manager_link.inicio_vigencia IS NULL
+                    OR manager_link.inicio_vigencia <= CONVERT(date, SYSUTCDATETIME()))
+               AND (manager_link.fim_vigencia IS NULL
+                    OR manager_link.fim_vigencia >= CONVERT(date, SYSUTCDATETIME()))
+            WHERE assignment.ciclo_avaliacao_id = cycle.ciclo_avaliacao_id
+              AND assignment.revogado_em_utc IS NULL
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM dbo.avaliacao AS assessment
+                  WHERE assessment.ciclo_avaliacao_id = cycle.ciclo_avaliacao_id
+                    AND assessment.colaborador_id = assignment.colaborador_id
+                    AND assessment.tipo_avaliacao = 'GESTOR'
+              )
+        )
+      ORDER BY cycle.janela_abertura_em_utc, cycle.nome, cycle.ciclo_avaliacao_id
+      """;
+
+  private static final String LIST_DIRECTOR_CREATION_CYCLES_SQL =
+      """
+      SELECT cycle.ciclo_avaliacao_id AS cycle_id,
+             cycle.nome AS cycle_name
+      FROM dbo.ciclo_avaliacao AS cycle
+      INNER JOIN dbo.usuario AS actor_user
+          ON actor_user.usuario_id = ?
+         AND actor_user.situacao = 'ATIVO'
+      WHERE cycle.situacao = 'ABERTO'
+        AND cycle.janela_abertura_em_utc <= SYSUTCDATETIME()
+        AND cycle.janela_encerramento_em_utc > SYSUTCDATETIME()
+        AND EXISTS (
+            SELECT 1
+            FROM dbo.atribuicao_questionario_colaborador AS assignment
+            INNER JOIN dbo.vinculo_diretoria_gerencia AS director_link
+                ON director_link.gerencia_colaborador_id = assignment.colaborador_id
+               AND director_link.diretoria_usuario_id = ?
+               AND director_link.revogado_em_utc IS NULL
+               AND (director_link.inicio_vigencia IS NULL
+                    OR director_link.inicio_vigencia <= CONVERT(date, SYSUTCDATETIME()))
+               AND (director_link.fim_vigencia IS NULL
+                    OR director_link.fim_vigencia >= CONVERT(date, SYSUTCDATETIME()))
+            WHERE assignment.ciclo_avaliacao_id = cycle.ciclo_avaliacao_id
+              AND assignment.revogado_em_utc IS NULL
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM dbo.avaliacao AS assessment
+                  WHERE assessment.ciclo_avaliacao_id = cycle.ciclo_avaliacao_id
+                    AND assessment.colaborador_id = assignment.colaborador_id
+                    AND assessment.tipo_avaliacao = 'DIRETORIA_GERENCIA'
+              )
+        )
+      ORDER BY cycle.janela_abertura_em_utc, cycle.nome, cycle.ciclo_avaliacao_id
+      """;
+
+  private static final String LIST_SELF_CREATION_CYCLES_SQL =
+      """
+      SELECT cycle.ciclo_avaliacao_id AS cycle_id,
+             cycle.nome AS cycle_name
+      FROM dbo.ciclo_avaliacao AS cycle
+      INNER JOIN dbo.usuario AS actor_user
+          ON actor_user.usuario_id = ?
+         AND actor_user.situacao = 'ATIVO'
+      WHERE cycle.situacao = 'ABERTO'
+        AND cycle.autoavaliacao_habilitada = 1
+        AND cycle.janela_abertura_em_utc <= SYSUTCDATETIME()
+        AND cycle.janela_encerramento_em_utc > SYSUTCDATETIME()
+        AND EXISTS (
+            SELECT 1
+            FROM dbo.vinculo_usuario_colaborador AS user_link
+            INNER JOIN dbo.atribuicao_questionario_colaborador AS assignment
+                ON assignment.ciclo_avaliacao_id = cycle.ciclo_avaliacao_id
+               AND assignment.colaborador_id = user_link.colaborador_id
+               AND assignment.revogado_em_utc IS NULL
+            WHERE user_link.usuario_id = ?
+              AND user_link.encerrado_em_utc IS NULL
+              AND user_link.inicio_vigencia <= CONVERT(date, SYSUTCDATETIME())
+              AND (user_link.fim_vigencia IS NULL
+                   OR user_link.fim_vigencia >= CONVERT(date, SYSUTCDATETIME()))
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM dbo.avaliacao AS assessment
+                  WHERE assessment.ciclo_avaliacao_id = cycle.ciclo_avaliacao_id
+                    AND assessment.colaborador_id = user_link.colaborador_id
+                    AND assessment.tipo_avaliacao = 'AUTOAVALIACAO'
+              )
+        )
+      ORDER BY cycle.janela_abertura_em_utc, cycle.nome, cycle.ciclo_avaliacao_id
+      """;
+
+  static String managerCreationCyclesSql() {
+    return LIST_MANAGER_CREATION_CYCLES_SQL;
+  }
+
+  static String directorCreationCyclesSql() {
+    return LIST_DIRECTOR_CREATION_CYCLES_SQL;
+  }
+
+  static String selfCreationCyclesSql() {
+    return LIST_SELF_CREATION_CYCLES_SQL;
+  }
+
   private final JdbcTemplate jdbcTemplate;
   private final TransactionTemplate transactionTemplate;
   private final AssessmentLifecycle lifecycle = new AssessmentLifecycle();
@@ -440,6 +557,38 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
         safeActor.userId(),
         safeActor.userId(),
         Objects.requireNonNull(cycleId, "cycleId não pode ser nulo"));
+  }
+
+  @Override
+  public List<CreationCycleOptionView> listCreationCycleOptions(
+      AssessmentType assessmentType, AssessmentAccessContext actor) {
+    AssessmentType safeType = Objects.requireNonNull(assessmentType, "tipo não pode ser nulo");
+    AssessmentAccessContext safeActor = Objects.requireNonNull(actor, "actor não pode ser nulo");
+    String sql =
+        switch (safeType) {
+          case GESTOR -> {
+            requirePermission(safeActor, "AVALIACOES.AVALIAR_VINCULADOS");
+            yield LIST_MANAGER_CREATION_CYCLES_SQL;
+          }
+          case DIRETORIA_GERENCIA -> {
+            requirePermission(safeActor, "AVALIACOES.AVALIAR_GERENCIAS_VINCULADAS");
+            if (!safeActor.hasRole("DIRETORIA") || safeActor.hasRole("ADMINISTRADOR_PLATAFORMA")) {
+              throw new AssessmentForbiddenException();
+            }
+            yield LIST_DIRECTOR_CREATION_CYCLES_SQL;
+          }
+          case AUTOAVALIACAO -> {
+            requirePermission(safeActor, "AUTOAVALIACOES.PREENCHER_PROPRIA");
+            yield LIST_SELF_CREATION_CYCLES_SQL;
+          }
+        };
+    return jdbcTemplate.query(
+        sql,
+        (resultSet, rowNumber) ->
+            new CreationCycleOptionView(
+                resultSet.getObject("cycle_id", UUID.class), resultSet.getString("cycle_name")),
+        safeActor.userId(),
+        safeActor.userId());
   }
 
   @Override

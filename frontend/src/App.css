@@ -326,6 +326,15 @@
 .workspace__content {
   min-width: 0;
 }
+
+/* A rota leva o foco programaticamente ao marco principal. Como ele não é um
+   controle acionável, o contorno nativo do navegador apenas enquadrava toda a
+   área de conteúdo após recarregar a página. Os controles internos continuam
+   com foco visível próprio. */
+.workspace:focus,
+.workspace:focus-visible {
+  outline: none;
+}
 .card,
 .competency-card,
 .result-card {
@@ -675,6 +684,11 @@ textarea:focus-visible,
   list-style: none;
   margin: 0;
   padding: 0;
+  transition: opacity 180ms ease;
+}
+
+.assessment-list--loading {
+  opacity: 0.64;
 }
 .assessment-list__item {
   align-items: stretch;
@@ -927,6 +941,85 @@ dd {
 .indicator-results {
   overflow-x: auto;
 }
+
+.indicator-results.indicator-results--metric {
+  display: grid;
+  gap: 0.85rem;
+  overflow: hidden;
+  padding: clamp(1rem, 2vw, 1.35rem);
+}
+
+.indicator-results--metric .indicator-results__header {
+  align-items: center;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 88%, var(--primary));
+  padding-bottom: 0.75rem;
+}
+
+.indicator-results__header > div {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.indicator-results__header .eyebrow,
+.indicator-results__header h3 {
+  margin: 0;
+}
+
+.indicator-results__header h3 {
+  color: var(--text-h);
+}
+
+.indicator-results__icon {
+  align-items: center;
+  color: var(--primary-strong);
+  display: inline-flex;
+  flex: 0 0 auto;
+  justify-content: center;
+}
+
+.indicator-results__metric {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  min-height: 0;
+  overflow: visible;
+}
+
+.indicator-results__metric > div {
+  align-items: center;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-height: 4rem;
+  padding: 0.1rem 0 0;
+}
+
+.indicator-results__metric dt {
+  color: var(--text);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.indicator-results__metric .metric-list__value {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  color: var(--primary-strong);
+  line-height: 1;
+  padding: 0;
+}
+
+@media (max-width: 34rem) {
+  .indicator-results__metric > div {
+    align-items: start;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .indicator-results__metric .metric-list__value {
+    justify-self: start;
+  }
+}
 .administration-users {
   border: 1px solid var(--border);
   border-radius: 0.9rem;
@@ -1170,6 +1263,22 @@ thead th {
   padding-inline: 0.45rem;
   width: auto;
 }
+
+.pagination--transitioning .pagination__page {
+  animation: pagination-page-change 220ms ease-out;
+}
+
+@keyframes pagination-page-change {
+  from {
+    opacity: 0.62;
+    transform: scale(0.9);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
 .pagination__ellipsis {
   color: var(--muted);
   display: inline-grid;
@@ -1326,6 +1435,14 @@ thead th {
   }
 }
 @media (prefers-reduced-motion: reduce) {
+  .assessment-list {
+    transition: none;
+  }
+
+  .pagination--transitioning .pagination__page {
+    animation: none;
+  }
+
   *,
   *::before,
   *::after {
@@ -1541,6 +1658,12 @@ thead th {
   display: grid;
   gap: clamp(1rem, 2vw, 1.5rem);
   grid-template-columns: minmax(0, 1fr);
+}
+
+.assessment-creation-form--manager {
+  /* O aviso de elegibilidade pode ocupar mais de uma linha. Os campos da mesma
+     grade devem manter sua altura própria, sem esticar o select do ciclo. */
+  align-items: start;
 }
 
 .assessment-creation-form--manager > .feedback,
@@ -2682,6 +2805,183 @@ thead th {
   gap: 0.9rem;
 }
 
+.inline-panel-focus {
+  scroll-margin-block: 1.5rem;
+}
+
+.inline-panel-focus:focus-visible {
+  outline: 0;
+}
+
+.inline-panel-focus--highlighted {
+  animation: inline-panel-highlight 1.8s ease-out;
+}
+
+.field--inline-reveal,
+.fieldset--inline-reveal,
+.cycle-questionnaire-table__row--inline-reveal {
+  animation-duration: 2.8s;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.inline-reveal-pulse--odd {
+  animation-name: inline-reveal-pulse-odd;
+}
+
+.inline-reveal-pulse--even {
+  animation-name: inline-reveal-pulse-even;
+}
+
+.field--inline-reveal :is(input, select, textarea) {
+  animation-duration: 2.8s;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.field--inline-reveal.inline-reveal-pulse--odd :is(input, select, textarea) {
+  animation-name: inline-control-highlight-odd;
+}
+
+.field--inline-reveal.inline-reveal-pulse--even :is(input, select, textarea) {
+  animation-name: inline-control-highlight-even;
+}
+
+@keyframes inline-panel-highlight {
+  0%,
+  30% {
+    box-shadow:
+      0 0 0 0.22rem color-mix(in srgb, var(--color-primary) 35%, transparent),
+      var(--shadow-card);
+  }
+
+  100% {
+    box-shadow: var(--shadow-card);
+  }
+}
+
+@keyframes inline-reveal-pulse-odd {
+  0%,
+  100% {
+    background: transparent;
+    box-shadow: none;
+  }
+
+  12%,
+  32% {
+    background: color-mix(in srgb, var(--color-primary) 11%, transparent);
+    box-shadow: 0 0 0 0.2rem color-mix(in srgb, var(--color-primary) 36%, transparent);
+  }
+
+  22% {
+    background: color-mix(in srgb, var(--color-primary) 16%, transparent);
+    box-shadow: 0 0 0 0.3rem color-mix(in srgb, var(--color-primary) 46%, transparent);
+  }
+
+  57%,
+  74% {
+    background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+    box-shadow: 0 0 0 0.14rem color-mix(in srgb, var(--color-primary) 26%, transparent);
+  }
+}
+
+@keyframes inline-reveal-pulse-even {
+  0%,
+  100% {
+    background: transparent;
+    box-shadow: none;
+  }
+
+  12%,
+  32% {
+    background: color-mix(in srgb, var(--color-primary) 11%, transparent);
+    box-shadow: 0 0 0 0.2rem color-mix(in srgb, var(--color-primary) 36%, transparent);
+  }
+
+  22% {
+    background: color-mix(in srgb, var(--color-primary) 16%, transparent);
+    box-shadow: 0 0 0 0.3rem color-mix(in srgb, var(--color-primary) 46%, transparent);
+  }
+
+  57%,
+  74% {
+    background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+    box-shadow: 0 0 0 0.14rem color-mix(in srgb, var(--color-primary) 26%, transparent);
+  }
+}
+
+@keyframes inline-control-highlight-odd {
+  0%,
+  100% {
+    border-color: var(--visual-control-border, var(--border));
+    box-shadow: none;
+  }
+
+  12%,
+  32% {
+    border-color: color-mix(in srgb, var(--color-primary) 78%, var(--border));
+    box-shadow:
+      0 0 0 0.18rem color-mix(in srgb, var(--color-primary) 30%, transparent),
+      0 0.45rem 0.9rem color-mix(in srgb, var(--color-primary) 14%, transparent);
+  }
+
+  22% {
+    border-color: color-mix(in srgb, var(--color-primary) 92%, var(--border));
+    box-shadow:
+      0 0 0 0.28rem color-mix(in srgb, var(--color-primary) 42%, transparent),
+      0 0.65rem 1.2rem color-mix(in srgb, var(--color-primary) 22%, transparent);
+  }
+
+  57%,
+  74% {
+    border-color: color-mix(in srgb, var(--color-primary) 62%, var(--border));
+    box-shadow: 0 0 0 0.12rem color-mix(in srgb, var(--color-primary) 22%, transparent);
+  }
+}
+
+@keyframes inline-control-highlight-even {
+  0%,
+  100% {
+    border-color: var(--visual-control-border, var(--border));
+    box-shadow: none;
+  }
+
+  12%,
+  32% {
+    border-color: color-mix(in srgb, var(--color-primary) 78%, var(--border));
+    box-shadow:
+      0 0 0 0.18rem color-mix(in srgb, var(--color-primary) 30%, transparent),
+      0 0.45rem 0.9rem color-mix(in srgb, var(--color-primary) 14%, transparent);
+  }
+
+  22% {
+    border-color: color-mix(in srgb, var(--color-primary) 92%, var(--border));
+    box-shadow:
+      0 0 0 0.28rem color-mix(in srgb, var(--color-primary) 42%, transparent),
+      0 0.65rem 1.2rem color-mix(in srgb, var(--color-primary) 22%, transparent);
+  }
+
+  57%,
+  74% {
+    border-color: color-mix(in srgb, var(--color-primary) 62%, var(--border));
+    box-shadow: 0 0 0 0.12rem color-mix(in srgb, var(--color-primary) 22%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .inline-panel-focus--highlighted {
+    animation: none;
+    outline: 0.16rem solid var(--color-primary);
+    outline-offset: 0.2rem;
+  }
+
+  .field--inline-reveal :is(input, select, textarea),
+  .fieldset--inline-reveal,
+  .cycle-questionnaire-table__row--inline-reveal {
+    animation: none;
+    outline: 0.14rem solid var(--color-primary);
+    outline-offset: 0.12rem;
+  }
+}
+
 .cycle-configuration-form__details-grid {
   display: grid;
   gap: 0.9rem 1.25rem;
@@ -3591,6 +3891,11 @@ thead th {
     width: min(100%, 47rem);
   }
 
+  .auth-page .auth-layout--restoring {
+    grid-template-columns: minmax(0, 27rem);
+    justify-content: center;
+  }
+
   .selected-user-overview {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -3615,6 +3920,46 @@ thead th {
   .user-account-edit-form > .feedback,
   .user-account-edit-form > .action-row {
     grid-column: 1 / -1;
+  }
+}
+
+.session-restoring {
+  align-items: center;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: auto minmax(0, 1fr);
+  min-height: 10rem;
+}
+
+.session-restoring .eyebrow,
+.session-restoring h1,
+.session-restoring .muted {
+  margin: 0;
+}
+
+.session-restoring h1 {
+  font-size: clamp(1.35rem, 3vw, 1.7rem);
+  margin-top: 0.25rem;
+}
+
+.session-restoring .muted {
+  margin-top: 0.45rem;
+}
+
+.session-restoring__spinner {
+  animation: session-restoring-spin 1s linear infinite;
+  color: var(--primary);
+}
+
+@keyframes session-restoring-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .session-restoring__spinner {
+    animation: none;
   }
 }
 
@@ -3963,8 +4308,8 @@ thead th {
     grid-column: 1 / -1;
   }
 
-  .assessment-editor .stack-form > .assessment-editor__narrative-field {
-    grid-column: auto;
+  .assessment-editor .stack-form > .assessment-editor__narrative-fields {
+    grid-column: 2;
   }
 
   .individual-assessment-summary--chart .individual-assessment-summary__chart-header {
@@ -4002,6 +4347,11 @@ thead th {
     font-size: 0.95rem;
     grid-column: 2;
   }
+}
+
+.assessment-editor__narrative-fields {
+  display: grid;
+  gap: 1.1rem;
 }
 
 .assessment-editor__narrative-field textarea {
@@ -4054,6 +4404,10 @@ thead th {
   min-width: 0;
 }
 
+.assessment-editor__print-heading {
+  display: none;
+}
+
 .assessment-print-signature {
   display: none;
 }
@@ -4082,67 +4436,166 @@ thead th {
     width: 100%;
   }
 
+  .assessment-editor__print-sheet {
+    color: #102a43;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  .assessment-editor__print-heading {
+    align-items: end;
+    border-bottom: 0.35mm solid #7a9ab8;
+    display: grid;
+    gap: 5mm;
+    grid-template-columns: minmax(0, 1.15fr) minmax(46mm, 0.85fr);
+    margin: 0 0 5mm;
+    padding: 0 0 4mm;
+  }
+
+  .assessment-editor__print-heading p,
+  .assessment-editor__print-heading h2,
+  .assessment-editor__print-heading dl,
+  .assessment-editor__print-heading dt,
+  .assessment-editor__print-heading dd {
+    margin: 0;
+  }
+
+  .assessment-editor__print-heading p,
+  .assessment-editor__print-heading dt {
+    color: #3a5f82;
+    font-size: 2.45mm;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+  }
+
+  .assessment-editor__print-heading h2 {
+    color: #102a43;
+    font-size: 5.1mm;
+    line-height: 1.14;
+    margin-top: 1.2mm;
+  }
+
+  .assessment-editor__print-heading dl {
+    display: grid;
+    gap: 2.5mm;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .assessment-editor__print-heading dl div + div {
+    border-left: 0.28mm solid #c6d5e2;
+    padding-left: 2.5mm;
+  }
+
+  .assessment-editor__print-heading dd {
+    color: #102a43;
+    font-size: 3.35mm;
+    font-weight: 700;
+    line-height: 1.25;
+    margin-top: 1mm;
+  }
+
   .assessment-editor__print-sheet .individual-assessment-summary {
     background: #fff;
+    border: 0.35mm solid #5e82a3;
+    border-radius: 2.5mm;
     break-inside: avoid;
     box-shadow: none;
-    gap: 3mm;
-    padding: 0;
+    color: #102a43;
+    gap: 4mm;
+    padding: 5mm 6mm 6mm;
     page-break-inside: avoid;
   }
 
   .assessment-editor__print-sheet .individual-assessment-summary__chart-heading .eyebrow,
-  .assessment-editor__print-sheet .individual-assessment-summary__guidance,
-  .assessment-editor__print-sheet .table-scroll,
-  .assessment-editor__print-sheet .competency-radar figcaption {
+  .assessment-editor__print-sheet .table-scroll {
     display: none;
   }
 
   .assessment-editor__print-sheet .individual-assessment-summary__chart-header {
-    align-items: end;
+    border-bottom: 0.28mm solid #c6d5e2;
     gap: 3mm;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr);
+    grid-template-columns: minmax(0, 1fr);
+    padding-bottom: 3.5mm;
   }
 
   .assessment-editor__print-sheet .individual-assessment-summary__chart-heading h3 {
+    color: #102a43;
     font-size: 4.2mm;
   }
 
   .assessment-editor__print-sheet .individual-assessment-summary__chart-result {
     gap: 3mm;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .assessment-editor__print-sheet .individual-assessment-summary__chart-result div + div {
+    border-left: 0.28mm solid #c6d5e2;
+    padding-left: 3mm;
   }
 
   .assessment-editor__print-sheet .individual-assessment-summary__chart-result dt {
+    color: #3a5f82;
     font-size: 2.5mm;
   }
 
   .assessment-editor__print-sheet .individual-assessment-summary__chart-result dd {
+    color: #102a43;
     font-size: 4.2mm;
   }
 
   .assessment-editor__print-sheet .competency-radar {
-    max-inline-size: 136mm;
+    margin: 2mm auto 0;
+    max-inline-size: 126mm;
+  }
+
+  .assessment-editor__print-sheet .competency-radar__ring {
+    stroke: #b8cad9;
+  }
+
+  .assessment-editor__print-sheet .competency-radar__axis {
+    stroke: #6b8aa5;
+  }
+
+  .assessment-editor__print-sheet .competency-radar__shape {
+    fill: #d7e7f4;
+    stroke: #19537b;
+  }
+
+  .assessment-editor__print-sheet .competency-radar__point {
+    fill: #19537b;
+    stroke: #fff;
   }
 
   .assessment-editor__print-sheet .competency-radar__label,
   .assessment-editor__print-sheet .competency-radar__ring-label {
-    font-size: 2.5mm;
+    color: #183d5b;
+    fill: #183d5b;
+    font-size: 2.8mm;
+  }
+
+  .assessment-editor__print-sheet .competency-radar figcaption {
+    color: #3a5f82;
+    display: block;
+    font-size: 2.55mm;
+    margin-top: -1mm;
   }
 
   .assessment-print-signature {
+    border-top: 0.28mm solid #c6d5e2;
     break-inside: avoid;
     display: grid;
-    font-size: 3mm;
-    gap: 2.5mm;
-    margin: 5mm auto 0;
-    max-width: 118mm;
+    font-size: 2.8mm;
+    gap: 3mm;
+    margin: 6mm auto 0;
+    max-width: 126mm;
     page-break-inside: avoid;
+    padding-top: 5mm;
   }
 
   .assessment-print-signature__line {
-    border-bottom: 0.3mm solid #0f172a;
-    height: 8mm;
+    border-bottom: 0.35mm solid #102a43;
+    height: 10mm;
   }
 }
 

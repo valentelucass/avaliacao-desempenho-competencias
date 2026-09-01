@@ -7,6 +7,7 @@ import type {
   AssessmentDetail,
   AssessmentDraftInput,
   CreateAssessmentInput,
+  CurrentUser,
   IndicatorExport,
   IndicatorQuery,
   IndicatorResponse,
@@ -16,7 +17,30 @@ import App from './App'
 const passwordChangeMethod = 'changePassword'
 
 describe('App', () => {
-  it('apresenta login sem tentar renovar uma sessão ao carregar', async () => {
+  it('não mostra o login enquanto restaura uma sessão ao atualizar a página', async () => {
+    let resolveCurrentUser: (user: CurrentUser | null) => void = () => undefined
+    const api = createApi({
+      currentUser: vi.fn(
+        () =>
+          new Promise<CurrentUser | null>((resolve) => {
+            resolveCurrentUser = resolve
+          }),
+      ),
+    })
+
+    render(<App api={api} />)
+
+    expect(screen.getByRole('status')).toHaveTextContent('Restaurando sua sessão')
+    expect(screen.queryByRole('heading', { name: 'Acesso à plataforma' })).not.toBeInTheDocument()
+
+    await waitFor(() => expect(api.currentUser).toHaveBeenCalledTimes(1))
+    resolveCurrentUser({ id: 'user-1', displayName: 'Sessão preservada', permissions: [] })
+
+    expect(await screen.findByText('Sessão preservada')).toBeInTheDocument()
+    expect(screen.queryByText('Restaurando sua sessão')).not.toBeInTheDocument()
+  })
+
+  it('verifica automaticamente uma sessão antes de apresentar o login', async () => {
     const api = createApi()
     render(<App api={api} />)
 
@@ -38,12 +62,13 @@ describe('App', () => {
       'Avaliações de desempenho',
     )
     expect(screen.getByRole('button', { name: 'Retomar sessão existente' })).toBeInTheDocument()
-    expect(api.refreshSession).not.toHaveBeenCalled()
-    expect(api.currentUser).not.toHaveBeenCalled()
+    expect(api.refreshSession).toHaveBeenCalledTimes(1)
+    expect(api.currentUser).toHaveBeenCalledTimes(2)
   })
 
-  it('retoma uma sessão existente somente pela ação explícita', async () => {
+  it('renova automaticamente uma sessão cujo token de acesso expirou', async () => {
     const api = createApi({
+      currentUser: vi.fn().mockResolvedValue(null),
       refreshSession: vi.fn().mockResolvedValue({
         id: 'user-1',
         displayName: 'Sessão retomada',
@@ -53,11 +78,25 @@ describe('App', () => {
 
     render(<App api={api} />)
 
-    fireEvent.click(screen.getByRole('button', { name: 'Retomar sessão existente' }))
-
     expect(await screen.findByText('Sessão retomada')).toBeInTheDocument()
     expect(api.refreshSession).toHaveBeenCalledTimes(1)
-    expect(api.currentUser).not.toHaveBeenCalled()
+    expect(api.currentUser).toHaveBeenCalledTimes(1)
+  })
+
+  it('mantém automaticamente uma sessão com token de acesso ainda válido', async () => {
+    const api = createApi({
+      currentUser: vi.fn().mockResolvedValue({
+        id: 'user-1',
+        displayName: 'Sessão preservada',
+        permissions: [],
+      }),
+    })
+
+    render(<App api={api} />)
+
+    expect(await screen.findByText('Sessão preservada')).toBeInTheDocument()
+    expect(api.currentUser).toHaveBeenCalledTimes(1)
+    expect(api.refreshSession).not.toHaveBeenCalled()
   })
 
   it('volta ao login ao sair mesmo que o servidor não confirme o encerramento', async () => {
@@ -154,9 +193,10 @@ describe('App', () => {
     const api = createApi({ refreshSession: vi.fn().mockResolvedValue(null) })
     render(<App api={api} />)
 
+    await waitFor(() => expect(api.refreshSession).toHaveBeenCalledTimes(1))
     fireEvent.click(screen.getByRole('button', { name: 'Retomar sessão existente' }))
 
-    await waitFor(() => expect(api.refreshSession).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(api.refreshSession).toHaveBeenCalledTimes(2))
     expect(screen.getByLabelText('E-mail ou login')).toBeInTheDocument()
     expect(
       screen.getByText('Não há uma sessão ativa para retomar. Entre com seu login e senha.'),
@@ -166,6 +206,10 @@ describe('App', () => {
   it('explica falha de credenciais sem revelar o estado da conta', async () => {
     const api = createApi({ signIn: vi.fn().mockRejectedValue(new ApiError({ status: 401 })) })
     render(<App api={api} />)
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Acessar plataforma' })).not.toBeDisabled(),
+    )
 
     fireEvent.change(screen.getByLabelText('E-mail ou login'), {
       target: { value: 'conta-teste' },
@@ -358,6 +402,9 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Imprimir / PDF' }))
     await waitFor(() => expect(api.recordAssessmentPrint).toHaveBeenCalledWith(draftAssessment.id))
     expect(print).toHaveBeenCalledTimes(1)
+    expect(document.querySelector('.assessment-editor__print-heading')).toHaveTextContent(
+      'Resumo individual de desempenho',
+    )
     expect(screen.getByLabelText('Assinatura do colaborador')).toBeInTheDocument()
   })
 
@@ -368,7 +415,7 @@ describe('App', () => {
         displayName: 'Colaborador autorizado',
         permissions: ['AUTOAVALIACOES.PREENCHER_PROPRIA', 'AUTOAVALIACOES.VISUALIZAR_PROPRIA'],
       }),
-      listCycles: vi
+      listAssessmentCreationCycleOptions: vi
         .fn()
         .mockResolvedValue([{ id: 'cycle-2024', name: 'Ciclo 2024', status: 'ABERTO' }]),
       createAssessment: vi.fn().mockResolvedValue(sampleSelfAssessment()),
@@ -400,7 +447,7 @@ describe('App', () => {
         displayName: 'Gestor autorizado',
         permissions: ['AVALIACOES.AVALIAR_VINCULADOS'],
       }),
-      listCycles: vi
+      listAssessmentCreationCycleOptions: vi
         .fn()
         .mockResolvedValue([{ id: 'cycle-2024', name: 'Ciclo 2024', status: 'ABERTO' }]),
       listManagerAssessmentCreationOptions: vi
@@ -434,6 +481,35 @@ describe('App', () => {
       cycleId: 'cycle-2024',
       collaboratorId: 'collaborator-1',
     })
+  })
+
+  it('mostra somente ciclos de Diretoria que o servidor confirmou como elegíveis', async () => {
+    const listAssessmentCreationCycleOptions = vi.fn((type: string) =>
+      Promise.resolve(
+        type === 'DIRETORIA_GERENCIA'
+          ? [{ id: 'cycle-eligible', name: 'Ciclo de teste de perfis DEV' }]
+          : [],
+      ),
+    )
+    const api = createApi({
+      currentUser: vi.fn().mockResolvedValue({
+        id: 'director-1',
+        displayName: 'Diretoria autorizada',
+        permissions: ['AVALIACOES.AVALIAR_GERENCIAS_VINCULADAS'],
+        roles: ['DIRETORIA'],
+      }),
+      listAssessmentCreationCycleOptions,
+    })
+
+    renderWithExistingSession(api, '/avaliacoes')
+
+    expect(
+      await screen.findByRole('option', { name: 'Ciclo de teste de perfis DEV' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole('option', { name: 'Demonstração DEV — radar com 5 perfis' }),
+    ).not.toBeInTheDocument()
+    expect(listAssessmentCreationCycleOptions).toHaveBeenCalledWith('DIRETORIA_GERENCIA')
   })
 
   it('não duplica a criação de avaliação no menu lateral', async () => {
@@ -633,7 +709,9 @@ describe('App', () => {
     )
     fireEvent.click(screen.getByRole('button', { name: 'Consultar indicadores' }))
 
-    await screen.findByRole('heading', { name: 'Resultado agregado' })
+    const resultHeading = await screen.findByRole('heading', { name: 'Resultado agregado' })
+    expect(resultHeading.closest('.indicator-results')).toHaveClass('indicator-results--metric')
+    expect(screen.getByText('Indicador disponível')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Exportar CSV agregado' })).not.toBeInTheDocument()
   })
 
@@ -1063,9 +1141,7 @@ describe('App', () => {
 
 function renderWithExistingSession(api: ApiClient, path = '/') {
   window.history.replaceState(null, '', path)
-  const rendered = render(<App api={api} />)
-  fireEvent.click(screen.getByRole('button', { name: 'Retomar sessão existente' }))
-  return rendered
+  return render(<App api={api} />)
 }
 
 function createApi(overrides: Partial<ApiClient> = {}): ApiClient {
@@ -1082,7 +1158,9 @@ function createApi(overrides: Partial<ApiClient> = {}): ApiClient {
     listCycles,
     listAllCycles,
     listAssessments: vi.fn().mockResolvedValue([]),
+    listAssessmentCreationCycleOptions: vi.fn().mockResolvedValue([]),
     listManagerAssessmentCreationOptions: vi.fn().mockResolvedValue([]),
+    listDirectorAssessmentCreationOptions: vi.fn().mockResolvedValue([]),
     createAssessment: vi.fn<(input: CreateAssessmentInput) => Promise<AssessmentDetail>>(),
     getAssessment: vi.fn<(assessmentId: string) => Promise<AssessmentDetail>>(),
     recordAssessmentPrint: vi.fn<(assessmentId: string) => Promise<void>>(),
