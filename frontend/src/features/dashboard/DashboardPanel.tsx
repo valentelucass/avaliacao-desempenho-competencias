@@ -14,6 +14,8 @@ export function DashboardPanel({
   canCreateSelfAssessment,
   onOpenAssessments,
 }: DashboardPanelProps) {
+  const hasAvailableJourney = canCreateAssessment || canCreateSelfAssessment
+
   return (
     <section aria-labelledby="dashboard-title">
       <div className="section-heading">
@@ -37,7 +39,10 @@ export function DashboardPanel({
         </div>
       </div>
 
-      <section className="dashboard-hero card" aria-labelledby="assessment-kind-title">
+      <section
+        className={`dashboard-hero card${hasAvailableJourney ? '' : ' dashboard-hero--empty'}`}
+        aria-labelledby="assessment-kind-title"
+      >
         <div>
           <p className="eyebrow">Nova avaliação</p>
           <div className="context-help__heading">
@@ -59,7 +64,7 @@ export function DashboardPanel({
           </p>
         </div>
         <div className="assessment-kind-grid">
-          {canCreateAssessment || canCreateSelfAssessment ? (
+          {hasAvailableJourney ? (
             <>
               {canCreateAssessment ? (
                 <button

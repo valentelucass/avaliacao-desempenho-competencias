@@ -7,6 +7,41 @@
   width: min(100%, 110rem);
 }
 
+/* O estado vazio mantém as duas colunas da jornada, porém uma régua sutil
+   esclarece a separação entre a explicação e a indisponibilidade. */
+.dashboard-hero.dashboard-hero--empty {
+  align-items: stretch;
+  gap: 0;
+  grid-template-columns: minmax(15rem, 0.8fr) minmax(22rem, 1.2fr);
+}
+
+.dashboard-hero--empty > :first-child {
+  border-inline-end: 1px solid var(--border);
+  padding-inline-end: clamp(1.25rem, 2vw, 2rem);
+}
+
+.dashboard-hero--empty .assessment-kind-grid {
+  align-content: center;
+  padding-inline-start: clamp(1.25rem, 2vw, 2rem);
+}
+
+@media (max-width: 48rem) {
+  .dashboard-hero.dashboard-hero--empty {
+    gap: 1rem;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dashboard-hero--empty > :first-child {
+    border-bottom: 1px solid var(--border);
+    border-inline-end: 0;
+    padding: 0 0 1rem;
+  }
+
+  .dashboard-hero--empty .assessment-kind-grid {
+    padding-inline-start: 0;
+  }
+}
+
 /* Navegação lateral: persistente em telas amplas e drawer acessível no celular. */
 .application-shell {
   margin: 0;
@@ -751,14 +786,14 @@ textarea:focus-visible,
   border-radius: 999px;
   color: var(--muted);
   display: inline-flex;
-  font-size: 0.7rem;
-  font-weight: 650;
-  letter-spacing: 0.01em;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.025em;
   line-height: 1;
   margin: 0;
-  min-height: 1.65rem;
-  padding: 0.2rem 0.62rem;
-  text-transform: none;
+  min-height: 1.6rem;
+  padding: 0.2rem 0.65rem;
+  text-transform: uppercase;
   white-space: nowrap;
 }
 .status-badge--publicada,
@@ -768,6 +803,11 @@ textarea:focus-visible,
   color: var(--success);
 }
 .status-badge--enviada {
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+.status-badge--aberto,
+.status-badge--open {
   background: var(--primary-soft);
   color: var(--primary);
 }

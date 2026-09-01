@@ -19,4 +19,18 @@ describe('DashboardPanel', () => {
 
     expect(screen.getByRole('tooltip')).toHaveTextContent('Avaliação de equipe')
   })
+
+  it('aplica a composição própria para duas colunas no estado sem jornadas', () => {
+    const { container } = render(
+      <DashboardPanel
+        canCreateAssessment={false}
+        canCreateSelfAssessment={false}
+        onOpenAssessments={vi.fn()}
+      />,
+    )
+
+    expect(container.querySelector('.dashboard-hero--empty')).toHaveTextContent(
+      'Nenhuma jornada disponível',
+    )
+  })
 })
