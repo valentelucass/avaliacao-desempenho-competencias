@@ -389,12 +389,14 @@ export function RelationshipAdministrationPanel({
                 <h3 id="manager-assignment-title">Vínculo gestor-colaborador</h3>
                 <ContextHelp title="O que este vínculo autoriza">
                   <p>
-                    Ele delimita quais colaboradores o gestor pode avaliar. A conta do gestor, a
-                    vigência e o escopo continuam verificados no servidor.
+                    Ele delimita quais colaboradores a conta avaliadora pode avaliar. A conta de
+                    Gestor ou RH, a vigência e o escopo continuam verificados no servidor.
                   </p>
                 </ContextHelp>
               </div>
-              <p className="muted">Define quais colaboradores podem ser avaliados pelo gestor.</p>
+              <p className="muted">
+                Define quais colaboradores podem ser avaliados por uma conta de Gestor ou RH.
+              </p>
             </div>
           </div>
           <form
@@ -405,7 +407,7 @@ export function RelationshipAdministrationPanel({
           >
             <div className="form-grid">
               <div className="field">
-                <label htmlFor={managerUserId}>Conta do gestor</label>
+                <label htmlFor={managerUserId}>Conta avaliadora (Gestor ou RH)</label>
                 <select
                   id={managerUserId}
                   value={managerUser}
@@ -465,7 +467,7 @@ export function RelationshipAdministrationPanel({
             getCollaboratorName={(entry) =>
               collaboratorLabel(collaboratorNamesById, entry.collaboratorId)
             }
-            accountColumn="Gestor"
+            accountColumn="Avaliador"
             onClose={(entry) =>
               setCloseTarget({
                 kind: 'MANAGER',

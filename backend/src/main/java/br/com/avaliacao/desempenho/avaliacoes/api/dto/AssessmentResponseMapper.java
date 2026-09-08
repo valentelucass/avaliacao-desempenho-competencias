@@ -44,7 +44,13 @@ public final class AssessmentResponseMapper {
         safeSource.actionPlan(),
         safeSource.result() == null ? null : toResult(safeSource.result()),
         safeSource.competencyScores().stream().map(this::toCompetencyScore).toList(),
-        safeSource.feedback() == null ? null : toFeedback(safeSource.feedback()));
+        safeSource.feedback() == null ? null : toFeedback(safeSource.feedback()),
+        new AssessmentDetailResponse.AllowedActionsResponse(
+            safeSource.allowedActions().edit(),
+            safeSource.allowedActions().submit(),
+            safeSource.allowedActions().publish(),
+            safeSource.allowedActions().reopen(),
+            safeSource.allowedActions().completeFeedback()));
   }
 
   private AssessmentDetailResponse.CompetencyResponse toCompetency(

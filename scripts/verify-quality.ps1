@@ -74,6 +74,10 @@ Invoke-Validation 'Operacao: manifesto PM2 com ambiente minimo' {
     & node (Join-Path $PSScriptRoot 'validate-pm2-manifest.cjs')
 }
 
+Invoke-Validation 'Operacao: regressao dos launchers DEV sem alterar processos reais' {
+    & (Join-Path $PSScriptRoot 'testar-launchers-dev.ps1')
+}
+
 Invoke-Validation 'Banco: regras estaticas de migrations' {
     & (Join-Path $repositoryRoot 'database\scripts\validar-migrations.ps1') `
         -MigrationDirectory (Join-Path $repositoryRoot 'database\sql\migrations')
@@ -86,6 +90,10 @@ Invoke-Validation 'Aplicacao: build, testes, formatter e lint' {
     else {
         & (Join-Path $PSScriptRoot 'verify.ps1') -BackendBuildDirectory $BackendBuildDirectory
     }
+}
+
+Invoke-Validation 'Front-end: impressao A4 e hover desabilitado no Edge real' {
+    & node (Join-Path $repositoryRoot 'frontend/scripts/check-assessment-print.cjs')
 }
 
 Invoke-Validation 'Back-end: SBOM e vulnerabilidades conhecidas' {

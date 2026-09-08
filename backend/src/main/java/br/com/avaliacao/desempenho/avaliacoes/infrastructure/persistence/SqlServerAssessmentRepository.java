@@ -599,7 +599,7 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
     if (assessment.isEmpty() || !canView(assessment.get(), safeActor)) {
       return Optional.empty();
     }
-    return Optional.of(toDetail(assessment.get()));
+    return Optional.of(toDetail(assessment.get(), safeActor));
   }
 
   @Override
@@ -646,7 +646,7 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
                   "SUCESSO",
                   requestId,
                   "REPETICAO_IDEMPOTENTE");
-              return toDetail(replay);
+              return toDetail(replay, safeActor);
             }
 
             CreationScope scope = requireManagerCreationScope(cycleId, collaboratorId, safeActor);
@@ -687,7 +687,7 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
                 "SUCESSO",
                 requestId,
                 POLICY_VERSION);
-            return toDetail(requireLocked(assessmentId));
+            return toDetail(requireLocked(assessmentId), safeActor);
           });
     } catch (AssessmentForbiddenException exception) {
       safeDeniedAudit(safeActor.userId(), "AVALIACOES.CRIAR_GESTOR", null, requestId);
@@ -725,7 +725,7 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
                   "SUCESSO",
                   requestId,
                   "REPETICAO_IDEMPOTENTE");
-              return toDetail(replay);
+              return toDetail(replay, safeActor);
             }
 
             CreationScope scope = requireDirectorCreationScope(cycleId, collaboratorId, safeActor);
@@ -766,7 +766,7 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
                 "SUCESSO",
                 requestId,
                 POLICY_VERSION);
-            return toDetail(requireLocked(assessmentId));
+            return toDetail(requireLocked(assessmentId), safeActor);
           });
     } catch (AssessmentForbiddenException exception) {
       safeDeniedAudit(safeActor.userId(), "AVALIACOES.CRIAR_DIRETORIA_GERENCIA", null, requestId);
@@ -797,7 +797,7 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
                   "SUCESSO",
                   requestId,
                   "REPETICAO_IDEMPOTENTE");
-              return toDetail(replay);
+              return toDetail(replay, safeActor);
             }
 
             CreationScope scope = requireSelfCreationScope(cycleId, safeActor);
@@ -838,7 +838,7 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
                 "SUCESSO",
                 requestId,
                 POLICY_VERSION);
-            return toDetail(requireLocked(assessmentId));
+            return toDetail(requireLocked(assessmentId), safeActor);
           });
     } catch (AssessmentForbiddenException exception) {
       safeDeniedAudit(safeActor.userId(), "AUTOAVALIACOES.CRIAR", null, requestId);
@@ -888,7 +888,7 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
                 "SUCESSO",
                 requestId,
                 POLICY_VERSION);
-            return toDetail(requireLocked(current.id()));
+            return toDetail(requireLocked(current.id()), safeActor);
           });
     } catch (AssessmentForbiddenException exception) {
       safeDeniedAudit(safeActor.userId(), "AVALIACOES.EDITAR", assessmentId, requestId);
@@ -923,7 +923,7 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
                   "SUCESSO",
                   requestId,
                   "REPETICAO_IDEMPOTENTE");
-              return toDetail(replay);
+              return toDetail(replay, safeActor);
             }
 
             LockedAssessment current = requireLocked(assessmentId);
@@ -989,7 +989,7 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
                 "SUCESSO",
                 requestId,
                 POLICY_VERSION);
-            return toDetail(requireLocked(current.id()));
+            return toDetail(requireLocked(current.id()), safeActor);
           });
     } catch (AssessmentForbiddenException exception) {
       safeDeniedAudit(safeActor.userId(), "AVALIACOES.ENVIAR", assessmentId, requestId);
@@ -1017,7 +1017,7 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
                   "SUCESSO",
                   requestId,
                   "REPETICAO_IDEMPOTENTE");
-              return toDetail(replay);
+              return toDetail(replay, safeActor);
             }
 
             LockedAssessment current = requireLocked(assessmentId);
@@ -1064,7 +1064,7 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
                 "SUCESSO",
                 requestId,
                 POLICY_VERSION);
-            return toDetail(requireLocked(current.id()));
+            return toDetail(requireLocked(current.id()), safeActor);
           });
     } catch (AssessmentForbiddenException exception) {
       safeDeniedAudit(safeActor.userId(), "AVALIACOES.PUBLICAR", assessmentId, requestId);
@@ -1104,7 +1104,7 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
                   "SUCESSO",
                   requestId,
                   "REPETICAO_IDEMPOTENTE");
-              return toDetail(replay);
+              return toDetail(replay, safeActor);
             }
 
             LockedAssessment current = requireLocked(assessmentId);
@@ -1141,7 +1141,7 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
                 "SUCESSO",
                 requestId,
                 POLICY_VERSION);
-            return toDetail(requireLocked(current.id()));
+            return toDetail(requireLocked(current.id()), safeActor);
           });
     } catch (AssessmentForbiddenException exception) {
       safeDeniedAudit(safeActor.userId(), "AVALIACOES.FEEDBACK.CONCLUIR", assessmentId, requestId);
@@ -1177,7 +1177,7 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
                   "SUCESSO",
                   requestId,
                   "REPETICAO_IDEMPOTENTE");
-              return toDetail(replay);
+              return toDetail(replay, safeActor);
             }
 
             LockedAssessment current = requireLocked(assessmentId);
@@ -1219,7 +1219,7 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
                 "SUCESSO",
                 requestId,
                 POLICY_VERSION);
-            return toDetail(requireLocked(current.id()));
+            return toDetail(requireLocked(current.id()), safeActor);
           });
     } catch (AssessmentForbiddenException exception) {
       safeDeniedAudit(safeActor.userId(), "AVALIACOES.REABRIR", assessmentId, requestId);
@@ -2197,7 +2197,8 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
     }
   }
 
-  private AssessmentDetailView toDetail(LockedAssessment assessment) {
+  private AssessmentDetailView toDetail(
+      LockedAssessment assessment, AssessmentAccessContext actor) {
     AssessmentSummaryView summary =
         new AssessmentSummaryView(
             assessment.id(),
@@ -2235,7 +2236,33 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
         assessment.actionPlan(),
         result,
         result == null ? List.of() : loadCompetencyScores(assessment.versionId()),
-        loadFeedback(assessment));
+        loadFeedback(assessment),
+        allowedActions(assessment, actor));
+  }
+
+  private AllowedActionsView allowedActions(
+      LockedAssessment assessment, AssessmentAccessContext actor) {
+    boolean draft = assessment.status() == AssessmentStatus.RASCUNHO;
+    boolean published = assessment.status() == AssessmentStatus.PUBLICADA;
+    return new AllowedActionsView(
+        draft && permitsAction(() -> requireEditable(assessment, actor)),
+        draft && permitsAction(() -> requireSubmit(assessment, actor)),
+        assessment.status() == AssessmentStatus.ENVIADA
+            && permitsAction(() -> requirePublish(assessment, actor)),
+        published && permitsAction(() -> requireReopen(assessment, actor)),
+        published
+            && assessment.feedbackStatus() == FeedbackStatus.PENDENTE
+            && permitsAction(() -> requireFeedbackCompletion(assessment, actor)));
+  }
+
+  /** Reutiliza a autorização da escrita; falhas de infraestrutura não viram permissão negada. */
+  static boolean permitsAction(Runnable authorization) {
+    try {
+      authorization.run();
+      return true;
+    } catch (AssessmentForbiddenException | AssessmentConflictException exception) {
+      return false;
+    }
   }
 
   private FeedbackView loadFeedback(LockedAssessment assessment) {

@@ -22,6 +22,35 @@ public class SqlServerMasterDataRepository implements MasterDataRepository {
   private static final String MIGRATION_ATRIBUICOES = "V0007";
   private static final String MIGRATION_FEEDBACK = "V0012";
 
+  static final String CREATE_MANAGER_ASSIGNMENT_SQL =
+      """
+      INSERT INTO dbo.vinculo_gestor_colaborador (
+          vinculo_gestor_colaborador_id,
+          gestor_usuario_id,
+          colaborador_id,
+          inicio_vigencia,
+          criado_por_usuario_id
+      )
+      SELECT ?, ?, ?, ?, ?
+      WHERE EXISTS (
+          SELECT 1 FROM dbo.usuario
+          WHERE usuario_id = ? AND situacao = 'ATIVO'
+      )
+        AND EXISTS (
+          SELECT 1
+          FROM dbo.atribuicao_papel AS atribuicao
+          INNER JOIN dbo.papel AS papel ON papel.papel_id = atribuicao.papel_id
+          WHERE atribuicao.usuario_id = ?
+            AND atribuicao.revogado_em_utc IS NULL
+            AND papel.codigo IN ('GESTOR', 'GERENCIA_RH')
+            AND papel.ativo = 1
+        )
+        AND EXISTS (
+          SELECT 1 FROM dbo.colaborador
+          WHERE colaborador_id = ? AND ativo = 1
+        )
+      """;
+
   private final JdbcTemplate jdbcTemplate;
 
   public SqlServerMasterDataRepository(JdbcTemplate jdbcTemplate) {
@@ -191,33 +220,7 @@ public class SqlServerMasterDataRepository implements MasterDataRepository {
     requireMigration(MIGRATION_CADASTROS);
     requireMigration(MIGRATION_REGRA_2024_1);
     return jdbcTemplate.update(
-            """
-            INSERT INTO dbo.vinculo_gestor_colaborador (
-                vinculo_gestor_colaborador_id,
-                gestor_usuario_id,
-                colaborador_id,
-                inicio_vigencia,
-                criado_por_usuario_id
-            )
-            SELECT ?, ?, ?, ?, ?
-            WHERE EXISTS (
-                SELECT 1 FROM dbo.usuario
-                WHERE usuario_id = ? AND situacao = 'ATIVO'
-            )
-              AND EXISTS (
-                SELECT 1
-                FROM dbo.atribuicao_papel AS atribuicao
-                INNER JOIN dbo.papel AS papel ON papel.papel_id = atribuicao.papel_id
-                WHERE atribuicao.usuario_id = ?
-                  AND atribuicao.revogado_em_utc IS NULL
-                  AND papel.codigo = 'GESTOR'
-                  AND papel.ativo = 1
-              )
-              AND EXISTS (
-                SELECT 1 FROM dbo.colaborador
-                WHERE colaborador_id = ? AND ativo = 1
-              )
-            """,
+            CREATE_MANAGER_ASSIGNMENT_SQL,
             assignment.id(),
             assignment.managerUserId(),
             assignment.collaboratorId(),

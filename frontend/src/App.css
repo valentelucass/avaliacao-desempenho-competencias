@@ -870,7 +870,7 @@ textarea:focus-visible,
     background-color 160ms ease,
     border-color 160ms ease;
 }
-.answer-option:hover {
+.answer-option:not(:has(input:disabled)):hover {
   background: var(--surface-muted);
 }
 .answer-option:has(input:checked) {
@@ -880,12 +880,10 @@ textarea:focus-visible,
 
 .answer-option:has(input:disabled) {
   cursor: default;
+  pointer-events: none;
   transition: none;
 }
 
-.answer-option:has(input:disabled):hover:not(:has(input:checked)) {
-  background: var(--surface);
-}
 .answer-option__points {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -4302,6 +4300,10 @@ thead th {
   white-space: pre-wrap;
 }
 
+.individual-assessment-summary__print-score-list {
+  display: none;
+}
+
 .individual-assessment-summary__table {
   table-layout: fixed;
   width: 100%;
@@ -4456,6 +4458,11 @@ thead th {
   padding: 0.9rem 1.1rem;
 }
 
+@page {
+  margin: 2mm 7mm;
+  size: A4 portrait;
+}
+
 @media print {
   .application-footer,
   .assessment-editor > :not(.stack-form),
@@ -4463,6 +4470,9 @@ thead th {
     display: none !important;
   }
 
+  html,
+  body,
+  #root,
   .application-shell,
   .workspace,
   .workspace__content,
@@ -4470,26 +4480,35 @@ thead th {
   .assessment-editor .stack-form,
   .assessment-editor__print-sheet {
     display: block;
+    height: auto !important;
     margin: 0;
     min-height: 0;
+    overflow: visible !important;
     padding: 0;
     width: 100%;
   }
 
   .assessment-editor__print-sheet {
+    break-after: avoid-page;
     color: #102a43;
+    page-break-after: avoid;
     print-color-adjust: exact;
     -webkit-print-color-adjust: exact;
+  }
+
+  /* A regra responsiva com :not() também participa da cascata de impressão. */
+  .application-shell:not(.application-shell--narrow) {
+    padding: 0;
   }
 
   .assessment-editor__print-heading {
     align-items: end;
     border-bottom: 0.35mm solid #7a9ab8;
     display: grid;
-    gap: 5mm;
-    grid-template-columns: minmax(0, 1.15fr) minmax(46mm, 0.85fr);
-    margin: 0 0 5mm;
-    padding: 0 0 4mm;
+    gap: 3mm;
+    grid-template-columns: minmax(0, 1.25fr) minmax(42mm, 0.75fr);
+    margin: 0 0 3mm;
+    padding: 0 0 3mm;
   }
 
   .assessment-editor__print-heading p,
@@ -4503,7 +4522,7 @@ thead th {
   .assessment-editor__print-heading p,
   .assessment-editor__print-heading dt {
     color: #3a5f82;
-    font-size: 2.45mm;
+    font-size: 2.1mm;
     font-weight: 700;
     letter-spacing: 0.07em;
     text-transform: uppercase;
@@ -4511,28 +4530,28 @@ thead th {
 
   .assessment-editor__print-heading h2 {
     color: #102a43;
-    font-size: 5.1mm;
+    font-size: 4mm;
     line-height: 1.14;
-    margin-top: 1.2mm;
+    margin-top: 0.8mm;
   }
 
   .assessment-editor__print-heading dl {
     display: grid;
-    gap: 2.5mm;
+    gap: 2mm;
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .assessment-editor__print-heading dl div + div {
     border-left: 0.28mm solid #c6d5e2;
-    padding-left: 2.5mm;
+    padding-left: 2mm;
   }
 
   .assessment-editor__print-heading dd {
     color: #102a43;
-    font-size: 3.35mm;
+    font-size: 2.8mm;
     font-weight: 700;
     line-height: 1.25;
-    margin-top: 1mm;
+    margin-top: 0.6mm;
   }
 
   .assessment-editor__print-sheet .individual-assessment-summary {
@@ -4542,51 +4561,52 @@ thead th {
     break-inside: avoid;
     box-shadow: none;
     color: #102a43;
-    gap: 4mm;
-    padding: 5mm 6mm 6mm;
+    gap: 2.5mm;
+    padding: 3.5mm 4mm 2mm;
     page-break-inside: avoid;
   }
 
   .assessment-editor__print-sheet .individual-assessment-summary__chart-heading .eyebrow,
-  .assessment-editor__print-sheet .table-scroll {
+  .assessment-editor__print-sheet .table-scroll,
+  .assessment-editor__print-sheet .pagination {
     display: none;
   }
 
   .assessment-editor__print-sheet .individual-assessment-summary__chart-header {
     border-bottom: 0.28mm solid #c6d5e2;
-    gap: 3mm;
+    gap: 2mm;
     grid-template-columns: minmax(0, 1fr);
-    padding-bottom: 3.5mm;
+    padding-bottom: 2.5mm;
   }
 
   .assessment-editor__print-sheet .individual-assessment-summary__chart-heading h3 {
     color: #102a43;
-    font-size: 4.2mm;
+    font-size: 3.35mm;
   }
 
   .assessment-editor__print-sheet .individual-assessment-summary__chart-result {
-    gap: 3mm;
+    gap: 2mm;
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .assessment-editor__print-sheet .individual-assessment-summary__chart-result div + div {
     border-left: 0.28mm solid #c6d5e2;
-    padding-left: 3mm;
+    padding-left: 2mm;
   }
 
   .assessment-editor__print-sheet .individual-assessment-summary__chart-result dt {
     color: #3a5f82;
-    font-size: 2.5mm;
+    font-size: 2.1mm;
   }
 
   .assessment-editor__print-sheet .individual-assessment-summary__chart-result dd {
     color: #102a43;
-    font-size: 4.2mm;
+    font-size: 3.35mm;
   }
 
   .assessment-editor__print-sheet .competency-radar {
-    margin: 2mm auto 0;
-    max-inline-size: 126mm;
+    margin: 1mm auto 0;
+    max-inline-size: 188mm;
   }
 
   .assessment-editor__print-sheet .competency-radar__ring {
@@ -4611,31 +4631,84 @@ thead th {
   .assessment-editor__print-sheet .competency-radar__ring-label {
     color: #183d5b;
     fill: #183d5b;
-    font-size: 2.8mm;
+    /* Unidades do SVG: o tamanho físico depende da escala do viewBox. */
+    font-size: 12px;
   }
 
   .assessment-editor__print-sheet .competency-radar figcaption {
     color: #3a5f82;
     display: block;
-    font-size: 2.55mm;
+    font-size: 2.1mm;
     margin-top: -1mm;
+  }
+
+  .assessment-editor__print-sheet .individual-assessment-summary__print-score-list {
+    border-top: 0.28mm solid #c6d5e2;
+    display: grid;
+    gap: 1.5mm;
+    margin-top: 0;
+    padding-top: 2.5mm;
+  }
+
+  .assessment-editor__print-sheet .individual-assessment-summary__print-score-list h4 {
+    color: #102a43;
+    font-size: 2.7mm;
+    margin: 0;
+  }
+
+  .assessment-editor__print-sheet .individual-assessment-summary__print-score-list ul {
+    display: grid;
+    gap: 0.9mm 4mm;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .assessment-editor__print-sheet .individual-assessment-summary__print-score-list li {
+    align-items: baseline;
+    border-bottom: 0.28mm solid #c6d5e2;
+    display: grid;
+    gap: 0.9mm;
+    grid-template-columns: minmax(0, 1fr) auto;
+    min-width: 0;
+    line-height: 1.3;
+    padding-bottom: 0.6mm;
+  }
+
+  .assessment-editor__print-sheet .individual-assessment-summary__print-score-list span {
+    color: #183d5b;
+    font-size: 2.65mm;
+    font-weight: 700;
+    overflow-wrap: anywhere;
+  }
+
+  .assessment-editor__print-sheet .individual-assessment-summary__print-score-list strong {
+    color: #102a43;
+    font-size: 2.65mm;
   }
 
   .assessment-print-signature {
     border-top: 0.28mm solid #c6d5e2;
     break-inside: avoid;
     display: grid;
-    font-size: 2.8mm;
-    gap: 3mm;
-    margin: 6mm auto 0;
-    max-width: 126mm;
+    font-size: 2.3mm;
+    gap: 2mm;
+    grid-template-columns: minmax(0, 3fr) minmax(27mm, 1fr);
+    margin: 1mm auto 0;
+    max-width: 91mm;
     page-break-inside: avoid;
-    padding-top: 5mm;
+    padding-top: 2mm;
+  }
+
+  .assessment-print-signature__field {
+    display: grid;
+    gap: 2mm;
   }
 
   .assessment-print-signature__line {
     border-bottom: 0.35mm solid #102a43;
-    height: 10mm;
+    height: 7mm;
   }
 }
 

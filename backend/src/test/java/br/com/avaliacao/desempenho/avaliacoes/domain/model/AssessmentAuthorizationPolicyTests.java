@@ -47,6 +47,47 @@ class AssessmentAuthorizationPolicyTests {
   }
 
   @Test
+  void rhCanEvaluateOnlyLinkedPeopleAndPerformItsOwnSelfAssessmentWhenGrantedTheJourneys() {
+    UUID rh = UUID.randomUUID();
+    AssessmentAccessContext actor =
+        new AssessmentAccessContext(
+            rh,
+            Set.of(
+                AssessmentAuthorizationPolicy.EVALUATE_LINKED,
+                AssessmentAuthorizationPolicy.VIEW_OWN_RESPONSES,
+                AssessmentAuthorizationPolicy.RECORD_OWN_FEEDBACK,
+                AssessmentAuthorizationPolicy.FILL_OWN_SELF_ASSESSMENT,
+                AssessmentAuthorizationPolicy.SUBMIT_OWN_SELF_ASSESSMENT,
+                AssessmentAuthorizationPolicy.VIEW_OWN_SELF_ASSESSMENT),
+            Set.of("GERENCIA_RH"));
+
+    assertThat(policy.canCreateManagerAssessment(actor)).isTrue();
+    assertThat(policy.canCreateOrEditSelfAssessment(actor)).isTrue();
+    assertThat(
+            policy.canSubmit(
+                actor,
+                new AssessmentAuthorizationPolicy.AssessmentOwnership(rh, AssessmentType.GESTOR)))
+        .isTrue();
+    assertThat(
+            policy.canSubmit(
+                actor,
+                new AssessmentAuthorizationPolicy.AssessmentOwnership(
+                    rh, AssessmentType.AUTOAVALIACAO)))
+        .isTrue();
+    assertThat(
+            policy.canView(
+                actor,
+                new AssessmentAuthorizationPolicy.AssessmentOwnership(rh, AssessmentType.GESTOR)))
+        .isTrue();
+    assertThat(
+            policy.canRecordOwnFeedback(
+                actor,
+                new AssessmentAuthorizationPolicy.AssessmentOwnership(rh, AssessmentType.GESTOR),
+                FeedbackStatus.PENDENTE))
+        .isTrue();
+  }
+
+  @Test
   void publicationAndReopeningAreAvailableForEveryAssessmentTypeToRhAndDirectorate() {
     AssessmentAccessContext rh =
         new AssessmentAccessContext(

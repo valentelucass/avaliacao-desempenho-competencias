@@ -430,6 +430,14 @@ export interface AssessmentResult {
 }
 
 export interface AssessmentDetail extends AssessmentSummary {
+  /** Ausência em uma API anterior mantém o detalhe somente para leitura. */
+  allowedActions?: {
+    edit: boolean
+    submit: boolean
+    publish: boolean
+    reopen: boolean
+    completeFeedback: boolean
+  }
   questionnaire: {
     version: string
     competencies: readonly AssessmentCompetency[]

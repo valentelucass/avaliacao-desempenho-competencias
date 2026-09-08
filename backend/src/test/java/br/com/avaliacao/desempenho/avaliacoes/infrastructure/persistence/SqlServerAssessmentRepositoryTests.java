@@ -1,11 +1,13 @@
 package br.com.avaliacao.desempenho.avaliacoes.infrastructure.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import br.com.avaliacao.desempenho.avaliacoes.application.AssessmentForbiddenException;
 import java.sql.ResultSet;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -13,6 +15,24 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 class SqlServerAssessmentRepositoryTests {
+
+  @Test
+  void actionAvailabilityDeniesAuthorizationFailuresButNeverHidesInfrastructureErrors() {
+    assertThat(SqlServerAssessmentRepository.permitsAction(() -> {})).isTrue();
+    assertThat(
+            SqlServerAssessmentRepository.permitsAction(
+                () -> {
+                  throw new AssessmentForbiddenException();
+                }))
+        .isFalse();
+    assertThatThrownBy(
+            () ->
+                SqlServerAssessmentRepository.permitsAction(
+                    () -> {
+                      throw new IllegalStateException("infrastructure unavailable");
+                    }))
+        .isInstanceOf(IllegalStateException.class);
+  }
 
   @Test
   void accessibleListKeepsScopeChecksAndUsesParameterizedIndividualFilters() {

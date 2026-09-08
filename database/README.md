@@ -1,6 +1,6 @@
 # Banco de dados — Avaliação de Desempenho e Competências
 
-Esta pasta contém a fonte versionada do banco SQL Server do projeto. Os nomes canônicos são `AVALIACAO_DEV` para desenvolvimento e `AVALIACAO_PROD` para produção. A fonte contém as migrations `V0001` a `V0011`; o estado operacional registrado em [`../STATES.md`](../STATES.md) informa os dois históricos reconciliados até `V0010`, portanto `V0011` permanece pendente de aplicação autorizada. A migration `V0010` carrega somente o catálogo inicial aprovado; não cria colaboradores, vínculos, ciclos, atribuições ou avaliações. A base de produção usa uma identidade SQL de mínimo privilégio definida em [`production/`](production/README.md).
+Esta pasta contém a fonte versionada do banco SQL Server do projeto. Os nomes canônicos são `AVALIACAO_DEV` para desenvolvimento e `AVALIACAO_PROD` para produção. A fonte contém as migrations `V0001` a `V0014`; verificações somente leitura em 2026-09-08 confirmaram os dois históricos reconciliados até `V0014`. A `V0014` habilita as jornadas de avaliação e autoavaliação da Gerência de RH, sempre dependentes dos vínculos e demais condições validadas pela API. A base de produção usa uma identidade SQL de mínimo privilégio definida em [`production/`](production/README.md).
 
 ## Estrutura
 
@@ -16,7 +16,7 @@ database/
 │   └── preparar-migrations.ps1 # Lista e manifesto UTF-8 sem BOM das migrations
 └── sql/
     ├── bootstrap/            # Criação controlada do banco e infraestrutura de migrations
-    ├── migrations/           # Fonte única do schema, em ordem V0001 a V0011
+    ├── migrations/           # Fonte única do schema, em ordem V0001 a V0014
     ├── validation/           # Consultas de validação somente leitura e detecção de deriva
     └── manual/               # Scripts manuais que nunca são executados automaticamente
 ```
@@ -110,6 +110,12 @@ Se já existir um banco com o nome esperado, o runner exige o marcador interno d
 ## Renomeio único dos alvos existentes
 
 O launcher `renomear-bases.bat` migra somente os nomes antigos autorizados para `AVALIACAO_DEV` e `AVALIACAO_PROD`. Primeiro execute `database\renomear-bases.bat --check`; depois, quando as conexões afetadas estiverem autorizadas, execute `database\renomear-bases.bat --apply` e digite `RENOMEAR AVALIACAO_DEV E AVALIACAO_PROD`. O renomeio encerra conexões das duas bases com rollback imediato, rejeita destinos existentes e tenta reverter ambos os nomes se a segunda alteração falhar. Não o execute enquanto houver processo desconhecido conectado sem autorização explícita.
+
+## Massa complementar exclusivamente DEV
+
+Com o DEV deste repositório iniciado por `iniciar-dev.bat`, execute `pwsh -NoProfile -File scripts/complementar-massa-teste-dev.ps1` para consultar o marcador da carga, sem escrever. O argumento explícito `-Populate` aplica a carga fictícia autorizada: base transacional em `sql/manual/013_complementar_massa_teste_dev.sql` e avaliações, cálculo, publicação, feedback e reabertura pela API. O roteiro está em [massa-complementar-dev.md](../docs/operations/massa-complementar-dev.md).
+
+A rotina aceita somente `AVALIACAO_DEV` local, exige o processo da API do launcher DEV e verifica a identidade autenticada contra essa base. Não cria schema/migration, não altera PROD ou concessões e não preenche valores nulos que representem estados ainda não concluídos. Os marcadores e as chaves idempotentes permitem retomada; carga concluída não sobrescreve testes manuais nem duplica registros. `-Validate` confere opções de criação, indicadores, supressão e CSV da massa inicial, sem editar avaliações/cadastros. Credenciais fictícias permanecem em arquivos locais protegidos e ignorados pelo Git, nunca na saída do comando. Não executar o SQL manual fora do wrapper nem incluir esse arquivo no runner de migrations.
 
 ## Convenção de migrations
 

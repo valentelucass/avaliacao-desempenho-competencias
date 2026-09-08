@@ -124,7 +124,7 @@ export function IndividualAssessmentSummary({
           <svg
             className="competency-radar__svg"
             preserveAspectRatio="xMidYMid meet"
-            viewBox={`0 0 ${chartSize} ${chartSize}`}
+            viewBox={`0 85 ${chartSize} 550`}
             role="img"
             aria-labelledby="competency-radar-title competency-radar-description"
           >
@@ -208,6 +208,23 @@ export function IndividualAssessmentSummary({
           </div>
         ) : null}
       </div>
+
+      {displayMode === 'chart' ? (
+        <section
+          aria-labelledby="individual-summary-print-scores-title"
+          className="individual-assessment-summary__print-score-list"
+        >
+          <h4 id="individual-summary-print-scores-title">Notas por competência</h4>
+          <ul aria-label="Notas por competência">
+            {competencyScores.map((competency) => (
+              <li key={competency.id}>
+                <span>{competency.name}</span>
+                <strong>{formatScore(competency.score)}</strong>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       <div className="table-scroll">
         <table className="individual-assessment-summary__table">

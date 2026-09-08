@@ -121,7 +121,12 @@ public interface AssessmentRepository {
       String actionPlan,
       ResultView result,
       List<CompetencyScoreView> competencyScores,
-      FeedbackView feedback) {}
+      FeedbackView feedback,
+      AllowedActionsView allowedActions) {}
+
+  /** Disponibilidade para a interface; cada escrita continua revalidando as mesmas regras. */
+  record AllowedActionsView(
+      boolean edit, boolean submit, boolean publish, boolean reopen, boolean completeFeedback) {}
 
   record CompetencyView(UUID id, String name, List<QuestionView> questions) {}
 

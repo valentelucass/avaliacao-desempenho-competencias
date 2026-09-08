@@ -74,6 +74,10 @@ if defined CHECK_ONLY (
   exit /b 0
 )
 
+echo [Avaliacao PROD] Encerrando apenas a instancia local de desenvolvimento deste repositorio, se existir...
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\encerrar-dev-local-antes-producao.ps1"
+if errorlevel 1 exit /b 1
+
 call :ensure_frontend_dependencies
 if errorlevel 1 exit /b 1
 
@@ -175,32 +179,46 @@ set "FRONTEND_INSTALLED_HASH="
 for /f "skip=1 tokens=*" %%H in ('certutil -hashfile "frontend\package-lock.json" SHA256') do if not defined FRONTEND_LOCK_HASH set "FRONTEND_LOCK_HASH=%%H"
 set "FRONTEND_LOCK_HASH=%FRONTEND_LOCK_HASH: =%"
 if exist "frontend\node_modules\.adc-package-lock.sha256" set /p FRONTEND_INSTALLED_HASH=<"frontend\node_modules\.adc-package-lock.sha256"
-if defined FRONTEND_LOCK_HASH if /i "%FRONTEND_LOCK_HASH%"=="%FRONTEND_INSTALLED_HASH%" (
-  echo [Avaliacao PROD] Dependencias exatas do front-end ja conferem com o package-lock.
-  exit /b 0
-)
+if not defined FRONTEND_LOCK_HASH goto :install_frontend_dependencies
+if /i not "%FRONTEND_LOCK_HASH%"=="%FRONTEND_INSTALLED_HASH%" goto :install_frontend_dependencies
+call :assert_frontend_dependency_files
+if errorlevel 1 goto :install_frontend_dependencies
+echo [Avaliacao PROD] Dependencias exatas do front-end ja conferem com o package-lock.
+exit /b 0
 
+:install_frontend_dependencies
 echo [Avaliacao PROD] Instalando dependencias exatas do front-end...
 pushd frontend
 call npm ci
+set "NPM_CI_EXIT=%ERRORLEVEL%"
+popd
+if not "%NPM_CI_EXIT%"=="0" exit /b %NPM_CI_EXIT%
+call :assert_frontend_dependency_files
 if errorlevel 1 (
-  popd
   exit /b 1
 )
 set "FRONTEND_LOCK_HASH="
-for /f "skip=1 tokens=*" %%H in ('certutil -hashfile "package-lock.json" SHA256') do if not defined FRONTEND_LOCK_HASH set "FRONTEND_LOCK_HASH=%%H"
+for /f "skip=1 tokens=*" %%H in ('certutil -hashfile "frontend\package-lock.json" SHA256') do if not defined FRONTEND_LOCK_HASH set "FRONTEND_LOCK_HASH=%%H"
 set "FRONTEND_LOCK_HASH=%FRONTEND_LOCK_HASH: =%"
 if not defined FRONTEND_LOCK_HASH (
-  popd
   exit /b 1
 )
-> "node_modules\.adc-package-lock.sha256" echo %FRONTEND_LOCK_HASH%
+> "frontend\node_modules\.adc-package-lock.sha256" echo %FRONTEND_LOCK_HASH%
 if errorlevel 1 (
-  popd
   exit /b 1
 )
-popd
 exit /b 0
+
+:assert_frontend_dependency_files
+if not exist "frontend\node_modules\.package-lock.json" goto :frontend_dependencies_incomplete
+if not exist "frontend\node_modules\.bin\prettier.cmd" goto :frontend_dependencies_incomplete
+if not exist "frontend\node_modules\prettier\package.json" goto :frontend_dependencies_incomplete
+if not exist "frontend\node_modules\vite\bin\vite.js" goto :frontend_dependencies_incomplete
+exit /b 0
+
+:frontend_dependencies_incomplete
+echo [Avaliacao PROD] A instalacao local do front-end esta incompleta; o marcador do package-lock nao sera aceito.
+exit /b 1
 
 :resolve_node_executable
 set "NODE_EXECUTABLE="

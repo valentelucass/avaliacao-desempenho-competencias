@@ -929,16 +929,27 @@ IF (
     WHERE recurso_id = @assessment_id
       AND acao = 'AVALIACOES.FEEDBACK.CONCLUIR'
       AND resultado = 'NEGADO'
-) <> 1 OR NOT EXISTS (
+) <> 2 OR EXISTS (
+    SELECT expected.login
+    FROM (VALUES (N'qa.feedback.rh.$runId'), (N'qa.feedback.diretoria.$runId')) AS expected(login)
+    WHERE NOT EXISTS (
+        SELECT 1 FROM dbo.evento_auditoria AS audit
+        JOIN dbo.usuario AS actor ON actor.usuario_id = audit.ator_usuario_id
+        WHERE actor.login_normalizado = expected.login
+          AND audit.recurso_id = @assessment_id
+          AND audit.acao = 'AVALIACOES.FEEDBACK.CONCLUIR'
+          AND audit.resultado = 'NEGADO'
+    )
+) OR NOT EXISTS (
     SELECT 1
     FROM dbo.evento_auditoria AS audit
     JOIN dbo.usuario AS actor ON actor.usuario_id = audit.ator_usuario_id
-    WHERE actor.login_normalizado = N'qa.feedback.rh.$runId'
+    WHERE actor.login_normalizado = N'qa.feedback.tecnico.$runId'
       AND audit.acao = 'AUTORIZACAO.NEGAR'
       AND audit.tipo_recurso = 'HTTP'
       AND audit.resultado = 'NEGADO'
 )
-    THROW 51341, N'As negações de feedback nas camadas HTTP e de recurso não foram auditadas.', 1;
+    THROW 51341, N'As negações de feedback por autoria e de leitura técnica HTTP não foram auditadas.', 1;
 "@
     $output = & sqlcmd.exe -S $sqlServer -E -N -C -d $database -b -h -1 -W -Q $query 2>&1
     if ($LASTEXITCODE -ne 0) {

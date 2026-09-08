@@ -640,7 +640,7 @@
     border-radius: var(--visual-radius-control);
   }
 
-  .answer-option:hover {
+  .answer-option:not(:has(input:disabled)):hover {
     background: color-mix(in srgb, var(--primary-soft) 62%, var(--surface));
     border-color: color-mix(in srgb, var(--primary) 48%, var(--border));
   }

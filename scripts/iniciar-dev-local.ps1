@@ -2,7 +2,8 @@
 param(
     [switch]$OpenBrowser,
     [switch]$KeepRunning,
-    [string]$PublicPreviewOrigin
+    [string]$PublicPreviewOrigin,
+    [switch]$PublicPreviewOriginFromEnvironment
 )
 
 Set-StrictMode -Version Latest
@@ -108,7 +109,7 @@ function Stop-ExistingLocalDevelopment {
     }
     Wait-ForAvailablePort -Port $backendPort
     Wait-ForAvailablePort -Port $frontendPort
-    Write-Host 'A instância anterior de desenvolvimento foi encerrada nas portas fixas 5180 e 5181.'
+    Write-Host "A instância anterior de desenvolvimento foi encerrada nas portas $frontendPort e $backendPort."
 }
 
 function Get-StartedLocalDevelopmentListener {
@@ -247,6 +248,26 @@ function Get-ValidatedPublicPreviewOrigin {
     }
 
     return $uri.GetLeftPart([UriPartial]::Authority)
+}
+
+function Get-DevTunnelForwardedPort {
+    param([Parameter(Mandatory)][string]$Origin)
+
+    $uri = [Uri]$Origin
+    $portMatch = [regex]::Match(
+        $uri.DnsSafeHost,
+        '-(?<port>[1-9][0-9]{0,4})\.(?:[a-z0-9-]+\.)*devtunnels\.ms$'
+    )
+    if (-not $portMatch.Success) {
+        throw 'A URL do Dev Tunnel não informa a porta encaminhada no hostname.'
+    }
+
+    $forwardedPort = [int]$portMatch.Groups['port'].Value
+    if ($forwardedPort -lt 1024 -or $forwardedPort -gt 65535) {
+        throw 'A porta encaminhada pelo Dev Tunnel deve estar entre 1024 e 65535.'
+    }
+
+    return $forwardedPort
 }
 
 function Restore-ProcessEnvironment {
@@ -483,7 +504,22 @@ try {
     if ($null -eq (Get-Command npm.cmd -ErrorAction SilentlyContinue)) {
         throw 'npm não foi encontrado no PATH.'
     }
-    $validatedPublicPreviewOrigin = Get-ValidatedPublicPreviewOrigin -Origin $PublicPreviewOrigin
+    if ($PublicPreviewOriginFromEnvironment -and -not [string]::IsNullOrWhiteSpace($PublicPreviewOrigin)) {
+        throw 'Informe a origem pública diretamente ou pelo ambiente, mas não pelas duas formas.'
+    }
+    $publicPreviewOriginInput = if ($PublicPreviewOriginFromEnvironment) {
+        [Environment]::GetEnvironmentVariable('ADC_DEV_PUBLIC_PREVIEW_ORIGIN', 'Process')
+    }
+    else {
+        $PublicPreviewOrigin
+    }
+    if ($PublicPreviewOriginFromEnvironment -and [string]::IsNullOrWhiteSpace($publicPreviewOriginInput)) {
+        throw 'A origem pública do Dev Tunnel não foi informada no ambiente do processo.'
+    }
+    $validatedPublicPreviewOrigin = Get-ValidatedPublicPreviewOrigin -Origin $publicPreviewOriginInput
+    if ($null -ne $validatedPublicPreviewOrigin) {
+        $frontendPort = Get-DevTunnelForwardedPort -Origin $validatedPublicPreviewOrigin
+    }
 
     $backendArtifact = New-DevelopmentBackendArtifact
     Assert-BackendArtifactIsCurrent -Artifact $backendArtifact
@@ -612,7 +648,7 @@ try {
     Write-Host "Processos em escuta: API $($startedListeners[0].ProcessId), front-end $($startedListeners[1].ProcessId)."
     if ($null -ne $validatedPublicPreviewOrigin) {
         Write-Host "Demonstração temporária disponível em $validatedPublicPreviewOrigin"
-        Write-Host 'Mantenha apenas a porta 5180 pública no Dev Tunnel e encerre esta sessão ao concluir a demonstração.'
+        Write-Host "O Dev Tunnel deve encaminhar somente a porta local $frontendPort; encerre esta sessão ao concluir a demonstração."
     }
     Write-Host 'A primeira entrada exige a troca da senha inicial e um novo login.'
     if ($OpenBrowser) {

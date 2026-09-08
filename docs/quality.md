@@ -10,6 +10,8 @@ Execute na raiz do repositório:
 
 O comando é um gate local. Ele não cria usuários, dados de negócio, migrations, processos PM2, regras de firewall ou rotas da Cloudflare.
 
+O gate inclui regressões dos launchers com processos simulados e impressão/hover em Microsoft Edge headless instalado no caminho padrão do Windows. O teste do navegador usa componentes reais, o CSS compilado e dados inteiramente fictícios, sem conexão com a API; valida uma única página A4, 21 notas, ausência de espaço no topo, tamanho físico dos rótulos e alternativas desabilitadas sem hover. Para executá-lo isoladamente após o build: `node frontend/scripts/check-assessment-print.cjs`. Aguarda fontes e quadros de renderização antes das medições; não substitui o aceite da impressora real.
+
 | Área         | Verificação executada                                                                                                                                                                                                                          |
 | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Repositório  | Scanner heurístico de segredos, análise de sintaxe dos scripts PowerShell versionáveis e validação estática do manifesto PM2. O scanner informa apenas arquivo, linha e categoria; nunca imprime o possível valor sensível.                    |
@@ -18,7 +20,7 @@ O comando é um gate local. Ele não cria usuários, dados de negócio, migratio
 | Front-end    | Prettier, Oxlint, Vitest, testes automatizados de acessibilidade com axe e build Vite/TypeScript.                                                                                                                                              |
 | Dependências | `npm audit --audit-level=high` e verificação do SBOM Java pelo OSV Scanner. As consultas de vulnerabilidade dependem de conectividade externa; o binário oficial do scanner Java é fixado por versão e validado por SHA-256 antes da execução. |
 
-Use o comando sem `-SkipDatabase` no banco local dedicado. A evidência de 2026-08-29 registra `V0001`–`V0013` reconciliadas em `AVALIACAO_DEV` e `AVALIACAO_PROD`. Use `-SkipDatabase` somente quando o alvo SQL Server não estiver disponível para o gate; essa opção ainda valida os arquivos de migration, mas não substitui a execução completa contra SQL Server antes da liberação.
+Use o comando sem `-SkipDatabase` no banco local dedicado. O catálogo versionado atual contém `V0001`–`V0014`; a reconciliação somente leitura dos dois bancos foi registrada em 2026-09-08. Use `-SkipDatabase` somente quando o alvo SQL Server não estiver disponível para o gate; essa opção ainda valida os arquivos de migration, mas não substitui a execução completa contra SQL Server antes da liberação.
 
 ## Acessibilidade
 

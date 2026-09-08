@@ -84,7 +84,7 @@ public class SqlServerAdministrativeReadRepository implements AdministrativeRead
 
   static final String LIST_ELIGIBLE_MANAGER_OPTIONS_SQL =
       """
-      SELECT usuario.usuario_id,
+      SELECT DISTINCT usuario.usuario_id,
              usuario.nome_exibicao
       FROM dbo.usuario AS usuario
       INNER JOIN dbo.atribuicao_papel AS atribuicao
@@ -93,7 +93,7 @@ public class SqlServerAdministrativeReadRepository implements AdministrativeRead
           ON papel.papel_id = atribuicao.papel_id
       WHERE usuario.situacao = 'ATIVO'
         AND atribuicao.revogado_em_utc IS NULL
-        AND papel.codigo = 'GESTOR'
+        AND papel.codigo IN ('GESTOR', 'GERENCIA_RH')
         AND papel.ativo = 1
       ORDER BY usuario.nome_exibicao, usuario.usuario_id
       """;

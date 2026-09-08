@@ -41,7 +41,6 @@ export function AssessmentEditor({
   const [assessment, setAssessment] = useState<AssessmentDetail>()
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [comment, setComment] = useState('')
-  const [actionPlan, setActionPlan] = useState('')
   const [reopenReason, setReopenReason] = useState('')
   const [feedbackDate, setFeedbackDate] = useState('')
   const [feedbackComment, setFeedbackComment] = useState('')
@@ -91,9 +90,12 @@ export function AssessmentEditor({
     [assessment],
   )
   const isDraft = assessment?.status === 'RASCUNHO'
-  const canEditDraft = isDraft && canEditAssessmentType(assessment?.type)
+  const canEditDraft =
+    isDraft && assessment?.allowedActions?.edit === true && canEditAssessmentType(assessment?.type)
+  const areAnswersDisabled = !canEditDraft || isSaving
   const canSubmitDraft =
     isDraft &&
+    assessment?.allowedActions?.submit === true &&
     (assessment?.type === 'AUTOAVALIACAO'
       ? canSubmitSelfAssessment
       : canEditAssessmentType(assessment?.type))
@@ -101,7 +103,10 @@ export function AssessmentEditor({
     assessment?.status === 'PUBLICADA' &&
     assessment.feedbackStatus === 'PENDENTE' &&
     assessment.type !== 'AUTOAVALIACAO' &&
+    assessment.allowedActions?.completeFeedback === true &&
     canRecordFeedback
+  const canPublishAssessment = canPublish && assessment?.allowedActions?.publish === true
+  const canReopenAssessment = canReopen && assessment?.allowedActions?.reopen === true
   const hasPrintableSummary =
     (assessment?.status === 'ENVIADA' || assessment?.status === 'PUBLICADA') &&
     assessment.result !== undefined &&
@@ -113,7 +118,6 @@ export function AssessmentEditor({
       Object.fromEntries(detail.answers.map((answer) => [answer.questionId, answer.optionId])),
     )
     setComment(detail.comment ?? '')
-    setActionPlan(detail.actionPlan ?? '')
     setReopenReason('')
     setFeedbackDate('')
     setFeedbackComment('')
@@ -124,7 +128,8 @@ export function AssessmentEditor({
     return {
       answers: Object.entries(answers).map(([questionId, optionId]) => ({ questionId, optionId })),
       comment: comment.trim() || undefined,
-      actionPlan: actionPlan.trim() || undefined,
+      // O campo deixou a interface; preservar um dado legado impede que salvar respostas o apague.
+      actionPlan: assessment?.actionPlan,
     }
   }
 
@@ -183,7 +188,7 @@ export function AssessmentEditor({
   }
 
   async function publishAssessment() {
-    if (!assessment || assessment.status !== 'ENVIADA' || !canPublish) {
+    if (!assessment || assessment.status !== 'ENVIADA' || !canPublishAssessment) {
       return
     }
 
@@ -203,7 +208,7 @@ export function AssessmentEditor({
   }
 
   async function reopenAssessment() {
-    if (!assessment || assessment.status !== 'PUBLICADA' || !canReopen) {
+    if (!assessment || assessment.status !== 'PUBLICADA' || !canReopenAssessment) {
       return
     }
     const reason = reopenReason.trim()
@@ -359,11 +364,7 @@ export function AssessmentEditor({
 
       <form className="stack-form" onSubmit={handleSubmit} noValidate aria-busy={isSaving}>
         {assessment.questionnaire.competencies.map((competency) => (
-          <fieldset
-            className="competency-card"
-            key={competency.id}
-            disabled={!canEditDraft || isSaving}
-          >
+          <fieldset className="competency-card" key={competency.id} disabled={areAnswersDisabled}>
             <legend id={`${competency.id}-label`}>{competency.name}</legend>
             {competency.questions.map((question) => {
               const questionError = missingQuestionIds.includes(question.id)
@@ -401,6 +402,7 @@ export function AssessmentEditor({
                             type="radio"
                             checked={answers[question.id] === option.id}
                             onChange={() => selectAnswer(question.id, option.id)}
+                            disabled={areAnswersDisabled}
                             required={question.required}
                           />
                           <span>{option.label}</span>
@@ -433,17 +435,6 @@ export function AssessmentEditor({
               rows={4}
             />
           </div>
-
-          <div className="field assessment-editor__narrative-field">
-            <label htmlFor="assessment-action-plan">Plano de ação opcional</label>
-            <textarea
-              id="assessment-action-plan"
-              value={actionPlan}
-              onChange={(event) => setActionPlan(event.target.value)}
-              disabled={!canEditDraft || isSaving}
-              rows={4}
-            />
-          </div>
         </div>
 
         <div className="assessment-editor__print-sheet">
@@ -465,8 +456,14 @@ export function AssessmentEditor({
           </header>
           <IndividualAssessmentSummary assessment={assessment} displayMode="chart" />
           <section className="assessment-print-signature" aria-label="Assinatura do colaborador">
-            <span>Assinatura do colaborador</span>
-            <div aria-hidden="true" className="assessment-print-signature__line" />
+            <div className="assessment-print-signature__field">
+              <span>Assinatura do colaborador</span>
+              <div aria-hidden="true" className="assessment-print-signature__line" />
+            </div>
+            <div className="assessment-print-signature__field">
+              <span>Data</span>
+              <div aria-hidden="true" className="assessment-print-signature__line" />
+            </div>
           </section>
         </div>
 
@@ -490,7 +487,7 @@ export function AssessmentEditor({
           </div>
         ) : null}
 
-        {assessment.status === 'ENVIADA' && canPublish ? (
+        {assessment.status === 'ENVIADA' && canPublishAssessment ? (
           <div className="action-row">
             <button
               className="button button--success"
@@ -503,7 +500,7 @@ export function AssessmentEditor({
           </div>
         ) : null}
 
-        {assessment.status === 'PUBLICADA' && canReopen ? (
+        {assessment.status === 'PUBLICADA' && canReopenAssessment ? (
           <section
             className="assessment-editor__administrative-action"
             aria-labelledby="reopen-assessment-title"
@@ -626,8 +623,8 @@ export function AssessmentEditor({
 
         {!canEditDraft &&
         !canSubmitDraft &&
-        !(assessment.status === 'ENVIADA' && canPublish) &&
-        !(assessment.status === 'PUBLICADA' && canReopen) &&
+        !(assessment.status === 'ENVIADA' && canPublishAssessment) &&
+        !(assessment.status === 'PUBLICADA' && canReopenAssessment) &&
         !canCompleteFeedback ? (
           <FeedbackMessage kind="status">
             Esta avaliação está disponível somente para consulta com as permissões atuais.

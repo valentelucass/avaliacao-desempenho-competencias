@@ -45,7 +45,7 @@ describe('RelationshipAdministrationPanel', () => {
     )
 
     await screen.findByRole('option', { name: 'Gestora Joana' })
-    fireEvent.change(screen.getByLabelText('Conta do gestor'), {
+    fireEvent.change(screen.getByLabelText('Conta avaliadora (Gestor ou RH)'), {
       target: { value: 'manager-user-1' },
     })
     fireEvent.change(screen.getByLabelText('Colaborador'), {
@@ -80,7 +80,7 @@ describe('RelationshipAdministrationPanel', () => {
       ?.querySelectorAll('td')
 
     expect(cells).toHaveLength(4)
-    expect(cells?.[0]).toHaveAttribute('data-label', 'Gestor')
+    expect(cells?.[0]).toHaveAttribute('data-label', 'Avaliador')
     expect(cells?.[1]).toHaveAttribute('data-label', 'Colaborador')
     expect(cells?.[2]).toHaveAttribute('data-label', 'Início')
     expect(cells?.[3]).toHaveAttribute('data-label', 'Ação')

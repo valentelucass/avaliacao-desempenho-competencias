@@ -20,6 +20,7 @@
     <properties>
         <java.version>21</java.version>
         <maven.compiler.release>21</maven.compiler.release>
+        <tomcat.version>11.0.25</tomcat.version>
         <adc.build.directory>${project.basedir}/target</adc.build.directory>
     </properties>
 

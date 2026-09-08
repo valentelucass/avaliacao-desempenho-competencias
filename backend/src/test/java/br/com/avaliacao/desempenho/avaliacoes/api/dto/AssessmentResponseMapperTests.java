@@ -56,12 +56,16 @@ class AssessmentResponseMapperTests {
             new AssessmentRepository.FeedbackView(
                 LocalDate.parse("2026-08-29"),
                 "Conversa realizada.",
-                Instant.parse("2026-08-29T03:00:00Z")));
+                Instant.parse("2026-08-29T03:00:00Z")),
+            new AssessmentRepository.AllowedActionsView(false, false, true, false, false));
 
     AssessmentDetailResponse response = new AssessmentResponseMapper().toDetail(view);
 
     assertThat(response.id()).isEqualTo(assessmentId);
     assertThat(response.type()).isEqualTo("GESTOR");
+    assertThat(response.allowedActions())
+        .isEqualTo(
+            new AssessmentDetailResponse.AllowedActionsResponse(false, false, true, false, false));
     assertThat(response.feedbackStatus()).isEqualTo("PENDENTE");
     assertThat(response.feedback().comment()).isEqualTo("Conversa realizada.");
     assertThat(

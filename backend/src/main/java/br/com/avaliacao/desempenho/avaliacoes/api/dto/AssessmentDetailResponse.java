@@ -22,7 +22,11 @@ public record AssessmentDetailResponse(
     String actionPlan,
     ResultResponse result,
     List<CompetencyScoreResponse> competencyScores,
-    FeedbackResponse feedback) {
+    FeedbackResponse feedback,
+    AllowedActionsResponse allowedActions) {
+
+  public record AllowedActionsResponse(
+      boolean edit, boolean submit, boolean publish, boolean reopen, boolean completeFeedback) {}
 
   public record QuestionnaireResponse(String version, List<CompetencyResponse> competencies) {}
 

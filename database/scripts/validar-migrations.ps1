@@ -213,6 +213,27 @@ try {
     }
   }
 
+  $v0014 = $files | Where-Object {
+    $_.Name -eq 'V0014__habilitar_avaliacoes_e_autoavaliacoes_gerencia_rh.sql'
+  }
+  if ($null -ne $v0014) {
+    $rhAssessmentValidation = Join-Path $PSScriptRoot 'testar-v0014-avaliacoes-gerencia-rh.ps1'
+    $sqlValidation = Join-Path $resolvedDirectory '..\validation\014_validar_avaliacoes_e_autoavaliacoes_gerencia_rh.sql'
+
+    if (-not (Test-Path -LiteralPath $rhAssessmentValidation)) {
+      throw 'Teste estatico da V0014 nao encontrado.'
+    }
+    if (-not (Test-Path -LiteralPath $sqlValidation)) {
+      throw 'Validacao SQL da V0014 nao encontrada.'
+    }
+
+    $global:LASTEXITCODE = 0
+    & $rhAssessmentValidation -MigrationPath $v0014.FullName -SqlValidationPath $sqlValidation
+    if ($LASTEXITCODE -ne 0) {
+      throw 'Teste estatico da V0014 falhou.'
+    }
+  }
+
   Write-Output "Migrations validas: $($files.Count)"
   Write-Output 'Conteudo de migrations compativel com o runner.'
 } catch {

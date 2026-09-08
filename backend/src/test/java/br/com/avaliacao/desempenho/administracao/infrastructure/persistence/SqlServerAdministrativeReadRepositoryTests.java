@@ -65,7 +65,7 @@ class SqlServerAdministrativeReadRepositoryTests {
         .contains(
             "usuario.situacao = 'ATIVO'",
             "atribuicao.revogado_em_utc IS NULL",
-            "papel.codigo = 'GESTOR'",
+            "papel.codigo IN ('GESTOR', 'GERENCIA_RH')",
             "papel.ativo = 1")
         .doesNotContain("DELETE", "login_normalizado", "senha", "token", "comentario");
     assertThat(SqlServerAdministrativeReadRepository.LIST_ACTIVE_USER_OPTIONS_SQL)

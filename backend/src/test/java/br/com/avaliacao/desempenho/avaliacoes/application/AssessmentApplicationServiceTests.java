@@ -111,7 +111,8 @@ class AssessmentApplicationServiceTests {
             null,
             null,
             List.of(),
-            null);
+            null,
+            new AssessmentRepository.AllowedActionsView(false, false, false, false, false));
     when(repository.findAccessible(assessmentId, actor)).thenReturn(Optional.of(accessible));
 
     service.recordPrint(assessmentId, actor, "request-correlation-id");

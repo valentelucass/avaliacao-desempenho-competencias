@@ -547,6 +547,7 @@ for %%F in (
   011_validar_restricao_autoridade_administrador_plataforma.sql
   012_validar_feedback_integrado_e_vinculo_diretoria_gerencia.sql
   013_validar_restricao_avaliacoes_administrador_plataforma.sql
+  014_validar_avaliacoes_e_autoavaliacoes_gerencia_rh.sql
 ) do (
   echo [ETAPA] Validando %%F...
   sqlcmd %SQLCMD_FLAGS% -S "%SQLCMD_SERVER%" -E -d "%ADC_DB_NAME%" -i "%~dp0sql\validation\%%F"

@@ -335,7 +335,10 @@ describe('App', () => {
   })
 
   it('salva as respostas atuais antes de enviar e oferece impressão do resumo', async () => {
-    const draftAssessment = sampleManagerAssessmentWithOptionalQuestion()
+    const draftAssessment: AssessmentDetail = {
+      ...sampleManagerAssessmentWithOptionalQuestion(),
+      actionPlan: 'Plano histórico que deve ser preservado.',
+    }
     const savedAssessment: AssessmentDetail = {
       ...draftAssessment,
       revision: 'revision-2',
@@ -378,6 +381,7 @@ describe('App', () => {
     await screen.findByRole('radiogroup', { name: 'Conduz atividades com responsabilidade?' })
 
     expect(screen.getByRole('button', { name: 'Imprimir / PDF' })).toBeDisabled()
+    expect(screen.queryByLabelText('Plano de ação opcional')).not.toBeInTheDocument()
 
     fireEvent.click(screen.getByLabelText('Dentro das expectativas'))
     fireEvent.click(screen.getByRole('button', { name: 'Enviar avaliação' }))
@@ -385,7 +389,10 @@ describe('App', () => {
     await waitFor(() =>
       expect(api.saveAssessment).toHaveBeenCalledWith(
         draftAssessment.id,
-        { answers: [{ questionId: 'question-1', optionId: 'option-1' }] },
+        {
+          answers: [{ questionId: 'question-1', optionId: 'option-1' }],
+          actionPlan: 'Plano histórico que deve ser preservado.',
+        },
         draftAssessment.revision,
       ),
     )
@@ -406,6 +413,7 @@ describe('App', () => {
       'Resumo individual de desempenho',
     )
     expect(screen.getByLabelText('Assinatura do colaborador')).toBeInTheDocument()
+    expect(screen.getByText('Data')).toBeInTheDocument()
   })
 
   it('permite ao colaborador criar uma autoavaliação em ciclo autorizado', async () => {
@@ -481,6 +489,33 @@ describe('App', () => {
       cycleId: 'cycle-2024',
       collaboratorId: 'collaborator-1',
     })
+  })
+
+  it('oferece avaliação de equipe e autoavaliação para a Gerência de RH avaliadora', async () => {
+    const api = createApi({
+      currentUser: vi.fn().mockResolvedValue({
+        id: 'rh-1',
+        displayName: 'Gerência de RH avaliadora',
+        roles: ['GERENCIA_RH'],
+        permissions: [
+          'AVALIACOES.AVALIAR_VINCULADOS',
+          'AVALIACOES.VISUALIZAR_PROPRIAS_RESPOSTAS',
+          'AVALIACOES.REGISTRAR_FEEDBACK_PROPRIO',
+          'AUTOAVALIACOES.PREENCHER_PROPRIA',
+          'AUTOAVALIACOES.ENVIAR_PROPRIA',
+          'AUTOAVALIACOES.VISUALIZAR_PROPRIA',
+        ],
+      }),
+    })
+
+    renderWithExistingSession(api, '/')
+
+    expect(
+      await screen.findByRole('heading', { name: 'Avaliações de desempenho' }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Avaliar minha equipe/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Minha autoavaliação/ })).toBeInTheDocument()
+    expect(screen.queryByText('Nenhuma jornada disponível')).not.toBeInTheDocument()
   })
 
   it('mostra somente ciclos de Diretoria que o servidor confirmou como elegíveis', async () => {
@@ -1196,6 +1231,13 @@ function createApi(overrides: Partial<ApiClient> = {}): ApiClient {
 
 function sampleAssessment(): AssessmentDetail {
   return {
+    allowedActions: {
+      edit: true,
+      submit: true,
+      publish: true,
+      reopen: true,
+      completeFeedback: true,
+    },
     id: 'assessment-1',
     cycle: { id: 'cycle-2024', name: 'Ciclo 2024' },
     evaluated: { displayName: 'Colaborador autorizado' },

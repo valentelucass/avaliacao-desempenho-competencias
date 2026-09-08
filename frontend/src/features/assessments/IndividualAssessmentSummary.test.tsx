@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import type { AssessmentDetail } from '../../api/contracts'
 import { IndividualAssessmentSummary } from './IndividualAssessmentSummary'
@@ -27,13 +27,18 @@ describe('IndividualAssessmentSummary', () => {
     expect(screen.queryByRole('img', { name: /Pontuação por competência/ })).not.toBeInTheDocument()
   })
 
-  it('exibe apenas o gráfico e a tabela no detalhe da avaliação', () => {
+  it('prepara a relação completa de notas abaixo do gráfico para impressão', () => {
     render(<IndividualAssessmentSummary assessment={sampleAssessment()} displayMode="chart" />)
 
     expect(screen.getByRole('heading', { name: 'Gráfico da avaliação' })).toBeInTheDocument()
     expect(screen.getByText('Nota final')).toBeInTheDocument()
     expect(screen.getByText('Dentro das expectativas')).toBeInTheDocument()
     expect(screen.getByText('80')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Notas por competência' })).toBeInTheDocument()
+    const printedScores = screen.getByRole('list', { name: 'Notas por competência' })
+    expect(within(printedScores).getAllByRole('listitem')).toHaveLength(2)
+    expect(within(printedScores).getByText('100,0')).toBeInTheDocument()
+    expect(within(printedScores).getByText('110,0')).toBeInTheDocument()
     expect(screen.queryByText('Comentário seguro')).not.toBeInTheDocument()
     expect(screen.queryByText('Plano de desenvolvimento')).not.toBeInTheDocument()
   })
