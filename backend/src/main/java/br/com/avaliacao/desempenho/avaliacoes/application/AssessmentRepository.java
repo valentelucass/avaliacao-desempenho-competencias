@@ -100,8 +100,12 @@ public interface AssessmentRepository {
 
   /** Filtros opcionais; o repositório sempre reaplica o escopo do ator. */
   record AssessmentListFilter(
-      UUID cycleId, UUID collaboratorId, String evaluatedName, String managerName,
-      AssessmentStatus status, FeedbackStatus feedbackStatus) {
+      UUID cycleId,
+      UUID collaboratorId,
+      String evaluatedName,
+      String managerName,
+      AssessmentStatus status,
+      FeedbackStatus feedbackStatus) {
     public AssessmentListFilter {
       evaluatedName = normalizeName(evaluatedName);
       managerName = normalizeName(managerName);
@@ -118,7 +122,8 @@ public interface AssessmentRepository {
     private static String normalizeName(String value) {
       if (value == null) return null;
       if (value.length() > 160 || value.chars().anyMatch(Character::isISOControl)) {
-        throw new AssessmentValidationException("O nome deve ter até 160 caracteres, sem controles.");
+        throw new AssessmentValidationException(
+            "O nome deve ter até 160 caracteres, sem controles.");
       }
       String normalized = value.strip();
       return normalized.isEmpty() ? null : normalized;

@@ -493,10 +493,15 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
     parameters.add(safeActor.userId());
     parameters.add(safeActor.has("AUTOAVALIACOES.VISUALIZAR_PROPRIA") ? 1 : 0);
     parameters.add(safeActor.userId());
-    for (Object value : new Object[] {safeFilter.cycleId(), safeFilter.collaboratorId(),
-        safeFilter.evaluatedName(), safeFilter.managerName(),
-        safeFilter.status() == null ? null : safeFilter.status().name(),
-        safeFilter.feedbackStatus() == null ? null : safeFilter.feedbackStatus().name()}) {
+    for (Object value :
+        new Object[] {
+          safeFilter.cycleId(),
+          safeFilter.collaboratorId(),
+          safeFilter.evaluatedName(),
+          safeFilter.managerName(),
+          safeFilter.status() == null ? null : safeFilter.status().name(),
+          safeFilter.feedbackStatus() == null ? null : safeFilter.feedbackStatus().name()
+        }) {
       parameters.add(value);
       parameters.add(value);
     }
@@ -505,9 +510,12 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
       parameters.add(SqlServerUtcDateTime.forBinding(cursor.updatedAt()));
       parameters.add(cursor.id());
     }
-    List<AssessmentSummaryView> items = new ArrayList<>(jdbcTemplate.query(
-        cursor == null ? LIST_ACCESSIBLE_FIRST_PAGE_SQL : LIST_ACCESSIBLE_AFTER_CURSOR_SQL,
-        (resultSet, rowNumber) -> mapSummary(resultSet), parameters.toArray()));
+    List<AssessmentSummaryView> items =
+        new ArrayList<>(
+            jdbcTemplate.query(
+                cursor == null ? LIST_ACCESSIBLE_FIRST_PAGE_SQL : LIST_ACCESSIBLE_AFTER_CURSOR_SQL,
+                (resultSet, rowNumber) -> mapSummary(resultSet),
+                parameters.toArray()));
     AssessmentCursor nextCursor = null;
     if (items.size() > limit) {
       items.remove(items.size() - 1);

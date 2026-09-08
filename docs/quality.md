@@ -30,11 +30,15 @@ Use o comando sem `-SkipDatabase` no banco local dedicado. O catálogo versionad
 
 ## Acessibilidade
 
+O ensaio Edge também mede os [quatro filtros da lista de avaliações](operations/filtros-avaliacoes.md) no painel real, em cinco larguras e dois temas, incluindo grade responsiva, limites dos controles e Tab/foco. O teste SQL opt-in `AssessmentListReadOnlySqlTests` executa os bindings e predicados reais sobre CTEs fictícias no DEV; não cria nem altera dados. Ele é separado do ensaio histórico de rotação de sessão com escrita.
+
 O ensaio Edge também cobre as tabelas administrativas Reshaped em dez variações, cinco larguras (320 a 1440 px) e dois temas, verificando overflow, células visíveis, ausência de interatividade nas linhas passivas e preservação de estilos representativos fora das tabelas. Detalhes e limites em [tabelas-administrativas-reshaped.md](operations/tabelas-administrativas-reshaped.md).
 
 Os testes com axe cobrem regras automatizáveis nas jornadas principais e nos diálogos administrativos. A regra de contraste é desabilitada nesses testes porque o `jsdom` não implementa o canvas usado pelo axe para medir cores. Isso não substitui a revisão em navegador de contraste, foco visível, teclado, responsividade, zoom e leitor de tela no ambiente-alvo.
 
 ## Verificação operacional pré-publicação
+
+Depois de atualizar o DEV, `./scripts/testar-filtros-avaliacoes-dev.ps1` (PowerShell 7) verifica os quatro filtros na API realmente em execução, em todas as páginas de dois itens, comparando com o ciclo fictício existente `DEV-COMPLETO-FLUXOS`. Usa a conta fictícia RH local e somente consultas de negócio; login/logout geram sessões e auditoria normais. Esse ensaio opt-in é separado do gate, que valida as fontes e não atualiza os processos ativos. Detalhes e pré-requisitos: [filtros de avaliações](operations/filtros-avaliacoes.md).
 
 `./scripts/check-operation.ps1` é somente leitura: confirma JDK, Node.js, npm, disponibilidade do comando PM2, serviço `cloudflared` e a exposição das portas privadas `18080`/`18081`. Ele alerta sobre firewall e diretório de logs, mas não altera nada e não é aceite de produção. O procedimento completo está em [Runbook de pré-publicação](operations/pre-publication-runbook.md).
 

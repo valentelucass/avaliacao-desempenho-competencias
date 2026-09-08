@@ -420,6 +420,37 @@ describe('HttpApiClient', () => {
     )
   })
 
+  it('codifica os quatro filtros junto ao cursor sem enviar permissões ou payload', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ items: [], page: { limit: 12, nextCursor: null } }))
+    vi.stubGlobal('fetch', fetchMock)
+    await new HttpApiClient().listAssessments({
+      limit: 12,
+      cursor: 'cursor-seguro',
+      cycleId: 'cycle-1',
+      collaboratorId: 'person-1',
+      evaluatedName: 'Ana & José',
+      managerName: 'João %_[]',
+      status: 'PUBLICADA',
+      feedbackStatus: 'CONCLUIDO',
+    })
+    const [url, options] = fetchMock.mock.calls[0]
+    const params = new URL(url, 'https://example.test').searchParams
+    expect(Object.fromEntries(params)).toEqual({
+      limit: '12',
+      cursor: 'cursor-seguro',
+      cycleId: 'cycle-1',
+      collaboratorId: 'person-1',
+      evaluatedName: 'Ana & José',
+      managerName: 'João %_[]',
+      status: 'PUBLICADA',
+      feedbackStatus: 'CONCLUIDO',
+    })
+    expect(options).toMatchObject({ method: 'GET', credentials: 'include' })
+    expect(options.body).toBeUndefined()
+  })
+
   it('consulta as contas locais pela rota administrativa somente de leitura', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       jsonResponse([

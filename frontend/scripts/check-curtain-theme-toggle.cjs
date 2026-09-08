@@ -158,9 +158,13 @@ module.exports = async function checkCurtainThemeToggle({ send, frameId, css }) 
   await evaluate("document.querySelector('.adc-curtain-toggle').click()")
   await ready("document.querySelector('.adc-theme-curtain')?.dataset.phase==='falling'")
   await send('Emulation.setEmulatedMedia', { media: 'print' })
+  // A troca de mídia pode encerrar a animação antes da próxima chamada CDP.
+  // Tanto ausência quanto display:none impedem que a cortina apareça no papel.
   assert.equal(
-    await evaluate("getComputedStyle(document.querySelector('.adc-theme-curtain')).display"),
-    'none',
+    await evaluate(
+      "(() => { const curtain = document.querySelector('.adc-theme-curtain'); return !curtain || getComputedStyle(curtain).display === 'none' })()",
+    ),
+    true,
   )
   await evaluate("window.dispatchEvent(new Event('beforeprint'))")
   await ready("document.querySelector('.adc-theme-curtain')===null")

@@ -1,9 +1,10 @@
 /*
  * Camada visual progressiva Rodogarcia.
  *
- * Não modifica JSX, paginação, navegação ou comportamento. ADC-UI-050
- * padroniza dimensões/espaçamento somente dos botões. Tailwind compila tokens
- * semânticos usados por @apply; o Preflight permanece desativado.
+ * ADC-UI-050 padroniza dimensões/espaçamento somente dos botões; ADC-UI-052
+ * organiza visualmente a navegação e os cartões, sem alterar seus fluxos.
+ * Tailwind compila tokens semânticos usados por @apply; o Preflight permanece
+ * desativado.
  */
 :root {
   --button-neutral-bg: #f1f5f9;
@@ -13,7 +14,7 @@
   --button-disabled-bg: #e8edf3;
   --button-disabled-border: #cbd5e1;
   --button-disabled-text: #64748b;
-  --visual-radius-card: 1.125rem;
+  --visual-radius-card: 1rem;
   --visual-radius-control: 0.75rem;
   --visual-focus-outline: 0 0 0 3px color-mix(in srgb, var(--focus) 28%, transparent);
   --visual-shell-background:
@@ -43,22 +44,16 @@
     #ffffff 0%,
     color-mix(in srgb, var(--surface) 90%, var(--primary-soft)) 100%
   );
-  --visual-card-background: linear-gradient(
-    145deg,
-    #ffffff 0%,
-    color-mix(in srgb, var(--surface) 94%, var(--primary-soft)) 100%
-  );
+  --visual-card-background: var(--surface);
   --visual-muted-background: linear-gradient(
     145deg,
     color-mix(in srgb, var(--surface-subtle) 84%, #ffffff),
     var(--surface-subtle)
   );
-  --visual-card-border: color-mix(in srgb, var(--border) 58%, var(--surface));
+  --visual-card-border: color-mix(in srgb, var(--border) 82%, var(--surface));
   --visual-control-border: color-mix(in srgb, var(--border) 72%, var(--surface));
-  --visual-card-shadow:
-    0 1px 2px rgb(31 61 84 / 3%), 0 0.75rem 1.8rem rgb(31 61 84 / 6%),
-    0 2.5rem 4.5rem rgb(31 61 84 / 4%);
-  --visual-raised-shadow: 0 0.3rem 0.85rem rgb(31 61 84 / 7%), 0 1.25rem 2.8rem rgb(31 61 84 / 11%);
+  --visual-card-shadow: 0 1px 2px rgb(31 61 84 / 5%), 0 0.55rem 1.4rem rgb(31 61 84 / 6%);
+  --visual-raised-shadow: 0 0.3rem 0.8rem rgb(31 61 84 / 8%), 0 1rem 2.2rem rgb(31 61 84 / 10%);
   --visual-primary-shadow: 0 0.55rem 1.2rem color-mix(in srgb, var(--primary) 28%, transparent);
   --visual-table-heading: linear-gradient(
     180deg,
@@ -116,21 +111,16 @@
     color-mix(in srgb, var(--surface) 94%, var(--page-bg)),
     var(--page-bg)
   );
-  --visual-card-background: linear-gradient(
-    145deg,
-    color-mix(in srgb, var(--surface) 88%, var(--primary)),
-    color-mix(in srgb, var(--surface) 96%, var(--page-bg))
-  );
+  --visual-card-background: var(--surface);
   --visual-muted-background: linear-gradient(
     145deg,
     color-mix(in srgb, var(--surface-subtle) 90%, var(--surface)),
     var(--surface-subtle)
   );
-  --visual-card-border: color-mix(in srgb, var(--border) 72%, var(--surface));
+  --visual-card-border: color-mix(in srgb, var(--border) 86%, var(--surface));
   --visual-control-border: color-mix(in srgb, var(--border) 84%, var(--surface));
-  --visual-card-shadow:
-    0 1px 2px rgb(0 0 0 / 22%), 0 0.85rem 2rem rgb(0 0 0 / 24%), 0 2.25rem 4.75rem rgb(0 0 0 / 16%);
-  --visual-raised-shadow: 0 0.3rem 0.9rem rgb(0 0 0 / 28%), 0 1.35rem 3rem rgb(0 0 0 / 32%);
+  --visual-card-shadow: 0 1px 2px rgb(0 0 0 / 22%), 0 0.55rem 1.4rem rgb(0 0 0 / 22%);
+  --visual-raised-shadow: 0 0.3rem 0.8rem rgb(0 0 0 / 28%), 0 1rem 2.2rem rgb(0 0 0 / 30%);
   --visual-primary-shadow: 0 0.65rem 1.35rem color-mix(in srgb, var(--primary) 24%, transparent);
   --visual-table-heading: linear-gradient(
     180deg,
@@ -171,9 +161,10 @@
 
   .workspace-sidebar {
     @apply text-rodo-heading;
-    background: var(--visual-sidebar-background);
-    border-color: color-mix(in srgb, var(--primary) 22%, var(--border));
-    box-shadow: var(--visual-raised-shadow);
+    background: var(--surface);
+    border-color: color-mix(in srgb, var(--border) 88%, var(--surface));
+    border-radius: 1.15rem 0 0 1.15rem;
+    box-shadow: -0.45rem 0 1.6rem rgb(31 61 84 / 8%);
   }
 
   .workspace-sidebar__navigation {
@@ -185,7 +176,7 @@
 
   .workspace-sidebar__navigation .workspace-nav {
     scrollbar-width: none;
-    scroll-padding-block: 2.65rem;
+    scroll-padding-block: 2.15rem;
   }
 
   .workspace-sidebar__navigation .workspace-nav::-webkit-scrollbar {
@@ -193,8 +184,9 @@
   }
 
   .workspace-sidebar__navigation-fade {
-    backdrop-filter: blur(4px);
-    height: 3.15rem;
+    /* A transição indica que há itens fora da área visível, mas não embaralha
+       o texto do menu nem cria uma faixa branca abrupta sobre a navegação. */
+    height: 1.8rem;
     inset-inline: 0;
     opacity: 0;
     pointer-events: none;
@@ -206,8 +198,8 @@
   .workspace-sidebar__navigation-fade--top {
     background: linear-gradient(
       to bottom,
-      color-mix(in srgb, var(--surface) 97%, transparent),
-      color-mix(in srgb, var(--surface) 72%, transparent) 42%,
+      color-mix(in srgb, var(--surface) 88%, transparent),
+      color-mix(in srgb, var(--surface) 52%, transparent) 34%,
       transparent
     );
     top: 0;
@@ -216,8 +208,8 @@
   .workspace-sidebar__navigation-fade--bottom {
     background: linear-gradient(
       to top,
-      color-mix(in srgb, var(--surface) 97%, transparent),
-      color-mix(in srgb, var(--surface) 72%, transparent) 42%,
+      color-mix(in srgb, var(--surface) 88%, transparent),
+      color-mix(in srgb, var(--surface) 52%, transparent) 34%,
       transparent
     );
     bottom: 0;
@@ -230,12 +222,12 @@
 
   .workspace-sidebar__navigation-control {
     align-items: center;
-    background: color-mix(in srgb, var(--surface) 78%, transparent);
+    background: color-mix(in srgb, var(--surface) 92%, transparent);
     border: 0;
     color: var(--primary-strong);
     cursor: pointer;
     display: inline-flex;
-    height: 2.2rem;
+    height: 1.8rem;
     justify-content: center;
     padding: 0;
     position: absolute;
@@ -248,11 +240,13 @@
   }
 
   .workspace-sidebar__navigation-control--up {
+    box-shadow: 0 1px 0 color-mix(in srgb, var(--border) 65%, transparent);
     border-radius: 0 0 var(--radius-sm) var(--radius-sm);
     top: 0;
   }
 
   .workspace-sidebar__navigation-control--down {
+    box-shadow: 0 -1px 0 color-mix(in srgb, var(--border) 65%, transparent);
     border-radius: var(--radius-sm) var(--radius-sm) 0 0;
     bottom: 0;
   }
@@ -278,7 +272,7 @@
   .workspace-sidebar__account {
     background: transparent;
     border: 0;
-    border-bottom: 1px solid color-mix(in srgb, var(--primary) 24%, var(--border));
+    border-bottom: 1px solid color-mix(in srgb, var(--border) 90%, var(--surface));
     border-radius: 0;
     box-shadow: none;
   }
@@ -450,16 +444,16 @@
   .workspace-sidebar .workspace-nav__item:hover,
   .workspace-sidebar__heading .icon-button:hover,
   .workspace-sidebar__sign-out:hover {
-    background: color-mix(in srgb, var(--primary-soft) 72%, var(--surface));
-    color: var(--primary-strong);
+    background: color-mix(in srgb, var(--primary-soft) 64%, var(--surface));
+    color: var(--text-h);
   }
 
   .workspace-sidebar .workspace-nav__item[aria-current='page'],
   .theme-toggle[aria-pressed='true'] {
-    background: var(--visual-active-background);
-    border-color: color-mix(in srgb, var(--primary) 35%, var(--border));
-    box-shadow: 0 0.35rem 0.9rem color-mix(in srgb, var(--primary) 13%, transparent);
-    color: var(--primary-strong);
+    background: color-mix(in srgb, var(--primary-soft) 78%, var(--surface));
+    border-color: color-mix(in srgb, var(--primary) 26%, var(--border));
+    box-shadow: none;
+    color: var(--text-h);
   }
 
   .workspace-sidebar .workspace-nav__item--primary {
@@ -473,6 +467,107 @@
     background: linear-gradient(135deg, var(--primary-strong), var(--primary));
     border-color: var(--primary-strong);
     color: var(--on-primary);
+  }
+
+  /* ADC-UI-052: uma navegação legível como lista, com subníveis visíveis,
+     sem alterar quais módulos ou ações cada perfil recebe. */
+  .workspace-sidebar__heading {
+    color: var(--text-h);
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.035em;
+  }
+
+  .workspace-sidebar .workspace-nav {
+    gap: 0.95rem;
+    padding-inline: 0.05rem;
+  }
+
+  .workspace-nav__section {
+    gap: 0.2rem;
+  }
+
+  .workspace-nav__label {
+    color: var(--muted);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    margin: 0 0.7rem 0.25rem;
+  }
+
+  .workspace-sidebar .workspace-nav__item {
+    border-color: transparent;
+    border-radius: 0.65rem;
+    color: var(--muted);
+    font-size: 0.9rem;
+    font-weight: 560;
+    gap: 0.65rem;
+    min-height: 2.55rem;
+    padding-inline: 0.75rem;
+  }
+
+  .workspace-sidebar .workspace-nav__item > svg,
+  .workspace-nav__administration-heading > svg {
+    color: color-mix(in srgb, var(--muted) 82%, var(--text-h));
+    flex: 0 0 auto;
+  }
+
+  .workspace-sidebar .workspace-nav__item[aria-current='page'] {
+    font-weight: 720;
+  }
+
+  .workspace-nav__administration {
+    gap: 0.25rem;
+  }
+
+  .workspace-nav__administration-heading {
+    color: var(--text-h);
+    font-size: 0.9rem;
+    font-weight: 720;
+    gap: 0.65rem;
+    min-height: 2.55rem;
+    padding-inline: 0.75rem;
+  }
+
+  .workspace-nav__administration-items {
+    gap: 0.16rem;
+    margin-left: 1.2rem;
+    padding-left: 0.85rem;
+    position: relative;
+  }
+
+  .workspace-nav__administration-items::before {
+    background: color-mix(in srgb, var(--border) 84%, var(--surface));
+    bottom: 0.35rem;
+    content: '';
+    left: 0;
+    position: absolute;
+    top: 0.35rem;
+    width: 1px;
+  }
+
+  .workspace-sidebar .workspace-nav__item--nested {
+    color: var(--muted);
+    font-size: 0.86rem;
+    font-weight: 520;
+    min-height: 2.35rem;
+    padding-inline: 0.6rem;
+  }
+
+  .workspace-sidebar .workspace-nav__item--nested[aria-current='page'] {
+    color: var(--text-h);
+    font-weight: 700;
+  }
+
+  .workspace-sidebar__footer {
+    border-top: 1px solid color-mix(in srgb, var(--border) 88%, var(--surface));
+    margin-inline: 0.05rem;
+    padding-top: 0.75rem;
+  }
+
+  .workspace-sidebar__sign-out {
+    border-radius: 0.65rem;
+    font-weight: 560;
   }
 
   .card,
@@ -493,6 +588,106 @@
   .card > .card-title-row,
   .auth-about-panel__note {
     border-color: color-mix(in srgb, var(--border) 64%, var(--surface));
+  }
+
+  /* Cartões da lista: cabeçalho, contexto e ação possuem ritmo próprio.
+     O conteúdo continua sendo exatamente o resumo autorizado pela API. */
+  .assessment-list {
+    align-items: stretch;
+    gap: 1rem;
+    grid-auto-rows: 1fr;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .assessment-list__item {
+    align-content: start;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    height: 100%;
+    min-height: 0;
+    padding: 1.15rem;
+  }
+
+  .assessment-list__details {
+    display: grid;
+    gap: 0.8rem;
+    min-height: 0;
+  }
+
+  .assessment-list__title {
+    align-items: center;
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: minmax(0, 1fr) auto;
+    min-width: 0;
+  }
+
+  .assessment-list__title h3 {
+    color: var(--text-h);
+    font-size: 1rem;
+    font-weight: 720;
+    line-height: 1.35;
+    max-width: 100%;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    width: 100%;
+  }
+
+  .assessment-list__title .status-badge {
+    align-self: center;
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  .assessment-list__metadata {
+    border-top: 1px solid color-mix(in srgb, var(--border) 76%, var(--surface));
+    display: grid;
+    gap: 0.32rem;
+    padding-top: 0.7rem;
+  }
+
+  .assessment-list__type,
+  .assessment-list__feedback-status {
+    margin: 0;
+  }
+
+  .assessment-list__type {
+    color: var(--muted);
+    font-size: 0.88rem;
+    line-height: 1.45;
+  }
+
+  .assessment-list__feedback-status {
+    color: color-mix(in srgb, var(--text-h) 74%, var(--primary));
+    font-size: 0.8rem;
+    font-weight: 680;
+    line-height: 1.35;
+  }
+
+  .assessment-list__actions {
+    border-top: 1px solid color-mix(in srgb, var(--border) 76%, var(--surface));
+    margin-top: auto;
+    padding-top: 0.85rem;
+  }
+
+  .assessment-list__actions .button {
+    min-height: 2.5rem;
+    white-space: nowrap;
+  }
+
+  @media (min-width: 48.0625rem) {
+    .assessment-list {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 80rem) {
+    .assessment-list {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
   }
 
   :root[data-theme='dark'] .auth-about-panel {
@@ -530,51 +725,31 @@
   }
 
   .assessment-kind-card {
-    background: linear-gradient(
-      145deg,
-      color-mix(in srgb, var(--primary-soft) 42%, #ffffff),
-      var(--surface)
-    );
+    background: var(--surface);
     box-shadow: var(--visual-card-shadow);
   }
 
   .assessment-kind-card:hover {
-    background: linear-gradient(
-      145deg,
-      color-mix(in srgb, var(--primary-soft) 70%, #ffffff),
-      var(--surface)
-    );
+    background: var(--surface);
     border-color: color-mix(in srgb, var(--border) 72%, var(--primary-soft));
     box-shadow: var(--visual-raised-shadow);
   }
 
   /* No escuro, escolhas de jornada recebem profundidade azul-marinho, nunca luz branca. */
   :root[data-theme='dark'] .assessment-kind-card {
-    background: linear-gradient(
-      145deg,
-      color-mix(in srgb, var(--surface) 84%, var(--primary)) 0%,
-      color-mix(in srgb, var(--surface) 96%, var(--page-bg)) 100%
-    );
-    border-color: color-mix(in srgb, var(--border) 76%, var(--primary));
-    box-shadow: 0 0.4rem 1.1rem rgb(0 0 0 / 24%);
+    background: var(--surface);
+    border-color: var(--visual-card-border);
+    box-shadow: var(--visual-card-shadow);
   }
 
   :root[data-theme='dark'] .assessment-kind-card:hover {
-    background: linear-gradient(
-      145deg,
-      color-mix(in srgb, var(--surface) 74%, var(--primary)) 0%,
-      color-mix(in srgb, var(--surface) 92%, var(--page-bg)) 100%
-    );
+    background: var(--surface);
     border-color: color-mix(in srgb, var(--primary) 72%, var(--border));
-    box-shadow: 0 0.65rem 1.45rem rgb(0 0 0 / 34%);
+    box-shadow: var(--visual-raised-shadow);
   }
 
   .kpi-card {
-    background: linear-gradient(
-      145deg,
-      color-mix(in srgb, var(--primary-soft) 50%, #ffffff),
-      var(--surface)
-    );
+    background: var(--surface);
     border-color: var(--visual-card-border);
     border-radius: var(--visual-radius-card);
     box-shadow: var(--visual-card-shadow);
@@ -593,13 +768,9 @@
   }
 
   :root[data-theme='dark'] .kpi-card {
-    background: linear-gradient(
-      145deg,
-      color-mix(in srgb, var(--surface) 84%, var(--primary)) 0%,
-      color-mix(in srgb, var(--surface) 94%, var(--page-bg)) 100%
-    );
-    border-color: color-mix(in srgb, var(--border) 74%, var(--primary));
-    box-shadow: 0 0.45rem 1.25rem rgb(0 0 0 / 20%);
+    background: var(--surface);
+    border-color: var(--visual-card-border);
+    box-shadow: var(--visual-card-shadow);
   }
 
   :root[data-theme='dark'] .kpi-card__icon {

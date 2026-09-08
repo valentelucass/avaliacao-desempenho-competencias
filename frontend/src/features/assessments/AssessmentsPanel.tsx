@@ -39,7 +39,45 @@ type AssessmentsPanelProps = {
   onSessionExpired: () => void
 }
 
-const assessmentsPageSize = 12
+const assessmentGridBreakpoint = {
+  twoColumns: '(min-width: 48.0625rem)',
+  threeColumns: '(min-width: 80rem)',
+} as const
+
+function pageSizeForAssessmentGrid(): number {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+    return 2
+  }
+  if (window.matchMedia(assessmentGridBreakpoint.threeColumns).matches) {
+    return 6
+  }
+  return window.matchMedia(assessmentGridBreakpoint.twoColumns).matches ? 4 : 2
+}
+
+function useAssessmentGridPageSize(): number {
+  const [pageSize, setPageSize] = useState(pageSizeForAssessmentGrid)
+
+  useEffect(() => {
+    if (typeof window.matchMedia !== 'function') {
+      return undefined
+    }
+    const mediaQueries = Object.values(assessmentGridBreakpoint).map((query) =>
+      window.matchMedia(query),
+    )
+    const syncPageSize = () => {
+      const nextPageSize = pageSizeForAssessmentGrid()
+      setPageSize((currentPageSize) =>
+        currentPageSize === nextPageSize ? currentPageSize : nextPageSize,
+      )
+    }
+    mediaQueries.forEach((mediaQuery) => mediaQuery.addEventListener('change', syncPageSize))
+    syncPageSize()
+    return () =>
+      mediaQueries.forEach((mediaQuery) => mediaQuery.removeEventListener('change', syncPageSize))
+  }, [])
+
+  return pageSize
+}
 
 export function AssessmentsPanel({
   api,
@@ -58,6 +96,7 @@ export function AssessmentsPanel({
   onSelectAssessment,
   onSessionExpired,
 }: AssessmentsPanelProps) {
+  const assessmentsPageSize = useAssessmentGridPageSize()
   const selfCycleId = useId()
   const managerCycleId = useId()
   const managerCollaboratorId = useId()
@@ -173,10 +212,6 @@ export function AssessmentsPanel({
           setPreviewAssessment(undefined)
           setPreviewError(undefined)
         }
-        if (reset) {
-          setPageNumber(1)
-          setCursorHistory([])
-        }
       } catch (requestError) {
         if (requestId !== listRequestId.current) return
         if (isAuthenticationError(requestError)) {
@@ -198,13 +233,16 @@ export function AssessmentsPanel({
       canUseAdministrativeFilters,
       listFilters,
       onSessionExpired,
+      assessmentsPageSize,
     ],
   )
 
   useEffect(() => {
     // oxlint-disable-next-line react/set-state-in-effect -- Network loading is asynchronous.
     void loadAssessments(undefined, true)
-    return () => { listRequestId.current += 1 }
+    return () => {
+      listRequestId.current += 1
+    }
   }, [loadAssessments])
 
   useEffect(() => {
@@ -1065,7 +1103,7 @@ export function AssessmentsPanel({
         </div>
       ) : null}
 
-      <AssessmentListFilters onApply={setListFilters} />
+      <AssessmentListFilters onApply={setListFilters} appliedFilters={listFilters} />
 
       {isLoading && assessmentPage.items.length === 0 ? (
         <FeedbackMessage kind="info">Carregando avaliações…</FeedbackMessage>
@@ -1073,7 +1111,9 @@ export function AssessmentsPanel({
       {error ? <FeedbackMessage kind="error">{error}</FeedbackMessage> : null}
 
       {!isLoading && !error && assessmentPage.items.length === 0 ? (
-        <EmptyState title={hasListFilters ? 'Nenhuma avaliação encontrada' : 'Nenhuma avaliação disponível'}>
+        <EmptyState
+          title={hasListFilters ? 'Nenhuma avaliação encontrada' : 'Nenhuma avaliação disponível'}
+        >
           {hasListFilters
             ? 'Nenhuma avaliação autorizada corresponde aos filtros. Ajuste os campos ou limpe os filtros para consultar novamente.'
             : 'Não há avaliações no seu escopo neste momento. A disponibilidade depende do perfil, dos vínculos ativos, do ciclo e do questionário atribuídos pelo servidor.'}
@@ -1086,9 +1126,9 @@ export function AssessmentsPanel({
       >
         {assessmentPage.items.map((assessment) => (
           <li className="card assessment-list__item" key={assessment.id}>
-            <div className="assessment-list__details">
+            <header className="assessment-list__details">
               <div className="assessment-list__title">
-                <h3>{assessment.evaluated.displayName}</h3>
+                <h3 title={assessment.evaluated.displayName}>{assessment.evaluated.displayName}</h3>
                 <span
                   aria-label={`Situação: ${formatAssessmentStatus(assessment.status)}`}
                   className={`status-badge status-badge--${assessment.status.toLowerCase()}`}
@@ -1096,12 +1136,14 @@ export function AssessmentsPanel({
                   {formatAssessmentStatus(assessment.status)}
                 </span>
               </div>
-              <p className="assessment-list__type">{formatAssessmentType(assessment.type)}</p>
-              {assessment.feedbackStatus !== 'NAO_APLICAVEL' ? (
-                <p className="assessment-list__feedback-status">
-                  Feedback {formatFeedbackStatus(assessment.feedbackStatus)}
-                </p>
-              ) : null}
+              <div className="assessment-list__metadata">
+                <p className="assessment-list__type">{formatAssessmentType(assessment.type)}</p>
+                {assessment.feedbackStatus !== 'NAO_APLICAVEL' ? (
+                  <p className="assessment-list__feedback-status">
+                    Feedback {formatFeedbackStatus(assessment.feedbackStatus)}
+                  </p>
+                ) : null}
+              </div>
               <span className="visually-hidden" id={`assessment-${assessment.id}-summary`}>
                 {`${formatAssessmentType(assessment.type)}. Situação: ${formatAssessmentStatus(assessment.status)}.${
                   assessment.feedbackStatus === 'NAO_APLICAVEL'
@@ -1109,8 +1151,8 @@ export function AssessmentsPanel({
                     : ` Feedback ${formatFeedbackStatus(assessment.feedbackStatus)}.`
                 }`}
               </span>
-            </div>
-            <div className="assessment-list__actions">
+            </header>
+            <footer className="assessment-list__actions">
               <button
                 className="button button--primary"
                 type="button"
@@ -1131,7 +1173,7 @@ export function AssessmentsPanel({
                   Pré-visualizar
                 </button>
               ) : null}
-            </div>
+            </footer>
           </li>
         ))}
       </ul>

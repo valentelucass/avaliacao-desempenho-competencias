@@ -8,9 +8,15 @@ export type AssessmentFilters = Pick<
   'evaluatedName' | 'managerName' | 'status' | 'feedbackStatus'
 >
 
-export function AssessmentListFilters({ onApply }: { onApply: (filters: AssessmentFilters) => void }) {
+export function AssessmentListFilters({
+  onApply,
+  appliedFilters,
+}: {
+  onApply: (filters: AssessmentFilters) => void
+  appliedFilters: AssessmentFilters
+}) {
   const id = useId()
-  const [draft, setDraft] = useState<AssessmentFilters>({})
+  const [draft, setDraft] = useState<AssessmentFilters>(appliedFilters)
 
   return (
     <form
@@ -35,21 +41,39 @@ export function AssessmentListFilters({ onApply }: { onApply: (filters: Assessme
       <div className="assessment-list-filters__grid">
         <div className="field">
           <label htmlFor={`${id}-evaluated`}>Nome do Colaborador Avaliado</label>
-          <input id={`${id}-evaluated`} type="search" maxLength={160}
-            placeholder="Digite parte do nome" value={draft.evaluatedName ?? ''}
-            onChange={(event) => setDraft({ ...draft, evaluatedName: event.target.value })} />
+          <input
+            id={`${id}-evaluated`}
+            type="search"
+            maxLength={160}
+            placeholder="Digite parte do nome"
+            value={draft.evaluatedName ?? ''}
+            onChange={(event) => setDraft({ ...draft, evaluatedName: event.target.value })}
+          />
         </div>
         <div className="field">
           <label htmlFor={`${id}-manager`}>Nome do Gestor Responsável</label>
-          <input id={`${id}-manager`} type="search" maxLength={160}
-            aria-describedby={`${id}-help`} placeholder="Digite parte do nome"
+          <input
+            id={`${id}-manager`}
+            type="search"
+            maxLength={160}
+            aria-describedby={`${id}-help`}
+            placeholder="Digite parte do nome"
             value={draft.managerName ?? ''}
-            onChange={(event) => setDraft({ ...draft, managerName: event.target.value })} />
+            onChange={(event) => setDraft({ ...draft, managerName: event.target.value })}
+          />
         </div>
         <div className="field">
           <label htmlFor={`${id}-status`}>Status da Avaliação</label>
-          <select id={`${id}-status`} value={draft.status ?? ''}
-            onChange={(event) => setDraft({ ...draft, status: event.target.value as AssessmentFilters['status'] || undefined })}>
+          <select
+            id={`${id}-status`}
+            value={draft.status ?? ''}
+            onChange={(event) =>
+              setDraft({
+                ...draft,
+                status: (event.target.value as AssessmentFilters['status']) || undefined,
+              })
+            }
+          >
             <option value="">Todos</option>
             <option value="RASCUNHO">Rascunho</option>
             <option value="ENVIADA">Enviada</option>
@@ -58,8 +82,17 @@ export function AssessmentListFilters({ onApply }: { onApply: (filters: Assessme
         </div>
         <div className="field">
           <label htmlFor={`${id}-feedback`}>Status do Feedback</label>
-          <select id={`${id}-feedback`} value={draft.feedbackStatus ?? ''}
-            onChange={(event) => setDraft({ ...draft, feedbackStatus: event.target.value as AssessmentFilters['feedbackStatus'] || undefined })}>
+          <select
+            id={`${id}-feedback`}
+            value={draft.feedbackStatus ?? ''}
+            onChange={(event) =>
+              setDraft({
+                ...draft,
+                feedbackStatus:
+                  (event.target.value as AssessmentFilters['feedbackStatus']) || undefined,
+              })
+            }
+          >
             <option value="">Todos</option>
             <option value="PENDENTE">Pendente</option>
             <option value="CONCLUIDO">Concluído</option>
@@ -71,7 +104,14 @@ export function AssessmentListFilters({ onApply }: { onApply: (filters: Assessme
         <button className="button button--primary" type="submit">
           <Filter aria-hidden="true" size={18} /> Aplicar filtros
         </button>
-        <button className="button" type="button" onClick={() => {setDraft({}); onApply({})}}>
+        <button
+          className="button"
+          type="button"
+          onClick={() => {
+            setDraft({})
+            onApply({})
+          }}
+        >
           <RotateCcw aria-hidden="true" size={18} /> Limpar filtros
         </button>
       </div>

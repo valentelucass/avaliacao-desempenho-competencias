@@ -1,12 +1,56 @@
 # Estado atual — Avaliação de Desempenho e Competências
 
-> Atualizado em 2026-09-08. Estado consolidado após a auditoria, a complementação autorizada de DEV, as tabelas administrativas, a cortina de tema e a padronização compacta dos botões. Substitui os relatos intermediários contraditórios; não equivale a aceite de produção ou garantia universal de ausência de defeitos.
+> Atualizado em 2026-09-08. Estado consolidado após a auditoria, a complementação autorizada de DEV, as tabelas administrativas, a cortina de tema, a padronização compacta dos botões, os quatro filtros de avaliações e o refino da navegação/cartões, inclusive a transição de rolagem do drawer e a paginação por duas linhas. Inclui a correção operacional dos filtros no DEV em execução (`ADC-COR-003`). Substitui os relatos intermediários contraditórios; não equivale a aceite de produção ou garantia universal de ausência de defeitos.
 
 ## Resultado vigente
 
 `ADC-COR-001`: os cinco achados da auditoria foram corrigidos no código. `ADC-DEV-002`: a massa complementar foi efetivamente gravada em `AVALIACAO_DEV`, validada por API e preservada na reexecução. Gate final completo aprovado, com revisão do diff e evidências abaixo.
 
 Nenhuma escrita em PROD, migration nova, mudança de concessões, deploy de produção ou exclusão de avaliação/histórico foi executada nessas tarefas. As alterações preexistentes do usuário foram preservadas. Na etapa anterior de auditoria/massa, o DEV foi recompilado e iniciado com o back-end atualizado para testar as jornadas reais. A integração de tabelas não iniciou/encerrou serviços nem gravou dados no banco.
+
+## Filtros no DEV em execução — ADC-COR-003 concluída
+
+O defeito relatado estava na versão em execução: a SPA já enviava os quatro campos, mas a API DEV iniciada às 14:07 executava um JAR anterior. Uma reprodução autenticada confirmou que os quatro parâmetros devolviam a mesma página sem filtro; nomes inexistentes também retornavam resultados. A inspeção do controller compilado no JAR confirmou ausência de `evaluatedName` e `managerName`. Não foi necessário alterar a implementação da SPA, o contrato ou o SQL dos filtros.
+
+A instância DEV foi recompilada e reiniciada com `scripts/iniciar-dev-local.ps1`, preservando a porta 5080 e a origem do Dev Tunnel já configurada, previamente confirmada na allowlist CORS da API local. O JAR atual está em `backend/target/dev-local-releases/7c96dc41a3324cbc9d73bba77da048ce`; o anterior foi preservado. O reinício exige novo login. O proxy local da SPA respondeu HTTP 200 com JSON de CSRF; o acesso externo pelo Dev Tunnel não foi recertificado por ensaio autenticado.
+
+Novo `scripts/testar-filtros-avaliacoes-dev.ps1`: 19 cenários aprovados contra a API ativa e o ciclo fictício existente `DEV-COMPLETO-FLUXOS`, com comparação independente da projeção SQL. Cobre cada nome completo/parcial, três avaliadores, exclusão de autoavaliações pelo filtro de gestor, nomes inexistentes, cada status de avaliação/feedback, quatro campos combinados por E, combinação vazia, limpeza, paginação de dois itens e enums inválidos (HTTP 422). Somente consultas de negócio; login/logout geraram suas sessões/auditorias normais. Nenhuma avaliação, cadastro, concessão ou migration foi alterada.
+
+Gate completo `target/assessment-filters-runtime-verification` aprovado: 201 testes Java (três opt-in ignorados), 142 testes front-end, builds/formatter/lint, Edge, scanner, SBOM/OSV e npm sem achados, 14 migrations/SQL somente leitura. Os dois testes SQL com CTEs fictícias passaram separadamente em `target/assessment-filters-runtime-sql`. Após finalizar o novo ensaio, scanner de segredos, sintaxe PowerShell, UTF-8 e `git diff --check` aprovados; os dois processos produtivos mantiveram PID/data de criação. Logs locais ignorados: `backend/target/assessment-filters-runtime-{gate,api,sql,restart}.log`. O ensaio da API é opt-in porque depende de DEV/massa/credenciais locais; o gate das fontes sozinho não comprova atualização do serviço ativo. Permanecem os limites de bundle e aceite assistivo humano já registrados.
+
+## Grade e paginação dos cartões de avaliação — ADC-UI-054 concluída localmente
+
+Títulos dos cartões não quebram mais linha: recebem reticências quando excedem a coluna e preservam o nome integral no atributo `title`, exibido pelo tooltip nativo ao passar o mouse. O selo continua reservado na mesma linha. Cartões da mesma página/linha passam a esticar até a mesma altura e o rodapé de ações ocupa a régua inferior; botões não quebram o texto.
+
+A grade é previsível e a página é recarregada do início ao cruzar a largura, sem reutilizar cursor em outro limite: abaixo de 48,0625 rem há uma coluna e dois itens; de 48,0625 a menos de 80 rem, duas colunas e quatro itens; a partir de 80 rem, três colunas e seis itens. Assim, cada página contém no máximo duas linhas, mantendo o cursor opaco, filtros e autorização integralmente no servidor. O contrato já aceita `limit` de 1 a 100; nenhuma rota, migration, dependência, dado ou permissão foi alterada.
+
+Vitest cobre o atributo do título e o limite largo de seis itens; Edge verifica título sem quebra/reticências, o tooltip nativo, colunas por largura, altura/régua dos cartões e botões nos temas claro/escuro. Aceite visual/assistivo humano permanece externo; nenhum serviço foi reiniciado e nenhum deploy foi feito.
+
+## Transição de rolagem da sidebar — ADC-UI-053 concluída localmente
+
+A indicação de que há itens fora da área visível do drawer deixou de aplicar `backdrop-filter`: o efeito desfocava o texto do menu e formava uma faixa brusca. Ela agora usa somente um gradiente translúcido curto de 1,8 rem, com superfície mais opaca e régua discreta nos controles de subir/descer. As setas, a rolagem, o foco visível, o teclado, a redução de movimento, as rotas e as permissões existentes foram preservados.
+
+A regressão em navegador real passou a exigir as duas faixas, ausência de `backdrop-filter` e altura máxima de 30 px, em claro/escuro e 320/375/768/1024/1440 px. Não houve alteração de JSX, dependência, API, banco, impressão, serviço ou deploy. O aceite visual/assistivo humano continua externo.
+
+## Navegação lateral e cartões — ADC-UI-052 concluída localmente
+
+A navegação lateral existente permanece como drawer contextual à direita; recebeu hierarquia visual de lista, grupos mais legíveis, item atual sóbrio e guia vertical para os subitens de Administração. Rotas, módulos disponíveis por perfil, foco, abertura/fechamento e permissões não foram modificados. A referência foi aplicada como linguagem visual, sem deslocar o drawer para outra borda nem criar itens de navegação novos.
+
+Cartões de superfície foram simplificados para fundo sólido, borda discreta, raio consistente e sombra curta nos dois temas. A lista de avaliações agora possui zonas semânticas de identificação/status, contexto e ação: títulos longos podem quebrar sem invadir o selo, metadados e rodapé são separados por réguas leves, e cartões não interativos não ganham animação ou cursor de ação. Não houve mudança de resumo retornado, filtros, callback de abertura, API, banco, impressão ou regra de acesso.
+
+Foram acrescentadas regressões do cartão real e ensaio Edge para navegação/cartões: cinco larguras (320–1440 px), claro/escuro, hierarquia do subnível, ausência de overflow, foco de teclado, ação com alvo mínimo e hover neutro no cartão da avaliação. Capturas fictícias foram inspecionadas; o aceite visual/assistivo humano continua externo. Nenhuma dependência, migration, escrita de dados, reinício de serviço ou deploy foi realizado.
+
+## Filtros da lista de avaliações — ADC-UI-051 concluída localmente
+
+Implementados os quatro filtros solicitados, combináveis por E: nome do colaborador avaliado, nome do gestor avaliador, status da avaliação e status do feedback. A busca por trecho ignora caixa/acentos, mas mantém caracteres SQL literais. Feedback usa a situação efetiva da versão atual; autoavaliação não corresponde ao filtro de gestor. Os filtros reduzem o conjunto autorizado no SQL antes do cursor/limite, sem mudar permissão, projeção, cálculo ou estado persistido.
+
+Interface responsiva com Aplicar/Limpar, início na primeira página ao mudar a busca, filtros preservados na navegação e proteção contra respostas obsoletas. Ao voltar do editor, os quatro valores aplicados reaparecem nos campos, cobertos por regressão específica. Localização por ciclo/colaborador e pré-visualização administrativa existentes foram preservadas. CSS restrito ao novo componente; nenhum ajuste adicional nos botões globais, impressão ou tabelas. A alteração HTTP é aditiva em v1 e exige back-end atualizado antes do front-end para que os parâmetros sejam reconhecidos; o DEV em execução não foi reiniciado.
+
+Gate completo `target/assessment-filters-verification` aprovado: 201 testes Java, zero falhas/erros e três casos SQL opt-in ignorados no ciclo padrão; 139 testes front-end naquela rodada, builds/formatter/lint, scanner, SBOM/OSV sem achados, npm sem vulnerabilidades e 14 migrations/SQL somente leitura. Após a correção de retorno do editor, toda a validação front-end foi repetida: 140 testes em 15 arquivos, formatter/lint/build e ensaio Edge aprovados. Na reexecução, uma corrida de tempo no ensaio antigo da cortina foi corrigida para aceitar o overlay já removido ao mudar a mídia; continuou exigindo ausência/ocultação na impressão e callback único, sem alteração no componente de tema.
+
+Dois testes opt-in de SQL Server passaram separadamente em `target/assessment-filters-sql`, executando SQL/bindings reais sobre CTEs fictícias somente leitura (sem tabelas/dados reais). Abrangem filtros combinados, acentos, caracteres literais, três páginas, ausência de permissão, autor alheio, ator inexistente, vínculo revogado, autoavaliação e status. O teste histórico de rotação de sessão com escrita permaneceu ignorado. Edge validou quatro campos em cinco larguras/dois temas, grade, limites, teclado/foco; capturas desktop/celular inspecionadas. Impressão A4/21 notas, opções desabilitadas, botões compactos, tabela de vínculos e cortina continuaram aprovados. Aviso de bundle acima de 500 kB permanece conhecido (aproximadamente 617 kB JS/514 kB CSS), sem nova dependência ou limite silenciado.
+
+Nenhuma migration, dependência nova, escrita em banco, concessão, reinício de serviço ou deploy nesta tarefa. Detalhes de uso, contrato, testes, limites e recuperação: [filtros-avaliacoes.md](docs/operations/filtros-avaliacoes.md).
 
 ## Botões globais compactos — ADC-UI-050 corrigida e validada localmente
 
@@ -88,14 +132,16 @@ Campos nulos previstos pelo fluxo foram mantidos: rascunho sem resultado, víncu
 
 | Área | Resultado |
 | --- | --- |
-| Back-end | Maven Verify: 194 testes, zero falhas/erros e uma integração SQL opt-in ignorada no ciclo padrão. Build e Spotless aprovados. |
-| Front-end | 126 testes em 14 arquivos no gate final de ADC-UI-050, Prettier, Oxlint sem avisos e build aprovados. Inclui ações por recurso, tabela real e dez testes do toggle, além da regressão de login/persistência. |
+| Back-end | Maven Verify: 201 testes, zero falhas/erros e três casos SQL opt-in ignorados no ciclo padrão. Dois deles executados separadamente em leitura sobre CTEs fictícias; o caso histórico com escrita não foi executado. Build e Spotless aprovados. |
+| Front-end | 142 testes em 15 arquivos após ADC-UI-054; Prettier, Oxlint sem avisos e build aprovados. Inclui a regressão de estrutura semântica/alinhamento dos cartões, título truncado com tooltip nativo, paginação de duas linhas e transição curta sem desfoque do drawer, além dos filtros, autorização, tabelas e tema. |
 | Navegador real | Edge headless com componentes e CSS compilado: uma página A4 com 21 notas, início no topo, rótulos medidos e alternativa desabilitada sem hover. A medição aguarda fontes/renderização e a sincronização do layout paginado pelo PDF. Tabelas administrativas verificadas em 320/375/768/1024/1440 px, temas claro/escuro e comparação de estilos representativos fora das tabelas. Cortina React real validada em 375/1440 px, teclado/foco, ambos os sentidos, movimento reduzido, impressão e desmontagem. |
 | API/SQL reais DEV (etapa anterior) | `scripts/testar-fluxo-feedback-dev.ps1` passou após atualizar a expectativa de V0014: repositórios, sessão/CSRF, concorrência, idempotência, histórico/feedback, indicadores/CSV e negações por perfil/recurso. Não foi reexecutado na tarefa visual; o gate atual fez apenas validação SQL somente leitura. |
 | Massa DEV | `-Populate` concluído, reexecução sem alteração/duplicação, `-Validate` aprovado; inventário SQL confirmou cinco ciclos, 22 avaliações complementares, 20 novas pessoas e 84 atribuições. |
 | Launchers | Teste de porta dinâmica, alvo desconhecido, propagação de falha e cancelamento aprovado; não houve encerramento real de processos por esse teste. |
 | Botões em navegador real | 160 combinações (16 variantes × cinco larguras × dois temas), contraste habilitado mínimo de 4,64:1, ações compactas, ícones de 18 px, sem rótulos cortados/ocultos nos cenários medidos, sem hover inativo e com foco por Tab. Mais 14 casos no painel real Diretoria–Gerência: Encerrar em uma linha/36 px, confirmação, cancelamento, paginação e reprodução controlada do defeito com o CSS antigo. |
-| Gate final | `scripts/verify-quality.ps1 -BackendBuildDirectory target/global-buttons-regression-fix` aprovado: scanner, sintaxe, 14 migrations, builds/testes/lint, Edge, SBOM CycloneDX com 58 componentes/OSV sem achados, npm sem vulnerabilidades e validação SQL somente leitura. `git diff --check` e leitura UTF-8 estrita dos arquivos alterados/novos aprovados. Gates anteriores: `target/global-buttons-verification` (não detectou a regressão de Encerrar), `target/curtain-theme-verification`, `target/reshaped-table-verification` e `target/audit-completion`. |
+| Filtros em SQL/navegador | SQL real/bindings sobre CTEs fictícias DEV, com dois testes de combinação/cursor/escopo e estados aprovados; nenhum DDL/DML ou leitura de avaliações reais nesse ensaio. Edge: dez combinações de viewport/tema, quatro campos, sem overflow, grade responsiva, rótulos e foco por Tab. |
+| Navegação/cartões no Edge | Ensaio com CSS compilado e dados fictícios em 320/375/768/1024/1440 px, claro/escuro: drawer entre 304–336 px, guia aninhada de 1 px, item atual, cartões sólidos sem gradiente, foco por Tab, sem overflow e sem hover/cursor nos cartões de avaliação. A lista real validou cabeçalho, metadados e rodapé em cada cartão; título de identificação longa em uma linha com reticências/tooltip nativo, régua inferior igual e colunas 1/2/3 conforme a largura. As duas transições de rolagem também foram verificadas sem `backdrop-filter` e com no máximo 30 px. |
+| Gate final | `scripts/verify-quality.ps1 -BackendBuildDirectory target/assessment-cards-two-rows-verification` aprovado: scanner, sintaxe, 14 migrations, 201 testes Java, 142 testes front-end, builds/testes/lint, Edge, SBOM CycloneDX com 58 componentes/OSV sem achados, npm sem vulnerabilidades e validação SQL somente leitura. Gate anterior de rolagem: `target/sidebar-scroll-fade-verification`; o antecessor de botões `target/global-buttons-verification` não havia detectado a regressão de Encerrar. |
 
 O catálogo contém 14 migrations imutáveis (`V0001`–`V0014`). A reconciliação DEV/PROD até V0014 já havia sido registrada em 2026-09-08 antes desta carga; não se executou `--apply` nesta rodada. Teste autenticado em PROD permanece fora do escopo por decisão explícita e não volta ao backlog.
 
@@ -103,7 +149,11 @@ O release produtivo e a infraestrutura existentes não foram modificados nem tiv
 
 ## Tarefas pendentes reais
 
-- `ADC-UI-051` em andamento: quatro filtros combináveis na lista autorizada (nome do avaliado, nome do avaliador responsável, situação da avaliação e do feedback), aplicados no SQL antes da paginação, sem ampliar permissões. Preservar localização/pré-visualização administrativa existente, criação e edição; testar filtros, cursor, concorrência de consultas, responsividade e autorização. Sem migration, carga, concessão ou deploy autorizado.
+- `ADC-COR-003` concluída no DEV: build antigo identificado e substituído pelo launcher existente, acesso local preservado, 19 cenários pela API ativa e gate completo aprovados. Necessário novo login após o reinício. Nenhuma publicação em PROD.
+- `ADC-UI-054` concluída localmente: títulos em linha única/tooltip nativo, cartões e botões alinhados e paginação responsiva de no máximo duas linhas; cobertura Vitest/Edge e gate completo aprovados. Aceite visual/assistivo humano permanece externo; nenhum deploy é implícito.
+- `ADC-UI-053` concluída localmente: blur removido da transição de rolagem, gradiente curto e controles preservados; cobertura Edge adicionada e gate completo aprovado. Aceite visual/assistivo humano permanece externo; nenhum deploy é implícito.
+- `ADC-UI-052` concluída localmente: navegação lateral e cartões refinados, com validações completas e sem alteração de comportamento. Aceite visual/assistivo humano permanece externo; nenhum deploy é implícito.
+- `ADC-UI-051` concluída no código e nas validações locais; a ativação pendente no DEV foi realizada e validada pela API em `ADC-COR-003`. Aceite visual/assistivo humano permanece externo; nenhuma publicação em PROD.
 - `ADC-UI-050` concluída localmente após corrigir a regressão de Encerrar e executar novo gate com geometria do painel real, coluna de ação estreita, dois temas e viewports/densidades variados. Aceite visual do usuário e zoom assistivo manual permanecem externos; nenhum deploy implícito.
 - `ADC-UI-049` concluída no escopo local solicitado; aceite assistivo humano permanece no pré-requisito externo já existente, sem deploy implícito.
 - `ADC-UI-048` concluída no escopo solicitado; ressalva conhecida de tamanho do bundle e aceite assistivo humano registrados, sem alegação de isolamento absoluto ou deploy.
@@ -136,6 +186,7 @@ Estes itens não são backlog de código e não podem ser declarados concluídos
 
 ## Documentos operacionais
 
+- [Filtros de avaliações autorizadas](docs/operations/filtros-avaliacoes.md)
 - [Botões globais compactos](docs/operations/botoes-globais.md)
 - [Alternância de tema com cortina](docs/operations/alternancia-tema-cortina.md)
 - [Tabelas administrativas Reshaped](docs/operations/tabelas-administrativas-reshaped.md)
