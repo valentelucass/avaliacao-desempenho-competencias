@@ -641,6 +641,9 @@ export class HttpApiClient implements ApiClient {
     if (request.collaboratorId) {
       parameters.set('collaboratorId', request.collaboratorId)
     }
+    for (const key of ['evaluatedName', 'managerName', 'status', 'feedbackStatus'] as const) {
+      if (request[key]) parameters.set(key, request[key])
+    }
     const query = parameters.size > 0 ? `?${parameters.toString()}` : ''
     return this.request<Page<AssessmentSummary>>(`/assessments${query}`)
   }

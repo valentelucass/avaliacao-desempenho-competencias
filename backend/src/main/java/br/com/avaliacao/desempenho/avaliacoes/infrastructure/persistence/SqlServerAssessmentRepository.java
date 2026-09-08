@@ -172,14 +172,7 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
              collaborator.nome_exibicao AS collaborator_display_name,
              assessment.tipo_avaliacao,
              assessment.situacao AS assessment_situation,
-             COALESCE(
-                 feedback.situacao,
-                 CASE
-                     WHEN assessment.situacao = 'PUBLICADA'
-                          AND assessment.tipo_avaliacao <> 'AUTOAVALIACAO' THEN 'PENDENTE'
-                     ELSE 'NAO_APLICAVEL'
-                 END
-             ) AS feedback_situation,
+             feedback_state.situation AS feedback_situation,
              version.row_version AS version_row_version,
              assessment.atualizada_em_utc
       FROM dbo.avaliacao AS assessment
@@ -192,6 +185,14 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
          AND version.numero = assessment.versao_atual_numero
       LEFT JOIN dbo.feedback_avaliacao AS feedback
           ON feedback.versao_avaliacao_id = version.versao_avaliacao_id
+      LEFT JOIN dbo.usuario AS evaluator
+          ON evaluator.usuario_id = assessment.avaliador_usuario_id
+      CROSS APPLY (VALUES (COALESCE(
+          feedback.situacao,
+          CASE WHEN assessment.situacao = 'PUBLICADA'
+                    AND assessment.tipo_avaliacao <> 'AUTOAVALIACAO' THEN 'PENDENTE'
+               ELSE 'NAO_APLICAVEL' END
+      ))) AS feedback_state(situation)
       WHERE ((? = 1)
          OR (
              assessment.avaliador_usuario_id = ?
@@ -238,6 +239,11 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
           ))
       AND (? IS NULL OR assessment.ciclo_avaliacao_id = ?)
       AND (? IS NULL OR assessment.colaborador_id = ?)
+      AND (? IS NULL OR CHARINDEX(?, collaborator.nome_exibicao COLLATE Latin1_General_100_CI_AI) > 0)
+      AND (? IS NULL OR (assessment.tipo_avaliacao <> 'AUTOAVALIACAO'
+          AND CHARINDEX(?, evaluator.nome_exibicao COLLATE Latin1_General_100_CI_AI) > 0))
+      AND (? IS NULL OR assessment.situacao = ?)
+      AND (? IS NULL OR feedback_state.situation = ?)
       """;
 
   private static final String LIST_ACCESSIBLE_AFTER_CURSOR_SQL =
@@ -477,44 +483,31 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
     if (!isActorActive(safeActor.userId())) {
       return new AssessmentPageView(List.of(), null);
     }
-    List<AssessmentSummaryView> items =
-        new java.util.ArrayList<>(
-            cursor == null
-                ? jdbcTemplate.query(
-                    LIST_ACCESSIBLE_FIRST_PAGE_SQL,
-                    (resultSet, rowNumber) -> mapSummary(resultSet),
-                    limit + 1,
-                    safeActor.has("AVALIACOES.VISUALIZAR_TODAS") ? 1 : 0,
-                    safeActor.userId(),
-                    safeActor.has("AVALIACOES.VISUALIZAR_PROPRIAS_RESPOSTAS") ? 1 : 0,
-                    safeActor.userId(),
-                    safeActor.has("AVALIACOES.AVALIAR_GERENCIAS_VINCULADAS") ? 1 : 0,
-                    safeActor.userId(),
-                    safeActor.has("AUTOAVALIACOES.VISUALIZAR_PROPRIA") ? 1 : 0,
-                    safeActor.userId(),
-                    safeFilter.cycleId(),
-                    safeFilter.cycleId(),
-                    safeFilter.collaboratorId(),
-                    safeFilter.collaboratorId())
-                : jdbcTemplate.query(
-                    LIST_ACCESSIBLE_AFTER_CURSOR_SQL,
-                    (resultSet, rowNumber) -> mapSummary(resultSet),
-                    limit + 1,
-                    safeActor.has("AVALIACOES.VISUALIZAR_TODAS") ? 1 : 0,
-                    safeActor.userId(),
-                    safeActor.has("AVALIACOES.VISUALIZAR_PROPRIAS_RESPOSTAS") ? 1 : 0,
-                    safeActor.userId(),
-                    safeActor.has("AVALIACOES.AVALIAR_GERENCIAS_VINCULADAS") ? 1 : 0,
-                    safeActor.userId(),
-                    safeActor.has("AUTOAVALIACOES.VISUALIZAR_PROPRIA") ? 1 : 0,
-                    safeActor.userId(),
-                    safeFilter.cycleId(),
-                    safeFilter.cycleId(),
-                    safeFilter.collaboratorId(),
-                    safeFilter.collaboratorId(),
-                    SqlServerUtcDateTime.forBinding(cursor.updatedAt()),
-                    SqlServerUtcDateTime.forBinding(cursor.updatedAt()),
-                    cursor.id()));
+    List<Object> parameters = new ArrayList<>();
+    parameters.add(limit + 1);
+    parameters.add(safeActor.has("AVALIACOES.VISUALIZAR_TODAS") ? 1 : 0);
+    parameters.add(safeActor.userId());
+    parameters.add(safeActor.has("AVALIACOES.VISUALIZAR_PROPRIAS_RESPOSTAS") ? 1 : 0);
+    parameters.add(safeActor.userId());
+    parameters.add(safeActor.has("AVALIACOES.AVALIAR_GERENCIAS_VINCULADAS") ? 1 : 0);
+    parameters.add(safeActor.userId());
+    parameters.add(safeActor.has("AUTOAVALIACOES.VISUALIZAR_PROPRIA") ? 1 : 0);
+    parameters.add(safeActor.userId());
+    for (Object value : new Object[] {safeFilter.cycleId(), safeFilter.collaboratorId(),
+        safeFilter.evaluatedName(), safeFilter.managerName(),
+        safeFilter.status() == null ? null : safeFilter.status().name(),
+        safeFilter.feedbackStatus() == null ? null : safeFilter.feedbackStatus().name()}) {
+      parameters.add(value);
+      parameters.add(value);
+    }
+    if (cursor != null) {
+      parameters.add(SqlServerUtcDateTime.forBinding(cursor.updatedAt()));
+      parameters.add(SqlServerUtcDateTime.forBinding(cursor.updatedAt()));
+      parameters.add(cursor.id());
+    }
+    List<AssessmentSummaryView> items = new ArrayList<>(jdbcTemplate.query(
+        cursor == null ? LIST_ACCESSIBLE_FIRST_PAGE_SQL : LIST_ACCESSIBLE_AFTER_CURSOR_SQL,
+        (resultSet, rowNumber) -> mapSummary(resultSet), parameters.toArray()));
     AssessmentCursor nextCursor = null;
     if (items.size() > limit) {
       items.remove(items.size() - 1);

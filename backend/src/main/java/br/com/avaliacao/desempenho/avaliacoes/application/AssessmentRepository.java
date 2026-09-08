@@ -1,6 +1,7 @@
 package br.com.avaliacao.desempenho.avaliacoes.application;
 
 import br.com.avaliacao.desempenho.avaliacoes.domain.model.AssessmentAccessContext;
+import br.com.avaliacao.desempenho.avaliacoes.domain.model.AssessmentStatus;
 import br.com.avaliacao.desempenho.avaliacoes.domain.model.AssessmentType;
 import br.com.avaliacao.desempenho.avaliacoes.domain.model.FeedbackStatus;
 import java.math.BigDecimal;
@@ -98,9 +99,29 @@ public interface AssessmentRepository {
   record AssessmentPageView(List<AssessmentSummaryView> items, AssessmentCursor nextCursor) {}
 
   /** Filtros opcionais; o repositório sempre reaplica o escopo do ator. */
-  record AssessmentListFilter(UUID cycleId, UUID collaboratorId) {
+  record AssessmentListFilter(
+      UUID cycleId, UUID collaboratorId, String evaluatedName, String managerName,
+      AssessmentStatus status, FeedbackStatus feedbackStatus) {
+    public AssessmentListFilter {
+      evaluatedName = normalizeName(evaluatedName);
+      managerName = normalizeName(managerName);
+    }
+
+    public AssessmentListFilter(UUID cycleId, UUID collaboratorId) {
+      this(cycleId, collaboratorId, null, null, null, null);
+    }
+
     public static AssessmentListFilter none() {
       return new AssessmentListFilter(null, null);
+    }
+
+    private static String normalizeName(String value) {
+      if (value == null) return null;
+      if (value.length() > 160 || value.chars().anyMatch(Character::isISOControl)) {
+        throw new AssessmentValidationException("O nome deve ter até 160 caracteres, sem controles.");
+      }
+      String normalized = value.strip();
+      return normalized.isEmpty() ? null : normalized;
     }
   }
 

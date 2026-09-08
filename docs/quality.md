@@ -12,6 +12,12 @@ O comando é um gate local. Ele não cria usuários, dados de negócio, migratio
 
 O gate inclui regressões dos launchers com processos simulados e impressão/hover em Microsoft Edge headless instalado no caminho padrão do Windows. O teste do navegador usa componentes reais, o CSS compilado e dados inteiramente fictícios, sem conexão com a API; valida uma única página A4, 21 notas, ausência de espaço no topo, tamanho físico dos rótulos e alternativas desabilitadas sem hover. Para executá-lo isoladamente após o build: `node frontend/scripts/check-assessment-print.cjs`. Aguarda fontes e quadros de renderização antes das medições; não substitui o aceite da impressora real.
 
+O mesmo ensaio também executa a [alternância de tema com cortina](operations/alternancia-tema-cortina.md) com React no Edge: animação real em 375/1440 px, Enter/foco, troca nos dois sentidos, tema das tabelas, campos preservados, movimento reduzido, impressão e desmontagem. A fixture é compilada em memória pelo Vite, sem modificar a SPA ou acessar API/dados reais.
+
+Os [botões globais compactos](operations/botoes-globais.md) são medidos em 16 variantes/contextos, cinco larguras e dois temas (160 combinações), com contraste mínimo de texto, dimensões/ícones, rótulos, foco por Tab e ausência de hover nos inativos. A geração das fixtures é local; nenhuma operação de negócio é disparada.
+
+A regressão de `Encerrar` é verificada adicionalmente no `RelationshipAdministrationPanel` real: coluna de ação estreita, ícone e texto em uma linha, altura compacta, confirmação/cancelamento e paginação. Há casos responsivos e densidades 1/1,5/2 nos dois temas. Reaplicar o CSS defeituoso precisa reproduzir a quebra, para comprovar que o teste detecta o problema relatado. Dados e API são fictícios; não se encerra vínculo real. Densidade/viewport emulados não substituem a validação manual de zoom.
+
 | Área         | Verificação executada                                                                                                                                                                                                                          |
 | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Repositório  | Scanner heurístico de segredos, análise de sintaxe dos scripts PowerShell versionáveis e validação estática do manifesto PM2. O scanner informa apenas arquivo, linha e categoria; nunca imprime o possível valor sensível.                    |
@@ -23,6 +29,8 @@ O gate inclui regressões dos launchers com processos simulados e impressão/hov
 Use o comando sem `-SkipDatabase` no banco local dedicado. O catálogo versionado atual contém `V0001`–`V0014`; a reconciliação somente leitura dos dois bancos foi registrada em 2026-09-08. Use `-SkipDatabase` somente quando o alvo SQL Server não estiver disponível para o gate; essa opção ainda valida os arquivos de migration, mas não substitui a execução completa contra SQL Server antes da liberação.
 
 ## Acessibilidade
+
+O ensaio Edge também cobre as tabelas administrativas Reshaped em dez variações, cinco larguras (320 a 1440 px) e dois temas, verificando overflow, células visíveis, ausência de interatividade nas linhas passivas e preservação de estilos representativos fora das tabelas. Detalhes e limites em [tabelas-administrativas-reshaped.md](operations/tabelas-administrativas-reshaped.md).
 
 Os testes com axe cobrem regras automatizáveis nas jornadas principais e nos diálogos administrativos. A regra de contraste é desabilitada nesses testes porque o `jsdom` não implementa o canvas usado pelo axe para medir cores. Isso não substitui a revisão em navegador de contraste, foco visível, teclado, responsividade, zoom e leitor de tela no ambiente-alvo.
 

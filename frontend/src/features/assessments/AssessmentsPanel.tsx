@@ -19,6 +19,7 @@ import { Pagination } from '../../ui/Pagination'
 import { safeErrorMessage } from '../../ui/safeErrorMessage'
 import { AssessmentEditor } from './AssessmentEditor'
 import { IndividualAssessmentSummary } from './IndividualAssessmentSummary'
+import { AssessmentListFilters, type AssessmentFilters } from './AssessmentListFilters'
 
 type AssessmentsPanelProps = {
   api: ApiClient
@@ -68,6 +69,9 @@ export function AssessmentsPanel({
   })
   const [pageNumber, setPageNumber] = useState(1)
   const [cursorHistory, setCursorHistory] = useState<readonly string[]>([])
+  const [listFilters, setListFilters] = useState<AssessmentFilters>({})
+  const listRequestId = useRef(0)
+  const hasListFilters = Object.values(listFilters).some(Boolean)
   const [selfCreationCycles, setSelfCreationCycles] = useState<
     readonly AssessmentCreationCycleOption[]
   >([])
@@ -127,8 +131,21 @@ export function AssessmentsPanel({
 
   const loadAssessments = useCallback(
     async (cursor?: string, reset = false) => {
+      const requestId = ++listRequestId.current
+      isPageNavigationPending.current = true
+      setIsLoading(true)
+      setError(undefined)
+      if (reset) {
+        setPageNumber(1)
+        setCursorHistory([])
+        setAssessmentPage({ items: [], page: { limit: assessmentsPageSize, nextCursor: null } })
+        setPreviewedAssessmentId(undefined)
+        setPreviewAssessment(undefined)
+        setPreviewError(undefined)
+      }
       try {
         const loadedPage = await api.listAssessments({
+          ...listFilters,
           limit: assessmentsPageSize,
           cursor,
           cycleId: canUseAdministrativeFilters ? administrativeCycleId || undefined : undefined,
@@ -136,6 +153,7 @@ export function AssessmentsPanel({
             ? administrativeCollaboratorId || undefined
             : undefined,
         })
+        if (requestId !== listRequestId.current) return
         // Compatibilidade transitória com respostas de builds locais anteriores ao cursor.
         const page = Array.isArray(loadedPage)
           ? { items: loadedPage, page: { limit: assessmentsPageSize, nextCursor: null } }
@@ -160,14 +178,17 @@ export function AssessmentsPanel({
           setCursorHistory([])
         }
       } catch (requestError) {
+        if (requestId !== listRequestId.current) return
         if (isAuthenticationError(requestError)) {
           onSessionExpired()
           return
         }
         setError(safeErrorMessage(requestError))
       } finally {
-        isPageNavigationPending.current = false
-        setIsLoading(false)
+        if (requestId === listRequestId.current) {
+          isPageNavigationPending.current = false
+          setIsLoading(false)
+        }
       }
     },
     [
@@ -175,6 +196,7 @@ export function AssessmentsPanel({
       administrativeCycleId,
       api,
       canUseAdministrativeFilters,
+      listFilters,
       onSessionExpired,
     ],
   )
@@ -182,6 +204,7 @@ export function AssessmentsPanel({
   useEffect(() => {
     // oxlint-disable-next-line react/set-state-in-effect -- Network loading is asynchronous.
     void loadAssessments(undefined, true)
+    return () => { listRequestId.current += 1 }
   }, [loadAssessments])
 
   useEffect(() => {
@@ -1042,15 +1065,18 @@ export function AssessmentsPanel({
         </div>
       ) : null}
 
+      <AssessmentListFilters onApply={setListFilters} />
+
       {isLoading && assessmentPage.items.length === 0 ? (
         <FeedbackMessage kind="info">Carregando avaliações…</FeedbackMessage>
       ) : null}
       {error ? <FeedbackMessage kind="error">{error}</FeedbackMessage> : null}
 
       {!isLoading && !error && assessmentPage.items.length === 0 ? (
-        <EmptyState title="Nenhuma avaliação disponível">
-          Não há avaliações no seu escopo neste momento. A disponibilidade depende do perfil, dos
-          vínculos ativos, do ciclo e do questionário atribuídos pelo servidor.
+        <EmptyState title={hasListFilters ? 'Nenhuma avaliação encontrada' : 'Nenhuma avaliação disponível'}>
+          {hasListFilters
+            ? 'Nenhuma avaliação autorizada corresponde aos filtros. Ajuste os campos ou limpe os filtros para consultar novamente.'
+            : 'Não há avaliações no seu escopo neste momento. A disponibilidade depende do perfil, dos vínculos ativos, do ciclo e do questionário atribuídos pelo servidor.'}
         </EmptyState>
       ) : null}
 

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Moon, Sun } from 'lucide-react'
+import { ThemeToggle } from '../../components/ui/curtain-theme-toggle'
 import { BrandLogo } from '../../ui/BrandLogo'
 
 type Theme = 'light' | 'dark'
@@ -27,19 +27,12 @@ export function AuthPageFrame({
     >
       <header className="auth-page__header">
         <BrandLogo className="brand-logo auth-page__logo" />
-        <button
-          aria-label={theme === 'light' ? 'Ativar modo escuro' : 'Ativar modo claro'}
-          aria-pressed={theme === 'dark'}
+        <ThemeToggle
+          variant="icon"
+          theme={theme}
           className="icon-button theme-toggle"
-          onClick={onToggleTheme}
-          type="button"
-        >
-          {theme === 'light' ? (
-            <Moon aria-hidden="true" size={17} strokeWidth={2} />
-          ) : (
-            <Sun aria-hidden="true" size={17} strokeWidth={2} />
-          )}
-        </button>
+          onThemeChange={onToggleTheme}
+        />
       </header>
 
       <div className={`auth-layout${contentClassName ? ` ${contentClassName}` : ''}`}>

@@ -1,3 +1,4 @@
+import { AdministrativeTable } from '@/components/ui/administrative-table'
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Archive, ClipboardList, MapPin, Plus, Power, RefreshCw, Trash2 } from 'lucide-react'
@@ -990,20 +991,20 @@ function NamedResourcesTable({
 
   return (
     <div className="administration-users">
-      <table>
+      <AdministrativeTable>
         <caption className="visually-hidden">{caption}</caption>
-        <thead>
-          <tr>
-            <th scope="col">Nome</th>
-            <th scope="col">Situação</th>
-            <th scope="col">Ação</th>
-          </tr>
-        </thead>
-        <tbody>
+        <AdministrativeTable.Head>
+          <AdministrativeTable.Row>
+            <AdministrativeTable.Heading scope="col">Nome</AdministrativeTable.Heading>
+            <AdministrativeTable.Heading scope="col">Situação</AdministrativeTable.Heading>
+            <AdministrativeTable.Heading scope="col">Ação</AdministrativeTable.Heading>
+          </AdministrativeTable.Row>
+        </AdministrativeTable.Head>
+        <AdministrativeTable.Body>
           {pagination.items.map((resource) => (
-            <tr key={resource.id}>
-              <td data-label="Nome">{resource.name}</td>
-              <td data-label="Situação">
+            <AdministrativeTable.Row key={resource.id}>
+              <AdministrativeTable.Cell data-label="Nome">{resource.name}</AdministrativeTable.Cell>
+              <AdministrativeTable.Cell data-label="Situação">
                 <span
                   className={`status-badge ${
                     resource.active ? 'status-badge--active' : 'status-badge--disabled'
@@ -1011,8 +1012,8 @@ function NamedResourcesTable({
                 >
                   {resource.active ? 'Ativa' : 'Desativada'}
                 </span>
-              </td>
-              <td data-label="Ação">
+              </AdministrativeTable.Cell>
+              <AdministrativeTable.Cell data-label="Ação">
                 {resource.active ? (
                   <div
                     className="table-actions"
@@ -1045,16 +1046,20 @@ function NamedResourcesTable({
                 ) : (
                   <span className="field-hint">Sem ação disponível</span>
                 )}
-              </td>
-            </tr>
+              </AdministrativeTable.Cell>
+            </AdministrativeTable.Row>
           ))}
           {Array.from({ length: emptyRowsCount }, (_, index) => (
-            <tr className="pagination-placeholder" aria-hidden="true" key={`placeholder-${index}`}>
-              <td colSpan={3} />
-            </tr>
+            <AdministrativeTable.Row
+              className="pagination-placeholder"
+              aria-hidden="true"
+              key={`placeholder-${index}`}
+            >
+              <AdministrativeTable.Cell colSpan={3} />
+            </AdministrativeTable.Row>
           ))}
-        </tbody>
-      </table>
+        </AdministrativeTable.Body>
+      </AdministrativeTable>
       <Pagination
         currentPage={pagination.currentPage}
         hasNextPage={pagination.hasNextPage}
@@ -1090,20 +1095,22 @@ function CollaboratorsTable({
 
   return (
     <div className="administration-users">
-      <table>
+      <AdministrativeTable>
         <caption className="visually-hidden">Colaboradores cadastrados</caption>
-        <thead>
-          <tr>
-            <th scope="col">Nome de exibição</th>
-            <th scope="col">Situação</th>
-            <th scope="col">Ação</th>
-          </tr>
-        </thead>
-        <tbody>
+        <AdministrativeTable.Head>
+          <AdministrativeTable.Row>
+            <AdministrativeTable.Heading scope="col">Nome de exibição</AdministrativeTable.Heading>
+            <AdministrativeTable.Heading scope="col">Situação</AdministrativeTable.Heading>
+            <AdministrativeTable.Heading scope="col">Ação</AdministrativeTable.Heading>
+          </AdministrativeTable.Row>
+        </AdministrativeTable.Head>
+        <AdministrativeTable.Body>
           {pagination.items.map((collaborator) => (
-            <tr key={collaborator.id}>
-              <td data-label="Nome">{collaborator.displayName}</td>
-              <td data-label="Situação">
+            <AdministrativeTable.Row key={collaborator.id}>
+              <AdministrativeTable.Cell data-label="Nome">
+                {collaborator.displayName}
+              </AdministrativeTable.Cell>
+              <AdministrativeTable.Cell data-label="Situação">
                 <span
                   className={`status-badge ${
                     collaborator.active ? 'status-badge--active' : 'status-badge--disabled'
@@ -1111,8 +1118,8 @@ function CollaboratorsTable({
                 >
                   {collaborator.active ? 'Ativo' : 'Desativado'}
                 </span>
-              </td>
-              <td data-label="Ação">
+              </AdministrativeTable.Cell>
+              <AdministrativeTable.Cell data-label="Ação">
                 {collaborator.active ? (
                   <div
                     className="table-actions"
@@ -1132,11 +1139,11 @@ function CollaboratorsTable({
                 ) : (
                   <span className="field-hint">Sem ação disponível</span>
                 )}
-              </td>
-            </tr>
+              </AdministrativeTable.Cell>
+            </AdministrativeTable.Row>
           ))}
-        </tbody>
-      </table>
+        </AdministrativeTable.Body>
+      </AdministrativeTable>
       <Pagination
         currentPage={pagination.currentPage}
         hasNextPage={pagination.hasNextPage}
@@ -1179,19 +1186,19 @@ function AllocationsTable({
 
   return (
     <div className="administration-users allocations-table">
-      <table>
+      <AdministrativeTable>
         <caption className="visually-hidden">Lotações ativas</caption>
-        <thead>
-          <tr>
-            <th scope="col">Colaborador</th>
-            <th scope="col">Filial</th>
-            <th scope="col">Área</th>
-            <th scope="col">Gestor</th>
-            <th scope="col">Início</th>
-            <th scope="col">Ação</th>
-          </tr>
-        </thead>
-        <tbody>
+        <AdministrativeTable.Head>
+          <AdministrativeTable.Row>
+            <AdministrativeTable.Heading scope="col">Colaborador</AdministrativeTable.Heading>
+            <AdministrativeTable.Heading scope="col">Filial</AdministrativeTable.Heading>
+            <AdministrativeTable.Heading scope="col">Área</AdministrativeTable.Heading>
+            <AdministrativeTable.Heading scope="col">Gestor</AdministrativeTable.Heading>
+            <AdministrativeTable.Heading scope="col">Início</AdministrativeTable.Heading>
+            <AdministrativeTable.Heading scope="col">Ação</AdministrativeTable.Heading>
+          </AdministrativeTable.Row>
+        </AdministrativeTable.Head>
+        <AdministrativeTable.Body>
           {pagination.items.map((allocation) => {
             const collaborator = nameFor(
               collaboratorNames,
@@ -1199,13 +1206,23 @@ function AllocationsTable({
               'Não disponível',
             )
             return (
-              <tr key={allocation.id}>
-                <td data-label="Colaborador">{collaborator}</td>
-                <td data-label="Filial">{optionalNameFor(branchNames, allocation.branchId)}</td>
-                <td data-label="Área">{optionalNameFor(areaNames, allocation.areaId)}</td>
-                <td data-label="Gestor">{allocation.managerText || 'Não informado'}</td>
-                <td data-label="Início">{formatDate(allocation.startsOn)}</td>
-                <td data-label="Ação">
+              <AdministrativeTable.Row key={allocation.id}>
+                <AdministrativeTable.Cell data-label="Colaborador">
+                  {collaborator}
+                </AdministrativeTable.Cell>
+                <AdministrativeTable.Cell data-label="Filial">
+                  {optionalNameFor(branchNames, allocation.branchId)}
+                </AdministrativeTable.Cell>
+                <AdministrativeTable.Cell data-label="Área">
+                  {optionalNameFor(areaNames, allocation.areaId)}
+                </AdministrativeTable.Cell>
+                <AdministrativeTable.Cell data-label="Gestor">
+                  {allocation.managerText || 'Não informado'}
+                </AdministrativeTable.Cell>
+                <AdministrativeTable.Cell data-label="Início">
+                  {formatDate(allocation.startsOn)}
+                </AdministrativeTable.Cell>
+                <AdministrativeTable.Cell data-label="Ação">
                   <div className="table-actions">
                     <button
                       aria-label={`Encerrar lotação de ${collaborator}`}
@@ -1219,12 +1236,12 @@ function AllocationsTable({
                       Encerrar
                     </button>
                   </div>
-                </td>
-              </tr>
+                </AdministrativeTable.Cell>
+              </AdministrativeTable.Row>
             )
           })}
-        </tbody>
-      </table>
+        </AdministrativeTable.Body>
+      </AdministrativeTable>
       <Pagination
         currentPage={pagination.currentPage}
         hasNextPage={pagination.hasNextPage}
@@ -1262,27 +1279,29 @@ function QuestionnaireAssignmentsTable({
 
   return (
     <div className="administration-users questionnaire-assignments-table">
-      <table>
+      <AdministrativeTable>
         <caption className="visually-hidden">Atribuições de questionário ativas</caption>
-        <thead>
-          <tr>
-            <th scope="col">Colaborador</th>
-            <th scope="col">Ciclo e questionário</th>
-            <th scope="col">Ação</th>
-          </tr>
-        </thead>
-        <tbody>
+        <AdministrativeTable.Head>
+          <AdministrativeTable.Row>
+            <AdministrativeTable.Heading scope="col">Colaborador</AdministrativeTable.Heading>
+            <AdministrativeTable.Heading scope="col">
+              Ciclo e questionário
+            </AdministrativeTable.Heading>
+            <AdministrativeTable.Heading scope="col">Ação</AdministrativeTable.Heading>
+          </AdministrativeTable.Row>
+        </AdministrativeTable.Head>
+        <AdministrativeTable.Body>
           {pagination.items.map((assignment) => {
             const subject = questionnaireAssignmentSubject(assignment, collaboratorNames)
             return (
-              <tr key={assignment.id}>
-                <td data-label="Colaborador">
+              <AdministrativeTable.Row key={assignment.id}>
+                <AdministrativeTable.Cell data-label="Colaborador">
                   {nameFor(collaboratorNames, assignment.collaboratorId, 'Não disponível')}
-                </td>
-                <td data-label="Ciclo e questionário">
+                </AdministrativeTable.Cell>
+                <AdministrativeTable.Cell data-label="Ciclo e questionário">
                   {formatQuestionnaireAssignment(assignment)}
-                </td>
-                <td data-label="Ação">
+                </AdministrativeTable.Cell>
+                <AdministrativeTable.Cell data-label="Ação">
                   <div className="table-actions">
                     <button
                       aria-label={`Revogar atribuição de ${subject}`}
@@ -1296,12 +1315,12 @@ function QuestionnaireAssignmentsTable({
                       Revogar
                     </button>
                   </div>
-                </td>
-              </tr>
+                </AdministrativeTable.Cell>
+              </AdministrativeTable.Row>
             )
           })}
-        </tbody>
-      </table>
+        </AdministrativeTable.Body>
+      </AdministrativeTable>
       <Pagination
         currentPage={pagination.currentPage}
         hasNextPage={pagination.hasNextPage}

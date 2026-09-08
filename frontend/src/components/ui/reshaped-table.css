@@ -1,0 +1,47 @@
+/* Apenas o escopo opt-in das tabelas. Não substituir tokens/reset da SPA. */
+.adc-reshaped-table-scope[data-rs-theme] {
+  --rs-font-family-body: var(--sans);
+  --rs-font-family-title: var(--sans);
+  --rs-font-family-headline: var(--sans);
+  --rs-color-foreground-neutral: var(--text);
+  --rs-color-foreground-neutral-faded: var(--muted);
+  --rs-color-background-page: var(--page-bg);
+  --rs-color-background-elevation-base: var(--surface);
+  --rs-color-background-elevation-raised: var(--surface);
+  --rs-color-background-neutral-highlighted-faded: var(--table-header);
+  --rs-color-border-neutral-faded: var(--border);
+  --rs-color-border-primary: var(--focus);
+}
+
+@media screen {
+  .adc-administrative-table {
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  .adc-administrative-table > thead > tr > th {
+    background: var(--table-header);
+    color: var(--text-h);
+    font-weight: 600;
+  }
+
+  .administration-users .adc-administrative-table > tbody > tr,
+  .administration-users .adc-administrative-table > tbody > tr:hover {
+    background: var(--surface);
+    cursor: default;
+    transition: none;
+  }
+}
+
+@media screen and (min-width: 48.0625rem) {
+  .adc-administrative-table > thead > tr > th,
+  .adc-administrative-table > tbody > tr > td {
+    border-bottom: 0;
+    padding: 0.85rem 1rem;
+    vertical-align: middle;
+  }
+
+  .adc-administrative-table > tbody > tr > td {
+    border-top: 1px solid var(--border);
+  }
+}

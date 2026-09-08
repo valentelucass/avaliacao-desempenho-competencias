@@ -13,7 +13,9 @@ import br.com.avaliacao.desempenho.avaliacoes.api.dto.SaveAssessmentDraftRequest
 import br.com.avaliacao.desempenho.avaliacoes.application.AssessmentApplicationService;
 import br.com.avaliacao.desempenho.avaliacoes.application.AssessmentRepository;
 import br.com.avaliacao.desempenho.avaliacoes.domain.model.AssessmentAccessContext;
+import br.com.avaliacao.desempenho.avaliacoes.domain.model.AssessmentStatus;
 import br.com.avaliacao.desempenho.avaliacoes.domain.model.AssessmentType;
+import br.com.avaliacao.desempenho.avaliacoes.domain.model.FeedbackStatus;
 import br.com.avaliacao.desempenho.identidadeacesso.infrastructure.persistence.ConditionalOnSqlServerPersistence;
 import br.com.avaliacao.desempenho.identidadeacesso.infrastructure.security.AuthenticatedPrincipal;
 import br.com.avaliacao.desempenho.identidadeacesso.infrastructure.security.RequestCorrelationFilter;
@@ -74,11 +76,16 @@ public class AssessmentController {
       @RequestParam(required = false) String cursor,
       @RequestParam(required = false) UUID cycleId,
       @RequestParam(required = false) UUID collaboratorId,
+      @RequestParam(required = false) @Size(max = 160) String evaluatedName,
+      @RequestParam(required = false) @Size(max = 160) String managerName,
+      @RequestParam(required = false) AssessmentStatus status,
+      @RequestParam(required = false) FeedbackStatus feedbackStatus,
       @AuthenticationPrincipal AuthenticatedPrincipal principal) {
     AssessmentRepository.AssessmentPageView page =
         service.list(
             accessFor(principal),
-            new AssessmentRepository.AssessmentListFilter(cycleId, collaboratorId),
+            new AssessmentRepository.AssessmentListFilter(
+                cycleId, collaboratorId, evaluatedName, managerName, status, feedbackStatus),
             limit,
             decodeCursor(cursor));
     List<AssessmentSummaryResponse> items =

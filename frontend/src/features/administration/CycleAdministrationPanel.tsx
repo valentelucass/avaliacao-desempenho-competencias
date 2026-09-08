@@ -1,3 +1,4 @@
+import { AdministrativeTable } from '@/components/ui/administrative-table'
 import { useCallback, useEffect, useId, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import { CheckCircle2, Eye, Pencil, Plus, RefreshCw, XCircle } from 'lucide-react'
@@ -473,25 +474,27 @@ export function CycleAdministrationPanel({
         ) : null}
         {cycles.length > 0 ? (
           <div className="administration-users">
-            <table>
+            <AdministrativeTable>
               <caption className="visually-hidden">Ciclos disponíveis</caption>
-              <thead>
-                <tr>
-                  <th scope="col">Ciclo</th>
-                  <th scope="col">Situação</th>
-                  <th scope="col">Ação</th>
-                </tr>
-              </thead>
-              <tbody>
+              <AdministrativeTable.Head>
+                <AdministrativeTable.Row>
+                  <AdministrativeTable.Heading scope="col">Ciclo</AdministrativeTable.Heading>
+                  <AdministrativeTable.Heading scope="col">Situação</AdministrativeTable.Heading>
+                  <AdministrativeTable.Heading scope="col">Ação</AdministrativeTable.Heading>
+                </AdministrativeTable.Row>
+              </AdministrativeTable.Head>
+              <AdministrativeTable.Body>
                 {cyclesPagination.items.map((cycle) => (
-                  <tr key={cycle.id}>
-                    <td data-label="Ciclo">{cycle.name}</td>
-                    <td data-label="Situação">
+                  <AdministrativeTable.Row key={cycle.id}>
+                    <AdministrativeTable.Cell data-label="Ciclo">
+                      {cycle.name}
+                    </AdministrativeTable.Cell>
+                    <AdministrativeTable.Cell data-label="Situação">
                       <span className={`status-badge status-badge--${cycle.status.toLowerCase()}`}>
                         {formatCycleStatus(cycle.status)}
                       </span>
-                    </td>
-                    <td data-label="Ação">
+                    </AdministrativeTable.Cell>
+                    <AdministrativeTable.Cell data-label="Ação">
                       <div className="table-actions">
                         <button
                           className="button"
@@ -503,11 +506,11 @@ export function CycleAdministrationPanel({
                           {cycle.status === 'RASCUNHO' ? 'Configurar' : 'Consultar'}
                         </button>
                       </div>
-                    </td>
-                  </tr>
+                    </AdministrativeTable.Cell>
+                  </AdministrativeTable.Row>
                 ))}
-              </tbody>
-            </table>
+              </AdministrativeTable.Body>
+            </AdministrativeTable>
             <Pagination
               currentPage={cyclesPagination.currentPage}
               hasNextPage={cyclesPagination.hasNextPage}
@@ -651,19 +654,23 @@ export function CycleAdministrationPanel({
             </EmptyState>
           ) : (
             <div className="cycle-questionnaire-table">
-              <table>
+              <AdministrativeTable>
                 <caption className="visually-hidden">
                   Questionários e configurações disponíveis para o ciclo
                 </caption>
-                <thead>
-                  <tr>
-                    <th scope="col">Questionário</th>
-                    <th scope="col">Versão</th>
-                    <th scope="col">Configuração</th>
-                    <th scope="col">Aplicar</th>
-                  </tr>
-                </thead>
-                <tbody>
+                <AdministrativeTable.Head>
+                  <AdministrativeTable.Row>
+                    <AdministrativeTable.Heading scope="col">
+                      Questionário
+                    </AdministrativeTable.Heading>
+                    <AdministrativeTable.Heading scope="col">Versão</AdministrativeTable.Heading>
+                    <AdministrativeTable.Heading scope="col">
+                      Configuração
+                    </AdministrativeTable.Heading>
+                    <AdministrativeTable.Heading scope="col">Aplicar</AdministrativeTable.Heading>
+                  </AdministrativeTable.Row>
+                </AdministrativeTable.Head>
+                <AdministrativeTable.Body>
                   {versionsPagination.items.map((version) => {
                     const isSelected = version.configurationOptions.some((option) =>
                       selectedOptionKeys.includes(
@@ -672,16 +679,18 @@ export function CycleAdministrationPanel({
                     )
 
                     return (
-                      <tr
+                      <AdministrativeTable.Row
                         className={questionnaireRevealClassName(isSelected)}
                         key={version.questionnaireVersionId}
                       >
-                        <td data-label="Questionário">
+                        <AdministrativeTable.Cell data-label="Questionário">
                           <strong>{version.questionnaireName}</strong>
                           <span className="cycle-questionnaire-table__title">{version.title}</span>
-                        </td>
-                        <td data-label="Versão">v{version.versionNumber}</td>
-                        <td data-label="Configuração">
+                        </AdministrativeTable.Cell>
+                        <AdministrativeTable.Cell data-label="Versão">
+                          v{version.versionNumber}
+                        </AdministrativeTable.Cell>
+                        <AdministrativeTable.Cell data-label="Configuração">
                           {version.configurationOptions.map((option) => (
                             <span
                               className="cycle-questionnaire-table__configuration"
@@ -690,8 +699,8 @@ export function CycleAdministrationPanel({
                               {formatConfigurationOption(option)}
                             </span>
                           ))}
-                        </td>
-                        <td data-label="Aplicar">
+                        </AdministrativeTable.Cell>
+                        <AdministrativeTable.Cell data-label="Aplicar">
                           {version.configurationOptions.map((option) => {
                             const key = optionKey(version.questionnaireVersionId, option)
                             const configurationLabel = formatConfigurationOption(option)
@@ -714,12 +723,12 @@ export function CycleAdministrationPanel({
                               </label>
                             )
                           })}
-                        </td>
-                      </tr>
+                        </AdministrativeTable.Cell>
+                      </AdministrativeTable.Row>
                     )
                   })}
-                </tbody>
-              </table>
+                </AdministrativeTable.Body>
+              </AdministrativeTable>
               <Pagination
                 currentPage={versionsPagination.currentPage}
                 hasNextPage={versionsPagination.hasNextPage}

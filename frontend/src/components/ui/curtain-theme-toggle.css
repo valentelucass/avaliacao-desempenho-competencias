@@ -1,0 +1,168 @@
+/* Estilos opt-in. Os cabeçalhos da SPA usam somente a variante icon. */
+.adc-curtain-toggle--standalone {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--border, #cfdae8);
+  border-radius: 50%;
+  background: var(--surface, #ffffff);
+  color: var(--text, #334155);
+  cursor: pointer;
+  transition: transform 150ms ease;
+}
+
+.adc-curtain-toggle--standalone:not([aria-disabled='true']):hover {
+  transform: scale(1.1);
+}
+
+.adc-curtain-toggle--standalone:not([aria-disabled='true']):active {
+  transform: scale(0.96);
+}
+
+.adc-curtain-toggle:focus-visible,
+.adc-curtain-bar__search input:focus-visible {
+  outline: 2px solid var(--focus, #3b82f6);
+  outline-offset: 3px;
+}
+
+.adc-curtain-toggle[aria-disabled='true'] {
+  pointer-events: none;
+  cursor: default;
+}
+
+.adc-theme-curtain {
+  position: fixed;
+  inset: 0;
+  z-index: 9997;
+  transform-origin: top;
+  /* Mesmas bases de página de index.css, sem reconfigurar o tema da SPA. */
+  background: #edf3f8;
+  animation: adc-curtain-fall var(--adc-curtain-duration) cubic-bezier(0.76, 0, 0.24, 1) both;
+  pointer-events: auto;
+}
+
+.adc-theme-curtain[data-target-theme='dark'] {
+  background: #0b1220;
+}
+
+.adc-theme-curtain[data-phase='rising'] {
+  animation-name: adc-curtain-rise;
+}
+
+@keyframes adc-curtain-fall {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+@keyframes adc-curtain-rise {
+  from {
+    transform: scaleY(1);
+  }
+  to {
+    transform: scaleY(0);
+  }
+}
+
+.adc-curtain-page {
+  min-height: 100vh;
+  padding-top: var(--adc-curtain-bar-height);
+  background: var(--page-bg, #edf3f8);
+  color: var(--text, #334155);
+}
+
+.adc-curtain-bar {
+  position: fixed;
+  inset: 0 0 auto;
+  min-height: var(--adc-curtain-bar-height);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 8px 24px;
+  background: var(--surface, #ffffff);
+  color: var(--text, #334155);
+  border-bottom: 1px solid var(--border, #cfdae8);
+  z-index: 40;
+}
+
+.adc-curtain-page--default .adc-curtain-bar > .adc-curtain-toggle {
+  position: absolute;
+  top: 100%;
+  translate: 0 -50%;
+}
+
+.adc-curtain-page--appbar {
+  padding-top: 0;
+}
+
+.adc-curtain-page--appbar .adc-curtain-bar {
+  position: sticky;
+  top: 0;
+  justify-content: space-between;
+}
+
+.adc-curtain-bar__brand,
+.adc-curtain-bar__account,
+.adc-curtain-bar__search {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.adc-curtain-bar__search {
+  flex: 1;
+  max-width: 320px;
+}
+
+.adc-curtain-bar__search input {
+  width: 100%;
+  min-width: 0;
+}
+
+@media (max-width: 48rem) {
+  .adc-curtain-page--appbar .adc-curtain-bar {
+    flex-wrap: wrap;
+    padding-inline: 12px;
+  }
+
+  .adc-curtain-bar__search {
+    order: 3;
+    flex-basis: 100%;
+    max-width: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .adc-theme-curtain {
+    display: none;
+    animation: none;
+  }
+  .adc-curtain-toggle {
+    transition: none;
+  }
+  .adc-curtain-toggle--standalone:not([aria-disabled='true']):hover,
+  .adc-curtain-toggle--standalone:not([aria-disabled='true']):active {
+    transform: none;
+  }
+}
+
+@media print {
+  .adc-theme-curtain,
+  .adc-curtain-toggle,
+  .adc-curtain-bar {
+    display: none !important;
+  }
+  .adc-curtain-page {
+    min-height: 0;
+    padding-top: 0;
+  }
+}

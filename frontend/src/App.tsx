@@ -19,10 +19,8 @@ import {
   LoaderCircle,
   LogOut,
   Menu,
-  Moon,
   ShieldCheck,
   ShieldAlert,
-  Sun,
   UsersRound,
   X,
 } from 'lucide-react'
@@ -40,6 +38,7 @@ import { AssessmentsPanel } from './features/assessments/AssessmentsPanel'
 import { IndicatorsPanel } from './features/indicators/IndicatorsPanel'
 import { DashboardPanel } from './features/dashboard/DashboardPanel'
 import { BrandLogo } from './ui/BrandLogo'
+import { ThemeToggle } from './components/ui/curtain-theme-toggle'
 import { ContextHelp } from './ui/ContextHelp'
 import { EmptyState } from './ui/EmptyState'
 import { safeErrorMessage } from './ui/safeErrorMessage'
@@ -461,19 +460,12 @@ function App({ api = defaultApiClient }: AppProps) {
             </div>
           </div>
           <div className="application-header__actions">
-            <button
-              aria-label={theme === 'light' ? 'Ativar modo escuro' : 'Ativar modo claro'}
-              aria-pressed={theme === 'dark'}
+            <ThemeToggle
+              variant="icon"
+              theme={theme}
               className="icon-button theme-toggle"
-              onClick={() => setTheme((current) => (current === 'light' ? 'dark' : 'light'))}
-              type="button"
-            >
-              {theme === 'light' ? (
-                <Moon aria-hidden="true" size={17} strokeWidth={2} />
-              ) : (
-                <Sun aria-hidden="true" size={17} strokeWidth={2} />
-              )}
-            </button>
+              onThemeChange={setTheme}
+            />
             <button
               aria-controls="workspace-sidebar"
               aria-expanded={isSidebarOpen}

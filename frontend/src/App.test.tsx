@@ -66,6 +66,33 @@ describe('App', () => {
     expect(api.currentUser).toHaveBeenCalledTimes(2)
   })
 
+  it('preserva o campo de login ao animar o tema e restaura a preferência ao remontar', async () => {
+    window.localStorage.setItem('adc-theme', 'light')
+    const api = createApi()
+    try {
+      const { unmount } = render(<App api={api} />)
+      fireEvent.change(await screen.findByLabelText('E-mail ou login'), {
+        target: { value: 'conta-ficticia' },
+      })
+      fireEvent.click(screen.getByRole('button', { name: 'Ativar modo escuro' }))
+      await waitFor(() => expect(document.documentElement).toHaveAttribute('data-theme', 'dark'))
+      expect(screen.getByLabelText('E-mail ou login')).toHaveValue('conta-ficticia')
+      expect(window.localStorage.getItem('adc-theme')).toBe('dark')
+      expect(api.signIn).not.toHaveBeenCalled()
+      unmount()
+      render(<App api={api} />)
+      await screen.findByLabelText('E-mail ou login')
+      expect(screen.getByRole('button', { name: 'Ativar modo claro' })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      )
+      expect(document.querySelector('.adc-theme-curtain')).toBeNull()
+    } finally {
+      window.localStorage.removeItem('adc-theme')
+      document.documentElement.dataset.theme = 'light'
+    }
+  })
+
   it('renova automaticamente uma sessão cujo token de acesso expirou', async () => {
     const api = createApi({
       currentUser: vi.fn().mockResolvedValue(null),
@@ -1162,7 +1189,7 @@ describe('App', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Ativar modo escuro' }))
 
-    expect(document.documentElement).toHaveAttribute('data-theme', 'dark')
+    await waitFor(() => expect(document.documentElement).toHaveAttribute('data-theme', 'dark'))
     expect(window.localStorage.getItem('adc-theme')).toBe('dark')
     expect(screen.getByRole('button', { name: 'Ativar modo claro' })).toHaveAttribute(
       'aria-pressed',

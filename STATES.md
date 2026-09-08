@@ -1,12 +1,44 @@
 # Estado atual — Avaliação de Desempenho e Competências
 
-> Atualizado em 2026-09-08. Estado consolidado após a auditoria e a complementação autorizada de DEV. Substitui os relatos intermediários contraditórios; não equivale a aceite de produção ou garantia universal de ausência de defeitos.
+> Atualizado em 2026-09-08. Estado consolidado após a auditoria, a complementação autorizada de DEV, as tabelas administrativas, a cortina de tema e a padronização compacta dos botões. Substitui os relatos intermediários contraditórios; não equivale a aceite de produção ou garantia universal de ausência de defeitos.
 
 ## Resultado vigente
 
 `ADC-COR-001`: os cinco achados da auditoria foram corrigidos no código. `ADC-DEV-002`: a massa complementar foi efetivamente gravada em `AVALIACAO_DEV`, validada por API e preservada na reexecução. Gate final completo aprovado, com revisão do diff e evidências abaixo.
 
-Nenhuma escrita em PROD, migration nova, mudança de concessões, deploy de produção ou exclusão de avaliação/histórico foi executada nesta rodada. As alterações preexistentes do usuário foram preservadas. O DEV foi recompilado e iniciado com o back-end atualizado para testar as jornadas reais.
+Nenhuma escrita em PROD, migration nova, mudança de concessões, deploy de produção ou exclusão de avaliação/histórico foi executada nessas tarefas. As alterações preexistentes do usuário foram preservadas. Na etapa anterior de auditoria/massa, o DEV foi recompilado e iniciado com o back-end atualizado para testar as jornadas reais. A integração de tabelas não iniciou/encerrou serviços nem gravou dados no banco.
+
+## Botões globais compactos — ADC-UI-050 corrigida e validada localmente
+
+O usuário apontou regressão real após o primeiro gate: o botão Encerrar ficou vertical na tabela de vínculos. A regra nova `overflow-wrap: anywhere` permitiu quebrar palavra dentro da coluna de ação com `width: 1%`. O ensaio anterior verificava overflow, mas não altura/linhas do rótulo nessa tabela com ícone. A quebra por letra foi removida e a largura intrínseca de ícone + texto reservada nas ações da tabela desktop. O gate anterior (`target/global-buttons-verification`) não detectou esse defeito e não foi usado como evidência suficiente da correção.
+
+Nova regressão executada com o `RelationshipAdministrationPanel` real, sete vínculos fictícios e API simulada sem escritas: 14 casos, em sete viewports/densidades e dois temas. Todos mantiveram Encerrar em uma linha e altura de 36 px, com ícone de 18 px, sem inflar linhas desktop ou ultrapassar a célula. Confirmação/cancelamento e paginação passaram. O teste de sensibilidade reaplicou o CSS antigo e reproduziu a quebra nos dois temas. Capturas claras/escuras foram inspecionadas. DPR 1,5/2 e viewport reduzido são emulação de layout/densidade, não aceite manual de zoom.
+
+Escala compacta solicitada preservada: ações comuns com altura mínima de 38 px, tabelas/ícones com 36 px, ícones Lucide de 18 px, cantos de 10 px e separação de 8 px. Preenchimento sólido e saturação consistente, preservando azul/verde/vermelho/neutro conforme a ação. Texto branco nas ações coloridas; contraste mínimo medido de aproximadamente 4,64:1 nos cenários habilitados. Rótulos quiet voltaram a ficar visíveis no celular.
+
+A única folha de produção alterada nesta tarefa é `frontend/src/visual-skin.css`: bloco compartilhado de botões, tokens de estado e indicador de paginação. Não há JSX/callback/permissão/API/banco alterado, nova dependência ou deploy. Desabilitados não recebem ponteiro/hover; foco e movimento reduzido permanecem acessíveis. Cartões de jornada, ajuda e estrutura de navegação não foram convertidos em botões de formulário. As mudanças anteriores do usuário foram preservadas.
+
+Novo gate completo `target/global-buttons-regression-fix` aprovado após corrigir a regressão: 194 testes Java (zero falhas/erros, uma integração SQL opt-in ignorada), 126 testes front-end em 14 arquivos, build/formatter/lint, scanner, SBOM/OSV, npm e 14 migrations/SQL somente leitura. Edge validou o painel real acima e 16 variantes/contextos em cinco larguras e dois temas (160 combinações), incluindo contraste, escala compacta, ícones, rótulos, foco, hover inativo e movimento reduzido. Tabelas, cortina e impressão A4 de uma página/21 notas também passaram.
+
+O ensaio da cortina agora restaura `NODE_ENV` após o build em memória para não misturar renderers React dev/prod em testes subsequentes; isso não afeta a SPA. Nenhuma vulnerabilidade nova encontrada. O aviso anterior de bundle acima de 500 kB permanece visível, sem ampliar dependências nesta tarefa. Detalhes e recuperação: [botoes-globais.md](docs/operations/botoes-globais.md).
+
+## Alternância de tema com cortina — ADC-UI-049 concluída
+
+O componente anexado pelo usuário foi integrado em `frontend/src/components/ui/curtain-theme-toggle.tsx`, substituindo somente os botões de tema do cabeçalho autenticado e de `AuthPageFrame` (login/restauração/troca de senha). O CSS próprio preserva o layout, as cores e as dimensões existentes. `App` continua responsável por `data-theme` e pela preferência visual `adc-theme`; não há classe global `dark`, storage adicional ou mudança de autenticação/permissões.
+
+A troca ocorre após a descida da cortina, com `animationend` e timeout de segurança. A implementação impede cliques/teclas repetidos, conserva foco, respeita movimento reduzido, finaliza antes de imprimir e cancela timers/listeners ao desmontar. As variantes e a demonstração permanecem importáveis, sem criar rota nem sobrescrever o demo da tabela. Nenhuma nova dependência, edição de estilos globais ou alteração do trabalho anterior de tabelas; nenhum serviço/deploy ou escrita em banco.
+
+Gate completo em `target/curtain-theme-verification` aprovado. A rodada do gate executou 125 testes front-end; após acrescentar uma regressão de login/persistência e remover um aviso de lint exclusivo da fixture, a suíte completa foi reexecutada: 126 testes em 14 arquivos, lint sem avisos e formatação aprovada. Edge mediu quadros reais da descida/subida em 375/1440 px, Enter/foco, tema das tabelas, campo preservado, movimento reduzido, impressão e desmontagem. Regressões anteriores de A4/21 notas, hover desabilitado e dez variações de tabela nos dois temas também passaram. Screenshots fictícios foram inspecionados, sem alegar aceite humano assistivo.
+
+Bundle atual: aproximadamente 613 kB JS/514 kB CSS (171/54 kB gzip); o aviso anterior de chunk acima de 500 kB permanece visível. Instalação/estrutura, adaptações em relação ao exemplo, limites e recuperação: [alternancia-tema-cortina.md](docs/operations/alternancia-tema-cortina.md).
+
+## Tabelas administrativas — ADC-UI-048 concluída
+
+Conforme escolha explícita do usuário, Reshaped foi aplicado a todas as tabelas dos cinco painéis administrativos: contas, cadastros, vínculos, questionários e ciclos. `reshaped@4.1.0` foi fixado no package/lockfile, sem atualizar ou remover versões de dependências existentes. React/TypeScript/Tailwind já estavam configurados; foram acrescentados o diretório `frontend/src/components/ui` e o alias `@/` no TypeScript/Vite.
+
+O componente solicitado reexporta o pacote real; a adaptação administrativa usa seus slots com raiz `table` e `caption` nativos para manter semântica, rótulos e seletores responsivos. O provider Slate é local e acompanha o tema existente. Comparação dos cinco painéis após normalização/transpilação confirmou somente trocas de tags e import: callbacks, filtros, ações, paginação e regras de negócio foram preservados. Nenhuma edição em `index.css`, `App.css`, `visual-skin.css`, formulários de avaliação, indicadores, impressão, permissões ou API.
+
+Gate completo aprovado em `target/reshaped-table-verification`, com 115 testes front-end, ensaio Edge de dez variações em cinco larguras e dois temas, isolamento de estilos representativos, sem overflow/células cortadas nos cenários medidos e impressão mantida em uma página A4. O modo scoped não é um sandbox; a biblioteca mantém listeners globais internos. O bundle passou para aproximadamente 610 kB JS/511 kB CSS (170/53 kB gzip), mantendo visível o aviso Vite de chunk acima de 500 kB. Otimização ampla de carregamento não foi incluída nesta mudança localizada. Estrutura, instalação opcional do CLI shadcn, demonstração, limites e rollback: [tabelas-administrativas-reshaped.md](docs/operations/tabelas-administrativas-reshaped.md).
 
 ## Correções da auditoria
 
@@ -57,12 +89,13 @@ Campos nulos previstos pelo fluxo foram mantidos: rascunho sem resultado, víncu
 | Área | Resultado |
 | --- | --- |
 | Back-end | Maven Verify: 194 testes, zero falhas/erros e uma integração SQL opt-in ignorada no ciclo padrão. Build e Spotless aprovados. |
-| Front-end | 110 testes em 12 arquivos, Prettier, Oxlint e build aprovados. Regressões novas de ações por recurso incluem ausência do campo e RH consultando rascunho/feedback alheios. |
-| Navegador real | Edge headless com componentes e CSS compilado: uma página A4 com 21 notas, início no topo, rótulos medidos e alternativa desabilitada sem hover. A medição aguarda fontes/renderização e a sincronização do layout paginado pelo PDF. |
-| API/SQL reais DEV | `scripts/testar-fluxo-feedback-dev.ps1` passou após atualizar a expectativa de V0014: repositórios, sessão/CSRF, concorrência, idempotência, histórico/feedback, indicadores/CSV e negações por perfil/recurso. |
+| Front-end | 126 testes em 14 arquivos no gate final de ADC-UI-050, Prettier, Oxlint sem avisos e build aprovados. Inclui ações por recurso, tabela real e dez testes do toggle, além da regressão de login/persistência. |
+| Navegador real | Edge headless com componentes e CSS compilado: uma página A4 com 21 notas, início no topo, rótulos medidos e alternativa desabilitada sem hover. A medição aguarda fontes/renderização e a sincronização do layout paginado pelo PDF. Tabelas administrativas verificadas em 320/375/768/1024/1440 px, temas claro/escuro e comparação de estilos representativos fora das tabelas. Cortina React real validada em 375/1440 px, teclado/foco, ambos os sentidos, movimento reduzido, impressão e desmontagem. |
+| API/SQL reais DEV (etapa anterior) | `scripts/testar-fluxo-feedback-dev.ps1` passou após atualizar a expectativa de V0014: repositórios, sessão/CSRF, concorrência, idempotência, histórico/feedback, indicadores/CSV e negações por perfil/recurso. Não foi reexecutado na tarefa visual; o gate atual fez apenas validação SQL somente leitura. |
 | Massa DEV | `-Populate` concluído, reexecução sem alteração/duplicação, `-Validate` aprovado; inventário SQL confirmou cinco ciclos, 22 avaliações complementares, 20 novas pessoas e 84 atribuições. |
 | Launchers | Teste de porta dinâmica, alvo desconhecido, propagação de falha e cancelamento aprovado; não houve encerramento real de processos por esse teste. |
-| Gate final | `scripts/verify-quality.ps1 -BackendBuildDirectory target/audit-completion` aprovado: scanner, sintaxe, 14 migrations, builds/testes/lint, Edge, SBOM CycloneDX com 58 componentes/OSV sem achados, npm sem vulnerabilidades e validação SQL somente leitura. `git diff --check` aprovado. |
+| Botões em navegador real | 160 combinações (16 variantes × cinco larguras × dois temas), contraste habilitado mínimo de 4,64:1, ações compactas, ícones de 18 px, sem rótulos cortados/ocultos nos cenários medidos, sem hover inativo e com foco por Tab. Mais 14 casos no painel real Diretoria–Gerência: Encerrar em uma linha/36 px, confirmação, cancelamento, paginação e reprodução controlada do defeito com o CSS antigo. |
+| Gate final | `scripts/verify-quality.ps1 -BackendBuildDirectory target/global-buttons-regression-fix` aprovado: scanner, sintaxe, 14 migrations, builds/testes/lint, Edge, SBOM CycloneDX com 58 componentes/OSV sem achados, npm sem vulnerabilidades e validação SQL somente leitura. `git diff --check` e leitura UTF-8 estrita dos arquivos alterados/novos aprovados. Gates anteriores: `target/global-buttons-verification` (não detectou a regressão de Encerrar), `target/curtain-theme-verification`, `target/reshaped-table-verification` e `target/audit-completion`. |
 
 O catálogo contém 14 migrations imutáveis (`V0001`–`V0014`). A reconciliação DEV/PROD até V0014 já havia sido registrada em 2026-09-08 antes desta carga; não se executou `--apply` nesta rodada. Teste autenticado em PROD permanece fora do escopo por decisão explícita e não volta ao backlog.
 
@@ -70,6 +103,10 @@ O release produtivo e a infraestrutura existentes não foram modificados nem tiv
 
 ## Tarefas pendentes reais
 
+- `ADC-UI-051` em andamento: quatro filtros combináveis na lista autorizada (nome do avaliado, nome do avaliador responsável, situação da avaliação e do feedback), aplicados no SQL antes da paginação, sem ampliar permissões. Preservar localização/pré-visualização administrativa existente, criação e edição; testar filtros, cursor, concorrência de consultas, responsividade e autorização. Sem migration, carga, concessão ou deploy autorizado.
+- `ADC-UI-050` concluída localmente após corrigir a regressão de Encerrar e executar novo gate com geometria do painel real, coluna de ação estreita, dois temas e viewports/densidades variados. Aceite visual do usuário e zoom assistivo manual permanecem externos; nenhum deploy implícito.
+- `ADC-UI-049` concluída no escopo local solicitado; aceite assistivo humano permanece no pré-requisito externo já existente, sem deploy implícito.
+- `ADC-UI-048` concluída no escopo solicitado; ressalva conhecida de tamanho do bundle e aceite assistivo humano registrados, sem alegação de isolamento absoluto ou deploy.
 - Não há pendência técnica conhecida nos cinco achados auditados ou na preparação/validação da massa solicitada; `ADC-COR-001` e `ADC-DEV-002` concluídas no escopo local autorizado.
 - Nenhuma carga real, concessão especial, alteração de infraestrutura ou deploy está autorizada por estas tarefas.
 
@@ -99,6 +136,9 @@ Estes itens não são backlog de código e não podem ser declarados concluídos
 
 ## Documentos operacionais
 
+- [Botões globais compactos](docs/operations/botoes-globais.md)
+- [Alternância de tema com cortina](docs/operations/alternancia-tema-cortina.md)
+- [Tabelas administrativas Reshaped](docs/operations/tabelas-administrativas-reshaped.md)
 - [Massa DEV e roteiro de testes](docs/operations/massa-complementar-dev.md)
 - [Gate de qualidade](docs/quality.md)
 - [Contrato HTTP v1](docs/api/contrato-http-v1.md)

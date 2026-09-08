@@ -264,6 +264,9 @@ async function mount(d, key) {
         after: hover.result.value,
       }),
     )
+    await require('./check-administrative-tables.cjs')({ send, frameId: frameTree.frame.id, css })
+    await require('./check-curtain-theme-toggle.cjs')({ send, frameId: frameTree.frame.id, css })
+    await require('./check-global-buttons.cjs')({ send, frameId: frameTree.frame.id, css })
     await send('Browser.close').catch(() => {})
   } finally {
     clearTimeout(timer)

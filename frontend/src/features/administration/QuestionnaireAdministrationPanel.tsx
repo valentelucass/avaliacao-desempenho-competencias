@@ -1,3 +1,4 @@
+import { AdministrativeTable } from '@/components/ui/administrative-table'
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { ChevronDown, ChevronUp, Plus, RefreshCw, Save, Trash2 } from 'lucide-react'
@@ -282,40 +283,46 @@ export function QuestionnaireAdministrationPanel({
             ) : null}
             {!isLoadingVersions && !loadError && versions.length > 0 ? (
               <div className="administration-users">
-                <table className="questionnaire-versions__table">
+                <AdministrativeTable className="questionnaire-versions__table">
                   <caption className="visually-hidden">
                     Versões de questionário aprovadas e suas configurações disponíveis
                   </caption>
-                  <thead>
-                    <tr>
-                      <th scope="col">Questionário</th>
-                      <th scope="col">Versão</th>
-                      <th scope="col">Título</th>
-                      <th scope="col">Configuração aprovada</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                  <AdministrativeTable.Head>
+                    <AdministrativeTable.Row>
+                      <AdministrativeTable.Heading scope="col">
+                        Questionário
+                      </AdministrativeTable.Heading>
+                      <AdministrativeTable.Heading scope="col">Versão</AdministrativeTable.Heading>
+                      <AdministrativeTable.Heading scope="col">Título</AdministrativeTable.Heading>
+                      <AdministrativeTable.Heading scope="col">
+                        Configuração aprovada
+                      </AdministrativeTable.Heading>
+                    </AdministrativeTable.Row>
+                  </AdministrativeTable.Head>
+                  <AdministrativeTable.Body>
                     {versionsPagination.items.map((version) => (
-                      <tr key={version.questionnaireVersionId}>
-                        <td data-label="Questionário">
+                      <AdministrativeTable.Row key={version.questionnaireVersionId}>
+                        <AdministrativeTable.Cell data-label="Questionário">
                           <strong>{version.questionnaireName}</strong>
                           <span className="questionnaire-versions__code">
                             {version.questionnaireCode}
                           </span>
-                        </td>
-                        <td data-label="Versão">v{version.versionNumber}</td>
-                        <td data-label="Título">
+                        </AdministrativeTable.Cell>
+                        <AdministrativeTable.Cell data-label="Versão">
+                          v{version.versionNumber}
+                        </AdministrativeTable.Cell>
+                        <AdministrativeTable.Cell data-label="Título">
                           <span className="questionnaire-versions__value">{version.title}</span>
-                        </td>
-                        <td data-label="Configuração aprovada">
+                        </AdministrativeTable.Cell>
+                        <AdministrativeTable.Cell data-label="Configuração aprovada">
                           <span className="questionnaire-versions__value">
                             {formatConfigurationOptions(version)}
                           </span>
-                        </td>
-                      </tr>
+                        </AdministrativeTable.Cell>
+                      </AdministrativeTable.Row>
                     ))}
-                  </tbody>
-                </table>
+                  </AdministrativeTable.Body>
+                </AdministrativeTable>
                 <Pagination
                   currentPage={versionsPagination.currentPage}
                   hasNextPage={versionsPagination.hasNextPage}

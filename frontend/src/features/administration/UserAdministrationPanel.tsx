@@ -1,3 +1,4 @@
+import { AdministrativeTable } from '@/components/ui/administrative-table'
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Ellipsis, KeyRound, Plus, RefreshCw, Save, ShieldCheck, Trash2, X } from 'lucide-react'
@@ -671,39 +672,43 @@ export function UserAdministrationPanel({
 
           {!isLoadingUsers && !listError && users.length > 0 ? (
             <div className="administration-users local-users-table">
-              <table>
+              <AdministrativeTable>
                 <caption className="visually-hidden">
                   Contas locais disponíveis para administração
                 </caption>
-                <thead>
-                  <tr>
-                    <th scope="col">Nome</th>
-                    <th scope="col">Login</th>
-                    <th scope="col">Situação</th>
-                    <th scope="col">Ação</th>
-                  </tr>
-                </thead>
-                <tbody>
+                <AdministrativeTable.Head>
+                  <AdministrativeTable.Row>
+                    <AdministrativeTable.Heading scope="col">Nome</AdministrativeTable.Heading>
+                    <AdministrativeTable.Heading scope="col">Login</AdministrativeTable.Heading>
+                    <AdministrativeTable.Heading scope="col">Situação</AdministrativeTable.Heading>
+                    <AdministrativeTable.Heading scope="col">Ação</AdministrativeTable.Heading>
+                  </AdministrativeTable.Row>
+                </AdministrativeTable.Head>
+                <AdministrativeTable.Body>
                   {usersPagination.items.map((user) => (
-                    <tr key={user.id}>
-                      <td data-label="Nome">{user.displayName}</td>
-                      <td data-label="Login">{user.login}</td>
-                      <td data-label="Situação">
+                    <AdministrativeTable.Row key={user.id}>
+                      <AdministrativeTable.Cell data-label="Nome">
+                        {user.displayName}
+                      </AdministrativeTable.Cell>
+                      <AdministrativeTable.Cell data-label="Login">
+                        {user.login}
+                      </AdministrativeTable.Cell>
+                      <AdministrativeTable.Cell data-label="Situação">
                         <span className={`status-badge status-badge--${user.status.toLowerCase()}`}>
                           {formatAccountStatus(user)}
                         </span>
-                      </td>
-                      <td data-label="Ação">
+                      </AdministrativeTable.Cell>
+                      <AdministrativeTable.Cell data-label="Ação">
                         <AccountActions
                           user={user}
                           isBusy={isLoadingDetail || isUpdating || isDeleting}
                           onOpen={() => void selectUser(user.id)}
                         />
-                      </td>
-                    </tr>
+                      </AdministrativeTable.Cell>
+                    </AdministrativeTable.Row>
                   ))}
-                </tbody>
-              </table>
+                </AdministrativeTable.Body>
+              </AdministrativeTable>
               <Pagination
                 currentPage={usersPagination.currentPage}
                 hasNextPage={usersPagination.hasNextPage}

@@ -542,4 +542,8 @@ export interface PageRequest {
 export interface AssessmentListRequest extends PageRequest {
   cycleId?: string
   collaboratorId?: string
+  evaluatedName?: string
+  managerName?: string
+  status?: 'RASCUNHO' | 'ENVIADA' | 'PUBLICADA'
+  feedbackStatus?: AssessmentSummary['feedbackStatus']
 }

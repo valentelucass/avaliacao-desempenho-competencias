@@ -1,6 +1,6 @@
 import react from '@vitejs/plugin-react'
 import { readFileSync } from 'node:fs'
-import { URL } from 'node:url'
+import { fileURLToPath, URL } from 'node:url'
 import { defineConfig } from 'vitest/config'
 
 const allowedPublicHosts = ['formulario.rodogarcia.com.br']
@@ -104,6 +104,9 @@ function secureLocalDevelopmentServer() {
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  resolve: {
+    alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
+  },
   server: secureLocalDevelopmentServer(),
   preview: {
     allowedHosts: allowedPublicHosts,

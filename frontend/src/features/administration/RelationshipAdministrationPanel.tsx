@@ -1,3 +1,4 @@
+import { AdministrativeTable } from '@/components/ui/administrative-table'
 import { useCallback, useEffect, useId, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link2, RefreshCw, Unlink } from 'lucide-react'
@@ -758,23 +759,31 @@ function RelationshipTable<Entry extends { id: string; startsOn: string | null }
 
   return (
     <div className="administration-users">
-      <table>
+      <AdministrativeTable>
         <caption className="visually-hidden">Vínculos ativos</caption>
-        <thead>
-          <tr>
-            <th scope="col">{accountColumn}</th>
-            <th scope="col">{collaboratorColumn}</th>
-            <th scope="col">Início</th>
-            <th scope="col">Ação</th>
-          </tr>
-        </thead>
-        <tbody>
+        <AdministrativeTable.Head>
+          <AdministrativeTable.Row>
+            <AdministrativeTable.Heading scope="col">{accountColumn}</AdministrativeTable.Heading>
+            <AdministrativeTable.Heading scope="col">
+              {collaboratorColumn}
+            </AdministrativeTable.Heading>
+            <AdministrativeTable.Heading scope="col">Início</AdministrativeTable.Heading>
+            <AdministrativeTable.Heading scope="col">Ação</AdministrativeTable.Heading>
+          </AdministrativeTable.Row>
+        </AdministrativeTable.Head>
+        <AdministrativeTable.Body>
           {pagination.items.map((entry) => (
-            <tr key={entry.id}>
-              <td data-label={accountColumn}>{getAccountName(entry)}</td>
-              <td data-label={collaboratorColumn}>{getCollaboratorName(entry)}</td>
-              <td data-label="Início">{entry.startsOn ?? 'Não informado'}</td>
-              <td data-label="Ação">
+            <AdministrativeTable.Row key={entry.id}>
+              <AdministrativeTable.Cell data-label={accountColumn}>
+                {getAccountName(entry)}
+              </AdministrativeTable.Cell>
+              <AdministrativeTable.Cell data-label={collaboratorColumn}>
+                {getCollaboratorName(entry)}
+              </AdministrativeTable.Cell>
+              <AdministrativeTable.Cell data-label="Início">
+                {entry.startsOn ?? 'Não informado'}
+              </AdministrativeTable.Cell>
+              <AdministrativeTable.Cell data-label="Ação">
                 <div className="table-actions">
                   <button
                     className="button button--danger"
@@ -785,11 +794,11 @@ function RelationshipTable<Entry extends { id: string; startsOn: string | null }
                     Encerrar
                   </button>
                 </div>
-              </td>
-            </tr>
+              </AdministrativeTable.Cell>
+            </AdministrativeTable.Row>
           ))}
-        </tbody>
-      </table>
+        </AdministrativeTable.Body>
+      </AdministrativeTable>
       <Pagination
         currentPage={pagination.currentPage}
         hasNextPage={pagination.hasNextPage}
