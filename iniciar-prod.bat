@@ -192,7 +192,10 @@ pushd frontend
 call npm ci
 set "NPM_CI_EXIT=%ERRORLEVEL%"
 popd
-if not "%NPM_CI_EXIT%"=="0" exit /b %NPM_CI_EXIT%
+if not "%NPM_CI_EXIT%"=="0" (
+  echo [Avaliacao PROD] npm ci falhou; o gate e os processos PM2 nao serao executados.
+  exit /b 1
+)
 call :assert_frontend_dependency_files
 if errorlevel 1 (
   exit /b 1

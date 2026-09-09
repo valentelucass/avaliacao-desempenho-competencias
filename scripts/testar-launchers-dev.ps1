@@ -40,16 +40,46 @@ function Assert-Launcher([bool]$Condition, [string]$Message) {
     Assert-Launcher $denied 'Processo de outro projeto deveria abortar o encerramento.'
 }
 
-Push-Location $repositoryRoot
-try {
-    $output = & cmd /d /c 'iniciar-dev.bat --public-preview https://example.invalid' 2>&1
-    Assert-Launcher ($LASTEXITCODE -ne 0) 'Falha do PowerShell foi mascarada no modo public-preview.'
-    $output = 'https://example.invalid' | & cmd /d /c 'iniciar-dev.bat --public-preview-prompt' 2>&1
-    Assert-Launcher ($LASTEXITCODE -ne 0) 'Falha do PowerShell foi mascarada no modo prompt.'
-    $output = '' | & cmd /d /c 'iniciar-dev.bat --public-preview-prompt' 2>&1
-    Assert-Launcher ($LASTEXITCODE -eq 2) 'Cancelamento sem URL deveria retornar 2.'
+& {
+    $npmWrapperViteScript = Join-Path $repositoryRoot 'frontend\node_modules\.bin\..\vite\bin\vite.js'
+    $npmWrapperWithDuplicateSeparator = $npmWrapperViteScript.Replace('\.bin\..\', '\.bin\\..\')
+    function Get-CimInstance {
+        [CmdletBinding()] param($ClassName, $Filter)
+        return [PSCustomObject]@{
+            Name = 'node.exe'; ProcessId = 913; CreationDate = '2026-09-09'
+            CommandLine = 'node "' + $npmWrapperWithDuplicateSeparator + '" --host 127.0.0.1 --port 5080 --strictPort'
+        }
+    }
+    function Get-NetTCPConnection {
+        [CmdletBinding()] param($State, $LocalPort, $OwningProcess)
+        if ($OwningProcess -eq 913) { return [PSCustomObject]@{ LocalPort = 5080; OwningProcess = 913 } }
+    }
+    function Stop-Process { throw 'O teste jamais deve encerrar um processo real.' }
+    $messages = & $stopScript -WhatIf 6>&1 | Out-String
+    Assert-Launcher ($messages.Contains('5080') -and $messages.Contains('913')) 'Vite iniciado pelo wrapper npm nao foi identificado.'
 }
-finally { Pop-Location }
+
+Push-Location $repositoryRoot
+$previousErrorActionPreference = $ErrorActionPreference
+try {
+    # Estas tres chamadas exercitam falhas esperadas do launcher. No Windows
+    # PowerShell, stderr de um executavel com codigo nao zero vira excecao quando
+    # ErrorActionPreference esta como Stop, antes que possamos conferir o codigo.
+    $ErrorActionPreference = 'Continue'
+    $output = & cmd /d /c 'iniciar-dev.bat --public-preview https://example.invalid' 2>&1
+    $exitCode = $LASTEXITCODE
+    Assert-Launcher ($exitCode -ne 0) 'Falha do PowerShell foi mascarada no modo public-preview.'
+    $output = 'https://example.invalid' | & cmd /d /c 'iniciar-dev.bat --public-preview-prompt' 2>&1
+    $exitCode = $LASTEXITCODE
+    Assert-Launcher ($exitCode -ne 0) 'Falha do PowerShell foi mascarada no modo prompt.'
+    $output = '' | & cmd /d /c 'iniciar-dev.bat --public-preview-prompt' 2>&1
+    $exitCode = $LASTEXITCODE
+    Assert-Launcher ($exitCode -eq 2) 'Cancelamento sem URL deveria retornar 2.'
+}
+finally {
+    $ErrorActionPreference = $previousErrorActionPreference
+    Pop-Location
+}
 # Os codigos nao zero acima eram assercoes negativas, nao falha deste teste.
 $global:LASTEXITCODE = 0
 Write-Host 'Launchers validados: porta dinamica, alvo desconhecido, propagacao de falhas e cancelamento.'

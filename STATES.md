@@ -1,12 +1,26 @@
 # Estado atual — Avaliação de Desempenho e Competências
 
-> Atualizado em 2026-09-08. Estado consolidado após a auditoria, a complementação autorizada de DEV, as tabelas administrativas, a cortina de tema, a padronização compacta dos botões, os quatro filtros de avaliações e o refino da navegação/cartões, inclusive a transição de rolagem do drawer e a paginação por duas linhas. Inclui a correção operacional dos filtros no DEV em execução (`ADC-COR-003`). Substitui os relatos intermediários contraditórios; não equivale a aceite de produção ou garantia universal de ausência de defeitos.
+> Atualizado em 2026-09-09. Inclui a publicação técnica solicitada em produção (`ADC-COR-005`), após corrigir os launchers e executar o gate completo pelo BAT. Preserva as evidências anteriores de auditoria, massa DEV, interface e filtros. A publicação técnica não substitui os pré-requisitos externos de negócio, dados e infraestrutura registrados abaixo.
 
 ## Resultado vigente
 
+`ADC-COR-005`: publicação concluída pelo `iniciar-prod.bat`, com código 0 e gate completo aprovado no Windows PowerShell. API e front-end estão online no PM2 e acessíveis nos hosts HTTPS previstos. Os 11 processos de outros sistemas mantiveram PID, status e contador de reinícios.
+
 `ADC-COR-001`: os cinco achados da auditoria foram corrigidos no código. `ADC-DEV-002`: a massa complementar foi efetivamente gravada em `AVALIACAO_DEV`, validada por API e preservada na reexecução. Gate final completo aprovado, com revisão do diff e evidências abaixo.
 
-Nenhuma escrita em PROD, migration nova, mudança de concessões, deploy de produção ou exclusão de avaliação/histórico foi executada nessas tarefas. As alterações preexistentes do usuário foram preservadas. Na etapa anterior de auditoria/massa, o DEV foi recompilado e iniciado com o back-end atualizado para testar as jornadas reais. A integração de tabelas não iniciou/encerrou serviços nem gravou dados no banco.
+Nas tarefas anteriores `ADC-COR-001` e `ADC-DEV-002`, não houve escrita em PROD, migration nova, mudança de concessões, deploy de produção ou exclusão de avaliação/histórico. As alterações preexistentes do usuário foram preservadas. Na etapa anterior de auditoria/massa, o DEV foi recompilado e iniciado com o back-end atualizado para testar as jornadas reais. A integração de tabelas não iniciou/encerrou serviços nem gravou dados no banco.
+
+## Publicação técnica — ADC-COR-005 concluída
+
+O usuário solicitou explicitamente corrigir e concluir a subida para produção após as falhas do launcher. A execução ocorreu em 2026-09-09, entre 18:29 e 18:36 (America/Sao_Paulo), pelo BAT existente. Os dois processos deste projeto estavam parados antes da publicação. O teste negativo do launcher passou no Windows PowerShell: o stderr esperado das tentativas inválidas é capturado antes da verificação dos códigos de saída, com restauração da preferência de erros ao final. Não foi removida nenhuma etapa do gate.
+
+- Preflight `iniciar-prod.bat --check`, verificação operacional, scanner de segredos, sintaxe PowerShell, manifesto mínimo PM2 e regressão dos launchers aprovados. Dependências locais íntegras, incluindo `vite/client` e `@types/node`, reutilizadas pelo hash do lockfile.
+- Maven: 201 testes, zero falhas/erros e três testes SQL condicionais não habilitados. Front-end: Prettier, Oxlint, 142 testes em 15 arquivos, build TypeScript/Vite e regressões no Edge aprovados. SBOM/OSV e npm sem vulnerabilidades encontradas. Migrations e validações SQL executadas somente em modo leitura, com sucesso.
+- Release Java ativo: `backend/target/releases/d24220d0c772424bbdc80b084ed52ea1/avaliacao-desempenho-api-0.0.1-SNAPSHOT.jar`; SHA-256 `111D26B5958EF14F02A14990732E6E6AAB53BBCDBBFCA2AD1EB80A5D5B4C7328`. Base Git `bf5c3c0`, com as correções operacionais locais descritas em `ADC-COR-004`.
+- `avaliacao-api-18081` e `avaliacao-front-18080` online, sem reinícios, com listeners exclusivamente em `127.0.0.1:18081` e `127.0.0.1:18080`. Validador do runtime PM2 aprovou ambiente mínimo, contrato de inicialização e logs; `pm2 save` concluído. Os 11 outros processos permaneceram inalterados.
+- Front-end privado/público e endpoint CSRF privado/público retornaram HTTP 200. `/api/v1/auth/me` e `/api/v1/assessments` retornaram 401 sem sessão. HSTS, CSP, `nosniff` e proteção contra framing presentes nos seis retornos. O host público entrega `/assets/index-BhtRQHKb.js`, correspondente ao build local e contendo a base pública correta da API. Nenhum login ou teste autenticado foi executado em produção.
+- Evidências locais ignoradas pelo Git: `backend/target/publication-20260909.log`, `production-http-verification-20260909.json` e `production-process-baseline-20260909.json`. Recuperação: JAR anterior preservado no release `bcb9649bcdad46a1bb80226886f5e533`; snapshot do `dist` anterior e argumentos anteriores dos dois processos em `backend/target/production-rollback-20260909-182907`. Rollback não precisou ser executado nem foi ensaiado nesta tarefa.
+- Não houve migration, carga, concessão, exclusão de histórico ou mudança em Cloudflare/firewall/SQL Server. Permanecem o aviso conhecido de tamanho do bundle e os pré-requisitos externos abaixo. A checagem operacional confirmou Cloudflared ativo/automático e reiterou o firewall desabilitado; o diretório de logs foi validado pelo preflight do BAT com a configuração externa carregada.
 
 ## Filtros no DEV em execução — ADC-COR-003 concluída
 
@@ -149,6 +163,12 @@ O release produtivo e a infraestrutura existentes não foram modificados nem tiv
 
 ## Tarefas pendentes reais
 
+- `ADC-COR-006` pendente de correção (2026-09-09): comparação solicitada pelo usuário confirmou nova falha na suíte, posterior à publicação aprovada. O log das 18:42 passou pelos launchers e Maven, mas registrou 139 testes aprovados e três falhas Vitest: dois testes de questionários excederam 5 segundos; a edição de ciclo enviou o nome anterior. Às 18:31 os 142 testes passaram. Na investigação, duas execuções isoladas dos testes de ciclos e uma execução completa em terminal interativo às 18:47 passaram; esta última incluiu um teste exploratório adicional (143 casos). A hipótese de sobreposição entre destaque visual e edição não reproduziu o defeito no ensaio, que foi retirado sem alterar os testes originais. A causa exata da divergência de nome e dos tempos variáveis continua não confirmada; não declarar a suíte estável nem tratar nova execução aprovada como correção. O validador confirmou os dois processos publicados online, com ambiente e contrato válidos. Nenhuma nova publicação, reinício, alteração de aplicação/dependências ou escrita em banco foi executada nesta investigação.
+
+- `ADC-COR-005` concluída (2026-09-09): BAT completo retornou 0, release publicado, dois processos PM2 online, endpoints HTTPS e acesso sem autenticação verificados; evidências e recuperação descritas acima. Nenhuma pendência técnica conhecida para esta subida; condições externas de uso com dados reais permanecem separadas.
+
+- `ADC-DEV-004` concluída localmente (2026-09-09): os arquivos de tipo ausentes foram restaurados de uma instalação temporária gerada pelo `package-lock`, copiando somente itens inexistentes e sem trocar os arquivos em uso. `npm ls --depth=0`, TypeScript/Vite build, Prettier e 142 testes front-end foram aprovados. Nenhuma versão, configuração TypeScript, API, banco, serviço ou processo foi alterado.
+- `ADC-COR-004` concluída localmente (2026-09-09): `iniciar-prod.bat` agora interrompe com código 1 qualquer falha de `npm ci`, antes do gate ou do PM2. O encerramento pré-produção reconhece o Vite DEV executado pelo wrapper npm, mesmo com barra duplicada, mas continua exigindo o binário deste repositório, `--strictPort` e ausência de `preview`. O teste do launcher também passou a tratar somente as três falhas simuladas como esperadas antes de inspecionar seus códigos de saída: no Windows PowerShell, o stderr de processo com erro era lançado como exceção antes da asserção. Testes simulados passaram no Windows PowerShell 5.1 e no PowerShell 7; o ensaio `-WhatIf` identificou somente o PID local da porta 5080. Nenhuma interrupção, início, exclusão ou alteração de processo PM2 foi executada nesta correção.
 - `ADC-COR-003` concluída no DEV: build antigo identificado e substituído pelo launcher existente, acesso local preservado, 19 cenários pela API ativa e gate completo aprovados. Necessário novo login após o reinício. Nenhuma publicação em PROD.
 - `ADC-UI-054` concluída localmente: títulos em linha única/tooltip nativo, cartões e botões alinhados e paginação responsiva de no máximo duas linhas; cobertura Vitest/Edge e gate completo aprovados. Aceite visual/assistivo humano permanece externo; nenhum deploy é implícito.
 - `ADC-UI-053` concluída localmente: blur removido da transição de rolagem, gradiente curto e controles preservados; cobertura Edge adicionada e gate completo aprovado. Aceite visual/assistivo humano permanece externo; nenhum deploy é implícito.
@@ -158,7 +178,7 @@ O release produtivo e a infraestrutura existentes não foram modificados nem tiv
 - `ADC-UI-049` concluída no escopo local solicitado; aceite assistivo humano permanece no pré-requisito externo já existente, sem deploy implícito.
 - `ADC-UI-048` concluída no escopo solicitado; ressalva conhecida de tamanho do bundle e aceite assistivo humano registrados, sem alegação de isolamento absoluto ou deploy.
 - Não há pendência técnica conhecida nos cinco achados auditados ou na preparação/validação da massa solicitada; `ADC-COR-001` e `ADC-DEV-002` concluídas no escopo local autorizado.
-- Nenhuma carga real, concessão especial, alteração de infraestrutura ou deploy está autorizada por estas tarefas.
+- As tarefas históricas não autorizam carga real, concessão especial, alteração de infraestrutura ou deploy. A publicação específica solicitada em `ADC-COR-005` foi concluída; isso não autoriza novas mudanças externas.
 
 ## Pré-requisitos externos para ativação com dados reais
 
@@ -182,7 +202,7 @@ Estes itens não são backlog de código e não podem ser declarados concluídos
 - Uma tentativa inicial da carga de encerrar prazo futuro foi corretamente negada. O ciclo e sua autoavaliação foram preservados sob `FUTURO`; um cenário separado com janela passada foi encerrado pela API. Nenhum gatilho foi desativado ou prazo aberto sobrescrito.
 - Massa complementar é identificável e preserva histórico; recuperação deve usar inativação/encerramento autorizados, nunca exclusão de avaliações ou auditoria. O teste autenticado criou e removeu somente suas próprias filiais fictícias descartáveis e associações de questionário em ciclo rascunho; não removeu avaliações ou histórico.
 - Credenciais permanecem fora do Git e dos logs. Não copiar massa ou credenciais DEV para PROD.
-- O release anterior permanece disponível. Implantação/rollback exigem escopo próprio; consultar [pre-publication-runbook.md](docs/operations/pre-publication-runbook.md).
+- O release anterior e o snapshot do front-end foram preservados em `ADC-COR-005`. Consultar [pre-publication-runbook.md](docs/operations/pre-publication-runbook.md) antes de nova implantação ou rollback.
 
 ## Documentos operacionais
 

@@ -46,13 +46,19 @@ function Test-ExpectedLocalDevelopmentProcess {
     if ([string]::IsNullOrWhiteSpace($commandLine)) {
         return $false
     }
+    # O npm pode emitir .bin\\.. no comando do processo; o caminho aponta ao mesmo Vite.
+    $normalizedCommandLine = $commandLine -replace '\\{2,}', '\'
 
     if ($Kind -eq 'front-end') {
         $viteScript = [regex]::Escape((Join-Path $frontendDirectory 'node_modules\vite\bin\vite.js'))
+        $viteNpmWrapperTarget = [regex]::Escape(
+            (Join-Path $frontendDirectory 'node_modules\.bin\..\vite\bin\vite.js')
+        )
         return $Process.Name -ieq 'node.exe' -and
-            $commandLine -match ('(?:^|\s)"?' + $viteScript + '"?(?=\s|$)') -and
-            $commandLine -match '(?:^|\s)--strictPort(?:\s|$)' -and
-            $commandLine -notmatch '(?:^|\s)preview(?:\s|$)'
+            ($normalizedCommandLine -match ('(?:^|\s)"?' + $viteScript + '"?(?=\s|$)') -or
+                $normalizedCommandLine -match ('(?:^|\s)"?' + $viteNpmWrapperTarget + '"?(?=\s|$)')) -and
+            $normalizedCommandLine -match '(?:^|\s)--strictPort(?:\s|$)' -and
+            $normalizedCommandLine -notmatch '(?:^|\s)preview(?:\s|$)'
     }
 
     $legacyArtifactPrefix = Join-Path $backendDirectory 'target\avaliacao-desempenho-api-'
