@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { ApiClient } from '../../api/client'
 import type {
@@ -112,6 +112,63 @@ describe('CycleAdministrationPanel', () => {
       }),
     )
   })
+
+  it.each([
+    ['Nome do ciclo', 'name', 'Ciclo de avaliação revisado'],
+    ['Fuso horário', 'timeZone', 'America/Manaus'],
+    ['Abertura', 'openingAtLocal', '2026-09-02T08:00'],
+    ['Encerramento', 'closingAtLocal', '2026-11-01T18:00'],
+    ['Permitir autoavaliação neste ciclo', 'selfAssessmentEnabled', false],
+  ] as const)(
+    'preserva %s se o DOM for restaurado antes de processar o estado pendente',
+    async (label, field, value) => {
+      vi.useFakeTimers()
+      const api = createApi({ listAllCycles: vi.fn().mockResolvedValue([sampleCycle()]) })
+
+      try {
+        await act(async () => {
+          render(
+            // Restaura o DOM ainda no evento, antes de React processar o updater.
+            <div onChange={(event) => (event.target as HTMLInputElement).form?.reset()}>
+              <CycleAdministrationPanel
+                api={api}
+                permissions={['CICLOS.GERIR']}
+                onSessionExpired={vi.fn()}
+              />
+            </div>,
+          )
+        })
+        await act(async () => {
+          fireEvent.click(screen.getByRole('button', { name: 'Configurar' }))
+        })
+
+        const input = screen.getByLabelText(label)
+        act(() => {
+          // O destaque e a edição ficam no mesmo lote, antes do próximo render.
+          vi.advanceTimersByTime(380)
+          if (typeof value === 'boolean') {
+            fireEvent.click(input)
+          } else {
+            fireEvent.change(input, { target: { value } })
+          }
+        })
+
+        if (typeof value === 'boolean') {
+          expect(input).not.toBeChecked()
+        } else {
+          expect(input).toHaveValue(value)
+        }
+        await act(async () => {
+          fireEvent.click(screen.getByRole('button', { name: 'Salvar configuração' }))
+        })
+        expect(api.replaceEvaluationCycle).toHaveBeenCalledWith('cycle-draft-1', {
+          configuration: expect.objectContaining({ [field]: value }),
+        })
+      } finally {
+        vi.useRealTimers()
+      }
+    },
+  )
 
   it('leva até o painel em linha ao consultar, configurar ou iniciar um ciclo', async () => {
     const scrollIntoView = vi.fn()

@@ -1,14 +1,26 @@
 # Estado atual — Avaliação de Desempenho e Competências
 
-> Atualizado em 2026-09-09. Inclui a publicação técnica solicitada em produção (`ADC-COR-005`), após corrigir os launchers e executar o gate completo pelo BAT. Preserva as evidências anteriores de auditoria, massa DEV, interface e filtros. A publicação técnica não substitui os pré-requisitos externos de negócio, dados e infraestrutura registrados abaixo.
+> Atualizado em 2026-09-15. Inclui a correção local da perda de edição no formulário de ciclos (`ADC-COR-006`) e o gate completo aprovado. Preserva a publicação histórica de 2026-09-09 (`ADC-COR-005`) e as evidências anteriores. Nenhuma nova publicação foi executada nesta correção.
 
 ## Resultado vigente
 
-`ADC-COR-005`: publicação concluída pelo `iniciar-prod.bat`, com código 0 e gate completo aprovado no Windows PowerShell. API e front-end estão online no PM2 e acessíveis nos hosts HTTPS previstos. Os 11 processos de outros sistemas mantiveram PID, status e contador de reinícios.
+`ADC-COR-006`: perda de edição corrigida localmente e validada. A consulta ao PM2 em 2026-09-15 mostrou `avaliacao-api-18081` e `avaliacao-front-18080` já parados antes do gate e ainda parados ao final; nenhum processo produtivo foi iniciado ou reiniciado nesta tarefa.
+
+`ADC-COR-005`: publicação histórica concluída em 2026-09-09 pelo `iniciar-prod.bat`, com código 0 e gate completo aprovado no Windows PowerShell. Naquela ocasião, API e front-end ficaram online no PM2 e acessíveis nos hosts HTTPS previstos. Os 11 processos de outros sistemas mantiveram PID, status e contador de reinícios.
 
 `ADC-COR-001`: os cinco achados da auditoria foram corrigidos no código. `ADC-DEV-002`: a massa complementar foi efetivamente gravada em `AVALIACAO_DEV`, validada por API e preservada na reexecução. Gate final completo aprovado, com revisão do diff e evidências abaixo.
 
 Nas tarefas anteriores `ADC-COR-001` e `ADC-DEV-002`, não houve escrita em PROD, migration nova, mudança de concessões, deploy de produção ou exclusão de avaliação/histórico. As alterações preexistentes do usuário foram preservadas. Na etapa anterior de auditoria/massa, o DEV foi recompilado e iniciado com o back-end atualizado para testar as jornadas reais. A integração de tabelas não iniciou/encerrou serviços nem gravou dados no banco.
+
+## Correção da edição de ciclos — ADC-COR-006, 2026-09-15
+
+O log enviado registrou 141 testes front-end aprovados e uma falha: a atualização do ciclo enviou o nome anterior em vez de `Ciclo de avaliação revisado`. O BAT interrompeu o preflight antes de alterar o PM2. No formulário, os seis handlers liam `event.target.value/checked` dentro do updater de estado, que podia consultar um DOM já restaurado. Agora capturam o valor durante o evento e enfileiram uma atualização que depende somente desse valor e do estado anterior. Contratos, validações, permissões, layout e dependências permanecem compatíveis.
+
+A regressão controlada enfileira o destaque visual e restaura o formulário no mesmo evento, antes de processar o estado pendente. Ela reproduziu o nome anterior no código original e passou após a correção. Foram acrescentados cinco casos para nome, fuso, abertura, encerramento e autoavaliação; verificam o campo e o valor enviado à API. Os sete testes anteriores do painel foram preservados. A sequência exata de escalonamento da execução original não foi reproduzida; uma execução inicial da suíte sem a correção passou, portanto esse resultado isolado não foi tratado como correção. A abordagem segue a exigência de [updaters puros do React](https://react.dev/reference/react/useState).
+
+Gate executado no Windows PowerShell: `scripts/verify-quality.ps1 -BackendBuildDirectory target/cycle-form-verification-20260915`, código 0. Evidências: 201 testes Java sem falhas/erros (três SQL opt-in ignorados), 147 testes front-end aprovados, builds, Prettier/Oxlint, sintaxe PowerShell, scanner de segredos, manifesto PM2 e launchers, regressões Edge, SBOM CycloneDX/OSV sem achados, npm sem vulnerabilidades e 14 migrations/SQL somente leitura. Log local ignorado: `backend/target/cycle-form-gate-20260915.log`. UTF-8 e diff revisados; a alteração preexistente de `iniciar-dev.bat` foi preservada, com hash conferido antes/depois.
+
+Limites: o aviso conhecido de bundle acima de 500 kB permanece; os timeouts de questionários relatados em 2026-09-09 não foram reproduzidos nem considerados corrigidos. Sem nova publicação, autenticação produtiva, DDL/DML ou alteração de infraestrutura. Recuperação da correção: reverter somente o helper/handlers e suas regressões nos dois arquivos de `CycleAdministrationPanel`; nenhuma migration ou recuperação de dados é necessária.
 
 ## Publicação técnica — ADC-COR-005 concluída
 
@@ -163,7 +175,9 @@ O release produtivo e a infraestrutura existentes não foram modificados nem tiv
 
 ## Tarefas pendentes reais
 
-- `ADC-COR-006` pendente de correção (2026-09-09): comparação solicitada pelo usuário confirmou nova falha na suíte, posterior à publicação aprovada. O log das 18:42 passou pelos launchers e Maven, mas registrou 139 testes aprovados e três falhas Vitest: dois testes de questionários excederam 5 segundos; a edição de ciclo enviou o nome anterior. Às 18:31 os 142 testes passaram. Na investigação, duas execuções isoladas dos testes de ciclos e uma execução completa em terminal interativo às 18:47 passaram; esta última incluiu um teste exploratório adicional (143 casos). A hipótese de sobreposição entre destaque visual e edição não reproduziu o defeito no ensaio, que foi retirado sem alterar os testes originais. A causa exata da divergência de nome e dos tempos variáveis continua não confirmada; não declarar a suíte estável nem tratar nova execução aprovada como correção. O validador confirmou os dois processos publicados online, com ambiente e contrato válidos. Nenhuma nova publicação, reinício, alteração de aplicação/dependências ou escrita em banco foi executada nesta investigação.
+- `ADC-COR-006`, perda de edição concluída localmente (2026-09-15): captura imediata dos valores dos campos, regressão sensível ao defeito e gate completo aprovado; evidências e limites na seção acima. Nenhuma nova publicação executada.
+
+- `ADC-COR-006`, pendência remanescente: investigar os dois timeouts de questionários (mais de cinco segundos) do log de 2026-09-09 às 18:42. A rodada tinha 139 testes aprovados e três falhas, incluindo a perda de nome agora corrigida. Os testes de questionários passaram no log enviado em 2026-09-15 e no gate desta correção; a causa dos tempos variáveis continua não confirmada. Nenhum timeout foi ampliado nem teste removido para liberar o gate.
 
 - `ADC-COR-005` concluída (2026-09-09): BAT completo retornou 0, release publicado, dois processos PM2 online, endpoints HTTPS e acesso sem autenticação verificados; evidências e recuperação descritas acima. Nenhuma pendência técnica conhecida para esta subida; condições externas de uso com dados reais permanecem separadas.
 

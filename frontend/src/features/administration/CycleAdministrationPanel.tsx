@@ -215,6 +215,11 @@ export function CycleAdministrationPanel({
     [api, configurationFieldIds, onSessionExpired, revealInlinePanel],
   )
 
+  function updateForm<K extends keyof CycleForm>(field: K, value: CycleForm[K]) {
+    // Capture o valor no evento; o updater pode rodar após o DOM ser restaurado.
+    setForm((current) => ({ ...current, [field]: value }))
+  }
+
   async function saveCycle(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!canManageCycles) {
@@ -569,7 +574,7 @@ export function CycleAdministrationPanel({
               value={form.code}
               maxLength={100}
               disabled={Boolean(selectedCycle) || isLoadingDraft || isSaving}
-              onChange={(event) => setForm((current) => ({ ...current, code: event.target.value }))}
+              onChange={(event) => updateForm('code', event.currentTarget.value)}
             />
           </div>
           <div className={fieldClassName(nameId)}>
@@ -579,7 +584,7 @@ export function CycleAdministrationPanel({
               value={form.name}
               maxLength={200}
               disabled={selectedCycle?.status !== undefined && selectedCycle.status !== 'RASCUNHO'}
-              onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
+              onChange={(event) => updateForm('name', event.currentTarget.value)}
             />
           </div>
           <div className={fieldClassName(timeZoneId)}>
@@ -589,9 +594,7 @@ export function CycleAdministrationPanel({
               value={form.timeZone}
               maxLength={100}
               disabled={selectedCycle?.status !== undefined && selectedCycle.status !== 'RASCUNHO'}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, timeZone: event.target.value }))
-              }
+              onChange={(event) => updateForm('timeZone', event.currentTarget.value)}
             />
           </div>
           <div className={fieldClassName(openingId)}>
@@ -601,9 +604,7 @@ export function CycleAdministrationPanel({
               type="datetime-local"
               value={form.openingAtLocal}
               disabled={selectedCycle?.status !== undefined && selectedCycle.status !== 'RASCUNHO'}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, openingAtLocal: event.target.value }))
-              }
+              onChange={(event) => updateForm('openingAtLocal', event.currentTarget.value)}
             />
           </div>
           <div className={fieldClassName(closingId)}>
@@ -613,9 +614,7 @@ export function CycleAdministrationPanel({
               type="datetime-local"
               value={form.closingAtLocal}
               disabled={selectedCycle?.status !== undefined && selectedCycle.status !== 'RASCUNHO'}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, closingAtLocal: event.target.value }))
-              }
+              onChange={(event) => updateForm('closingAtLocal', event.currentTarget.value)}
             />
           </div>
           <label
@@ -627,9 +626,7 @@ export function CycleAdministrationPanel({
               type="checkbox"
               checked={form.selfAssessmentEnabled}
               disabled={selectedCycle?.status !== undefined && selectedCycle.status !== 'RASCUNHO'}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, selfAssessmentEnabled: event.target.checked }))
-              }
+              onChange={(event) => updateForm('selfAssessmentEnabled', event.currentTarget.checked)}
             />
             Permitir autoavaliação neste ciclo
           </label>
