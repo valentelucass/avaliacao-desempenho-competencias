@@ -184,7 +184,7 @@ function App({ api = defaultApiClient }: AppProps) {
       try {
         // Os cookies de credencial são HttpOnly; a API é a única autoridade para
         // confirmar se ainda há uma sessão que possa ser retomada.
-        const restoredUser = await api.refreshSession()
+        const restoredUser = await api.restoreSession()
         if (restoredUser) {
           setUser(restoredUser)
           return
@@ -205,18 +205,12 @@ function App({ api = defaultApiClient }: AppProps) {
   )
 
   useEffect(() => {
-    // A atualização da SPA descarta apenas o estado React, não os cookies HttpOnly.
-    // Primeiro recupere a identidade pelo token de acesso ainda válido. Só então use
-    // o refresh quando esse token curto tiver expirado, evitando uma rotação de sessão
-    // desnecessária a cada recarregamento.
+    // O servidor preserva o acesso válido e só renova quando necessário.
+    // Ausência de sessão é um resultado normal desta restauração opcional.
     let cancelled = false
 
     void Promise.resolve()
-      .then(() => (cancelled ? null : api.currentUser()))
-      .then((currentUser) => {
-        if (cancelled) return null
-        return currentUser ?? api.refreshSession()
-      })
+      .then(() => (cancelled ? null : api.restoreSession()))
       .then((restoredUser) => {
         if (cancelled || !restoredUser) {
           return

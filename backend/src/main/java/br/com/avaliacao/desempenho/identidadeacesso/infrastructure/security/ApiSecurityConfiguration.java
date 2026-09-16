@@ -116,6 +116,8 @@ public class ApiSecurityConfiguration {
                     .permitAll()
                     .requestMatchers(HttpMethod.POST, "/api/v1/auth/sessions/refresh")
                     .permitAll()
+                    .requestMatchers(HttpMethod.POST, "/api/v1/auth/sessions/restore")
+                    .permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/v1/administration/users/**")
                     .hasAuthority("PERMISSION:USUARIOS.LER")
                     .requestMatchers(HttpMethod.POST, "/api/v1/administration/users")

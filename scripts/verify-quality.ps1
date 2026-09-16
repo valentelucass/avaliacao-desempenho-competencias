@@ -96,6 +96,10 @@ Invoke-Validation 'Front-end: impressao A4 e hover desabilitado no Edge real' {
     & node (Join-Path $repositoryRoot 'frontend/scripts/check-assessment-print.cjs')
 }
 
+Invoke-Validation 'Front-end: restauracao de sessao e console no Edge real' {
+    & node (Join-Path $repositoryRoot 'frontend/scripts/check-session-restoration.cjs')
+}
+
 Invoke-Validation 'Back-end: SBOM e vulnerabilidades conhecidas' {
     if ([string]::IsNullOrWhiteSpace($BackendBuildDirectory)) {
         & (Join-Path $PSScriptRoot 'verify-java-dependencies.ps1')

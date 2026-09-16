@@ -93,6 +93,7 @@ export interface ApiClient {
   discardSpreadsheet(id: string): Promise<void>
   currentUser(): Promise<CurrentUser | null>
   refreshSession(): Promise<CurrentUser | null>
+  restoreSession(): Promise<CurrentUser | null>
   signIn(login: string, password: string): Promise<void>
   signOut(): Promise<void>
   changePassword(currentPassword: string, newPassword: string): Promise<void>
@@ -247,22 +248,39 @@ export class HttpApiClient implements ApiClient {
   }
 
   refreshSession(): Promise<CurrentUser | null> {
-    // Inicialização, retomada manual e recuperação de 401 compartilham a mesma rotação.
+    return this.resolveSession(false)
+  }
+
+  restoreSession(): Promise<CurrentUser | null> {
+    return this.resolveSession(true)
+  }
+
+  private resolveSession(optional: boolean): Promise<CurrentUser | null> {
+    // Inicialização, retomada manual e recuperação de 401 compartilham a mesma operação.
     if (!this.sessionRefreshRequest) {
-      this.sessionRefreshRequest = this.requestSessionRefresh().finally(() => {
+      this.sessionRefreshRequest = this.requestSessionRefresh(optional).finally(() => {
         this.sessionRefreshRequest = undefined
       })
     }
     return this.sessionRefreshRequest
   }
 
-  private async requestSessionRefresh(): Promise<CurrentUser | null> {
+  private async requestSessionRefresh(optional: boolean): Promise<CurrentUser | null> {
     try {
-      await this.request<void>('/auth/sessions/refresh', {
-        method: 'POST',
-        requiresCsrf: true,
-        skipSessionRecovery: true,
-      })
+      const result = await this.request<{ authenticated: boolean } | undefined>(
+        optional ? '/auth/sessions/restore' : '/auth/sessions/refresh',
+        {
+          method: 'POST',
+          requiresCsrf: true,
+          skipSessionRecovery: true,
+        },
+      )
+      if (optional) {
+        if (typeof result?.authenticated !== 'boolean') {
+          throw new ApiError({ status: 502, code: 'INVALID_RESPONSE' })
+        }
+        if (!result.authenticated) return null
+      }
       this.csrfToken = undefined
       return await this.currentUser()
     } catch (error) {

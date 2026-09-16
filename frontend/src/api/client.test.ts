@@ -2,6 +2,74 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { HttpApiClient } from './client'
 
 describe('HttpApiClient', () => {
+  it('restaura opcionalmente sem consultar identidade nem refresh quando não há sessão', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ token: 'csrf-synthetic' }))
+      .mockResolvedValueOnce(jsonResponse({ authenticated: false }))
+    vi.stubGlobal('fetch', fetchMock)
+    await expect(new HttpApiClient().restoreSession()).resolves.toBeNull()
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+      '/api/v1/auth/csrf',
+      '/api/v1/auth/sessions/restore',
+    ])
+    const request = fetchMock.mock.calls[1][1]
+    expect(request.method).toBe('POST')
+    expect(request.credentials).toBe('include')
+    expect(request.headers.get('X-CSRF-TOKEN')).toBe('csrf-synthetic')
+  })
+
+  it('compartilha restauração e refresh concorrentes e renova CSRF antes da próxima escrita', async () => {
+    const user = { id: 'user-1', displayName: 'Pessoa fictícia', permissions: [] }
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ token: 'csrf-before' }))
+      .mockResolvedValueOnce(jsonResponse({ authenticated: true }))
+      .mockResolvedValueOnce(jsonResponse(user))
+      .mockResolvedValueOnce(jsonResponse({ token: 'csrf-after' }))
+      .mockResolvedValueOnce(jsonResponse({ id: 'branch-1' }))
+    vi.stubGlobal('fetch', fetchMock)
+    const api = new HttpApiClient()
+    await expect(
+      Promise.all([api.restoreSession(), api.refreshSession(), api.restoreSession()]),
+    ).resolves.toEqual([user, user, user])
+    await api.createBranch({ name: 'Filial fictícia' })
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+      '/api/v1/auth/csrf',
+      '/api/v1/auth/sessions/restore',
+      '/api/v1/auth/me',
+      '/api/v1/auth/csrf',
+      '/api/v1/master-data/branches',
+    ])
+    expect(fetchMock.mock.calls[4][1].headers.get('X-CSRF-TOKEN')).toBe('csrf-after')
+  })
+
+  it.each([403, 429, 503])(
+    'preserva falha %i da restauração e permite nova tentativa',
+    async (status) => {
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValueOnce(jsonResponse({ token: 'csrf-synthetic' }))
+        .mockResolvedValueOnce(jsonResponse({ code: 'UNAVAILABLE' }, status))
+        .mockResolvedValueOnce(jsonResponse({ authenticated: false }))
+      vi.stubGlobal('fetch', fetchMock)
+      const api = new HttpApiClient()
+      await expect(api.restoreSession()).rejects.toMatchObject({ status })
+      await expect(api.restoreSession()).resolves.toBeNull()
+      expect(fetchMock).toHaveBeenCalledTimes(3)
+    },
+  )
+
+  it('rejeita contrato inválido de restauração em vez de apresentá-lo como sessão ausente', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ token: 'csrf-synthetic' }))
+      .mockResolvedValueOnce(jsonResponse({}))
+    vi.stubGlobal('fetch', fetchMock)
+    await expect(new HttpApiClient().restoreSession()).rejects.toMatchObject({ status: 502 })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
   it('compartilha uma única rotação entre refresh direto e recuperação de uma requisição', async () => {
     let completeRefresh!: (response: Response) => void
     const refreshResponse = new Promise<Response>((resolve) => {

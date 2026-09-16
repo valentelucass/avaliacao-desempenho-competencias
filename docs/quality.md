@@ -32,6 +32,12 @@ A regressão de `Encerrar` é verificada adicionalmente no `RelationshipAdminist
 
 Use o comando sem `-SkipDatabase` no banco local dedicado. O catálogo versionado atual contém `V0001`–`V0014`; a reconciliação somente leitura dos dois bancos foi registrada em 2026-09-08. Use `-SkipDatabase` somente quando o alvo SQL Server não estiver disponível para o gate; essa opção ainda valida os arquivos de migration, mas não substitui a execução completa contra SQL Server antes da liberação.
 
+## Restauração opcional de sessão
+
+`ADC-COR-021`: `SessionRestorationHttpTests` verifica a rota aditiva `/auth/sessions/restore` com a cadeia Spring, cookies e token CSRF mascarado reais, serviço/repositório de identidade fictícios e nenhum SQL. Cobre ausência de sessão, refresh recusado, acesso válido sem rotação, renovação com cookies seguros e invalidação de CSRF, negações por método/CSRF, preservação dos 401 existentes e propagação de falha não relacionada à autenticação. Testes de App com o cliente HTTP real verificam a abertura sem consultas protegidas; os testes do cliente cobrem concorrência entre restauração/refresh, descarte de CSRF, falhas e nova tentativa.
+
+O gate também executa `node frontend/scripts/check-session-restoration.cjs`. Compila a SPA em memória e usa HTTP fictício exclusivamente em loopback, com perfil novo do Edge, sem API real ou credenciais de usuário. Em 375/1440 px, verifica login sem sessão, retomada manual, sessão disponível e indisponibilidade do serviço; captura erros do console e exige zero nos cenários normais. Login inválido mantém 401 e feedback visível. É evidência do cliente no navegador, não de ativação do JAR DEV/PROD nem de persistência SQL.
+
 ## Criação de ciclo com SQL Server DEV e rollback
 
 `CycleCreationDevSqlTests` é opt-in por `-Dadc.dev.cycles.rollback=true`. Executa controllers HTTP, serviços, validações e repositórios reais sobre `AVALIACAO_DEV`: questionários aprovados, fim anterior ao início rejeitado, criação com abertura em 16/09/2026 14:00 e encerramento em 16/10/2026 23:59 (São Paulo), autoavaliação habilitada, persistência das datas/versões, paginação completa, edição e duplicidade. O principal é fornecido pelo teste; autenticação e filtros são cobertos separadamente. Não inicia servidor, não usa a configuração de produção e exige uma conta fictícia ativa `qa.feedback.rh.%` já existente.

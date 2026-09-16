@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import { StrictMode } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { axe } from 'vitest-axe'
-import { ApiError } from './api/client'
+import { ApiError, HttpApiClient } from './api/client'
 import type { ApiClient } from './api/client'
 import type {
   AssessmentDetail,
@@ -18,10 +18,35 @@ import App from './App'
 const passwordChangeMethod = 'changePassword'
 
 describe('App', () => {
+  it('abre o login com o cliente HTTP real sem consultar rotas que exigem sessão', async () => {
+    const fetchMock = vi.fn((url: string) => {
+      const body = url.endsWith('/auth/csrf')
+        ? { token: 'csrf-synthetic' }
+        : { authenticated: false }
+      const status = url.endsWith('/auth/me') || url.endsWith('/auth/sessions/refresh') ? 401 : 200
+      return Promise.resolve(new Response(JSON.stringify(body), { status }))
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    try {
+      render(
+        <StrictMode>
+          <App api={new HttpApiClient()} />
+        </StrictMode>,
+      )
+      expect(await screen.findByLabelText('E-mail ou login')).toBeInTheDocument()
+      expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+        '/api/v1/auth/csrf',
+        '/api/v1/auth/sessions/restore',
+      ])
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
   it('restaura a sessão uma única vez na inicialização em StrictMode', async () => {
     const api = createApi({
-      currentUser: vi.fn().mockResolvedValue(null),
-      refreshSession: vi.fn().mockResolvedValue({
+      restoreSession: vi.fn().mockResolvedValue({
         id: 'user-1',
         displayName: 'Sessão fictícia retomada',
         permissions: [],
@@ -33,14 +58,14 @@ describe('App', () => {
       </StrictMode>,
     )
     expect(await screen.findByText('Sessão fictícia retomada')).toBeInTheDocument()
-    expect(api.currentUser).toHaveBeenCalledTimes(1)
-    expect(api.refreshSession).toHaveBeenCalledTimes(1)
+    expect(api.restoreSession).toHaveBeenCalledTimes(1)
+    expect(api.currentUser).not.toHaveBeenCalled()
+    expect(api.refreshSession).not.toHaveBeenCalled()
   })
 
   it('apresenta o login sem repetir a tentativa de sessão ausente em StrictMode', async () => {
     const api = createApi({
-      currentUser: vi.fn().mockResolvedValue(null),
-      refreshSession: vi.fn().mockResolvedValue(null),
+      restoreSession: vi.fn().mockResolvedValue(null),
     })
     render(
       <StrictMode>
@@ -48,15 +73,16 @@ describe('App', () => {
       </StrictMode>,
     )
     expect(await screen.findByRole('heading', { name: 'Acesso à plataforma' })).toBeInTheDocument()
-    expect(api.currentUser).toHaveBeenCalledTimes(1)
-    expect(api.refreshSession).toHaveBeenCalledTimes(1)
+    expect(api.restoreSession).toHaveBeenCalledTimes(1)
+    expect(api.currentUser).not.toHaveBeenCalled()
+    expect(api.refreshSession).not.toHaveBeenCalled()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
-  it('não renova a sessão quando a leitura inicial termina após sair da aplicação', async () => {
+  it('não continua a restauração quando a resposta chega após sair da aplicação', async () => {
     let resolve!: (user: CurrentUser | null) => void
     const api = createApi({
-      currentUser: vi.fn(
+      restoreSession: vi.fn(
         () =>
           new Promise<CurrentUser | null>((done) => {
             resolve = done
@@ -64,10 +90,11 @@ describe('App', () => {
       ),
     })
     const { unmount } = render(<App api={api} />)
-    await waitFor(() => expect(api.currentUser).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(api.restoreSession).toHaveBeenCalledTimes(1))
     unmount()
     await act(async () => resolve(null))
     expect(api.refreshSession).not.toHaveBeenCalled()
+    expect(api.currentUser).not.toHaveBeenCalled()
   })
 
   it('não mostra o login enquanto restaura uma sessão ao atualizar a página', async () => {
@@ -1267,6 +1294,7 @@ function createApi(overrides: Partial<ApiClient> = {}): ApiClient {
   const api = {
     currentUser,
     refreshSession,
+    restoreSession: vi.fn(async () => (await currentUser()) ?? refreshSession()),
     signIn: vi.fn().mockResolvedValue(undefined),
     signOut: vi.fn().mockResolvedValue(undefined),
     listAdministrationUsers: vi.fn().mockResolvedValue([]),

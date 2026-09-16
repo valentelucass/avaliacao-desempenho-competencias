@@ -1,5 +1,6 @@
 package br.com.avaliacao.desempenho.identidadeacesso.api;
 
+import br.com.avaliacao.desempenho.identidadeacesso.application.AuthenticationFailureException;
 import br.com.avaliacao.desempenho.identidadeacesso.application.LocalAuthenticationService;
 import br.com.avaliacao.desempenho.identidadeacesso.application.LoginRateLimiter;
 import br.com.avaliacao.desempenho.identidadeacesso.domain.model.LoginNormalizer;
@@ -85,6 +86,27 @@ public class AuthenticationController {
             RequestCorrelationFilter.getRequestId(request));
     cookieWriter.write(response, credentials);
     csrfTokens.saveToken(null, request, response);
+  }
+
+  @PostMapping("/sessions/restore")
+  public SessionRestorationResponse restore(
+      Authentication authentication, HttpServletRequest request, HttpServletResponse response) {
+    if (authentication != null
+        && authentication.isAuthenticated()
+        && authentication.getPrincipal() instanceof AuthenticatedPrincipal) {
+      return new SessionRestorationResponse(true);
+    }
+    if (findCookie(request, AuthenticationCookieWriter.REFRESH_COOKIE_NAME).isBlank()) {
+      return new SessionRestorationResponse(false);
+    }
+    try {
+      refresh(request, response);
+      return new SessionRestorationResponse(true);
+    } catch (AuthenticationFailureException exception) {
+      // Nesta consulta opcional, credencial ausente/expirada significa apresentar o login.
+      // Falhas de infraestrutura, CSRF e as demais rotas mantêm seus contratos de erro.
+      return new SessionRestorationResponse(false);
+    }
   }
 
   @DeleteMapping("/sessions/current")
@@ -181,4 +203,6 @@ public class AuthenticationController {
       boolean supremeAdministrator) {}
 
   public record CsrfResponse(String token) {}
+
+  public record SessionRestorationResponse(boolean authenticated) {}
 }
