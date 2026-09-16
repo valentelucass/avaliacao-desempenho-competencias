@@ -29,6 +29,14 @@ function errorMessage(error: unknown): string {
       return 'Você não possui acesso a esta operação.'
     }
     if (error.status === 409) {
+      if (error.reasonCode === 'CYCLE_CODE_ALREADY_EXISTS')
+        return 'Já existe um ciclo com esse código. Para configurar ou abrir esse ciclo, selecione-o em Ciclos disponíveis. Para criar outro, informe um código diferente.'
+      if (error.reasonCode === 'CYCLE_OPENING_NOT_REACHED')
+        return 'O ciclo ainda não chegou à data e ao horário de abertura salvos (America/Sao_Paulo). Aguarde esse horário ou revise e salve a abertura do rascunho.'
+      if (error.reasonCode === 'CYCLE_WINDOW_ENDED')
+        return 'O período configurado já terminou. Revise e salve as datas do rascunho antes de abrir o ciclo.'
+      if (error.reasonCode === 'CYCLE_CLOSING_NOT_REACHED')
+        return 'O ciclo só pode ser encerrado a partir da data e do horário de encerramento salvos (America/Sao_Paulo).'
       if (error.reasonCode === 'QUESTIONNAIRE_INTEGRITY_CONFLICT')
         return 'O código ou a versão do questionário conflita com um registro existente. Confira as versões aprovadas.'
       if (error.reasonCode === 'QUESTIONNAIRE_CATALOG_CONFLICT')
@@ -47,6 +55,8 @@ function errorMessage(error: unknown): string {
     }
     if (error.status === 422) {
       const cycleReasons: Record<string, string> = {
+        CYCLE_WINDOW_ORDER_INVALID: 'O encerramento deve ocorrer depois da abertura.',
+        // Compatibilidade com a API anterior à revisão do calendário por ciclo.
         CYCLE_WINDOW_INVALID:
           'O ciclo deve abrir em 01/09 às 00:00 e encerrar em 16/09 às 00:00 do mesmo ano.',
         CYCLE_TIME_ZONE_INVALID: 'O fuso horário do ciclo deve ser America/Sao_Paulo.',

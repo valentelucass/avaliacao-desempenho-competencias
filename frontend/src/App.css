@@ -638,6 +638,63 @@ textarea:focus-visible,
   border-color: var(--border-strong);
   color: var(--text);
 }
+.feedback-viewport {
+  position: fixed;
+  z-index: 60;
+  top: max(1rem, env(safe-area-inset-top));
+  right: max(1rem, env(safe-area-inset-right));
+  width: min(34rem, calc(100% - 2rem));
+  max-height: calc(100dvh - 2rem);
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  pointer-events: none;
+}
+.feedback--floating {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 0.65rem;
+  padding: 0.85rem;
+  box-shadow: var(--shadow-lg);
+  pointer-events: auto;
+}
+.feedback--floating > svg {
+  margin-top: 0.25rem;
+}
+.feedback__message {
+  align-self: center;
+  overflow-wrap: anywhere;
+}
+.feedback__dismiss {
+  display: grid;
+  place-items: center;
+  min-width: 2rem;
+  min-height: 2rem;
+  border: 1px solid transparent;
+  border-radius: 0.4rem;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.feedback__dismiss:hover {
+  border-color: currentColor;
+}
+.feedback__dismiss:focus-visible,
+.feedback--floating:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: -3px;
+}
+body:has(:is([role='dialog'], [role='alertdialog'])[aria-modal='true']) > .feedback-viewport {
+  visibility: hidden;
+}
+@media print {
+  .feedback-viewport {
+    display: none !important;
+  }
+}
 .error-summary {
   border-radius: 0.7rem;
 }
@@ -1107,8 +1164,6 @@ dd {
 }
 .account-dialog-backdrop {
   align-items: center;
-  backdrop-filter: blur(0.3rem) saturate(0.85);
-  background: rgb(15 23 42 / 44%);
   display: grid;
   inset: 0;
   justify-items: center;
@@ -1116,6 +1171,17 @@ dd {
   padding: 1rem;
   position: fixed;
   z-index: 30;
+}
+.account-dialog-backdrop::before,
+.confirmation-dialog-backdrop::before {
+  /* O filtro fica fora da árvore dos avisos para não prender position: fixed à rolagem. */
+  backdrop-filter: blur(0.3rem) saturate(0.85);
+  background: rgb(15 23 42 / 44%);
+  content: '';
+  inset: 0;
+  pointer-events: none;
+  position: fixed;
+  z-index: -1;
 }
 .account-dialog {
   box-shadow: var(--shadow-lg);
@@ -3640,8 +3706,6 @@ thead th {
 /* Confirmações destrutivas precisam aparecer no contexto do clique, não ao fim da página. */
 .confirmation-dialog-backdrop {
   align-items: center;
-  backdrop-filter: blur(0.3rem) saturate(0.85);
-  background: rgb(15 23 42 / 44%);
   display: grid;
   inset: 0;
   justify-items: center;

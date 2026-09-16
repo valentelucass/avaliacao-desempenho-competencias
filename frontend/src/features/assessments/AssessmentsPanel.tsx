@@ -775,7 +775,11 @@ export function AssessmentsPanel({
           {isLoadingPreview ? (
             <FeedbackMessage kind="info">Carregando pré-visualização da avaliação…</FeedbackMessage>
           ) : null}
-          {previewError ? <FeedbackMessage kind="error">{previewError}</FeedbackMessage> : null}
+          {previewError ? (
+            <FeedbackMessage kind="error" onDismiss={() => setPreviewError(undefined)}>
+              {previewError}
+            </FeedbackMessage>
+          ) : null}
           {!isLoading &&
           !isLoadingPreview &&
           !previewError &&
@@ -831,7 +835,12 @@ export function AssessmentsPanel({
                 aria-busy={isCreatingManagerAssessment}
               >
                 {managerCreationError ? (
-                  <FeedbackMessage kind="error">{managerCreationError}</FeedbackMessage>
+                  <FeedbackMessage
+                    kind="error"
+                    onDismiss={() => setManagerCreationError(undefined)}
+                  >
+                    {managerCreationError}
+                  </FeedbackMessage>
                 ) : null}
                 {isLoadingCycles ? (
                   <p className="field-hint">Verificando ciclos elegíveis…</p>
@@ -941,7 +950,12 @@ export function AssessmentsPanel({
                 aria-busy={isCreatingDirectorAssessment}
               >
                 {directorCreationError ? (
-                  <FeedbackMessage kind="error">{directorCreationError}</FeedbackMessage>
+                  <FeedbackMessage
+                    kind="error"
+                    onDismiss={() => setDirectorCreationError(undefined)}
+                  >
+                    {directorCreationError}
+                  </FeedbackMessage>
                 ) : null}
                 {isLoadingCycles ? (
                   <p className="field-hint">Verificando ciclos elegíveis…</p>
@@ -1054,7 +1068,9 @@ export function AssessmentsPanel({
                 aria-busy={isCreating}
               >
                 {creationError ? (
-                  <FeedbackMessage kind="error">{creationError}</FeedbackMessage>
+                  <FeedbackMessage kind="error" onDismiss={() => setCreationError(undefined)}>
+                    {creationError}
+                  </FeedbackMessage>
                 ) : null}
                 {isLoadingCycles ? (
                   <p className="field-hint">Verificando ciclos elegíveis…</p>
@@ -1108,7 +1124,11 @@ export function AssessmentsPanel({
       {isLoading && assessmentPage.items.length === 0 ? (
         <FeedbackMessage kind="info">Carregando avaliações…</FeedbackMessage>
       ) : null}
-      {error ? <FeedbackMessage kind="error">{error}</FeedbackMessage> : null}
+      {error ? (
+        <FeedbackMessage kind="error" onDismiss={() => setError(undefined)}>
+          {error}
+        </FeedbackMessage>
+      ) : null}
 
       {!isLoading && !error && assessmentPage.items.length === 0 ? (
         <EmptyState

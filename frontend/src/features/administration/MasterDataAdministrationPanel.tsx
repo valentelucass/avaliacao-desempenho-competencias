@@ -448,13 +448,21 @@ export function MasterDataAdministrationPanel({
         </button>
       </div>
 
-      {notice ? <FeedbackMessage kind="status">{notice}</FeedbackMessage> : null}
+      {notice ? (
+        <FeedbackMessage kind="status" onDismiss={() => setNotice(undefined)}>
+          {notice}
+        </FeedbackMessage>
+      ) : null}
       {loadErrors.map((message) => (
         <FeedbackMessage kind="error" key={message}>
           {message}
         </FeedbackMessage>
       ))}
-      {operationError ? <FeedbackMessage kind="error">{operationError}</FeedbackMessage> : null}
+      {operationError ? (
+        <FeedbackMessage kind="error" onDismiss={() => setOperationError(undefined)}>
+          {operationError}
+        </FeedbackMessage>
+      ) : null}
       {isLoading ? (
         <FeedbackMessage kind="info">Carregando cadastros autorizados…</FeedbackMessage>
       ) : null}
@@ -950,7 +958,9 @@ export function MasterDataAdministrationPanel({
                 </div>
               ) : null}
               {confirmationError ? (
-                <FeedbackMessage kind="error">{confirmationError}</FeedbackMessage>
+                <FeedbackMessage kind="error" onDismiss={() => setConfirmationError(undefined)}>
+                  {confirmationError}
+                </FeedbackMessage>
               ) : null}
               <div className="action-row">
                 <button

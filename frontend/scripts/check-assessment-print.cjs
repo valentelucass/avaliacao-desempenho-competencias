@@ -154,7 +154,7 @@ async function mount(d, key) {
     edge.kill()
     console.error('browser timeout')
     process.exit(1)
-  }, 45000)
+  }, 65000)
   try {
     const browserUrl = await new Promise((resolve, reject) => {
       let out = ''

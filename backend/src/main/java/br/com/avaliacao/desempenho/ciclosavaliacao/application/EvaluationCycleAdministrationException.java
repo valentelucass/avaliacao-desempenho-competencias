@@ -16,6 +16,10 @@ public final class EvaluationCycleAdministrationException extends RuntimeExcepti
 
   public enum Reason {
     CONFLICT,
+    CODE_ALREADY_EXISTS,
+    OPENING_NOT_REACHED,
+    WINDOW_ENDED,
+    CLOSING_NOT_REACHED,
     UNAVAILABLE
   }
 }

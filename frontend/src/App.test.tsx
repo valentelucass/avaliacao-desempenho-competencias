@@ -282,7 +282,7 @@ describe('App', () => {
       'Dados insuficientes para preservar a confidencialidade.',
     )
     expect(insufficientDataMessage).toBeInTheDocument()
-    expect(insufficientDataMessage).toHaveClass('feedback--warning')
+    expect(insufficientDataMessage.closest('[role="status"]')).toHaveClass('feedback--warning')
     expect(screen.queryByRole('heading', { name: 'Resultado agregado' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Exportar CSV agregado' })).not.toBeInTheDocument()
     expect(api.getIndicators).toHaveBeenCalledWith({

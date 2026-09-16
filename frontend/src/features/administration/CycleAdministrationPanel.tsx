@@ -248,12 +248,6 @@ export function CycleAdministrationPanel({
       setError('O fuso horário do ciclo deve ser America/Sao_Paulo.')
       return
     }
-    const annualOpening = /^(\d{4})-09-01T00:00(?::00(?:\.0+)?)?$/.exec(form.openingAtLocal)
-    const annualClosing = /^(\d{4})-09-16T00:00(?::00(?:\.0+)?)?$/.exec(form.closingAtLocal)
-    if (!annualOpening || !annualClosing || annualOpening[1] !== annualClosing[1]) {
-      setError('O ciclo deve abrir em 01/09 às 00:00 e encerrar em 16/09 às 00:00 do mesmo ano.')
-      return
-    }
     if (!isAvailable('versions')) {
       setError('Atualize os questionários aprovados antes de salvar o ciclo.')
       return
@@ -476,16 +470,20 @@ export function CycleAdministrationPanel({
       </div>
 
       {error ? (
-        <div id={formErrorId}>
-          <FeedbackMessage kind="error">{error}</FeedbackMessage>
-        </div>
+        <FeedbackMessage kind="error" id={formErrorId} onDismiss={() => setError(undefined)}>
+          {error}
+        </FeedbackMessage>
       ) : null}
       {loadErrors.map((message) => (
         <FeedbackMessage kind="error" key={message}>
           {message}
         </FeedbackMessage>
       ))}
-      {notice ? <FeedbackMessage kind="status">{notice}</FeedbackMessage> : null}
+      {notice ? (
+        <FeedbackMessage kind="status" onDismiss={() => setNotice(undefined)}>
+          {notice}
+        </FeedbackMessage>
+      ) : null}
       {isLoading ? (
         <FeedbackMessage kind="info">Carregando ciclos e versões aprovadas…</FeedbackMessage>
       ) : null}
@@ -646,7 +644,7 @@ export function CycleAdministrationPanel({
               onChange={(event) => updateForm('openingAtLocal', event.currentTarget.value)}
             />
             <p className="field-hint" id={`${openingId}-hint`}>
-              01 de setembro às 00:00.
+              Data e horário de início do ciclo.
             </p>
           </div>
           <div className={fieldClassName(closingId)}>
@@ -660,7 +658,7 @@ export function CycleAdministrationPanel({
               onChange={(event) => updateForm('closingAtLocal', event.currentTarget.value)}
             />
             <p className="field-hint" id={`${closingId}-hint`}>
-              16 de setembro às 00:00 do mesmo ano; inclui todo o dia 15.
+              Deve ser posterior à abertura; o prazo termina neste horário.
             </p>
           </div>
           <label
@@ -806,14 +804,15 @@ export function CycleAdministrationPanel({
             <h3 id="cycle-transition-title">Abrir ciclo</h3>
             <ContextHelp title="O efeito de abrir o ciclo">
               <p>
-                A abertura inicia a vigência e bloqueia a edição da configuração. Confirme somente
-                quando a janela e os questionários aplicados estiverem revisados.
+                A abertura é permitida a partir da data e do horário de abertura salvos, antes do
+                encerramento, no fuso America/Sao_Paulo. Ela bloqueia a edição da configuração.
               </p>
             </ContextHelp>
           </div>
           <p className="muted">
-            Ao abrir, a configuração do ciclo deixa de ser editável. Confirme somente após revisar a
-            janela e os questionários aplicados.
+            Só é possível abrir dentro do período configurado, no fuso America/Sao_Paulo. Salve as
+            alterações e revise as datas e os questionários antes de abrir; a configuração deixará
+            de ser editável.
           </p>
           <div className="action-row">
             <button
@@ -840,7 +839,8 @@ export function CycleAdministrationPanel({
             </ContextHelp>
           </div>
           <p className="muted">
-            O encerramento impede novas avaliações. A API confirma a transição e a audita.
+            O encerramento só é permitido a partir da data e do horário de encerramento salvos, no
+            fuso America/Sao_Paulo, e impede novas avaliações.
           </p>
           <div className="action-row">
             <button

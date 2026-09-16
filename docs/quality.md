@@ -34,15 +34,23 @@ Use o comando sem `-SkipDatabase` no banco local dedicado. O catálogo versionad
 
 ## Criação de ciclo com SQL Server DEV e rollback
 
-`CycleCreationDevSqlTests` é opt-in por `-Dadc.dev.cycles.rollback=true`. Executa controllers HTTP, serviços, validações e repositórios reais sobre `AVALIACAO_DEV`: questionários aprovados, data inválida, criação, persistência das datas/versões, paginação completa, edição e duplicidade. O principal é fornecido pelo teste; autenticação e filtros são cobertos separadamente. Não inicia servidor, não usa a configuração de produção e exige uma conta fictícia ativa `qa.feedback.rh.%` já existente.
+`CycleCreationDevSqlTests` é opt-in por `-Dadc.dev.cycles.rollback=true`. Executa controllers HTTP, serviços, validações e repositórios reais sobre `AVALIACAO_DEV`: questionários aprovados, fim anterior ao início rejeitado, criação com abertura em 16/09/2026 14:00 e encerramento em 16/10/2026 23:59 (São Paulo), autoavaliação habilitada, persistência das datas/versões, paginação completa, edição e duplicidade. O principal é fornecido pelo teste; autenticação e filtros são cobertos separadamente. Não inicia servidor, não usa a configuração de produção e exige uma conta fictícia ativa `qa.feedback.rh.%` já existente.
 
 A URL DEV é fixa e `DB_NAME()` é conferido antes da escrita. A transação é marcada para rollback antes do primeiro comando; depois, o teste exige ausência do ciclo, da transição e da auditoria correspondente. Nenhuma conta, migration, schema ou avaliação é criada. A autenticação integrada usa a DLL local compatível com o driver JDBC, pela propriedade `java.library.path`. Executar de `backend`, passando o caminho dessa DLL como argumento da JVM de teste:
 
 `mvnw.cmd -Dtest=CycleCreationDevSqlTests -Dadc.dev.cycles.rollback=true "-DargLine=-Djava.library.path=<diretório da DLL local>" test`
 
-O ensaio não é ativado pelo gate padrão. Sua execução explícita foi aprovada em ADC-VAL-011; as integrações antigas continuam com suas próprias opções.
+O ensaio também abre o próprio ciclo fictício, após ajustar sua janela em rascunho para conter o horário corrente, e exige conflito ao tentar alterar datas depois da abertura. O rollback cobre todas essas etapas.
+
+`ADC-COR-014` acrescenta janelas relativas ao horário corrente: abertura futura e período expirado retornam 409 com motivos distintos, sem abertura/auditoria de sucesso; o período corrente abre normalmente e o encerramento antecipado retorna seu motivo específico. As datas do ciclo informado pelo usuário são consultadas somente para diagnóstico, sem alteração; o ensaio usa exclusivamente o ciclo fictício próprio.
+
+O ensaio não é ativado pelo gate padrão. Sua execução explícita foi aprovada em ADC-VAL-011 e, com datas configuráveis e imutabilidade, em ADC-COR-013; as integrações antigas continuam com suas próprias opções.
 
 ## Acessibilidade
+
+`ADC-UI-055` / `ADC-UI-056`: `FeedbackMessage` apresenta erros, sucessos e alertas em notificações empilhadas no topo da tela, fora do fluxo do conteúdo. Por solicitação posterior do usuário, sucesso desaparece após 5 segundos e erro/alerta após 10 segundos. Ponteiro, foco de teclado e aba oculta suspendem o prazo; ao sair da interação ou voltar à aba, o prazo inteiro recomeça. Mensagem nova reinicia o temporizador; fechamento manual/desmontagem o cancelam. Mantém `alert`/`status`, referência de requisição e botão de fechamento por teclado; expiração não move o foco. Carregamento e instruções dos campos permanecem em contexto. Avisos de diálogos ficam no escopo acessível do modal; os avisos de fundo ficam ocultos enquanto ele está aberto. Notificações não são impressas. `Feedback.test.tsx` cobre temporização, pausas, callbacks atuais, ciclo de vida/StrictMode, empilhamento, fechamento, repetição, associação ao formulário e modal. Edge verifica erro/sucesso no topo em 375/1440 px e expiração real de ambos, com repetição do erro após expirar, em 375 px. Aceite assistivo humano permanece pendente.
+
+`ADC-COR-015`: regressão de duplicidade usa ciclo fictício exclusivo no SQL DEV, com rollback previamente marcado. Reenvio com código em minúsculas enquanto rascunho e repetição após abertura retornam `CYCLE_CODE_ALREADY_EXISTS`; continuam existindo somente um ciclo e uma auditoria de criação, com configuração preservada. O teste HTTP verifica motivo/referência sem detalhes internos, e Edge exercita o formulário real com transporte fictício. Nenhum dado do ciclo informado pelo usuário é alterado.
 
 O ensaio Edge também mede os [quatro filtros da lista de avaliações](operations/filtros-avaliacoes.md) no painel real, em cinco larguras e dois temas, incluindo grade responsiva, limites dos controles e Tab/foco. O teste SQL opt-in `AssessmentListReadOnlySqlTests` executa os bindings e predicados reais sobre CTEs fictícias no DEV; não cria nem altera dados. Ele é separado do ensaio histórico de rotação de sessão com escrita.
 

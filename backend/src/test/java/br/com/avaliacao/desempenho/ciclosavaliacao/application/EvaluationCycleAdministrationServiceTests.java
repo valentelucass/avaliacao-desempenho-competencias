@@ -164,6 +164,33 @@ class EvaluationCycleAdministrationServiceTests {
     verify(repository, never()).writeAdministrativeAudit(any(), any(), any(), any(), any());
   }
 
+  @Test
+  void rejectsConfigurationWhenTheRepositoryRefusesTheEdit() {
+    UUID cycleId = UUID.randomUUID();
+    var configuration =
+        new EvaluationCycleConfigurationDraft(
+            "Ciclo 2026",
+            LocalDateTime.of(2026, 9, 16, 14, 0),
+            LocalDateTime.of(2026, 10, 16, 23, 59),
+            EvaluationCycleConfigurationDraft.TIME_ZONE,
+            true,
+            validConfiguration().questionnaires());
+    when(transactionTemplate.execute(any())).thenAnswer(this::runTransaction);
+    when(repository.replaceDraftConfiguration(any(), any(), any())).thenReturn(false);
+
+    assertThatThrownBy(
+            () ->
+                service.replaceDraftConfiguration(
+                    cycleId,
+                    configuration,
+                    new EvaluationCycleCommandContext(UUID.randomUUID(), "request-immutable")))
+        .isInstanceOf(EvaluationCycleAdministrationException.class)
+        .extracting(exception -> ((EvaluationCycleAdministrationException) exception).reason())
+        .isEqualTo(Reason.CONFLICT);
+    verify(repository).replaceDraftConfiguration(any(), any(), any());
+    verify(repository, never()).writeAdministrativeAudit(any(), any(), any(), any(), any());
+  }
+
   private static EvaluationCycleConfigurationDraft validConfiguration() {
     return new EvaluationCycleConfigurationDraft(
         "Ciclo 2026",

@@ -288,7 +288,11 @@ export function IndicatorsPanel({ api, canExport, onSessionExpired }: Indicators
             </p>
           </ContextHelp>
         </div>
-        {error ? <FeedbackMessage kind="error">{error}</FeedbackMessage> : null}
+        {error ? (
+          <FeedbackMessage kind="error" onDismiss={() => setError(undefined)}>
+            {error}
+          </FeedbackMessage>
+        ) : null}
         {status ? (
           <FeedbackMessage kind={indicator && !isAvailable(indicator) ? 'warning' : 'status'}>
             {status}

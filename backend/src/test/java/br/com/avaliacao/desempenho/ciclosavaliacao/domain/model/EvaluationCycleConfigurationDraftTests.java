@@ -8,11 +8,13 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 class EvaluationCycleConfigurationDraftTests {
 
   @Test
-  void acceptsTheConfirmedAnnualWindowAndConvertsItToUtc() {
+  void preservesTheOriginalSeptemberWindowAndConvertsItToUtc() {
     EvaluationCycleConfigurationDraft configuration = validConfiguration();
 
     assertThat(configuration.name()).isEqualTo("Ciclo 2026");
@@ -20,19 +22,50 @@ class EvaluationCycleConfigurationDraftTests {
     assertThat(configuration.closingAtUtc()).isEqualTo(Instant.parse("2026-09-16T03:00:00Z"));
   }
 
-  @Test
-  void rejectsAnyWindowOtherThanTheConfirmedSeptemberDates() {
+  @ParameterizedTest
+  @CsvSource({
+    "2026-09-16T14:00,2026-10-16T23:59,2026-09-16T17:00:00Z,2026-10-17T02:59:00Z",
+    "2026-12-20T09:30,2027-01-20T18:15,2026-12-20T12:30:00Z,2027-01-20T21:15:00Z"
+  })
+  void acceptsConfiguredDatesAcrossMonthsAndYears(
+      String opening, String closing, String openingUtc, String closingUtc) {
+    var configuration =
+        new EvaluationCycleConfigurationDraft(
+            "Ciclo 2026",
+            LocalDateTime.parse(opening),
+            LocalDateTime.parse(closing),
+            EvaluationCycleConfigurationDraft.TIME_ZONE,
+            true,
+            List.of(appliedQuestionnaire()));
+
+    assertThat(configuration.openingAtUtc()).isEqualTo(Instant.parse(openingUtc));
+    assertThat(configuration.closingAtUtc()).isEqualTo(Instant.parse(closingUtc));
+    assertThat(configuration.selfAssessmentEnabled()).isTrue();
+  }
+
+  @ParameterizedTest
+  @CsvSource({
+    "2026-09-16T14:00,2026-09-16T14:00",
+    "2026-10-17T14:00,2026-10-16T23:59",
+    // A ordem também deve ser válida nos instantes UTC, inclusive no horário de verão histórico.
+    "2018-11-04T00:45,2018-11-04T01:15"
+  })
+  void rejectsClosingAtOrBeforeOpening(String opening, String closing) {
     assertThatThrownBy(
             () ->
                 new EvaluationCycleConfigurationDraft(
                     "Ciclo 2026",
-                    LocalDateTime.of(2026, 9, 2, 0, 0),
-                    LocalDateTime.of(2026, 9, 16, 0, 0),
+                    LocalDateTime.parse(opening),
+                    LocalDateTime.parse(closing),
                     EvaluationCycleConfigurationDraft.TIME_ZONE,
                     true,
                     List.of(appliedQuestionnaire())))
         .isInstanceOf(CycleAdministrationRuleViolation.class)
-        .hasMessageContaining("1º de setembro");
+        .hasMessageContaining("posterior à abertura")
+        .satisfies(
+            error ->
+                assertThat(((CycleAdministrationRuleViolation) error).reasonCode())
+                    .isEqualTo("CYCLE_WINDOW_ORDER_INVALID"));
   }
 
   @Test

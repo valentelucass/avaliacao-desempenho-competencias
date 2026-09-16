@@ -6,6 +6,7 @@ const versionId = '00000000-0000-0000-0000-000000000001'
 const configId = '00000000-0000-0000-0000-000000000002'
 const matrixId = '00000000-0000-0000-0000-000000000003'
 const calls: { method: string; path: string; body?: string }[] = []
+const createdCodes = new Set<string>()
 let firstRead = true
 let failRead: () => void = () => {}
 const json = (value: unknown, status = 200) =>
@@ -17,6 +18,15 @@ window.fetch = async (input, options = {}) => {
   const method = options.method ?? 'GET'
   calls.push({ method, path, body: options.body as string | undefined })
   if (path.endsWith('/auth/csrf')) return json({ token: 'fictional-browser-csrf' })
+  if (method === 'POST' && path.endsWith('/evaluation-cycles/cycle-fictional/open'))
+    return json(
+      {
+        code: 'CONFLICT',
+        reasonCode: 'CYCLE_OPENING_NOT_REACHED',
+        requestId: 'browser-cycle-opening',
+      },
+      409,
+    )
   if (path.endsWith('/questionnaire-versions/approved'))
     return json([
       {
@@ -47,7 +57,18 @@ window.fetch = async (input, options = {}) => {
     }
     return json({ items: [], page: { limit: 100, nextCursor: null } })
   }
-  if (method === 'POST' && path.endsWith('/evaluation-cycles'))
+  if (method === 'POST' && path.endsWith('/evaluation-cycles')) {
+    const code = JSON.parse(options.body as string).code.toUpperCase()
+    if (createdCodes.has(code))
+      return json(
+        {
+          code: 'CONFLICT',
+          reasonCode: 'CYCLE_CODE_ALREADY_EXISTS',
+          requestId: 'browser-cycle-duplicate',
+        },
+        409,
+      )
+    createdCodes.add(code)
     return json(
       {
         cycleId: 'cycle-fictional',
@@ -57,6 +78,7 @@ window.fetch = async (input, options = {}) => {
       },
       201,
     )
+  }
   throw new Error('Unexpected fixture request')
 }
 

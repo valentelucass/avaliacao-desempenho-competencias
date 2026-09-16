@@ -388,13 +388,21 @@ export function RelationshipAdministrationPanel({
         </button>
       </div>
 
-      {error ? <FeedbackMessage kind="error">{error}</FeedbackMessage> : null}
+      {error ? (
+        <FeedbackMessage kind="error" onDismiss={() => setError(undefined)}>
+          {error}
+        </FeedbackMessage>
+      ) : null}
       {loadErrors.map((message) => (
         <FeedbackMessage kind="error" key={message}>
           {message}
         </FeedbackMessage>
       ))}
-      {notice ? <FeedbackMessage kind="status">{notice}</FeedbackMessage> : null}
+      {notice ? (
+        <FeedbackMessage kind="status" onDismiss={() => setNotice(undefined)}>
+          {notice}
+        </FeedbackMessage>
+      ) : null}
       {isLoading ? (
         <FeedbackMessage kind="info">Carregando vínculos ativos…</FeedbackMessage>
       ) : null}

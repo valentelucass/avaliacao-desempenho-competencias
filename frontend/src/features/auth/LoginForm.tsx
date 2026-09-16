@@ -80,7 +80,11 @@ export function LoginForm({
         <form className="stack-form" onSubmit={handleSubmit} noValidate>
           {notice ? <FeedbackMessage kind="status">{notice}</FeedbackMessage> : null}
           {startupError ? <FeedbackMessage kind="error">{startupError}</FeedbackMessage> : null}
-          {error ? <FeedbackMessage kind="error">{error}</FeedbackMessage> : null}
+          {error ? (
+            <FeedbackMessage kind="error" onDismiss={() => setError(undefined)}>
+              {error}
+            </FeedbackMessage>
+          ) : null}
 
           <div className="field">
             <label htmlFor={loginId}>E-mail ou login</label>

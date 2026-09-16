@@ -293,6 +293,9 @@ describe('UserAdministrationPanel', () => {
       }),
     )
     expect(screen.getByText('Dados da conta atualizados.')).toBeInTheDocument()
+    expect(screen.getByRole('dialog')).toContainElement(
+      screen.getByText('Dados da conta atualizados.'),
+    )
     expect(screen.queryByRole('button', { name: 'Salvar acessos' })).not.toBeInTheDocument()
   })
 

@@ -2,8 +2,6 @@ package br.com.avaliacao.desempenho.ciclosavaliacao.domain.model;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.time.Month;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Objects;
@@ -33,7 +31,7 @@ public record EvaluationCycleConfigurationDraft(
           "CYCLE_TIME_ZONE_INVALID", "O ciclo 2024.1 exige o fuso America/Sao_Paulo.");
     }
     questionnaires = copyQuestionnaires(questionnaires);
-    requireAnnualWindow(openingAtLocal, closingAtLocal);
+    requireOrderedWindow(openingAtLocal, closingAtLocal);
   }
 
   public Instant openingAtUtc() {
@@ -81,19 +79,15 @@ public record EvaluationCycleConfigurationDraft(
     return copy;
   }
 
-  private static void requireAnnualWindow(
+  private static void requireOrderedWindow(
       LocalDateTime openingAtLocal, LocalDateTime closingAtLocal) {
     if (!openingAtLocal.isBefore(closingAtLocal)
-        || openingAtLocal.getYear() != closingAtLocal.getYear()
-        || openingAtLocal.getMonth() != Month.SEPTEMBER
-        || openingAtLocal.getDayOfMonth() != 1
-        || !openingAtLocal.toLocalTime().equals(LocalTime.MIDNIGHT)
-        || closingAtLocal.getMonth() != Month.SEPTEMBER
-        || closingAtLocal.getDayOfMonth() != 16
-        || !closingAtLocal.toLocalTime().equals(LocalTime.MIDNIGHT)) {
+        || !openingAtLocal
+            .atZone(BRAZIL_TIME_ZONE)
+            .toInstant()
+            .isBefore(closingAtLocal.atZone(BRAZIL_TIME_ZONE).toInstant())) {
       throw new CycleAdministrationRuleViolation(
-          "CYCLE_WINDOW_INVALID",
-          "O ciclo anual deve abrir em 1º de setembro às 00:00 e encerrar em 16 de setembro às 00:00.");
+          "CYCLE_WINDOW_ORDER_INVALID", "O encerramento deve ser posterior à abertura.");
     }
   }
 

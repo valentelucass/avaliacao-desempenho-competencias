@@ -93,3 +93,23 @@ O gate completo das fontes terminou com código 0 no worktree isolado, usando `-
 Preflight `iniciar-prod.bat --check` aprovado. Fontes testadas conferidas por hash contra o workspace; `frontend/dist` e listeners produtivos preservados. Logs em `backend/target/cycle-release-{sql,gate,database,preflight,operation}.log` e conferência em `cycle-release-source-verification.json`. Instruções de reprodução no [guia de qualidade](../quality.md#criação-de-ciclo-com-sql-server-dev-e-rollback).
 
 **Candidata validada para a atualização das correções reproduzidas; publicação não executada.** Atualizar API antes da SPA. A causa individual do incidente original e o comportamento autenticado em produção continuam sem nova evidência; os pré-requisitos externos históricos não foram alterados.
+
+## Calendário configurável autorizado — ADC-COR-013
+
+Uma captura posterior revelou abertura em **16/09/2026 14:00** e encerramento em **16/10/2026 23:59**. A regra fixa de setembro vinha do levantamento de 25/08/2026, anterior às correções; os testes anteriores não demonstravam aceitação desse novo período. Após o diagnóstico documental, o usuário autorizou “pode aplicar” à proposta de datas configuráveis. A [regra revisada](../business/regras-operacionais-v1.md#revisão-do-calendário--adc-cor-013-2026-09-15) substitui a restrição de calendário e mantém fuso São Paulo, fim posterior e imutabilidade após abertura.
+
+API e formulário atualizados. `CYCLE_WINDOW_ORDER_INVALID` identifica ordem inválida; a mensagem de `CYCLE_WINDOW_INVALID` permanece somente para compatibilidade com API antiga. Nenhuma migration é necessária.
+
+Regressões sensíveis ao bloqueio falharam antes da alteração e passaram depois. O teste HTTP/SQL DEV confirmou criação 201 com o período exato, autoavaliação, instantes UTC, versões e auditoria; leitura/edição; rejeição de ordem inválida e duplicidade. Também abriu o ciclo fictício após configurar uma janela corrente em rascunho e confirmou que nova edição recebe 409 sem alterar as datas. Rollback e ausência dos registros conferidos. O Edge real passou em celular/desktop, verificando um único POST com os campos da captura preservados; o transporte do browser é simulado e o SQL é testado separadamente.
+
+Gate das fontes aprovado em cópia isolada (`-SkipDatabase`), mais SQL/migrations somente leitura na raiz: 213 casos Java executados entre gate e SQL opt-in, 165 front-end, Edge, builds, formatter/lint, scanner, SBOM/OSV e npm aprovados. Três integrações antigas não executadas; aceite assistivo humano pendente e aviso conhecido de bundle permanecem. Logs: `backend/target/cycle-flexible-{before,ui-before,java,ui,sql,gate,database}.log`; capturas `cycle-flexible-{375,1440}.png` e conferências de fontes/produção no mesmo diretório. Os 406 arquivos conferidos correspondem à cópia testada; o `dist` e os processos produtivos foram preservados.
+
+**Alteração concluída localmente; publicação não executada.** Atualizar API e SPA em janela de manutenção. Em eventual reversão para API antiga, rascunhos com períodos novos voltam a ser rejeitados na edição; preservar as datas gravadas. Esta mudança resolve a rejeição de calendário identificada, sem atribuir uma causa única aos erros das primeiras capturas.
+
+## Nova tentativa de criação e expiração do aviso — ADC-COR-015 / ADC-UI-056
+
+A captura posterior mostra **Novo ciclo**, código `2026`, período já informado e conflito com referência `f26244fa-b63b-405e-8271-91f94c741d4e`. Consulta parametrizada somente leitura, restrita a esse código no `AVALIACAO_DEV` conferido, encontrou rascunho com as mesmas datas. A referência não apareceu nos 50 logs disponíveis pesquisados; a operação daquela requisição não pôde ser confirmada individualmente.
+
+Foi reproduzido no HTTP/SQL DEV o defeito de mensagem: criar novamente um código existente devolvia 409 genérico, sem motivo. A inserção agora verifica o código sob bloqueio na mesma transação e retorna `CYCLE_CODE_ALREADY_EXISTS` quando já existe, preservando o ciclo original. Outros conflitos continuam com seu tratamento próprio. A orientação é selecionar o ciclo existente em **Ciclos disponíveis**, ou usar outro código se a intenção for criar outro ciclo. A mensagem específica exige atualizar a API e a SPA.
+
+O usuário também solicitou expiração automática: sucesso permanece por 5 segundos e erro/alerta por 10 segundos. Interação por ponteiro/teclado ou aba oculta suspendem o prazo; ao retornar, a contagem completa recomeça. Fechamento manual continua disponível. Regressões, evidências e limites de publicação estão no `STATES.md`; dados existentes não foram alterados e nenhum deploy é implícito.

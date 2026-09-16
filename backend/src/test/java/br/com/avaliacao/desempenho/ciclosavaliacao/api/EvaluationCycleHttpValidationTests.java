@@ -58,17 +58,17 @@ class EvaluationCycleHttpValidationTests {
               })
           .build();
 
-  @Test
-  void acceptsCanonicalCycleAndMapsTheHttpContract() throws Exception {
+  @ParameterizedTest
+  @CsvSource({"2026-09-01T00:00,2026-09-16T00:00", "2026-09-16T14:00,2026-10-16T23:59"})
+  void acceptsConfiguredCycleAndMapsTheHttpContract(String opening, String closing)
+      throws Exception {
     when(writes.createDraftCycle(any(), any()))
         .thenReturn(
             new EvaluationCycleAdministrationRepository.CreatedCycle(UUID.randomUUID(), List.of()));
     mvc.perform(
             post("/api/v1/evaluation-cycles")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(
-                    body(
-                        "CICLO-2026", "2026-09-01T00:00", "2026-09-16T00:00", "America/Sao_Paulo")))
+                .content(body("2026", opening, closing, "America/Sao_Paulo")))
         .andExpect(status().isCreated())
         .andExpect(jsonPath("$.cycleId").isString());
     verify(writes).createDraftCycle(any(), any());
@@ -76,8 +76,8 @@ class EvaluationCycleHttpValidationTests {
 
   @ParameterizedTest
   @CsvSource({
-    "CICLO-2026,2026-09-02T00:00,2026-09-16T00:00,America/Sao_Paulo,CYCLE_WINDOW_INVALID",
-    "CICLO-2026,2026-09-01T00:00,2026-09-15T23:59,America/Sao_Paulo,CYCLE_WINDOW_INVALID",
+    "CICLO-2026,2026-09-16T14:00,2026-09-16T14:00,America/Sao_Paulo,CYCLE_WINDOW_ORDER_INVALID",
+    "CICLO-2026,2026-10-17T14:00,2026-10-16T23:59,America/Sao_Paulo,CYCLE_WINDOW_ORDER_INVALID",
     "CICLO-2026,2026-09-01T00:00,2026-09-16T00:00,America/Manaus,CYCLE_TIME_ZONE_INVALID",
     "CODIGO COM ESPACO,2026-09-01T00:00,2026-09-16T00:00,America/Sao_Paulo,CYCLE_CODE_INVALID"
   })
@@ -92,6 +92,28 @@ class EvaluationCycleHttpValidationTests {
         .andExpect(jsonPath("$.reasonCode").value(reason))
         .andExpect(jsonPath("$.requestId").isString());
     verifyNoInteractions(writes);
+  }
+
+  @Test
+  void duplicateCodeHasSafeReasonAndRequestReference() throws Exception {
+    when(writes.createDraftCycle(any(), any()))
+        .thenThrow(
+            new EvaluationCycleAdministrationException(
+                EvaluationCycleAdministrationException.Reason.CODE_ALREADY_EXISTS,
+                "Internal persistence detail must not be exposed"));
+    mvc.perform(
+            post("/api/v1/evaluation-cycles")
+                .header("X-Request-Id", "cycle-duplicate-test")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body("2026", "2026-09-16T14:00", "2026-10-16T23:59", "America/Sao_Paulo")))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("CONFLICT"))
+        .andExpect(jsonPath("$.reasonCode").value("CYCLE_CODE_ALREADY_EXISTS"))
+        .andExpect(jsonPath("$.requestId").value("cycle-duplicate-test"))
+        .andExpect(
+            jsonPath("$.detail")
+                .value(
+                    "Já existe um ciclo com esse código. Selecione o ciclo existente ou informe outro código."));
   }
 
   @Test

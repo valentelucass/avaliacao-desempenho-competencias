@@ -527,7 +527,11 @@ export function UserAdministrationPanel({
         ) : null}
       </div>
 
-      {notice ? <FeedbackMessage kind="status">{notice}</FeedbackMessage> : null}
+      {notice && (!selectedUser || isLoadingDetail) ? (
+        <FeedbackMessage kind="status" onDismiss={() => setNotice(undefined)}>
+          {notice}
+        </FeedbackMessage>
+      ) : null}
 
       {!hasAnyAdministrationPermission ? (
         <FeedbackMessage kind="error">
@@ -564,7 +568,11 @@ export function UserAdministrationPanel({
             noValidate
             aria-busy={isCreating}
           >
-            {createError ? <FeedbackMessage kind="error">{createError}</FeedbackMessage> : null}
+            {createError ? (
+              <FeedbackMessage kind="error" onDismiss={() => setCreateError(undefined)}>
+                {createError}
+              </FeedbackMessage>
+            ) : null}
             <div className="field">
               <label htmlFor={loginId}>Login</label>
               <input
@@ -662,7 +670,11 @@ export function UserAdministrationPanel({
           {isLoadingUsers ? (
             <FeedbackMessage kind="info">Carregando contas locais…</FeedbackMessage>
           ) : null}
-          {listError ? <FeedbackMessage kind="error">{listError}</FeedbackMessage> : null}
+          {listError ? (
+            <FeedbackMessage kind="error" onDismiss={() => setListError(undefined)}>
+              {listError}
+            </FeedbackMessage>
+          ) : null}
           {!isLoadingUsers && !listError && users.length === 0 ? (
             <EmptyState className="empty-state--compact" title="Nenhuma conta local cadastrada">
               Ainda não há contas que esta sessão possa consultar. Crie uma conta ou atualize a
@@ -727,7 +739,11 @@ export function UserAdministrationPanel({
       {isLoadingDetail ? (
         <FeedbackMessage kind="info">Carregando detalhes da conta…</FeedbackMessage>
       ) : null}
-      {detailError ? <FeedbackMessage kind="error">{detailError}</FeedbackMessage> : null}
+      {detailError ? (
+        <FeedbackMessage kind="error" onDismiss={() => setDetailError(undefined)}>
+          {detailError}
+        </FeedbackMessage>
+      ) : null}
 
       {selectedUser && !isLoadingDetail ? (
         <div className="account-dialog-backdrop" onMouseDown={() => setSelectedUser(undefined)}>
@@ -740,6 +756,11 @@ export function UserAdministrationPanel({
             tabIndex={-1}
             onMouseDown={(event) => event.stopPropagation()}
           >
+            {notice ? (
+              <FeedbackMessage kind="status" onDismiss={() => setNotice(undefined)}>
+                {notice}
+              </FeedbackMessage>
+            ) : null}
             <div className="section-heading">
               <div>
                 <h3 id="selected-user-title">Detalhes de {selectedUser.displayName}</h3>
@@ -795,7 +816,12 @@ export function UserAdministrationPanel({
                     no próximo acesso e todas as sessões atuais serão encerradas.
                   </p>
                   {passwordResetError ? (
-                    <FeedbackMessage kind="error">{passwordResetError}</FeedbackMessage>
+                    <FeedbackMessage
+                      kind="error"
+                      onDismiss={() => setPasswordResetError(undefined)}
+                    >
+                      {passwordResetError}
+                    </FeedbackMessage>
                   ) : null}
                   <div className="field">
                     <label htmlFor={temporaryPasswordId}>Senha temporária</label>
@@ -839,7 +865,9 @@ export function UserAdministrationPanel({
                 >
                   <h4>Editar conta</h4>
                   {updateError ? (
-                    <FeedbackMessage kind="error">{updateError}</FeedbackMessage>
+                    <FeedbackMessage kind="error" onDismiss={() => setUpdateError(undefined)}>
+                      {updateError}
+                    </FeedbackMessage>
                   ) : null}
                   <div className="field">
                     <label htmlFor={editDisplayNameId}>Nome</label>
@@ -897,7 +925,7 @@ export function UserAdministrationPanel({
               ) : null}
 
               {selectedUserIsCurrent ? (
-                <FeedbackMessage kind="status">
+                <FeedbackMessage kind="info">
                   A configuração de acesso da sua própria conta não pode ser exibida para edição
                   nesta tela.
                 </FeedbackMessage>
@@ -920,7 +948,9 @@ export function UserAdministrationPanel({
                     e todas as regras.
                   </p>
                   {accessError ? (
-                    <FeedbackMessage kind="error">{accessError}</FeedbackMessage>
+                    <FeedbackMessage kind="error" onDismiss={() => setAccessError(undefined)}>
+                      {accessError}
+                    </FeedbackMessage>
                   ) : null}
 
                   <fieldset disabled={isSavingAccess}>

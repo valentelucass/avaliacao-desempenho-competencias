@@ -3,7 +3,7 @@ package br.com.avaliacao.desempenho.ciclosavaliacao.domain.model;
 import java.util.Locale;
 import java.util.Objects;
 
-/** Novo ciclo anual criado inicialmente em rascunho. */
+/** Novo ciclo criado inicialmente em rascunho. */
 public record EvaluationCycleDraft(String code, EvaluationCycleConfigurationDraft configuration) {
 
   public EvaluationCycleDraft {

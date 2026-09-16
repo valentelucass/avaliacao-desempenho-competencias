@@ -129,7 +129,7 @@ public class SqlServerEvaluationCycleAdministrationRepository
     requireRequiredMigrations();
     int updated = updateCycleStatus(cycleId, sourceStatus, targetStatus, actorUserId);
     if (updated != 1) {
-      return false;
+      throw transitionConflict(cycleId, sourceStatus, targetStatus);
     }
     int inserted =
         jdbcTemplate.update(
@@ -171,6 +171,7 @@ public class SqlServerEvaluationCycleAdministrationRepository
 
   private void insertDraftCycle(UUID cycleId, EvaluationCycleDraft draft) {
     EvaluationCycleConfigurationDraft configuration = draft.configuration();
+    // O bloqueio pela chave única serializa criações do mesmo código na transação do serviço.
     int inserted =
         jdbcTemplate.update(
             """
@@ -183,7 +184,12 @@ public class SqlServerEvaluationCycleAdministrationRepository
                 janela_encerramento_em_utc,
                 fuso_horario_iana,
                 autoavaliacao_habilitada
-            ) VALUES (?, ?, ?, 'RASCUNHO', ?, ?, ?, ?)
+            )
+            SELECT ?, ?, ?, 'RASCUNHO', ?, ?, ?, ?
+            WHERE NOT EXISTS (
+                SELECT 1 FROM dbo.ciclo_avaliacao WITH (UPDLOCK, HOLDLOCK)
+                WHERE codigo = ?
+            )
             """,
             cycleId,
             draft.code(),
@@ -191,7 +197,13 @@ public class SqlServerEvaluationCycleAdministrationRepository
             SqlServerUtcDateTime.forBinding(configuration.openingAtUtc()),
             SqlServerUtcDateTime.forBinding(configuration.closingAtUtc()),
             configuration.timeZone(),
-            configuration.selfAssessmentEnabled());
+            configuration.selfAssessmentEnabled(),
+            draft.code());
+    if (inserted == 0) {
+      throw new EvaluationCycleAdministrationException(
+          EvaluationCycleAdministrationException.Reason.CODE_ALREADY_EXISTS,
+          "Já existe um ciclo com esse código.");
+    }
     if (inserted != 1) {
       throw conflict();
     }
@@ -310,6 +322,40 @@ public class SqlServerEvaluationCycleAdministrationRepository
       return jdbcTemplate.update(CLOSE_CYCLE_SQL, actorUserId, cycleId, sourceStatus.name());
     }
     throw conflict();
+  }
+
+  private EvaluationCycleAdministrationException transitionConflict(
+      UUID cycleId, EvaluationCycleStatus sourceStatus, EvaluationCycleStatus targetStatus) {
+    // A transação do serviço mantém o ciclo bloqueado; o relógio é o mesmo do UPDATE.
+    // Só diagnosticar a janela se o estado ainda for o esperado, sem expor estado de outro recurso.
+    var reasons =
+        jdbcTemplate.query(
+            """
+        SELECT CASE
+            WHEN janela_abertura_em_utc IS NULL OR janela_encerramento_em_utc IS NULL
+                THEN 'CONFLICT'
+            WHEN ? = 'ABERTO' AND SYSUTCDATETIME() < janela_abertura_em_utc
+                THEN 'OPENING_NOT_REACHED'
+            WHEN ? = 'ABERTO' AND SYSUTCDATETIME() >= janela_encerramento_em_utc
+                THEN 'WINDOW_ENDED'
+            WHEN ? = 'ENCERRADO' AND SYSUTCDATETIME() < janela_encerramento_em_utc
+                THEN 'CLOSING_NOT_REACHED'
+            ELSE 'CONFLICT'
+        END
+        FROM dbo.ciclo_avaliacao
+        WHERE ciclo_avaliacao_id = ? AND situacao = ?
+        """,
+            (row, index) -> EvaluationCycleAdministrationException.Reason.valueOf(row.getString(1)),
+            targetStatus.name(),
+            targetStatus.name(),
+            targetStatus.name(),
+            cycleId,
+            sourceStatus.name());
+    return new EvaluationCycleAdministrationException(
+        reasons.isEmpty()
+            ? EvaluationCycleAdministrationException.Reason.CONFLICT
+            : reasons.getFirst(),
+        "A transição não atende ao estado ou à janela configurada do ciclo.");
   }
 
   private List<StoredAppliedQuestionnaire> lockAppliedQuestionnaires(UUID cycleId) {

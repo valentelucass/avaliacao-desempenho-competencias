@@ -84,7 +84,11 @@ export function PasswordChangeForm({
             type="text"
             value={username ?? ''}
           />
-          {error ? <FeedbackMessage kind="error">{error}</FeedbackMessage> : null}
+          {error ? (
+            <FeedbackMessage kind="error" onDismiss={() => setError(undefined)}>
+              {error}
+            </FeedbackMessage>
+          ) : null}
 
           <div className="field">
             <label htmlFor={currentPasswordId}>Senha atual</label>

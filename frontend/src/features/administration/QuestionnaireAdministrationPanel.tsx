@@ -250,7 +250,11 @@ export function QuestionnaireAdministrationPanel({
 
       {canManageQuestionnaires ? (
         <>
-          {notice ? <FeedbackMessage kind="status">{notice}</FeedbackMessage> : null}
+          {notice ? (
+            <FeedbackMessage kind="status" onDismiss={() => setNotice(undefined)}>
+              {notice}
+            </FeedbackMessage>
+          ) : null}
 
           <section
             className="card questionnaire-versions"
@@ -274,7 +278,11 @@ export function QuestionnaireAdministrationPanel({
             {isLoadingVersions ? (
               <FeedbackMessage kind="info">Carregando versões aprovadas…</FeedbackMessage>
             ) : null}
-            {loadError ? <FeedbackMessage kind="error">{loadError}</FeedbackMessage> : null}
+            {loadError ? (
+              <FeedbackMessage kind="error" onDismiss={() => setLoadError(undefined)}>
+                {loadError}
+              </FeedbackMessage>
+            ) : null}
             {!isLoadingVersions && !loadError && versions.length === 0 ? (
               <EmptyState className="empty-state--compact" title="Nenhuma versão aprovada">
                 Ainda não há questionários aprovados para consulta. Uma versão precisa ser criada,
@@ -359,7 +367,11 @@ export function QuestionnaireAdministrationPanel({
               noValidate
               aria-busy={isCreating}
             >
-              {submitError ? <FeedbackMessage kind="error">{submitError}</FeedbackMessage> : null}
+              {submitError ? (
+                <FeedbackMessage kind="error" onDismiss={() => setSubmitError(undefined)}>
+                  {submitError}
+                </FeedbackMessage>
+              ) : null}
               <fieldset
                 className="filter-fieldset questionnaire-builder__details"
                 disabled={isCreating}

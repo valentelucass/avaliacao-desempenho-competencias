@@ -46,9 +46,9 @@ module.exports = async function checkCycleRecovery({ send, frameId, css }) {
       )
     return result.result.value
   }
-  const ready = (condition) =>
+  const ready = (condition, timeout = 3000) =>
     evaluate(
-      `new Promise((resolve,reject)=>{const start=performance.now();function tick(){if(${condition})return resolve(true);if(performance.now()-start>3000)return reject(new Error('Cycle recovery timeout'));requestAnimationFrame(tick)}tick()})`,
+      `new Promise((resolve,reject)=>{const start=performance.now();function tick(){if(${condition})return resolve(true);if(performance.now()-start>${timeout})return reject(new Error('Cycle recovery timeout'));requestAnimationFrame(tick)}tick()})`,
     )
   const click = async (text) => {
     const coordinates = await evaluate(
@@ -113,24 +113,76 @@ module.exports = async function checkCycleRecovery({ send, frameId, css }) {
     await ready(
       "!document.querySelector('[role=alert]') && document.body.textContent.includes('Nenhum ciclo disponível')",
     )
-    await fill('Código do ciclo', 'CICLO-TESTE')
-    await fill('Nome do ciclo', 'Ciclo fictício de verificação')
-    await fill('Abertura', '2026-09-02T00:00')
-    await fill('Encerramento', '2026-09-16T00:00')
+    await fill('Código do ciclo', '2026')
+    await fill('Nome do ciclo', 'Avaliação de Desempenho 2026')
+    await fill('Abertura', '2026-10-17T14:00')
+    await fill('Encerramento', '2026-10-16T23:59')
     await evaluate("document.querySelector('fieldset input[type=checkbox]').click()")
+    await evaluate(
+      "[...document.querySelectorAll('label')].find(l=>l.textContent.includes('Permitir autoavaliação')).querySelector('input').click()",
+    )
     await click('Criar ciclo')
-    await ready("document.querySelector('[role=alert]')?.textContent.includes('01/09')")
+    await ready(
+      "document.querySelector('[role=alert]')?.textContent.includes('encerramento deve ocorrer depois da abertura')",
+    )
     assert.equal(
       await evaluate("window.cycleRecovery.calls.filter(c=>c.method==='POST').length"),
       0,
     )
-    await fill('Abertura', '2026-09-01T00:00')
+    await fill('Abertura', '2026-09-16T14:00')
     await click('Criar ciclo')
     await ready("document.body.textContent.includes('Ciclo criado como rascunho')")
     assert.equal(
       await evaluate("window.cycleRecovery.calls.filter(c=>c.method==='POST').length"),
       1,
     )
+    const submitted = await evaluate(
+      "JSON.parse(window.cycleRecovery.calls.find(c=>c.method==='POST').body)",
+    )
+    assert.equal(submitted.code, '2026')
+    assert.equal(submitted.configuration.name, 'Avaliação de Desempenho 2026')
+    assert.equal(submitted.configuration.openingAtLocal, '2026-09-16T14:00')
+    assert.equal(submitted.configuration.closingAtLocal, '2026-10-16T23:59')
+    assert.equal(submitted.configuration.timeZone, 'America/Sao_Paulo')
+    assert.equal(submitted.configuration.selfAssessmentEnabled, true)
+    const successBounds = await evaluate(
+      "(()=>{const el=document.querySelector('.feedback--floating'); const r=el.getBoundingClientRect(); return {top:r.top,bottom:r.bottom,right:r.right,fixed:getComputedStyle(el.parentElement).position,insideContent:!!el.closest('.workspace')}})()",
+    )
+    assert.equal(successBounds.fixed, 'fixed')
+    assert.equal(successBounds.insideContent, false)
+    assert.ok(successBounds.top >= 0 && successBounds.top <= 24)
+    assert.ok(successBounds.right <= width)
+    fs.writeFileSync(
+      `dist/cycle-success-${width}.png`,
+      Buffer.from((await send('Page.captureScreenshot', { format: 'png' })).data, 'base64'),
+    )
+    if (width === 375)
+      await ready("!document.querySelector('.feedback--floating[role=status]')", 6500)
+    await evaluate('window.confirm = () => true')
+    await click('Abrir ciclo')
+    await ready(
+      "document.querySelector('[role=alert]')?.textContent.includes('ainda não chegou à data e ao horário de abertura salvos')",
+    )
+    assert.equal(
+      await evaluate("window.cycleRecovery.calls.filter(c=>c.path.endsWith('/open')).length"),
+      1,
+    )
+    assert.equal(
+      await evaluate(
+        "document.querySelector('[role=alert]').textContent.includes('browser-cycle-opening')",
+      ),
+      true,
+    )
+    assert.equal(
+      await evaluate("document.querySelector('[role=alert]').textContent.includes('outra sessão')"),
+      false,
+    )
+    assert.equal(await evaluate("window.cycleRecovery.calls.filter(c=>c.method==='PUT').length"), 0)
+    const errorBounds = await evaluate(
+      "(()=>{const r=document.querySelector('[role=alert]').getBoundingClientRect();return {top:r.top,bottom:r.bottom,right:r.right}})()",
+    )
+    assert.ok(errorBounds.top >= 0 && errorBounds.top <= 24)
+    assert.ok(errorBounds.bottom < 1000 && errorBounds.right <= width)
     assert.equal(await evaluate('document.documentElement.scrollWidth > innerWidth + 1'), false)
     await evaluate(
       "document.querySelector('h2').scrollIntoView({block:'start',behavior:'instant'})",
@@ -139,6 +191,69 @@ module.exports = async function checkCycleRecovery({ send, frameId, css }) {
       `dist/cycle-recovery-${width}.png`,
       Buffer.from((await send('Page.captureScreenshot', { format: 'png' })).data, 'base64'),
     )
+    // Reproduz a estrutura dos diálogos para conferir o aviso também durante a rolagem modal.
+    for (const modalKind of ['account', 'confirmation']) {
+      const modalBounds = await evaluate(`(()=>{
+      const kind=${JSON.stringify(modalKind)};
+      const backdrop=document.createElement('div');backdrop.className=kind+'-dialog-backdrop';
+      const dialog=document.createElement('section');dialog.className=kind+'-dialog card';
+      dialog.setAttribute('role',kind==='account'?'dialog':'alertdialog');dialog.setAttribute('aria-modal','true');
+      dialog.style.minHeight='2000px';
+      const viewport=document.createElement('div');viewport.className='feedback-viewport';
+      viewport.appendChild(document.querySelector('[role=alert]').cloneNode(true));
+      dialog.appendChild(viewport);backdrop.appendChild(dialog);document.body.appendChild(backdrop);
+      backdrop.scrollTop=600;
+      const r=viewport.getBoundingClientRect();const result={top:r.top,right:r.right,scroll:backdrop.scrollTop};
+      backdrop.remove();return result;
+    })()`)
+      assert.ok(modalBounds.scroll >= 500)
+      assert.ok(
+        modalBounds.top >= 0 && modalBounds.top <= 24,
+        `Aviso saiu do topo ao rolar ${modalKind}`,
+      )
+      assert.ok(modalBounds.right <= width)
+    }
+    await click('Novo ciclo')
+    await fill('Código do ciclo', '2026')
+    await fill('Nome do ciclo', 'Avaliação de Desempenho 2026')
+    await fill('Abertura', '2026-09-16T14:00')
+    await fill('Encerramento', '2026-10-16T23:59')
+    await evaluate("document.querySelector('fieldset input[type=checkbox]').click()")
+    await click('Criar ciclo')
+    await ready(
+      "document.querySelector('[role=alert]')?.textContent.includes('Já existe um ciclo com esse código')",
+    )
+    assert.equal(
+      await evaluate(
+        "document.querySelector('[role=alert]').textContent.includes('browser-cycle-duplicate')",
+      ),
+      true,
+    )
+    assert.equal(
+      await evaluate(
+        "window.cycleRecovery.calls.filter(c=>c.method==='POST' && c.path.endsWith('/evaluation-cycles')).length",
+      ),
+      2,
+    )
+    fs.writeFileSync(
+      `dist/cycle-duplicate-${width}.png`,
+      Buffer.from((await send('Page.captureScreenshot', { format: 'png' })).data, 'base64'),
+    )
+    if (width === 375) {
+      await ready("!document.querySelector('[role=alert]')", 11500)
+      assert.equal(await evaluate("document.querySelector('input').value"), '2026')
+      await click('Criar ciclo')
+      await ready(
+        "document.querySelector('[role=alert]')?.textContent.includes('Já existe um ciclo com esse código')",
+      )
+      assert.equal(
+        await evaluate(
+          "window.cycleRecovery.calls.filter(c=>c.method==='POST' && c.path.endsWith('/evaluation-cycles')).length",
+        ),
+        3,
+      )
+    }
+    assert.equal(await evaluate("window.cycleRecovery.calls.filter(c=>c.method==='PUT').length"), 0)
     results.push({
       width,
       newCycleWrites: 0,
@@ -146,6 +261,12 @@ module.exports = async function checkCycleRecovery({ send, frameId, css }) {
       retryRecovered: true,
       invalidDateWrites: 0,
       validCycleWrites: 1,
+      configuredPeriodPreserved: true,
+      futureOpeningExplained: true,
+      successAndErrorAtViewportTop: true,
+      modalScrollKeepsNotificationAtTop: true,
+      duplicateCodeExplained: true,
+      automaticDismissAndRepeatedErrorVerified: width === 375,
     })
   }
   console.log(

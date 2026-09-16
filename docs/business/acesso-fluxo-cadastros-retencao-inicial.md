@@ -29,11 +29,11 @@ Administrar usuários também não concede autoridade para publicar/reabrir aval
 
 - Os campos de colaborador e gestor serão de texto livre.
 - Áreas e filiais serão opções restritas a uma tabela que ainda será enviada.
-- As avaliações ocorrerão anualmente, no período de 1º a 15 de setembro.
+- Registro inicial de 25/08/2026: avaliações anuais, de 1º a 15 de setembro. A restrição de datas foi substituída pela revisão `ADC-COR-013` de 15/09/2026, descrita na [regra operacional vigente](regras-operacionais-v1.md#revisão-do-calendário--adc-cor-013-2026-09-15).
 
 O texto livre atende ao cadastro operacional, mas não substitui a vinculação segura entre uma conta de gestor autorizada e suas ações no sistema.
 
-O intervalo anual é de 1º de setembro às 00:00 até 16 de setembro às 00:00, início inclusivo e fim exclusivo, no fuso `America/Sao_Paulo`. Cada ciclo persiste a própria janela antes de abrir.
+Na regra vigente, cada ciclo recebe sua própria abertura e encerramento, com fim posterior ao início, início inclusivo e fim exclusivo, no fuso `America/Sao_Paulo`. A configuração só pode ser alterada enquanto estiver em rascunho. O intervalo de setembro fica registrado como calendário inicial, sem obrigatoriedade para novos ciclos.
 
 ## Retenção e extração
 

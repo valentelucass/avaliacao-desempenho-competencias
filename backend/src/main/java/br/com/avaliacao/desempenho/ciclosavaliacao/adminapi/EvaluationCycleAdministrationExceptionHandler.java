@@ -25,22 +25,56 @@ public class EvaluationCycleAdministrationExceptionHandler {
   @ExceptionHandler(EvaluationCycleAdministrationException.class)
   ResponseEntity<ProblemDetail> administrationFailure(
       EvaluationCycleAdministrationException exception, HttpServletRequest request) {
-    return switch (exception.reason()) {
-      case CONFLICT ->
-          problem(
-              request,
-              HttpStatus.CONFLICT,
-              "CONFLICT",
-              "Operação não permitida",
-              "A operação conflita com o estado atual do ciclo.");
-      case UNAVAILABLE ->
-          problem(
-              request,
-              HttpStatus.SERVICE_UNAVAILABLE,
-              "SERVICE_UNAVAILABLE",
-              "Recurso indisponível",
-              "O recurso administrativo ainda não está disponível.");
-    };
+    ResponseEntity<ProblemDetail> response =
+        switch (exception.reason()) {
+          case CONFLICT ->
+              problem(
+                  request,
+                  HttpStatus.CONFLICT,
+                  "CONFLICT",
+                  "Operação não permitida",
+                  "A operação conflita com o estado atual do ciclo.");
+          case CODE_ALREADY_EXISTS ->
+              problem(
+                  request,
+                  HttpStatus.CONFLICT,
+                  "CONFLICT",
+                  "Código de ciclo já utilizado",
+                  "Já existe um ciclo com esse código. Selecione o ciclo existente ou informe outro código.");
+          case OPENING_NOT_REACHED ->
+              problem(
+                  request,
+                  HttpStatus.CONFLICT,
+                  "CONFLICT",
+                  "Abertura ainda não disponível",
+                  "Aguarde a data e o horário de abertura salvos no ciclo, no fuso America/Sao_Paulo.");
+          case WINDOW_ENDED ->
+              problem(
+                  request,
+                  HttpStatus.CONFLICT,
+                  "CONFLICT",
+                  "Período encerrado",
+                  "O período configurado já terminou. Revise as datas do rascunho antes de abrir o ciclo.");
+          case CLOSING_NOT_REACHED ->
+              problem(
+                  request,
+                  HttpStatus.CONFLICT,
+                  "CONFLICT",
+                  "Encerramento ainda não disponível",
+                  "Aguarde a data e o horário de encerramento salvos no ciclo, no fuso America/Sao_Paulo.");
+          case UNAVAILABLE ->
+              problem(
+                  request,
+                  HttpStatus.SERVICE_UNAVAILABLE,
+                  "SERVICE_UNAVAILABLE",
+                  "Recurso indisponível",
+                  "O recurso administrativo ainda não está disponível.");
+        };
+    if (exception.reason() != EvaluationCycleAdministrationException.Reason.CONFLICT
+        && exception.reason() != EvaluationCycleAdministrationException.Reason.UNAVAILABLE) {
+      response.getBody().setProperty("reasonCode", "CYCLE_" + exception.reason().name());
+    }
+    return response;
   }
 
   @ExceptionHandler(CycleAdministrationRuleViolation.class)
@@ -63,7 +97,7 @@ public class EvaluationCycleAdministrationExceptionHandler {
         HttpStatus.UNPROCESSABLE_CONTENT,
         "VALIDATION_FAILED",
         "Solicitação inválida",
-        "Revise a janela anual, o fuso e os questionários aprovados informados.");
+        "Revise as datas, o fuso e os questionários aprovados informados.");
   }
 
   private static ResponseEntity<ProblemDetail> problem(

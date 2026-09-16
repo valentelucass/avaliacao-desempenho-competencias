@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { ApiClient } from '../../api/client'
+import { ApiError } from '../../api/client'
 import type {
   ApprovedQuestionnaireVersion,
   AppliedCycleQuestionnaire,
@@ -10,7 +11,7 @@ import type {
 import { CycleAdministrationPanel } from './CycleAdministrationPanel'
 
 describe('CycleAdministrationPanel', () => {
-  it('cria um ciclo em rascunho com uma versão aprovada selecionada', async () => {
+  it('cria o ciclo com as datas e a autoavaliação informadas pelo gestor', async () => {
     const api = createApi({
       createEvaluationCycle: vi.fn().mockResolvedValue({
         cycleId: 'cycle-created',
@@ -34,28 +35,29 @@ describe('CycleAdministrationPanel', () => {
     await screen.findByRole('checkbox', {
       name: 'MEDIA_SIMPLES_2024_1 v1 · GERAL v1',
     })
-    fireEvent.change(screen.getByLabelText('Código do ciclo'), { target: { value: '2026.2' } })
+    fireEvent.change(screen.getByLabelText('Código do ciclo'), { target: { value: '2026' } })
     fireEvent.change(screen.getByLabelText('Nome do ciclo'), {
-      target: { value: 'Ciclo de avaliação 2026.2' },
+      target: { value: 'Avaliação de Desempenho 2026' },
     })
     fireEvent.change(screen.getByLabelText('Abertura'), {
-      target: { value: '2026-09-01T00:00' },
+      target: { value: '2026-09-16T14:00' },
     })
     fireEvent.change(screen.getByLabelText('Encerramento'), {
-      target: { value: '2026-09-16T00:00' },
+      target: { value: '2026-10-16T23:59' },
     })
     fireEvent.click(screen.getByRole('checkbox', { name: 'MEDIA_SIMPLES_2024_1 v1 · GERAL v1' }))
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Permitir autoavaliação neste ciclo' }))
     fireEvent.click(screen.getByRole('button', { name: 'Criar ciclo' }))
 
     await waitFor(() =>
       expect(api.createEvaluationCycle).toHaveBeenCalledWith({
-        code: '2026.2',
+        code: '2026',
         configuration: {
-          name: 'Ciclo de avaliação 2026.2',
-          openingAtLocal: '2026-09-01T00:00',
-          closingAtLocal: '2026-09-16T00:00',
+          name: 'Avaliação de Desempenho 2026',
+          openingAtLocal: '2026-09-16T14:00',
+          closingAtLocal: '2026-10-16T23:59',
           timeZone: 'America/Sao_Paulo',
-          selfAssessmentEnabled: false,
+          selfAssessmentEnabled: true,
           questionnaires: [
             {
               questionnaireVersionId: 'questionnaire-version-1',
@@ -161,7 +163,7 @@ describe('CycleAdministrationPanel', () => {
         await act(async () => {
           fireEvent.click(screen.getByRole('button', { name: 'Salvar configuração' }))
         })
-        if (field === 'timeZone' || field === 'openingAtLocal' || field === 'closingAtLocal') {
+        if (field === 'timeZone') {
           expect(api.replaceEvaluationCycle).not.toHaveBeenCalled()
           expect(screen.getByRole('alert')).toBeInTheDocument()
         } else {
@@ -172,6 +174,33 @@ describe('CycleAdministrationPanel', () => {
       } finally {
         vi.useRealTimers()
       }
+    },
+  )
+
+  it.each(['2026-09-16T14:00', '2026-09-15T23:59'])(
+    'impede encerramento %s igual ou anterior à abertura sem chamar a API',
+    async (closing) => {
+      const api = createApi()
+      render(
+        <CycleAdministrationPanel
+          api={api}
+          permissions={['CICLOS.GERIR']}
+          onSessionExpired={vi.fn()}
+        />,
+      )
+      await screen.findByRole('checkbox', { name: 'MEDIA_SIMPLES_2024_1 v1 · GERAL v1' })
+      fireEvent.change(screen.getByLabelText('Código do ciclo'), { target: { value: '2026' } })
+      fireEvent.change(screen.getByLabelText('Nome do ciclo'), {
+        target: { value: 'Ciclo fictício' },
+      })
+      fireEvent.change(screen.getByLabelText('Abertura'), { target: { value: '2026-09-16T14:00' } })
+      fireEvent.change(screen.getByLabelText('Encerramento'), { target: { value: closing } })
+      fireEvent.click(screen.getByRole('checkbox', { name: 'MEDIA_SIMPLES_2024_1 v1 · GERAL v1' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Criar ciclo' }))
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        'O encerramento deve ocorrer depois da abertura.',
+      )
+      expect(api.createEvaluationCycle).not.toHaveBeenCalled()
     },
   )
 
@@ -223,6 +252,9 @@ describe('CycleAdministrationPanel', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Consultar' }))
       await screen.findByRole('form', { name: 'Configuração: Ciclo aberto' })
       await waitFor(() => expect(scrollIntoView).toHaveBeenCalledTimes(2))
+      expect(screen.getByLabelText('Abertura')).toBeDisabled()
+      expect(screen.getByLabelText('Encerramento')).toBeDisabled()
+      expect(screen.getByLabelText('Fuso horário')).toBeDisabled()
 
       fireEvent.click(screen.getByRole('button', { name: 'Novo ciclo' }))
       await screen.findByRole('form', { name: 'Novo ciclo' })
@@ -289,6 +321,42 @@ describe('CycleAdministrationPanel', () => {
       )
       await waitFor(() => expect(api.openEvaluationCycle).toHaveBeenCalledWith('cycle-draft-1'))
       expect(await screen.findByText('Ciclo aberto.')).toBeInTheDocument()
+    } finally {
+      confirmation.mockRestore()
+    }
+  })
+
+  it('explica abertura futura sem alterar o rascunho nem repetir a escrita', async () => {
+    const confirmation = vi.spyOn(window, 'confirm').mockReturnValue(true)
+    const api = createApi({
+      listAllCycles: vi.fn().mockResolvedValue([sampleCycle()]),
+      openEvaluationCycle: vi.fn().mockRejectedValue(
+        new ApiError({
+          status: 409,
+          reasonCode: 'CYCLE_OPENING_NOT_REACHED',
+          requestId: 'cycle-future-1',
+        }),
+      ),
+    })
+    try {
+      render(
+        <CycleAdministrationPanel
+          api={api}
+          permissions={['CICLOS.GERIR']}
+          onSessionExpired={vi.fn()}
+        />,
+      )
+      fireEvent.click(await screen.findByRole('button', { name: 'Configurar' }))
+      await screen.findByText('O rascunho selecionado contém 1 questionário(s) aplicado(s).')
+      fireEvent.click(screen.getByRole('button', { name: 'Abrir ciclo' }))
+      const alert = await screen.findByRole('alert')
+      expect(alert).toHaveTextContent('ainda não chegou à data e ao horário de abertura salvos')
+      expect(alert).toHaveTextContent('Referência: cycle-future-1.')
+      expect(api.openEvaluationCycle).toHaveBeenCalledTimes(1)
+      expect(api.replaceEvaluationCycle).not.toHaveBeenCalled()
+      expect(screen.getByLabelText('Abertura')).toHaveValue('2026-09-01T00:00')
+      expect(screen.getByRole('button', { name: 'Salvar configuração' })).toBeEnabled()
+      expect(screen.queryByText('Ciclo aberto.')).not.toBeInTheDocument()
     } finally {
       confirmation.mockRestore()
     }

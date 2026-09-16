@@ -307,7 +307,11 @@ export function AssessmentEditor({
     return (
       <section className="card" aria-labelledby="assessment-error-title">
         <h2 id="assessment-error-title">Avaliação indisponível</h2>
-        {error ? <FeedbackMessage kind="error">{error}</FeedbackMessage> : null}
+        {error ? (
+          <FeedbackMessage kind="error" onDismiss={() => setError(undefined)}>
+            {error}
+          </FeedbackMessage>
+        ) : null}
         <div className="action-row print-hidden">
           <button className="button" type="button" onClick={onBack}>
             Voltar para a lista
@@ -356,11 +360,20 @@ export function AssessmentEditor({
       ) : null}
 
       {error ? (
-        <div className="error-summary" ref={errorSummaryRef} tabIndex={-1}>
-          <FeedbackMessage kind="error">{error}</FeedbackMessage>
-        </div>
+        <FeedbackMessage
+          kind="error"
+          ref={errorSummaryRef}
+          tabIndex={-1}
+          onDismiss={() => setError(undefined)}
+        >
+          {error}
+        </FeedbackMessage>
       ) : null}
-      {status ? <FeedbackMessage kind="status">{status}</FeedbackMessage> : null}
+      {status ? (
+        <FeedbackMessage kind="status" onDismiss={() => setStatus(undefined)}>
+          {status}
+        </FeedbackMessage>
+      ) : null}
 
       <form className="stack-form" onSubmit={handleSubmit} noValidate aria-busy={isSaving}>
         {assessment.questionnaire.competencies.map((competency) => (
@@ -626,7 +639,7 @@ export function AssessmentEditor({
         !(assessment.status === 'ENVIADA' && canPublishAssessment) &&
         !(assessment.status === 'PUBLICADA' && canReopenAssessment) &&
         !canCompleteFeedback ? (
-          <FeedbackMessage kind="status">
+          <FeedbackMessage kind="info">
             Esta avaliação está disponível somente para consulta com as permissões atuais.
           </FeedbackMessage>
         ) : null}
