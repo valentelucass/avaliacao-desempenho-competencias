@@ -1,4 +1,5 @@
 import { administrativeRead, useAdministrativeLoad } from './useAdministrativeLoad'
+import { SpreadsheetImportPanel } from './SpreadsheetImportPanel'
 import { AdministrativeTable } from '@/components/ui/administrative-table'
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
@@ -601,6 +602,14 @@ export function MasterDataAdministrationPanel({
           </div>
           <ClipboardList aria-hidden="true" size={19} strokeWidth={2} />
         </div>
+        <SpreadsheetImportPanel
+          kind="collaborators"
+          api={api}
+          disabled={isLoading || isWriting}
+          onBusyChange={setIsWriting}
+          onImported={loadMasterData}
+          onSessionExpired={onSessionExpired}
+        />
         <form
           className="stack-form master-data-quick-form"
           onSubmit={createCollaborator}
@@ -657,6 +666,14 @@ export function MasterDataAdministrationPanel({
           </div>
           <MapPin aria-hidden="true" size={19} strokeWidth={2} />
         </div>
+        <SpreadsheetImportPanel
+          kind="allocations"
+          api={api}
+          disabled={isLoading || isWriting}
+          onBusyChange={setIsWriting}
+          onImported={loadMasterData}
+          onSessionExpired={onSessionExpired}
+        />
         <p className="muted">
           Selecione recursos ativos. Filial, área e gestor em texto são opcionais; a vigência é
           validada pelo servidor.
@@ -784,6 +801,15 @@ export function MasterDataAdministrationPanel({
           </div>
           <ClipboardList aria-hidden="true" size={19} strokeWidth={2} />
         </div>
+        <SpreadsheetImportPanel
+          kind="assignments"
+          api={api}
+          cycles={assignmentOptions}
+          disabled={isLoading || isWriting}
+          onBusyChange={setIsWriting}
+          onImported={loadMasterData}
+          onSessionExpired={onSessionExpired}
+        />
         <p className="muted">
           A atribuição utiliza somente questionários já aplicados em ciclos de rascunho e
           colaboradores ativos. A API continua verificando todas as regras antes de confirmar.

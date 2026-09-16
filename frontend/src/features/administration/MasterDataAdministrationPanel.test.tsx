@@ -13,6 +13,52 @@ import type {
 import { MasterDataAdministrationPanel } from './MasterDataAdministrationPanel'
 
 describe('MasterDataAdministrationPanel', () => {
+  it('prepara os três importadores sem enviar arquivo, chamar a API ou perder o cadastro digitado', async () => {
+    const api = createApi()
+    const { container } = render(
+      <MasterDataAdministrationPanel
+        api={api}
+        permissions={['CADASTROS.GERIR']}
+        onSessionExpired={vi.fn()}
+      />,
+    )
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Criar colaborador' })).toBeEnabled(),
+    )
+    fireEvent.change(screen.getByLabelText('Nome de exibição do colaborador'), {
+      target: { value: 'Pessoa fictícia em edição' },
+    })
+    const callsBefore = Object.values(api).map((method) =>
+      vi.isMockFunction(method) ? method.mock.calls.length : 0,
+    )
+    for (const label of ['colaboradores', 'lotações', 'atribuições de questionário']) {
+      const trigger = screen.getByRole('button', { name: `Importar Excel de ${label}` })
+      expect(trigger).toHaveAttribute('aria-expanded', 'false')
+      fireEvent.click(trigger)
+      const panel = screen.getByRole('region', { name: `Importar ${label}` })
+      expect(trigger).toHaveAttribute('aria-controls', panel.id)
+      expect(within(panel).getByLabelText(`Planilha de ${label}`)).toBeEnabled()
+      const review = within(panel).getByRole('button', { name: 'Conferir planilha' })
+      expect(review).toBeDisabled()
+      fireEvent.click(review)
+      fireEvent.click(trigger)
+      expect(panel).not.toBeVisible()
+      fireEvent.click(trigger)
+    }
+    expect(
+      Object.values(api).map((method) =>
+        vi.isMockFunction(method) ? method.mock.calls.length : 0,
+      ),
+    ).toEqual(callsBefore)
+    expect(screen.getByLabelText('Nome de exibição do colaborador')).toHaveValue(
+      'Pessoa fictícia em edição',
+    )
+    expect(screen.getByRole('button', { name: 'Criar colaborador' })).toBeEnabled()
+    expect(
+      (await axe(container, { rules: { 'color-contrast': { enabled: false } } })).violations,
+    ).toHaveLength(0)
+  })
+
   it('carrega nomes autorizados e cria uma lotação usando seletores, sem UUID manual', async () => {
     const api = createApi()
 
@@ -289,6 +335,7 @@ describe('MasterDataAdministrationPanel', () => {
       'Você não possui permissão para consultar ou gerir os cadastros de apoio.',
     )
     expect(screen.queryByRole('button', { name: 'Criar filial' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Importar Excel/ })).not.toBeInTheDocument()
   })
 
   it('explica os pré-requisitos quando não há ciclo em rascunho para atribuição', async () => {

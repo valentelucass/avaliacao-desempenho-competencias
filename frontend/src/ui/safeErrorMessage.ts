@@ -21,6 +21,19 @@ function withReference(message: string, error: unknown): string {
 
 function errorMessage(error: unknown): string {
   if (error instanceof ApiError) {
+    const importErrors: Record<string, string> = {
+      IMPORT_INVALID_FILE:
+        'Use o modelo .xlsx com uma aba e os cabeçalhos esperados. A planilha deve conter somente valores, sem fórmulas, links ou objetos.',
+      IMPORT_LIMIT_EXCEEDED:
+        'Use uma planilha de até 1 MB e 1.000 registros, sem conteúdo adicional.',
+      IMPORT_EXPIRED:
+        'A conferência expirou ou não está disponível. Clique em Conferir planilha novamente.',
+      IMPORT_STALE:
+        'Os cadastros mudaram ou há pendências. Confira novamente a planilha antes de confirmar.',
+      IMPORT_RATE_LIMITED:
+        'Aguarde um minuto ou descarte uma conferência anterior antes de tentar novamente.',
+    }
+    if (error.code && Object.hasOwn(importErrors, error.code)) return importErrors[error.code]
     if (error.status === 401) {
       return 'Sua sessão não está disponível. Entre novamente para continuar.'
     }

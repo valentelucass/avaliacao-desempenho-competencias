@@ -21,6 +21,7 @@ import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.web.csrf.CsrfTokenRepository;
 
 class AuthenticationControllerTests {
 
@@ -28,7 +29,9 @@ class AuthenticationControllerTests {
   void exposesOnlyTheAuthenticatedUsersProfileCodesForSessionIdentification() {
     AuthenticationController controller =
         new AuthenticationController(
-            mock(LocalAuthenticationService.class), mock(LoginRateLimiter.class));
+            mock(LocalAuthenticationService.class),
+            mock(LoginRateLimiter.class),
+            mock(CsrfTokenRepository.class));
     UUID userId = UUID.randomUUID();
     Authentication authentication = mock(Authentication.class);
     when(authentication.getPrincipal())
@@ -59,7 +62,8 @@ class AuthenticationControllerTests {
             new LoginRateLimiter(
                 Clock.fixed(Instant.parse("2026-08-29T00:00:00Z"), ZoneOffset.UTC),
                 5,
-                Duration.ofMinutes(1)));
+                Duration.ofMinutes(1)),
+            mock(CsrfTokenRepository.class));
     HttpServletRequest request = mock(HttpServletRequest.class);
     HttpServletResponse response = mock(HttpServletResponse.class);
     String refreshToken = "A".repeat(64);

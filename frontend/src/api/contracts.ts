@@ -548,3 +548,28 @@ export interface AssessmentListRequest extends PageRequest {
   status?: 'RASCUNHO' | 'ENVIADA' | 'PUBLICADA'
   feedbackStatus?: AssessmentSummary['feedbackStatus']
 }
+export type SpreadsheetImportKind = 'collaborators' | 'assignments' | 'allocations'
+export type SpreadsheetImportPreview = {
+  id: string
+  expiresAt: string
+  total: number
+  creates: number
+  existing: number
+  errors: number
+  page: number
+  totalPages: number
+  rows: readonly {
+    line: number
+    name: string
+    questionnaire: string
+    allocation?: {
+      branch: string
+      area: string
+      manager: string
+      startsOn: string
+    } | null
+    status: 'CREATE' | 'EXISTS' | 'ERROR'
+    message: string
+  }[]
+}
+export type SpreadsheetImportResult = { created: number; existing: number }

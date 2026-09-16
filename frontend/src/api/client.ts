@@ -1,4 +1,7 @@
 import type {
+  SpreadsheetImportKind,
+  SpreadsheetImportPreview,
+  SpreadsheetImportResult,
   AdministrationUser,
   AppliedCycleQuestionnaire,
   ActiveAllocation,
@@ -80,6 +83,14 @@ export function isAuthenticationError(error: unknown): error is ApiError {
 }
 
 export interface ApiClient {
+  previewSpreadsheet(
+    kind: SpreadsheetImportKind,
+    file: File,
+    cycleId?: string,
+  ): Promise<SpreadsheetImportPreview>
+  getSpreadsheetPreview(id: string, page: number): Promise<SpreadsheetImportPreview>
+  confirmSpreadsheet(id: string): Promise<SpreadsheetImportResult>
+  discardSpreadsheet(id: string): Promise<void>
   currentUser(): Promise<CurrentUser | null>
   refreshSession(): Promise<CurrentUser | null>
   signIn(login: string, password: string): Promise<void>
@@ -183,15 +194,46 @@ export interface ApiClient {
 type RequestOptions = {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
   body?: unknown
+  rawBody?: Blob
   headers?: HeadersInit
   requiresCsrf?: boolean
   skipSessionRecovery?: boolean
 }
 
 export class HttpApiClient implements ApiClient {
+  previewSpreadsheet(
+    kind: SpreadsheetImportKind,
+    file: File,
+    cycleId?: string,
+  ): Promise<SpreadsheetImportPreview> {
+    const query = cycleId ? `?cycleId=${encodeURIComponent(cycleId)}` : ''
+    return this.request(`/master-data/imports/${kind}/preview${query}`, {
+      method: 'POST',
+      rawBody: file,
+      requiresCsrf: true,
+      headers: {
+        'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      },
+    })
+  }
+  getSpreadsheetPreview(id: string, page: number): Promise<SpreadsheetImportPreview> {
+    return this.request(`/master-data/imports/${encodeURIComponent(id)}?page=${page}`)
+  }
+  confirmSpreadsheet(id: string): Promise<SpreadsheetImportResult> {
+    return this.request(`/master-data/imports/${encodeURIComponent(id)}/confirm`, {
+      method: 'POST',
+      requiresCsrf: true,
+    })
+  }
+  discardSpreadsheet(id: string): Promise<void> {
+    return this.request(`/master-data/imports/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      requiresCsrf: true,
+    })
+  }
   private csrfToken?: string
   private csrfRequest?: Promise<string>
-  private sessionRefreshRequest?: Promise<boolean>
+  private sessionRefreshRequest?: Promise<CurrentUser | null>
 
   async currentUser(): Promise<CurrentUser | null> {
     try {
@@ -204,13 +246,24 @@ export class HttpApiClient implements ApiClient {
     }
   }
 
-  async refreshSession(): Promise<CurrentUser | null> {
+  refreshSession(): Promise<CurrentUser | null> {
+    // Inicialização, retomada manual e recuperação de 401 compartilham a mesma rotação.
+    if (!this.sessionRefreshRequest) {
+      this.sessionRefreshRequest = this.requestSessionRefresh().finally(() => {
+        this.sessionRefreshRequest = undefined
+      })
+    }
+    return this.sessionRefreshRequest
+  }
+
+  private async requestSessionRefresh(): Promise<CurrentUser | null> {
     try {
       await this.request<void>('/auth/sessions/refresh', {
         method: 'POST',
         requiresCsrf: true,
         skipSessionRecovery: true,
       })
+      this.csrfToken = undefined
       return await this.currentUser()
     } catch (error) {
       if (isAuthenticationError(error)) {
@@ -875,7 +928,8 @@ export class HttpApiClient implements ApiClient {
       method: options.method ?? 'GET',
       credentials: 'include',
       headers,
-      body: options.body === undefined ? undefined : JSON.stringify(options.body),
+      body:
+        options.rawBody ?? (options.body === undefined ? undefined : JSON.stringify(options.body)),
     })
   }
 
@@ -894,15 +948,7 @@ export class HttpApiClient implements ApiClient {
   }
 
   private recoverSession(): Promise<boolean> {
-    if (!this.sessionRefreshRequest) {
-      this.sessionRefreshRequest = this.refreshSession()
-        .then((user) => user !== null)
-        .finally(() => {
-          this.sessionRefreshRequest = undefined
-        })
-    }
-
-    return this.sessionRefreshRequest
+    return this.refreshSession().then((user) => user !== null)
   }
 
   private async loadCsrfToken(): Promise<string> {

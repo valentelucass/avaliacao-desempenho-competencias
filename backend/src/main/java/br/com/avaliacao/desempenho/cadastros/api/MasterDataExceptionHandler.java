@@ -1,6 +1,7 @@
 package br.com.avaliacao.desempenho.cadastros.api;
 
 import br.com.avaliacao.desempenho.cadastros.application.MasterDataException;
+import br.com.avaliacao.desempenho.cadastros.application.SpreadsheetImportException;
 import br.com.avaliacao.desempenho.identidadeacesso.infrastructure.security.RequestCorrelationFilter;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
@@ -20,6 +21,33 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 public class MasterDataExceptionHandler {
 
   private static final String PROBLEM_BASE = "https://api-formulario.rodogarcia.com.br/problems/";
+
+  @ExceptionHandler(SpreadsheetImportException.class)
+  ResponseEntity<ProblemDetail> spreadsheetFailure(
+      SpreadsheetImportException exception, HttpServletRequest request) {
+    HttpStatus status =
+        switch (exception.reason()) {
+          case LIMIT_EXCEEDED -> HttpStatus.CONTENT_TOO_LARGE;
+          case INVALID_FILE -> HttpStatus.UNPROCESSABLE_CONTENT;
+          case EXPIRED, STALE -> HttpStatus.CONFLICT;
+          case RATE_LIMITED -> HttpStatus.TOO_MANY_REQUESTS;
+        };
+    String detail =
+        switch (exception.reason()) {
+          case INVALID_FILE ->
+              "Use o modelo XLSX com uma aba, os cabeçalhos esperados e somente valores, sem fórmulas ou links.";
+          case LIMIT_EXCEEDED ->
+              "Use uma planilha de até 1 MB e 1.000 registros, sem conteúdo adicional.";
+          case EXPIRED ->
+              "A conferência expirou ou não está disponível. Confira novamente a planilha.";
+          case STALE ->
+              "Os cadastros mudaram ou há pendências. Confira novamente antes de confirmar.";
+          case RATE_LIMITED ->
+              "Aguarde um minuto ou descarte uma conferência anterior antes de tentar novamente.";
+        };
+    return problem(
+        request, status, "IMPORT_" + exception.reason().name(), "Importação não concluída", detail);
+  }
 
   @ExceptionHandler(MasterDataException.class)
   ResponseEntity<ProblemDetail> masterDataFailure(
@@ -71,6 +99,7 @@ public class MasterDataExceptionHandler {
     problem.setTitle(title);
     problem.setProperty("code", code);
     problem.setProperty("requestId", RequestCorrelationFilter.getRequestId(request));
+    RequestCorrelationFilter.recordProblem(request, code, null);
     return ResponseEntity.status(status)
         .contentType(MediaType.APPLICATION_PROBLEM_JSON)
         .body(problem);

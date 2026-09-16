@@ -3703,6 +3703,93 @@ thead th {
   margin-top: 0;
 }
 
+.spreadsheet-import {
+  min-width: 0;
+}
+
+.spreadsheet-import__entry {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.spreadsheet-import__availability {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.spreadsheet-import__toggle[aria-expanded='true'] > svg:last-child {
+  transform: rotate(180deg);
+}
+
+.spreadsheet-import__panel:not([hidden]) {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.8rem;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr);
+  margin-top: 1rem;
+  padding: clamp(0.85rem, 2vw, 1.25rem);
+}
+
+.spreadsheet-import__panel :is(h4, p) {
+  margin: 0;
+}
+
+.spreadsheet-import__panel > * {
+  min-width: 0;
+}
+
+.spreadsheet-import__table td:last-child {
+  text-align: left;
+}
+
+.spreadsheet-import__steps {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.spreadsheet-import__steps span {
+  color: var(--muted);
+  display: block;
+  font-size: 0.875rem;
+  margin-top: 0.3rem;
+}
+
+.spreadsheet-import__file-row {
+  align-items: end;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.spreadsheet-import input[type='file'] {
+  min-width: 0;
+  width: 100%;
+}
+
+.spreadsheet-import input::file-selector-button {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.35rem;
+  color: inherit;
+  font: inherit;
+  margin-right: 0.75rem;
+  padding: 0.25rem 0.5rem;
+}
+
+@media (max-width: 48rem) {
+  .spreadsheet-import__steps,
+  .spreadsheet-import__file-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 /* Confirmações destrutivas precisam aparecer no contexto do clique, não ao fim da página. */
 .confirmation-dialog-backdrop {
   align-items: center;
@@ -5600,4 +5687,34 @@ textarea:hover:not(:disabled) {
   .questionnaire-versions__table tbody tr + tr {
     padding: 0.9rem;
   }
+}
+.spreadsheet-import__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.spreadsheet-import td {
+  overflow-wrap: anywhere;
+}
+
+.spreadsheet-import__date {
+  white-space: nowrap;
+}
+
+.spreadsheet-import__references {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.spreadsheet-import__references strong {
+  display: block;
+  white-space: normal;
+}
+
+.spreadsheet-import__references ul {
+  margin: 0.5rem 0 0;
+  padding-left: 1.25rem;
 }

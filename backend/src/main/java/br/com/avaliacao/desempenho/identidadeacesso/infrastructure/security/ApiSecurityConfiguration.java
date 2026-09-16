@@ -24,6 +24,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.session.NullAuthenticatedSessionStrategy;
 import org.springframework.security.web.context.SecurityContextHolderFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfException;
@@ -54,7 +55,12 @@ public class ApiSecurityConfiguration {
       ObjectProvider<AccessTokenAuthenticationFilter> accessTokenAuthenticationFilter,
       ObjectProvider<IdentityAccessRepository> identityAccessRepository)
       throws Exception {
-    http.csrf(csrf -> csrf.csrfTokenRepository(csrfTokenRepository()))
+    http.csrf(
+            csrf ->
+                csrf.csrfTokenRepository(csrfTokenRepository())
+                    // JWT é revalidado a cada chamada. A rotação ocorre explicitamente nos
+                    // endpoints de sessão, não a cada autenticação do filtro stateless.
+                    .sessionAuthenticationStrategy(new NullAuthenticatedSessionStrategy()))
         .cors(cors -> cors.configurationSource(corsConfigurationSource))
         .sessionManagement(
             sessionManagement ->
@@ -154,6 +160,8 @@ public class ApiSecurityConfiguration {
                     .requestMatchers(
                         HttpMethod.GET, "/api/v1/evaluation-cycles/*/administration-draft")
                     .hasAuthority("PERMISSION:CICLOS.GERIR")
+                    .requestMatchers("/api/v1/master-data/imports/**")
+                    .hasAuthority("PERMISSION:CADASTROS.GERIR")
                     .requestMatchers(
                         "/api/v1/master-data/**",
                         "/api/v1/administration/manager-assignments/**",

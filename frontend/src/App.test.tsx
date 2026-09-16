@@ -1,4 +1,5 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { StrictMode } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { axe } from 'vitest-axe'
 import { ApiError } from './api/client'
@@ -17,6 +18,58 @@ import App from './App'
 const passwordChangeMethod = 'changePassword'
 
 describe('App', () => {
+  it('restaura a sessão uma única vez na inicialização em StrictMode', async () => {
+    const api = createApi({
+      currentUser: vi.fn().mockResolvedValue(null),
+      refreshSession: vi.fn().mockResolvedValue({
+        id: 'user-1',
+        displayName: 'Sessão fictícia retomada',
+        permissions: [],
+      }),
+    })
+    render(
+      <StrictMode>
+        <App api={api} />
+      </StrictMode>,
+    )
+    expect(await screen.findByText('Sessão fictícia retomada')).toBeInTheDocument()
+    expect(api.currentUser).toHaveBeenCalledTimes(1)
+    expect(api.refreshSession).toHaveBeenCalledTimes(1)
+  })
+
+  it('apresenta o login sem repetir a tentativa de sessão ausente em StrictMode', async () => {
+    const api = createApi({
+      currentUser: vi.fn().mockResolvedValue(null),
+      refreshSession: vi.fn().mockResolvedValue(null),
+    })
+    render(
+      <StrictMode>
+        <App api={api} />
+      </StrictMode>,
+    )
+    expect(await screen.findByRole('heading', { name: 'Acesso à plataforma' })).toBeInTheDocument()
+    expect(api.currentUser).toHaveBeenCalledTimes(1)
+    expect(api.refreshSession).toHaveBeenCalledTimes(1)
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('não renova a sessão quando a leitura inicial termina após sair da aplicação', async () => {
+    let resolve!: (user: CurrentUser | null) => void
+    const api = createApi({
+      currentUser: vi.fn(
+        () =>
+          new Promise<CurrentUser | null>((done) => {
+            resolve = done
+          }),
+      ),
+    })
+    const { unmount } = render(<App api={api} />)
+    await waitFor(() => expect(api.currentUser).toHaveBeenCalledTimes(1))
+    unmount()
+    await act(async () => resolve(null))
+    expect(api.refreshSession).not.toHaveBeenCalled()
+  })
+
   it('não mostra o login enquanto restaura uma sessão ao atualizar a página', async () => {
     let resolveCurrentUser: (user: CurrentUser | null) => void = () => undefined
     const api = createApi({

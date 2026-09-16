@@ -19,6 +19,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.csrf.CsrfToken;
+import org.springframework.security.web.csrf.CsrfTokenRepository;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -40,14 +41,18 @@ public class AuthenticationController {
 
   private final LocalAuthenticationService authenticationService;
   private final LoginRateLimiter loginRateLimiter;
+  private final CsrfTokenRepository csrfTokens;
   private final AuthenticationCookieWriter cookieWriter = new AuthenticationCookieWriter();
   private final br.com.avaliacao.desempenho.identidadeacesso.application.OpaqueTokenService
       keyHasher = new br.com.avaliacao.desempenho.identidadeacesso.application.OpaqueTokenService();
 
   public AuthenticationController(
-      LocalAuthenticationService authenticationService, LoginRateLimiter loginRateLimiter) {
+      LocalAuthenticationService authenticationService,
+      LoginRateLimiter loginRateLimiter,
+      CsrfTokenRepository csrfTokens) {
     this.authenticationService = authenticationService;
     this.loginRateLimiter = loginRateLimiter;
+    this.csrfTokens = csrfTokens;
   }
 
   @GetMapping("/csrf")
@@ -68,6 +73,7 @@ public class AuthenticationController {
             request.password(),
             RequestCorrelationFilter.getRequestId(servletRequest));
     cookieWriter.write(servletResponse, credentials);
+    csrfTokens.saveToken(null, servletRequest, servletResponse);
   }
 
   @PostMapping("/sessions/refresh")
@@ -78,6 +84,7 @@ public class AuthenticationController {
             findCookie(request, AuthenticationCookieWriter.REFRESH_COOKIE_NAME),
             RequestCorrelationFilter.getRequestId(request));
     cookieWriter.write(response, credentials);
+    csrfTokens.saveToken(null, request, response);
   }
 
   @DeleteMapping("/sessions/current")
@@ -88,6 +95,7 @@ public class AuthenticationController {
     authenticationService.logout(
         principal.sessionId(), principal.userId(), RequestCorrelationFilter.getRequestId(request));
     cookieWriter.clear(response);
+    csrfTokens.saveToken(null, request, response);
   }
 
   @GetMapping("/me")
@@ -118,6 +126,7 @@ public class AuthenticationController {
         request.newPassword(),
         RequestCorrelationFilter.getRequestId(servletRequest));
     cookieWriter.clear(servletResponse);
+    csrfTokens.saveToken(null, servletRequest, servletResponse);
   }
 
   private String rateLimitKey(HttpServletRequest request, String suppliedLogin) {

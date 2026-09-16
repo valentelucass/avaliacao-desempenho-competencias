@@ -154,6 +154,44 @@ class ApiSecurityConfigurationTests {
   }
 
   @Test
+  void restrictsSpreadsheetBodiesAndPreviewsToMasterDataPermissionAndCsrf() throws Exception {
+    for (String kind : new String[] {"collaborators", "allocations", "assignments"}) {
+      String path = "/api/v1/master-data/imports/" + kind + "/preview";
+      mockMvc
+          .perform(
+              post(path)
+                  .with(
+                      user("cadastro")
+                          .authorities(new SimpleGrantedAuthority("PERMISSION:CADASTROS.GERIR"))))
+          .andExpect(status().isForbidden())
+          .andExpect(jsonPath("$.code").value("CSRF_INVALID"));
+      mockMvc
+          .perform(
+              post(path)
+                  .with(csrf())
+                  .with(
+                      user("vinculos")
+                          .authorities(
+                              new SimpleGrantedAuthority(
+                                  "PERMISSION:VINCULOS_GESTOR_COLABORADOR.GERIR"))))
+          .andExpect(status().isForbidden())
+          .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
+      mockMvc
+          .perform(
+              post(path)
+                  .with(csrf())
+                  .with(
+                      user("cadastro")
+                          .authorities(new SimpleGrantedAuthority("PERMISSION:CADASTROS.GERIR"))))
+          .andExpect(
+              status().isNotFound()); // Persistência não registrada neste contexto: gate permitiu.
+    }
+    mockMvc
+        .perform(get("/api/v1/master-data/imports/00000000-0000-0000-0000-000000000001"))
+        .andExpect(status().isUnauthorized());
+  }
+
+  @Test
   void acceptsCorsPreflightOnlyForConfiguredFrontend() throws Exception {
     mockMvc
         .perform(

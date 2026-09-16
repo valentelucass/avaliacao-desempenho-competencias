@@ -2,6 +2,128 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { HttpApiClient } from './client'
 
 describe('HttpApiClient', () => {
+  it('compartilha uma única rotação entre refresh direto e recuperação de uma requisição', async () => {
+    let completeRefresh!: (response: Response) => void
+    const refreshResponse = new Promise<Response>((resolve) => {
+      completeRefresh = resolve
+    })
+    let reads = 0
+    const user = { id: 'user-1', displayName: 'Pessoa fictícia', permissions: [] }
+    const fetchMock = vi.fn((url: string) => {
+      if (url.endsWith('/auth/csrf'))
+        return Promise.resolve(jsonResponse({ token: 'csrf-synthetic' }))
+      if (url.endsWith('/auth/sessions/refresh')) return refreshResponse
+      if (url.endsWith('/auth/me')) return Promise.resolve(jsonResponse(user))
+      if (url.endsWith('/administration/users'))
+        return Promise.resolve(
+          ++reads === 1 ? new Response(null, { status: 401 }) : jsonResponse([]),
+        )
+      throw new Error('Rota inesperada no teste')
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const api = new HttpApiClient()
+    const direct = api.refreshSession()
+    const duplicate = api.refreshSession()
+    const recovered = api.listAdministrationUsers()
+    await vi.waitFor(() =>
+      expect(fetchMock.mock.calls.some(([url]) => url.endsWith('/auth/sessions/refresh'))).toBe(
+        true,
+      ),
+    )
+    completeRefresh(new Response(null, { status: 204 }))
+    await expect(Promise.all([direct, duplicate, recovered])).resolves.toEqual([user, user, []])
+    expect(
+      fetchMock.mock.calls.filter(([url]) => url.endsWith('/auth/sessions/refresh')),
+    ).toHaveLength(1)
+    expect(fetchMock.mock.calls.filter(([url]) => url.endsWith('/auth/me'))).toHaveLength(1)
+  })
+
+  it.each([401, 503])(
+    'libera a renovação compartilhada após falha %i para permitir nova tentativa',
+    async (status) => {
+      const user = { id: 'user-1', displayName: 'Pessoa fictícia', permissions: [] }
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValueOnce(jsonResponse({ token: 'csrf-synthetic' }))
+        .mockResolvedValueOnce(new Response(null, { status }))
+        .mockResolvedValueOnce(new Response(null, { status: 204 }))
+        .mockResolvedValueOnce(jsonResponse(user))
+      vi.stubGlobal('fetch', fetchMock)
+      const api = new HttpApiClient()
+      const results = await Promise.allSettled([api.refreshSession(), api.refreshSession()])
+      if (status === 401) {
+        expect(results).toEqual([
+          { status: 'fulfilled', value: null },
+          { status: 'fulfilled', value: null },
+        ])
+      } else {
+        expect(results).toEqual([
+          { status: 'rejected', reason: expect.objectContaining({ status }) },
+          { status: 'rejected', reason: expect.objectContaining({ status }) },
+        ])
+      }
+      expect(fetchMock).toHaveBeenCalledTimes(2)
+      await expect(api.refreshSession()).resolves.toEqual(user)
+      expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+        '/api/v1/auth/csrf',
+        '/api/v1/auth/sessions/refresh',
+        '/api/v1/auth/sessions/refresh',
+        '/api/v1/auth/me',
+      ])
+    },
+  )
+
+  it('obtém CSRF novo após renovar a sessão antes de confirmar a importação', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ token: 'csrf-before-refresh' }))
+      .mockResolvedValueOnce(jsonResponse({ id: 'preview-1', rows: [] }))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
+      .mockResolvedValueOnce(jsonResponse({ id: 'user-1', displayName: 'Pessoa fictícia' }))
+      .mockResolvedValueOnce(jsonResponse({ token: 'csrf-after-refresh' }))
+      .mockResolvedValueOnce(jsonResponse({ created: 1, existing: 0 }))
+    vi.stubGlobal('fetch', fetchMock)
+    const api = new HttpApiClient()
+    await api.previewSpreadsheet('allocations', new File(['synthetic xlsx'], 'exemplo.xlsx'))
+    await api.refreshSession()
+    await api.confirmSpreadsheet('preview-1')
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+      '/api/v1/auth/csrf',
+      '/api/v1/master-data/imports/allocations/preview',
+      '/api/v1/auth/sessions/refresh',
+      '/api/v1/auth/me',
+      '/api/v1/auth/csrf',
+      '/api/v1/master-data/imports/preview-1/confirm',
+    ])
+    expect(fetchMock.mock.calls[5][1].headers.get('X-CSRF-TOKEN')).toBe('csrf-after-refresh')
+  })
+
+  it('envia XLSX binário com cookies/CSRF e preserva o arquivo ao recuperar CSRF', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ token: 'csrf-test-before' }))
+      .mockResolvedValueOnce(jsonResponse({ status: 403, code: 'CSRF_INVALID' }, 403))
+      .mockResolvedValueOnce(jsonResponse({ token: 'csrf-test-after' }))
+      .mockResolvedValueOnce(jsonResponse({ id: 'preview-1', rows: [] }))
+      .mockResolvedValueOnce(jsonResponse({ created: 1, existing: 0 }))
+    vi.stubGlobal('fetch', fetchMock)
+    const api = new HttpApiClient()
+    const file = new File(['synthetic xlsx'], 'exemplo.xlsx')
+    await api.previewSpreadsheet('assignments', file, 'cycle-1')
+    expect(fetchMock.mock.calls[1][0]).toBe(
+      '/api/v1/master-data/imports/assignments/preview?cycleId=cycle-1',
+    )
+    for (const index of [1, 3]) {
+      expect(fetchMock.mock.calls[index][1].body).toBe(file)
+      expect(fetchMock.mock.calls[index][1].credentials).toBe('include')
+      expect(fetchMock.mock.calls[index][1].headers.get('Content-Type')).toContain(
+        'spreadsheetml.sheet',
+      )
+    }
+    expect(fetchMock.mock.calls[3][1].headers.get('X-CSRF-TOKEN')).toBe('csrf-test-after')
+    await api.confirmSpreadsheet('preview-1')
+    expect(fetchMock.mock.calls[4][0]).toBe('/api/v1/master-data/imports/preview-1/confirm')
+  })
   afterEach(() => {
     vi.unstubAllGlobals()
   })
@@ -224,6 +346,7 @@ describe('HttpApiClient', () => {
       .mockResolvedValueOnce(new Response(null, { status: 401 }))
       .mockResolvedValueOnce(new Response(null, { status: 204 }))
       .mockResolvedValueOnce(jsonResponse({ id: 'user-1', displayName: 'Pessoa' }))
+      .mockResolvedValueOnce(jsonResponse({ token: 'csrf-after-refresh' }))
       .mockResolvedValueOnce(
         new Response(csv, {
           headers: {
@@ -240,13 +363,14 @@ describe('HttpApiClient', () => {
       metric: 'FINAL_SCORE_AVERAGE',
     })
 
-    expect(fetchMock).toHaveBeenCalledTimes(5)
+    expect(fetchMock).toHaveBeenCalledTimes(6)
     expect(fetchMock).toHaveBeenNthCalledWith(
       3,
       '/api/v1/auth/sessions/refresh',
       expect.objectContaining({ credentials: 'include', method: 'POST' }),
     )
-    expect(fetchMock).toHaveBeenNthCalledWith(5, '/api/v1/indicators/exports', expect.anything())
+    expect(fetchMock).toHaveBeenNthCalledWith(5, '/api/v1/auth/csrf', expect.anything())
+    expect(fetchMock).toHaveBeenNthCalledWith(6, '/api/v1/indicators/exports', expect.anything())
     expect(result).toMatchObject({ filename: 'indicadores.csv' })
     expect('content' in result && (await result.content.text())).toBe(csv)
   })
@@ -337,19 +461,21 @@ describe('HttpApiClient', () => {
       .mockResolvedValueOnce(new Response(null, { status: 401 }))
       .mockResolvedValueOnce(new Response(null, { status: 204 }))
       .mockResolvedValueOnce(jsonResponse({ id: 'user-1', displayName: 'Pessoa' }))
+      .mockResolvedValueOnce(jsonResponse({ token: 'csrf-after-refresh' }))
       .mockResolvedValueOnce(new Response(null, { status: 204 }))
     vi.stubGlobal('fetch', fetchMock)
 
     const api = new HttpApiClient()
 
     await expect(api.signOut()).resolves.toBeUndefined()
-    expect(fetchMock).toHaveBeenCalledTimes(5)
+    expect(fetchMock).toHaveBeenCalledTimes(6)
     expect(fetchMock).toHaveBeenNthCalledWith(
       3,
       '/api/v1/auth/sessions/refresh',
       expect.objectContaining({ credentials: 'include', method: 'POST' }),
     )
-    expect(fetchMock).toHaveBeenNthCalledWith(5, '/api/v1/auth/sessions/current', {
+    expect(fetchMock).toHaveBeenNthCalledWith(5, '/api/v1/auth/csrf', expect.anything())
+    expect(fetchMock).toHaveBeenNthCalledWith(6, '/api/v1/auth/sessions/current', {
       body: undefined,
       credentials: 'include',
       headers: expect.any(Headers),

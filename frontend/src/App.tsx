@@ -212,8 +212,11 @@ function App({ api = defaultApiClient }: AppProps) {
     let cancelled = false
 
     void Promise.resolve()
-      .then(() => api.currentUser())
-      .then((currentUser) => currentUser ?? api.refreshSession())
+      .then(() => (cancelled ? null : api.currentUser()))
+      .then((currentUser) => {
+        if (cancelled) return null
+        return currentUser ?? api.refreshSession()
+      })
       .then((restoredUser) => {
         if (cancelled || !restoredUser) {
           return

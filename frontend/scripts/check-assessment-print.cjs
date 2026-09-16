@@ -150,9 +150,10 @@ async function mount(d, key) {
     { windowsHide: true, stdio: ['ignore', 'ignore', 'pipe'] },
   )
   let ws
+  let browserPhase = 'inicialização e impressão'
   const timer = setTimeout(() => {
     edge.kill()
-    console.error('browser timeout')
+    console.error(`browser timeout: ${browserPhase}`)
     process.exit(1)
   }, 65000)
   try {
@@ -284,12 +285,20 @@ async function mount(d, key) {
         after: hover.result.value,
       }),
     )
-    await require('./check-administrative-tables.cjs')({ send, frameId: frameTree.frame.id, css })
-    await require('./check-curtain-theme-toggle.cjs')({ send, frameId: frameTree.frame.id, css })
-    await require('./check-global-buttons.cjs')({ send, frameId: frameTree.frame.id, css })
-    await require('./check-assessment-filters.cjs')({ send, frameId: frameTree.frame.id, css })
-    await require('./check-sidebar-cards.cjs')({ send, frameId: frameTree.frame.id, css })
-    await require('./check-cycle-recovery.cjs')({ send, frameId: frameTree.frame.id, css })
+    for (const phase of [
+      'check-administrative-tables',
+      'check-curtain-theme-toggle',
+      'check-global-buttons',
+      'check-assessment-filters',
+      'check-sidebar-cards',
+      'check-cycle-recovery',
+      'check-spreadsheet-import',
+    ]) {
+      browserPhase = phase
+      // Cada suíte tem o mesmo limite; as anteriores não consomem o tempo da próxima.
+      timer.refresh()
+      await require(`./${phase}.cjs`)({ send, frameId: frameTree.frame.id, css })
+    }
     await send('Browser.close').catch(() => {})
   } finally {
     clearTimeout(timer)
