@@ -1,4 +1,5 @@
 import { administrativeRead, useAdministrativeLoad } from './useAdministrativeLoad'
+import { SpreadsheetImportPanel } from './SpreadsheetImportPanel'
 import { AdministrativeTable } from '@/components/ui/administrative-table'
 import { useCallback, useEffect, useId, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
@@ -435,6 +436,14 @@ export function RelationshipAdministrationPanel({
               </p>
             </div>
           </div>
+          <SpreadsheetImportPanel
+            kind="manager-assignments"
+            api={api}
+            disabled={isLoading || isSaving || !isAvailable('managerOptions')}
+            onBusyChange={setIsSaving}
+            onImported={loadRelationships}
+            onSessionExpired={onSessionExpired}
+          />
           <form
             className="stack-form manager-assignment-form"
             noValidate

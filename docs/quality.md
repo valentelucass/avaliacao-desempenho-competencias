@@ -85,3 +85,12 @@ Depois de uma publicação, `pm2 jlist | node .\scripts\validate-pm2-runtime.cjs
 - Permanecem externos ao gate: carga e desempenho com dados aprovados, navegador/dispositivo e tecnologia assistiva manuais, política/agenda/criptografia dos backups, proxy/Cloudflare, firewall, monitoração e CI. O procedimento técnico de backup e restauração foi executado com sucesso em 2026-08-29, mas não substitui uma política de continuidade.
 
 O estado canônico, as evidências executadas e os pré-requisitos externos para uso real ficam no [STATES.md](../STATES.md).
+
+
+## Manutenção de cadastros e importação de vínculos
+
+`ADC-COR-022`/`ADC-IMP-003`: `MasterDataMaintenanceSecurityTests` usa filtros Spring e controllers reais com serviços fictícios para verificar permissão, CSRF, DTOs e códigos seguros. `ManagerAssignmentImportTests` cobre cabeçalhos/datas, modelo distribuído, ambiguidade, conta inelegível, inatividade, repetição, períodos, isolamento por ator/família e revalidação. `SpreadsheetImportHttpTests` verifica projeção mínima e namespace próprio.
+
+`MasterDataMaintenanceDevSqlTests` é opt-in `-Dadc.dev.maintenance.rollback=true`, somente AVALIACAO_DEV e massa fictícia própria. JDBC/serviços reais, transação marcada para rollback antes da escrita e savepoints para falhas esperadas: edição/reativação preservam ID, exclusão somente sem uso, histórico/auditoria preservados, vínculos idênticos sem duplicação, período inclusivo, prévia desatualizada e falha na segunda linha sem escrita parcial. Requer a DLL JDBC local como os outros testes SQL. Não é teste autenticado de produção.
+
+O gate inclui `check-master-data-maintenance.cjs` e amplia `check-spreadsheet-import.cjs` ao quarto importador, com componentes reais/dados fictícios. Verifica teclado, confirmação, rótulos, limites de controles/tabelas e responsividade em cinco larguras/dois temas. Persistência e segurança HTTP são verificadas separadamente. Artefatos e resultados efetivamente executados ficam no STATES.md; scripts de concessão produtiva não são executados pelo gate.

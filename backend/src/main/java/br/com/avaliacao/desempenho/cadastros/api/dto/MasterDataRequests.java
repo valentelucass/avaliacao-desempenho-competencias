@@ -1,5 +1,6 @@
 package br.com.avaliacao.desempenho.cadastros.api.dto;
 
+import com.fasterxml.jackson.annotation.JsonAnySetter;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -11,9 +12,19 @@ public final class MasterDataRequests {
 
   private MasterDataRequests() {}
 
-  public record NamedResource(@NotBlank @Size(max = 200) String name) {}
+  public record NamedResource(@NotBlank @Size(max = 200) String name) {
+    @JsonAnySetter
+    public void rejectUnknown(String key, Object value) {
+      throw new IllegalArgumentException("Campo não permitido.");
+    }
+  }
 
-  public record Collaborator(@NotBlank @Size(max = 200) String displayName) {}
+  public record Collaborator(@NotBlank @Size(max = 200) String displayName) {
+    @JsonAnySetter
+    public void rejectUnknown(String key, Object value) {
+      throw new IllegalArgumentException("Campo não permitido.");
+    }
+  }
 
   public record Allocation(
       @NotNull UUID collaboratorId,

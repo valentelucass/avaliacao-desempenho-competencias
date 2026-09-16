@@ -67,6 +67,20 @@ public class MasterDataExceptionHandler {
               "CONFLICT",
               "Operação não permitida",
               "A operação conflita com o estado atual do cadastro.");
+      case DELETION_BLOCKED ->
+          problem(
+              request,
+              HttpStatus.CONFLICT,
+              "MASTER_DATA_DELETE_BLOCKED",
+              "Exclusão não permitida",
+              "Só é possível excluir um cadastro desativado e sem uso. Lotações, vínculos, atribuições e avaliações, inclusive históricos, impedem a exclusão. Edite ou reative o cadastro.");
+      case DELETION_UNAVAILABLE ->
+          problem(
+              request,
+              HttpStatus.SERVICE_UNAVAILABLE,
+              "MASTER_DATA_DELETE_UNAVAILABLE",
+              "Exclusão indisponível",
+              "A exclusão ainda não foi habilitada neste ambiente. Solicite a configuração ao administrador; edição e reativação continuam disponíveis.");
       case UNAVAILABLE ->
           problem(
               request,

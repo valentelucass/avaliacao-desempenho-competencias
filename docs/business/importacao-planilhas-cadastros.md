@@ -1,4 +1,4 @@
-# Importação por planilha — colaboradores, lotações e atribuições
+# Importação por planilha — cadastros e vínculos
 
 ## Escopo e origem
 
@@ -17,6 +17,16 @@ Tela **Cadastros e atribuições**, opção **Importar Excel** nos blocos Colabo
 5. Clique em **Confirmar importação**. Só então os registros novos são criados e as listas atualizadas.
 
 Abrir a área não envia arquivo. A conferência não grava cadastro. Trocar arquivo ou ciclo descarta a conferência anterior. O usuário pode descartá-la explicitamente. Sair da tela também libera a prévia; respostas tardias são descartadas, e uma confirmação já enviada termina antes de liberar seu token. Se o descarte falhar por falta de rede, permanece a expiração no servidor. Sucesso/erro usa a notificação flutuante compartilhada, com expiração; instruções, totais, resultado concluído e pendências permanecem no painel.
+
+## Vínculos gestor–colaborador (ADC-IMP-003)
+
+Ampliação solicitada pelo usuário em 16/09/2026 para atender volume de vínculos em produção. O modelo foi definido consultando a relação administrativa existente, conforme pedido posterior do usuário. Tela **Vínculos**, seção **Vínculo gestor-colaborador**, permissão `VINCULOS_GESTOR_COLABORADOR.GERIR`. O botão **Baixar modelo de vínculos** oferece arquivo vazio.
+
+Cabeçalhos obrigatórios: **Conta avaliadora** (nome de exibição da conta ativa de Gestor/RH no seletor), **Colaborador** (nome cadastrado ativo) e **Início** (dd/mm/aaaa ou data Excel sem horário). Ordem livre entre A:Z, extras de dados ignorados e controles de arquivo aplicados ao conteúdo inteiro. Não exige login nem consulta irrestrita de contas. Nomes ambíguos requerem vínculo individual; não inferir identidade a partir do Gestor de Lotações.
+
+Somente um vínculo por colaborador no lote. Idêntico, não revogado e com mesmo início: manter. Conta/data diferente, vínculo não revogado ou período histórico sobreposto: bloquear sem encerrar/substituir. Fim inclusivo; início após o fim do vínculo anterior. A confirmação concede escopo de acesso e revalida elegibilidade/vigência/duplicidade sob bloqueios antes de gravar o lote e suas auditorias atomicamente.
+
+A permissão de cadastros não autoriza este fluxo. Prévias são isoladas por ator e família de permissão em leitura, confirmação e descarte. Mesmos limites de memória/arquivo/tempo/reenvio dos importadores existentes. Diretoria–Gerência e conta–colaborador permanecem individuais. Regras, exemplo e recuperação: [manutenção e vínculos](../operations/manutencao-cadastros-e-importacao-vinculos.md).
 
 ## Modelos recebidos
 
@@ -56,11 +66,11 @@ Em Lotações, uma área ausente deve ser cadastrada na seção Áreas quando re
 - Nenhum cadastro correspondente: criar colaborador, ou bloquear atribuição até que o colaborador seja cadastrado.
 - Um cadastro ativo correspondente: apresentar como existente na importação de colaboradores; nas atribuições, resolver esse cadastro para conferência.
 - Mais de um cadastro correspondente: bloquear por ambiguidade. Não escolher homônimo automaticamente. Pessoa distinta com mesmo nome deve ser tratada individualmente até existir modelo com identificador aprovado.
-- Cadastro inativo: bloquear, sem reativar. Nome repetido na planilha: bloquear o lote para correção.
+- Cadastro inativo: bloquear, sem reativar automaticamente. Áreas/Colaboradores podem ser editados e reativados explicitamente em Cadastros e atribuições (ADC-COR-022); depois, conferir a planilha novamente. Nome repetido na planilha: bloquear o lote para correção.
 - Ciclo: deve continuar em rascunho; cada linha precisa corresponder ao código, nome ou apresentação `código — nome` do ciclo selecionado.
 - Questionário: título deve corresponder a exatamente um questionário já aplicado ao ciclo. Não é escolhido por categoria aproximada nem criado implicitamente.
 - Atribuição ativa idêntica: manter e contar como existente. Atribuição ativa para outro questionário: bloquear; não revogar/substituir.
-- Nenhuma conta, permissão ou vínculo de gestão é criado por estes importadores. Somente o importador Lotações cria lotações; Filial permanece desconsiderada nas Atribuições.
+- Nenhuma conta, permissão ou vínculo de gestão é criado pelos três importadores de cadastros. O novo importador específico de vínculos segue a permissão e as regras próprias descritas acima. Somente o importador Lotações cria lotações; Filial permanece desconsiderada nas Atribuições.
 - Confirmação reconsulta os registros sob bloqueios transacionais e compara com a conferência. Alterações relevantes exigem nova conferência. Todas as linhas novas e auditorias pertencem à mesma transação; qualquer falha desfaz o lote.
 - Repetir a mesma confirmação retorna o resultado anterior durante a validade da prévia. Reenviar o arquivo depois produz registros existentes; não duplicação silenciosa. Não há exclusão nem atualização em lote.
 

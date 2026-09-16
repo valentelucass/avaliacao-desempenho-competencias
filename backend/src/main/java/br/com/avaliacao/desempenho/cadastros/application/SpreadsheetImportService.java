@@ -3,6 +3,7 @@ package br.com.avaliacao.desempenho.cadastros.application;
 import static br.com.avaliacao.desempenho.cadastros.application.SpreadsheetImportException.Reason.*;
 
 import br.com.avaliacao.desempenho.cadastros.domain.model.AllocationImport;
+import br.com.avaliacao.desempenho.cadastros.domain.model.ManagerAssignmentImport;
 import br.com.avaliacao.desempenho.cadastros.domain.model.SpreadsheetImport;
 import br.com.avaliacao.desempenho.cadastros.domain.model.SpreadsheetImport.*;
 import br.com.avaliacao.desempenho.identidadeacesso.infrastructure.persistence.ConditionalOnSqlServerPersistence;
@@ -111,12 +112,17 @@ public class SpreadsheetImportService {
   }
 
   public Result confirm(UUID id, MasterDataCommandContext context) {
+    return confirm(id, context, null);
+  }
+
+  public Result confirm(UUID id, MasterDataCommandContext context, Kind requiredKind) {
     Pending item;
     synchronized (this) {
       expire();
       item = pending.get(id);
-      if (item == null || !item.actor.equals(context.actorUserId()))
-        throw new SpreadsheetImportException(EXPIRED);
+      if (item == null
+          || !item.actor.equals(context.actorUserId())
+          || !matchesKind(item, requiredKind)) throw new SpreadsheetImportException(EXPIRED);
     }
     synchronized (item) {
       if (!item.preview.expiresAt().isAfter(clock.instant()))
@@ -135,7 +141,14 @@ public class SpreadsheetImportService {
                     if (row.status() != Status.CREATE) continue;
                     if (item.kind == Kind.COLLABORATORS)
                       writes.createCollaborator(row.name(), context);
-                    else if (item.kind == Kind.ALLOCATIONS) {
+                    else if (item.kind == Kind.MANAGER_ASSIGNMENTS) {
+                      var assignment = row.managerAssignment();
+                      writes.createManagerAssignment(
+                          assignment.managerUserId(),
+                          row.collaboratorId(),
+                          assignment.startsOn(),
+                          context);
+                    } else if (item.kind == Kind.ALLOCATIONS) {
                       var allocation = row.allocation();
                       String manager = SpreadsheetImport.cleanText(allocation.fields().manager());
                       writes.createAllocation(
@@ -166,21 +179,43 @@ public class SpreadsheetImportService {
   }
 
   public synchronized Preview get(UUID id, UUID actor) {
+    return get(id, actor, null);
+  }
+
+  public synchronized Preview get(UUID id, UUID actor, Kind requiredKind) {
     expire();
     Pending item = pending.get(id);
-    if (item == null || !item.actor.equals(actor)) throw new SpreadsheetImportException(EXPIRED);
+    if (item == null || !item.actor.equals(actor) || !matchesKind(item, requiredKind))
+      throw new SpreadsheetImportException(EXPIRED);
     return item.preview;
   }
 
   public synchronized void discard(UUID id, UUID actor) {
+    discard(id, actor, null);
+  }
+
+  public synchronized void discard(UUID id, UUID actor, Kind requiredKind) {
     Pending item = pending.get(id);
-    if (item != null && item.actor.equals(actor)) pending.remove(id);
+    if (item != null && item.actor.equals(actor) && matchesKind(item, requiredKind))
+      pending.remove(id);
+  }
+
+  private static boolean matchesKind(Pending item, Kind requiredKind) {
+    return requiredKind == null ? item.kind != Kind.MANAGER_ASSIGNMENTS : item.kind == requiredKind;
   }
 
   private List<Row> review(Kind kind, List<SourceRow> source, UUID cycleId, boolean lock) {
     try {
       var names =
           source.stream().map(row -> SpreadsheetImport.key(row.name())).collect(Collectors.toSet());
+      if (kind == Kind.MANAGER_ASSIGNMENTS) {
+        var managers =
+            source.stream()
+                .map(row -> SpreadsheetImport.key(row.managerAssignment().manager()))
+                .collect(Collectors.toSet());
+        return ManagerAssignmentImport.review(
+            source, repository.managerAssignmentSnapshot(names, managers, lock));
+      }
       if (kind == Kind.ALLOCATIONS) {
         var branches =
             source.stream()

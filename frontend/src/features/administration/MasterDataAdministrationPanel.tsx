@@ -3,7 +3,16 @@ import { SpreadsheetImportPanel } from './SpreadsheetImportPanel'
 import { AdministrativeTable } from '@/components/ui/administrative-table'
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
-import { Archive, ClipboardList, MapPin, Plus, Power, RefreshCw, Trash2 } from 'lucide-react'
+import {
+  Archive,
+  ClipboardList,
+  MapPin,
+  Pencil,
+  Plus,
+  Power,
+  RefreshCw,
+  Trash2,
+} from 'lucide-react'
 import { isAuthenticationError } from '../../api/client'
 import type { ApiClient } from '../../api/client'
 import type {
@@ -29,6 +38,12 @@ type MasterDataAdministrationPanelProps = {
 }
 
 type PendingAction =
+  | { kind: 'EDIT_AREA' | 'EDIT_COLLABORATOR'; id: string; subject: string; name: string }
+  | {
+      kind: 'REACTIVATE_AREA' | 'REACTIVATE_COLLABORATOR' | 'DELETE_AREA' | 'DELETE_COLLABORATOR'
+      id: string
+      subject: string
+    }
   | {
       kind: 'DEACTIVATE_BRANCH'
       id: string
@@ -83,6 +98,7 @@ export function MasterDataAdministrationPanel({
   const assignmentCycleId = useId()
   const assignmentCollaboratorId = useId()
   const assignmentQuestionnaireId = useId()
+  const editNameId = useId()
   const confirmationEndsOnId = useId()
   const confirmationReasonId = useId()
   const confirmationDialogRef = useRef<HTMLElement | null>(null)
@@ -323,6 +339,42 @@ export function MasterDataAdministrationPanel({
 
     setConfirmationError(undefined)
     let completed = false
+
+    if (pendingAction.kind === 'EDIT_AREA' || pendingAction.kind === 'EDIT_COLLABORATOR') {
+      const name = pendingAction.name.trim()
+      if (!name) {
+        setConfirmationError('Informe o nome do cadastro.')
+        return
+      }
+      completed = await runWrite(
+        () =>
+          pendingAction.kind === 'EDIT_AREA'
+            ? api.updateArea(pendingAction.id, { name })
+            : api.updateCollaborator(pendingAction.id, { displayName: name }),
+        'Nome atualizado. A situação e os vínculos foram preservados.',
+      )
+    }
+    if (
+      pendingAction.kind === 'REACTIVATE_AREA' ||
+      pendingAction.kind === 'REACTIVATE_COLLABORATOR'
+    ) {
+      completed = await runWrite(
+        () =>
+          pendingAction.kind === 'REACTIVATE_AREA'
+            ? api.reactivateArea(pendingAction.id)
+            : api.reactivateCollaborator(pendingAction.id),
+        'Cadastro reativado. Confira novamente a planilha antes de importar.',
+      )
+    }
+    if (pendingAction.kind === 'DELETE_AREA' || pendingAction.kind === 'DELETE_COLLABORATOR') {
+      completed = await runWrite(
+        () =>
+          pendingAction.kind === 'DELETE_AREA'
+            ? api.deleteInactiveUnusedArea(pendingAction.id)
+            : api.deleteInactiveUnusedCollaborator(pendingAction.id),
+        'Cadastro sem uso excluído. A auditoria foi preservada.',
+      )
+    }
 
     if (pendingAction.kind === 'DEACTIVATE_BRANCH') {
       completed = await runWrite(
@@ -580,6 +632,20 @@ export function MasterDataAdministrationPanel({
               caption="Áreas cadastradas"
               resources={areas}
               resourceLabel="área"
+              onEdit={(area) =>
+                requestConfirmation({
+                  kind: 'EDIT_AREA',
+                  id: area.id,
+                  subject: area.name,
+                  name: area.name,
+                })
+              }
+              onReactivate={(area) =>
+                requestConfirmation({ kind: 'REACTIVATE_AREA', id: area.id, subject: area.name })
+              }
+              onDeleteInactive={(area) =>
+                requestConfirmation({ kind: 'DELETE_AREA', id: area.id, subject: area.name })
+              }
               isBusy={isLoading || isWriting}
               onDeactivate={(area) =>
                 requestConfirmation({ kind: 'DEACTIVATE_AREA', id: area.id, subject: area.name })
@@ -641,6 +707,28 @@ export function MasterDataAdministrationPanel({
         {isAvailable('collaborators') ? (
           <CollaboratorsTable
             collaborators={collaborators}
+            onEdit={(person) =>
+              requestConfirmation({
+                kind: 'EDIT_COLLABORATOR',
+                id: person.id,
+                subject: person.displayName,
+                name: person.displayName,
+              })
+            }
+            onReactivate={(person) =>
+              requestConfirmation({
+                kind: 'REACTIVATE_COLLABORATOR',
+                id: person.id,
+                subject: person.displayName,
+              })
+            }
+            onDeleteInactive={(person) =>
+              requestConfirmation({
+                kind: 'DELETE_COLLABORATOR',
+                id: person.id,
+                subject: person.displayName,
+              })
+            }
             isBusy={isLoading || isWriting}
             onDeactivate={(collaborator) =>
               requestConfirmation({
@@ -944,9 +1032,11 @@ export function MasterDataAdministrationPanel({
               {confirmationDescription(pendingAction)} <strong>{pendingAction.subject}</strong>.
             </p>
             <p className="muted">
-              {pendingAction.kind === 'DELETE_BRANCH'
-                ? 'A exclusão é definitiva e só é permitida para filial inativa sem lotações. O histórico administrativo permanece.'
-                : 'Esta operação não exclui histórico. Confirme somente após verificar os dados.'}
+              {pendingAction.kind.startsWith('DELETE_')
+                ? 'A exclusão é definitiva e só é permitida para cadastro desativado sem uso, inclusive histórico. A auditoria permanece. Para voltar a utilizar um cadastro existente, prefira reativá-lo.'
+                : pendingAction.kind === 'REACTIVATE_COLLABORATOR'
+                  ? 'A reativação volta a permitir o uso deste colaborador nos vínculos que continuarem vigentes. Vínculos encerrados permanecem encerrados. Confira o cadastro antes de confirmar.'
+                  : 'Esta operação preserva o identificador e o histórico. A edição corrige o nome exibido nas consultas; notas e respostas permanecem iguais.'}
             </p>
             <form
               className="stack-form"
@@ -954,6 +1044,33 @@ export function MasterDataAdministrationPanel({
               noValidate
               aria-busy={isWriting}
             >
+              {'name' in pendingAction && (
+                <div className="field">
+                  <label htmlFor={editNameId}>Novo nome</label>
+                  <input
+                    id={editNameId}
+                    data-dialog-initial-focus
+                    value={pendingAction.name}
+                    onChange={(event) => {
+                      const name = event.target.value
+                      setPendingAction((current) =>
+                        current && 'name' in current ? { ...current, name } : current,
+                      )
+                    }}
+                    disabled={isWriting}
+                    maxLength={200}
+                    required
+                    aria-invalid={Boolean(confirmationError)}
+                    aria-describedby={confirmationError ? editNameId + '-error' : undefined}
+                  />
+                  {confirmationError && <p id={editNameId + '-error'}>{confirmationError}</p>}
+                </div>
+              )}
+              {operationError && (
+                <FeedbackMessage kind="error" onDismiss={() => setOperationError(undefined)}>
+                  {operationError}
+                </FeedbackMessage>
+              )}
               {pendingAction.kind === 'CLOSE_ALLOCATION' ? (
                 <div className="field">
                   <label htmlFor={confirmationEndsOnId}>Data de encerramento</label>
@@ -992,6 +1109,7 @@ export function MasterDataAdministrationPanel({
                 <button
                   className="button"
                   data-dialog-initial-focus={
+                    !('name' in pendingAction) &&
                     pendingAction.kind !== 'CLOSE_ALLOCATION' &&
                     pendingAction.kind !== 'REVOKE_QUESTIONNAIRE_ASSIGNMENT'
                       ? ''
@@ -1003,7 +1121,16 @@ export function MasterDataAdministrationPanel({
                 >
                   Cancelar
                 </button>
-                <button className="button button--danger" type="submit" disabled={isWriting}>
+                <button
+                  className={
+                    pendingAction.kind.startsWith('EDIT_') ||
+                    pendingAction.kind.startsWith('REACTIVATE_')
+                      ? 'button button--success'
+                      : 'button button--danger'
+                  }
+                  type="submit"
+                  disabled={isWriting}
+                >
                   <Archive aria-hidden="true" size={17} strokeWidth={2} />
                   {confirmationButtonLabel(pendingAction)}
                 </button>
@@ -1023,6 +1150,8 @@ function NamedResourcesTable({
   isBusy,
   onDeactivate,
   onDeleteInactive,
+  onEdit,
+  onReactivate,
 }: {
   caption: string
   resources: readonly AdministrativeNamedResource[]
@@ -1030,6 +1159,8 @@ function NamedResourcesTable({
   isBusy: boolean
   onDeactivate: (resource: AdministrativeNamedResource) => void
   onDeleteInactive?: (resource: AdministrativeNamedResource) => void
+  onEdit?: (resource: AdministrativeNamedResource) => void
+  onReactivate?: (resource: AdministrativeNamedResource) => void
 }) {
   const pagination = useClientPagination(resources, 5)
   const emptyRowsCount = 5 - pagination.items.length
@@ -1071,11 +1202,35 @@ function NamedResourcesTable({
                 </span>
               </AdministrativeTable.Cell>
               <AdministrativeTable.Cell data-label="Ação">
-                {resource.active ? (
-                  <div
-                    className="table-actions"
-                    aria-label={`Ações da ${resourceLabel} ${resource.name}`}
-                  >
+                <div
+                  className="table-actions"
+                  aria-label={`Ações da ${resourceLabel} ${resource.name}`}
+                >
+                  {onEdit && (
+                    <button
+                      className="button button--quiet"
+                      type="button"
+                      disabled={isBusy}
+                      onClick={() => onEdit(resource)}
+                      aria-label={'Editar ' + resourceLabel + ' ' + resource.name}
+                    >
+                      <Pencil aria-hidden="true" size={16} />
+                      Editar
+                    </button>
+                  )}
+                  {!resource.active && onReactivate && (
+                    <button
+                      className="button button--success button--quiet"
+                      type="button"
+                      disabled={isBusy}
+                      onClick={() => onReactivate(resource)}
+                      aria-label={'Reativar ' + resourceLabel + ' ' + resource.name}
+                    >
+                      <Power aria-hidden="true" size={16} />
+                      Reativar
+                    </button>
+                  )}
+                  {resource.active ? (
                     <button
                       aria-label={`Desativar ${resourceLabel} ${resource.name}`}
                       className="button button--danger button--quiet"
@@ -1086,11 +1241,9 @@ function NamedResourcesTable({
                       <Power aria-hidden="true" size={16} strokeWidth={2} />
                       Desativar
                     </button>
-                  </div>
-                ) : onDeleteInactive ? (
-                  <div className="table-actions" aria-label={`Ações da filial ${resource.name}`}>
+                  ) : onDeleteInactive ? (
                     <button
-                      aria-label={`Excluir filial ${resource.name}`}
+                      aria-label={`Excluir ${resourceLabel} ${resource.name}`}
                       className="button button--danger"
                       type="button"
                       onClick={() => onDeleteInactive(resource)}
@@ -1099,10 +1252,10 @@ function NamedResourcesTable({
                       <Trash2 aria-hidden="true" size={16} strokeWidth={2} />
                       Excluir
                     </button>
-                  </div>
-                ) : (
-                  <span className="field-hint">Sem ação disponível</span>
-                )}
+                  ) : (
+                    <span className="field-hint">Sem ação disponível</span>
+                  )}
+                </div>
               </AdministrativeTable.Cell>
             </AdministrativeTable.Row>
           ))}
@@ -1135,10 +1288,16 @@ function CollaboratorsTable({
   collaborators,
   isBusy,
   onDeactivate,
+  onEdit,
+  onReactivate,
+  onDeleteInactive,
 }: {
   collaborators: readonly AdministrativeCollaborator[]
   isBusy: boolean
   onDeactivate: (collaborator: AdministrativeCollaborator) => void
+  onEdit: (collaborator: AdministrativeCollaborator) => void
+  onReactivate: (collaborator: AdministrativeCollaborator) => void
+  onDeleteInactive: (collaborator: AdministrativeCollaborator) => void
 }) {
   const pagination = useClientPagination(collaborators, 10)
 
@@ -1177,11 +1336,21 @@ function CollaboratorsTable({
                 </span>
               </AdministrativeTable.Cell>
               <AdministrativeTable.Cell data-label="Ação">
-                {collaborator.active ? (
-                  <div
-                    className="table-actions"
-                    aria-label={`Ações do colaborador ${collaborator.displayName}`}
+                <div
+                  className="table-actions"
+                  aria-label={`Ações do colaborador ${collaborator.displayName}`}
+                >
+                  <button
+                    className="button button--quiet"
+                    type="button"
+                    disabled={isBusy}
+                    onClick={() => onEdit(collaborator)}
+                    aria-label={'Editar colaborador ' + collaborator.displayName}
                   >
+                    <Pencil aria-hidden="true" size={16} />
+                    Editar
+                  </button>
+                  {collaborator.active ? (
                     <button
                       aria-label={`Desativar colaborador ${collaborator.displayName}`}
                       className="button button--danger button--quiet"
@@ -1192,10 +1361,31 @@ function CollaboratorsTable({
                       <Power aria-hidden="true" size={16} strokeWidth={2} />
                       Desativar
                     </button>
-                  </div>
-                ) : (
-                  <span className="field-hint">Sem ação disponível</span>
-                )}
+                  ) : (
+                    <>
+                      <button
+                        className="button button--success button--quiet"
+                        type="button"
+                        disabled={isBusy}
+                        onClick={() => onReactivate(collaborator)}
+                        aria-label={'Reativar colaborador ' + collaborator.displayName}
+                      >
+                        <Power aria-hidden="true" size={16} />
+                        Reativar
+                      </button>
+                      <button
+                        className="button button--danger"
+                        type="button"
+                        disabled={isBusy}
+                        onClick={() => onDeleteInactive(collaborator)}
+                        aria-label={'Excluir colaborador ' + collaborator.displayName}
+                      >
+                        <Trash2 aria-hidden="true" size={16} />
+                        Excluir
+                      </button>
+                    </>
+                  )}
+                </div>
               </AdministrativeTable.Cell>
             </AdministrativeTable.Row>
           ))}
@@ -1436,6 +1626,12 @@ function formatQuestionnaireAssignment(assignment: ActiveQuestionnaireAssignment
 
 function confirmationDescription(action: PendingAction): string {
   const labels: Record<PendingAction['kind'], string> = {
+    EDIT_AREA: 'Você está corrigindo o nome da área',
+    EDIT_COLLABORATOR: 'Você está corrigindo o nome do colaborador',
+    REACTIVATE_AREA: 'Você está prestes a reativar a área',
+    REACTIVATE_COLLABORATOR: 'Você está prestes a reativar o colaborador',
+    DELETE_AREA: 'Você está prestes a excluir permanentemente a área',
+    DELETE_COLLABORATOR: 'Você está prestes a excluir permanentemente o colaborador',
     DEACTIVATE_BRANCH: 'Você está prestes a desativar a filial',
     DELETE_BRANCH: 'Você está prestes a excluir permanentemente a filial',
     DEACTIVATE_AREA: 'Você está prestes a desativar a área',
@@ -1448,6 +1644,12 @@ function confirmationDescription(action: PendingAction): string {
 
 function confirmationButtonLabel(action: PendingAction): string {
   const labels: Record<PendingAction['kind'], string> = {
+    EDIT_AREA: 'Salvar nome da área',
+    EDIT_COLLABORATOR: 'Salvar nome do colaborador',
+    REACTIVATE_AREA: 'Confirmar reativação da área',
+    REACTIVATE_COLLABORATOR: 'Confirmar reativação do colaborador',
+    DELETE_AREA: 'Confirmar exclusão definitiva da área',
+    DELETE_COLLABORATOR: 'Confirmar exclusão definitiva do colaborador',
     DEACTIVATE_BRANCH: 'Confirmar desativação da filial',
     DELETE_BRANCH: 'Confirmar exclusão definitiva da filial',
     DEACTIVATE_AREA: 'Confirmar desativação da área',

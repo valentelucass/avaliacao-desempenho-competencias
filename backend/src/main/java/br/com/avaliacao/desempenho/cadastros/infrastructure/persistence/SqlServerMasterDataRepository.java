@@ -10,8 +10,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 /**
- * JDBC parametrizado para cadastros versionados; DELETE físico é limitado à filial inativa e sem
- * referências, conforme a regra administrativa.
+ * JDBC parametrizado para cadastros versionados; DELETE físico é limitado a cadastros inativos e
+ * sem referências, conforme a regra administrativa.
  */
 @Repository
 @ConditionalOnSqlServerPersistence
@@ -108,6 +108,44 @@ public class SqlServerMasterDataRepository implements MasterDataRepository {
   }
 
   @Override
+  public boolean updateArea(NamedRecord record) {
+    requireMigration(MIGRATION_CADASTROS);
+    return jdbcTemplate.update(
+            "UPDATE dbo.area SET nome = ?, atualizado_em_utc = SYSUTCDATETIME() WHERE area_id = ?",
+            record.name(),
+            record.id())
+        == 1;
+  }
+
+  @Override
+  public boolean reactivateArea(UUID id) {
+    requireMigration(MIGRATION_CADASTROS);
+    return jdbcTemplate.update(
+            "UPDATE dbo.area SET ativa = 1, atualizado_em_utc = SYSUTCDATETIME() WHERE area_id = ? AND ativa = 0",
+            id)
+        == 1;
+  }
+
+  @Override
+  public boolean deleteInactiveUnusedArea(UUID id) {
+    requireMigration(MIGRATION_CADASTROS);
+    Integer allowed =
+        jdbcTemplate.queryForObject(
+            "SELECT HAS_PERMS_BY_NAME('dbo.area', 'OBJECT', 'DELETE')", Integer.class);
+    if (!Integer.valueOf(1).equals(allowed))
+      throw new MasterDataException(
+          MasterDataException.Reason.DELETION_UNAVAILABLE, "Exclusão indisponível neste ambiente.");
+    return jdbcTemplate.update(
+            """
+        DELETE resource FROM dbo.area AS resource WITH (UPDLOCK, HOLDLOCK)
+        WHERE resource.area_id = ? AND resource.ativa = 0
+          AND NOT EXISTS (SELECT 1 FROM dbo.lotacao_colaborador WITH (UPDLOCK, HOLDLOCK) WHERE area_id = resource.area_id)
+        """,
+            id)
+        == 1;
+  }
+
+  @Override
   public boolean deactivateArea(UUID areaId) {
     requireMigration(MIGRATION_CADASTROS);
     return jdbcTemplate.update(
@@ -130,6 +168,49 @@ public class SqlServerMasterDataRepository implements MasterDataRepository {
             """,
             collaborator.id(),
             collaborator.name())
+        == 1;
+  }
+
+  @Override
+  public boolean updateCollaborator(NamedRecord record) {
+    requireMigration(MIGRATION_CADASTROS);
+    return jdbcTemplate.update(
+            "UPDATE dbo.colaborador SET nome_exibicao = ?, atualizado_em_utc = SYSUTCDATETIME() WHERE colaborador_id = ?",
+            record.name(),
+            record.id())
+        == 1;
+  }
+
+  @Override
+  public boolean reactivateCollaborator(UUID id) {
+    requireMigration(MIGRATION_CADASTROS);
+    return jdbcTemplate.update(
+            "UPDATE dbo.colaborador SET ativo = 1, atualizado_em_utc = SYSUTCDATETIME() WHERE colaborador_id = ? AND ativo = 0",
+            id)
+        == 1;
+  }
+
+  @Override
+  public boolean deleteInactiveUnusedCollaborator(UUID id) {
+    requireMigration(MIGRATION_CADASTROS);
+    Integer allowed =
+        jdbcTemplate.queryForObject(
+            "SELECT HAS_PERMS_BY_NAME('dbo.colaborador', 'OBJECT', 'DELETE')", Integer.class);
+    if (!Integer.valueOf(1).equals(allowed))
+      throw new MasterDataException(
+          MasterDataException.Reason.DELETION_UNAVAILABLE, "Exclusão indisponível neste ambiente.");
+    return jdbcTemplate.update(
+            """
+        DELETE resource FROM dbo.colaborador AS resource WITH (UPDLOCK, HOLDLOCK)
+        WHERE resource.colaborador_id = ? AND resource.ativo = 0
+          AND NOT EXISTS (SELECT 1 FROM dbo.lotacao_colaborador WITH (UPDLOCK, HOLDLOCK) WHERE colaborador_id = resource.colaborador_id)
+          AND NOT EXISTS (SELECT 1 FROM dbo.vinculo_gestor_colaborador WITH (UPDLOCK, HOLDLOCK) WHERE colaborador_id = resource.colaborador_id)
+          AND NOT EXISTS (SELECT 1 FROM dbo.vinculo_usuario_colaborador WITH (UPDLOCK, HOLDLOCK) WHERE colaborador_id = resource.colaborador_id)
+          AND NOT EXISTS (SELECT 1 FROM dbo.vinculo_diretoria_gerencia WITH (UPDLOCK, HOLDLOCK) WHERE gerencia_colaborador_id = resource.colaborador_id)
+          AND NOT EXISTS (SELECT 1 FROM dbo.atribuicao_questionario_colaborador WITH (UPDLOCK, HOLDLOCK) WHERE colaborador_id = resource.colaborador_id)
+          AND NOT EXISTS (SELECT 1 FROM dbo.avaliacao WITH (UPDLOCK, HOLDLOCK) WHERE colaborador_id = resource.colaborador_id)
+        """,
+            id)
         == 1;
   }
 

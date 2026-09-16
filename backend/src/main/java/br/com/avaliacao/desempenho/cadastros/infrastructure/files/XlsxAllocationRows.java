@@ -4,6 +4,7 @@ import static br.com.avaliacao.desempenho.cadastros.application.SpreadsheetImpor
 
 import br.com.avaliacao.desempenho.cadastros.application.SpreadsheetImportException;
 import br.com.avaliacao.desempenho.cadastros.domain.model.AllocationImport;
+import br.com.avaliacao.desempenho.cadastros.domain.model.ManagerAssignmentImport;
 import br.com.avaliacao.desempenho.cadastros.domain.model.SpreadsheetImport;
 import br.com.avaliacao.desempenho.cadastros.domain.model.SpreadsheetImport.SourceRow;
 import java.math.BigDecimal;
@@ -18,7 +19,7 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 
-/** Extrai exclusivamente os cinco cabeçalhos autorizados, mesmo entre colunas extras. */
+/** Extrai cabeçalhos de lotação ou vínculo com data, ignorando somente colunas extras de dados. */
 final class XlsxAllocationRows {
   private XlsxAllocationRows() {}
 
@@ -26,7 +27,9 @@ final class XlsxAllocationRows {
   private static final Set<String> HEADERS =
       Set.of("FILIAL", "COLABORADOR", "AREA", "GESTOR", "INICIO DA LOTACAO");
 
-  static List<SourceRow> read(Document sheet, List<String> strings, boolean date1904) {
+  static List<SourceRow> read(
+      Document sheet, List<String> strings, boolean date1904, boolean managers) {
+    Set<String> headers = managers ? Set.of("CONTA AVALIADORA", "COLABORADOR", "INICIO") : HEADERS;
     NodeList rows = sheet.getElementsByTagNameNS(NS, "row");
     if (rows.getLength() < 2 || rows.getLength() > 1001)
       throw new SpreadsheetImportException(LIMIT_EXCEEDED);
@@ -56,21 +59,34 @@ final class XlsxAllocationRows {
                   Set.of("s", "inlineStr", "str", "", "n").contains(type)
                       ? value(cell, strings)
                       : "");
-          if (HEADERS.contains(header)) {
+          if (headers.contains(header)) {
             if (columns.containsValue(header)) throw new SpreadsheetImportException(INVALID_FILE);
             columns.put(column, header);
           }
         } else if (columns.containsKey(column)) {
           String header = columns.get(column);
           String value = value(cell, strings);
-          if (header.equals("INICIO DA LOTACAO"))
+          if (header.equals(managers ? "INICIO" : "INICIO DA LOTACAO"))
             value = date(value, cell.getAttribute("t"), date1904);
           values.put(header, value);
         }
       }
-      if (i == 0 && columns.size() != HEADERS.size())
+      if (i == 0 && columns.size() != headers.size())
         throw new SpreadsheetImportException(INVALID_FILE);
       if (i > 0 && values.values().stream().anyMatch(value -> !value.isBlank())) {
+        if (managers) {
+          result.add(
+              new SourceRow(
+                  line,
+                  values.getOrDefault("COLABORADOR", ""),
+                  "",
+                  "",
+                  null,
+                  new ManagerAssignmentImport.Fields(
+                      values.getOrDefault("CONTA AVALIADORA", ""),
+                      values.getOrDefault("INICIO", ""))));
+          continue;
+        }
         result.add(
             new SourceRow(
                 line,

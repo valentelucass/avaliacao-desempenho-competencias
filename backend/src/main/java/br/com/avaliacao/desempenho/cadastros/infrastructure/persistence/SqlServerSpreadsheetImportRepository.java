@@ -2,6 +2,7 @@ package br.com.avaliacao.desempenho.cadastros.infrastructure.persistence;
 
 import br.com.avaliacao.desempenho.cadastros.application.SpreadsheetImportRepository;
 import br.com.avaliacao.desempenho.cadastros.domain.model.AllocationImport;
+import br.com.avaliacao.desempenho.cadastros.domain.model.ManagerAssignmentImport;
 import br.com.avaliacao.desempenho.cadastros.domain.model.SpreadsheetImport.*;
 import br.com.avaliacao.desempenho.identidadeacesso.infrastructure.persistence.ConditionalOnSqlServerPersistence;
 import java.util.ArrayList;
@@ -114,6 +115,50 @@ public class SqlServerSpreadsheetImportRepository implements SpreadsheetImportRe
         json.writeValueAsString(
             people.values().stream().flatMap(List::stream).map(Collaborator::id).toList()));
     return new AllocationImport.Snapshot(people, branchRecords, areaRecords, allocations);
+  }
+
+  @Override
+  public ManagerAssignmentImport.Snapshot managerAssignmentSnapshot(
+      Set<String> names, Set<String> managerNames, boolean lock) {
+    var people = snapshot(names, null, lock).collaborators();
+    String hint = lock ? " WITH (UPDLOCK, HOLDLOCK) " : " ";
+    Map<String, List<UUID>> managers = new HashMap<>();
+    jdbc.query(
+        "SELECT n.[value], u.usuario_id FROM dbo.usuario u"
+            + hint
+            + "JOIN OPENJSON(?) n ON TRIM(REPLACE(REPLACE(u.nome_exibicao, NCHAR(160), N' '), NCHAR(8239), N' ')) COLLATE Latin1_General_100_CI_AI = n.[value] COLLATE Latin1_General_100_CI_AI "
+            + "WHERE u.situacao = 'ATIVO' AND u.excluido_logicamente = 0 AND EXISTS ("
+            + "SELECT 1 FROM dbo.atribuicao_papel a"
+            + hint
+            + "JOIN dbo.papel p"
+            + hint
+            + "ON p.papel_id = a.papel_id "
+            + "WHERE a.usuario_id = u.usuario_id AND a.revogado_em_utc IS NULL "
+            + "AND p.ativo = 1 AND p.codigo IN ('GESTOR', 'GERENCIA_RH')) ORDER BY u.usuario_id",
+        rs -> {
+          managers
+              .computeIfAbsent(rs.getString(1), ignored -> new ArrayList<>())
+              .add(rs.getObject(2, UUID.class));
+        },
+        json.writeValueAsString(managerNames));
+    Map<UUID, List<ManagerAssignmentImport.Existing>> assignments = new HashMap<>();
+    jdbc.query(
+        "SELECT colaborador_id, gestor_usuario_id, inicio_vigencia, fim_vigencia, revogado_em_utc FROM dbo.vinculo_gestor_colaborador"
+            + hint
+            + "WHERE colaborador_id IN (SELECT TRY_CONVERT(uniqueidentifier, [value]) FROM OPENJSON(?))",
+        rs -> {
+          assignments
+              .computeIfAbsent(rs.getObject(1, UUID.class), ignored -> new ArrayList<>())
+              .add(
+                  new ManagerAssignmentImport.Existing(
+                      rs.getObject(2, UUID.class),
+                      rs.getObject(3, java.time.LocalDate.class),
+                      rs.getObject(4, java.time.LocalDate.class),
+                      rs.getTimestamp(5) != null));
+        },
+        json.writeValueAsString(
+            people.values().stream().flatMap(List::stream).map(Collaborator::id).toList()));
+    return new ManagerAssignmentImport.Snapshot(people, managers, assignments);
   }
 
   private Map<String, List<AllocationImport.NamedResource>> namedResources(

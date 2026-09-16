@@ -13,6 +13,97 @@ import type {
 import { MasterDataAdministrationPanel } from './MasterDataAdministrationPanel'
 
 describe('MasterDataAdministrationPanel', () => {
+  it.each(['area', 'collaborator'] as const)(
+    'edita e reativa %s inativo preservando o identificador e o formulário novo',
+    async (kind) => {
+      const area = kind === 'area'
+      const api = createApi({
+        listAreas: vi.fn().mockResolvedValue([sampleArea({ active: false })]),
+        listCollaborators: vi.fn().mockResolvedValue([sampleCollaborator({ active: false })]),
+        updateArea: vi.fn().mockResolvedValue(undefined),
+        updateCollaborator: vi.fn().mockResolvedValue(undefined),
+        reactivateArea: vi.fn().mockResolvedValue(undefined),
+        reactivateCollaborator: vi.fn().mockResolvedValue(undefined),
+      })
+      render(
+        <MasterDataAdministrationPanel
+          api={api}
+          permissions={['CADASTROS.GERIR']}
+          onSessionExpired={vi.fn()}
+        />,
+      )
+      const label = area ? 'área Operações' : 'colaborador Patrícia Avaliada'
+      const id = area ? 'area-1' : 'collaborator-1'
+      const update = area ? api.updateArea : api.updateCollaborator
+      const reactivate = area ? api.reactivateArea : api.reactivateCollaborator
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: 'Editar ' + label })).toBeEnabled(),
+      )
+      fireEvent.change(screen.getByLabelText('Nome da área'), {
+        target: { value: 'Nova área em digitação' },
+      })
+      fireEvent.click(screen.getByRole('button', { name: 'Editar ' + label }))
+      const input = screen.getByLabelText('Novo nome')
+      await waitFor(() => expect(input).toHaveFocus())
+      fireEvent.change(input, { target: { value: 'Nome corrigido' } })
+      expect(update).not.toHaveBeenCalled()
+      fireEvent.click(
+        screen.getByRole('button', {
+          name: area ? 'Salvar nome da área' : 'Salvar nome do colaborador',
+        }),
+      )
+      await waitFor(() =>
+        expect(update).toHaveBeenCalledWith(
+          id,
+          area ? { name: 'Nome corrigido' } : { displayName: 'Nome corrigido' },
+        ),
+      )
+      await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument())
+      expect(screen.getByLabelText('Nome da área')).toHaveValue('Nova área em digitação')
+      fireEvent.click(screen.getByRole('button', { name: 'Reativar ' + label }))
+      expect(reactivate).not.toHaveBeenCalled()
+      fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }))
+      expect(reactivate).not.toHaveBeenCalled()
+      fireEvent.click(screen.getByRole('button', { name: 'Reativar ' + label }))
+      fireEvent.click(
+        screen.getByRole('button', {
+          name: area ? 'Confirmar reativação da área' : 'Confirmar reativação do colaborador',
+        }),
+      )
+      await waitFor(() => expect(reactivate).toHaveBeenCalledWith(id))
+    },
+  )
+
+  it('mantém a exclusão bloqueada e explica o histórico dentro do diálogo', async () => {
+    const api = createApi({
+      listAreas: vi.fn().mockResolvedValue([sampleArea({ active: false })]),
+      deleteInactiveUnusedArea: vi
+        .fn()
+        .mockRejectedValue(new ApiError({ status: 409, code: 'MASTER_DATA_DELETE_BLOCKED' })),
+    })
+    render(
+      <MasterDataAdministrationPanel
+        api={api}
+        permissions={['CADASTROS.GERIR']}
+        onSessionExpired={vi.fn()}
+      />,
+    )
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Excluir área Operações' })).toBeEnabled(),
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Excluir área Operações' }))
+    expect(api.deleteInactiveUnusedArea).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar exclusão definitiva da área' }))
+    await waitFor(() =>
+      expect(within(screen.getByRole('alertdialog')).getByRole('alert')).toHaveTextContent(
+        'inclusive históricos',
+      ),
+    )
+    expect(api.deleteInactiveUnusedArea).toHaveBeenCalledWith('area-1')
+    fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }))
+    expect(screen.getByRole('button', { name: 'Reativar área Operações' })).toBeEnabled()
+  })
+
   it('prepara os três importadores sem enviar arquivo, chamar a API ou perder o cadastro digitado', async () => {
     const api = createApi()
     const { container } = render(

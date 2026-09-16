@@ -44,3 +44,10 @@ Depois da validação, a configuração externa de produção deve apontar para 
 O procedimento opt-in para gerar um backup `COPY_ONLY` com checksum e compressão, restaurá-lo em clone isolado, executar `DBCC CHECKDB`, reconciliar migrations e descartar exatamente o clone criado está documentado em [`../../docs/operations/backup-restauracao-sql-server.md`](../../docs/operations/backup-restauracao-sql-server.md).
 
 O script aceita somente `localhost,1433` e `AVALIACAO_PROD`, exige `-Execute` mais confirmação textual e não imprime caminhos ou identidades. O switch adicional `-RemoveBackupAfterValidation` remove de forma irreversível apenas o arquivo único criado pela execução, somente após todas as validações e a limpeza do clone; qualquer divergência falha fechada. Sua presença no repositório não autoriza execução; confirme janela, impacto em disco, proteção em repouso, retenção e recuperação antes de usá-lo.
+
+
+## Ampliação de exclusão de cadastros — ADC-COR-022
+
+O script manual [004_conceder_delete_cadastros_sem_uso.sql](004_conceder_delete_cadastros_sem_uso.sql) prepara exclusivamente os grants de DELETE em `dbo.area` e `dbo.colaborador` para a identidade SQL existente de AVALIACAO_PROD. Não é migration, não é chamado pelo launcher e sua criação não autoriza executá-lo. Registrar grants anteriores e obter autorização operacional antes de aplicar. API/SPA compatíveis são necessárias; a API bloqueia cadastro ativo ou com referências, inclusive histórico, e preserva auditoria. Sem grant, edição/reativação seguem disponíveis e exclusão retorna erro seguro.
+
+Recuperação dos grants: revogar somente as permissões adicionadas por essa operação, preservando concessões anteriores. Não remove dados e não recupera um cadastro que tenha sido excluído posteriormente. Procedimento completo em [manutenção de cadastros e vínculos](../../docs/operations/manutencao-cadastros-e-importacao-vinculos.md).

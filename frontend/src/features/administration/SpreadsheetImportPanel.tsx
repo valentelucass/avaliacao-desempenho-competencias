@@ -25,9 +25,12 @@ const importLabels = {
   collaborators: 'colaboradores',
   assignments: 'atribuições de questionário',
   allocations: 'lotações',
+  'manager-assignments': 'vínculos gestor-colaborador',
 } as const
 
 const importInstructions = {
+  'manager-assignments':
+    'Cabeçalhos: Conta avaliadora, Colaborador e Início. Use o nome de exibição da conta de Gestor ou RH, como aparece no seletor desta tela, o nome cadastrado do colaborador e uma data dd/mm/aaaa ou do Excel. As três colunas são obrigatórias.',
   collaborators:
     'Cabeçalho: Colaboradores. Cadastros existentes serão mantidos; nomes ambíguos precisam de revisão individual.',
   assignments:
@@ -64,14 +67,22 @@ export function SpreadsheetImportPanel({
   const ready =
     file && (kind !== 'assignments' || cycles.some((cycle) => cycle.cycleId === cycleId))
 
+  const discard = useCallback(
+    (previewId: string) =>
+      kind === 'manager-assignments'
+        ? api.discardSpreadsheet(previewId, kind)
+        : api.discardSpreadsheet(previewId),
+    [api, kind],
+  )
+
   const discardPreview = useCallback(() => {
     const pending = pendingPreview.current
     pendingPreview.current = undefined
     if (pending)
-      void api.discardSpreadsheet(pending).catch(() => {
+      void discard(pending).catch(() => {
         /* Se a rede falhar, a prévia também expira no servidor. */
       })
-  }, [api])
+  }, [discard])
 
   useEffect(() => {
     mounted.current = true
@@ -114,7 +125,7 @@ export function SpreadsheetImportPanel({
   function review() {
     if (!ready) return
     void run(async () => {
-      if (preview) await api.discardSpreadsheet(preview.id)
+      if (preview) await discard(preview.id)
       pendingPreview.current = undefined
       if (!mounted.current) return
       setPreview(undefined)
@@ -133,7 +144,9 @@ export function SpreadsheetImportPanel({
   function confirm() {
     if (!preview || preview.errors || !preview.creates || completed) return
     void run(async () => {
-      const result = await api.confirmSpreadsheet(preview.id)
+      const result = await (kind === 'manager-assignments'
+        ? api.confirmSpreadsheet(preview.id, kind)
+        : api.confirmSpreadsheet(preview.id))
       if (!mounted.current) return
       setCompleted(true)
       setNotice(
@@ -146,7 +159,9 @@ export function SpreadsheetImportPanel({
   function page(number: number) {
     if (preview)
       void run(async () => {
-        const result = await api.getSpreadsheetPreview(preview.id, number)
+        const result = await (kind === 'manager-assignments'
+          ? api.getSpreadsheetPreview(preview.id, number, kind)
+          : api.getSpreadsheetPreview(preview.id, number))
         if (mounted.current) setPreview(result)
       })
   }
@@ -182,6 +197,19 @@ export function SpreadsheetImportPanel({
           registros por arquivo, em uma única aba e sem fórmulas.
         </p>
         <p className="muted">{importInstructions[kind]}</p>
+        {kind === 'manager-assignments' && (
+          <div>
+            <a className="button" href="/templates/vinculos-gestor-colaborador.xlsx" download>
+              Baixar modelo de vínculos
+            </a>
+            <p className="muted">
+              Cada linha concede à conta avaliadora acesso ao colaborador indicado, conforme a
+              vigência. Confira os nomes antes de confirmar. Nomes ambíguos e períodos conflitantes
+              exigem revisão individual. Vínculos idênticos serão mantidos; a planilha não troca
+              gestores nem cria contas.
+            </p>
+          </div>
+        )}
         {kind === 'allocations' && (
           <p className="muted">
             Colaborador e início são obrigatórios. Use uma data do Excel ou dd/mm/aaaa, sem horário.
@@ -306,6 +334,12 @@ export function SpreadsheetImportPanel({
                   <tr>
                     <th scope="col">Linha</th>
                     <th scope="col">Colaborador</th>
+                    {kind === 'manager-assignments' && (
+                      <>
+                        <th scope="col">Conta avaliadora</th>
+                        <th scope="col">Início</th>
+                      </>
+                    )}
                     {kind === 'allocations' && (
                       <>
                         <th scope="col">Filial</th>
@@ -323,6 +357,16 @@ export function SpreadsheetImportPanel({
                     <tr key={row.line}>
                       <td data-label="Linha">{row.line}</td>
                       <td data-label="Colaborador">{row.name}</td>
+                      {kind === 'manager-assignments' && (
+                        <>
+                          <td data-label="Conta avaliadora">{row.managerAssignment?.manager}</td>
+                          <td data-label="Início">
+                            <span className="spreadsheet-import__date">
+                              {row.managerAssignment?.startsOn}
+                            </span>
+                          </td>
+                        </>
+                      )}
                       {kind === 'allocations' && (
                         <>
                           <td data-label="Filial">{row.allocation?.branch || 'Não informada'}</td>

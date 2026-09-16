@@ -88,9 +88,13 @@ export interface ApiClient {
     file: File,
     cycleId?: string,
   ): Promise<SpreadsheetImportPreview>
-  getSpreadsheetPreview(id: string, page: number): Promise<SpreadsheetImportPreview>
-  confirmSpreadsheet(id: string): Promise<SpreadsheetImportResult>
-  discardSpreadsheet(id: string): Promise<void>
+  getSpreadsheetPreview(
+    id: string,
+    page: number,
+    kind?: SpreadsheetImportKind,
+  ): Promise<SpreadsheetImportPreview>
+  confirmSpreadsheet(id: string, kind?: SpreadsheetImportKind): Promise<SpreadsheetImportResult>
+  discardSpreadsheet(id: string, kind?: SpreadsheetImportKind): Promise<void>
   currentUser(): Promise<CurrentUser | null>
   refreshSession(): Promise<CurrentUser | null>
   restoreSession(): Promise<CurrentUser | null>
@@ -130,8 +134,14 @@ export interface ApiClient {
   deactivateBranch(branchId: string): Promise<void>
   deleteInactiveUnusedBranch(branchId: string): Promise<void>
   createArea(input: NamedResourceInput): Promise<CreatedResource>
+  updateArea(id: string, input: NamedResourceInput): Promise<void>
+  reactivateArea(id: string): Promise<void>
+  deleteInactiveUnusedArea(id: string): Promise<void>
   deactivateArea(areaId: string): Promise<void>
   createCollaborator(input: CreateCollaboratorInput): Promise<CreatedResource>
+  updateCollaborator(id: string, input: CreateCollaboratorInput): Promise<void>
+  reactivateCollaborator(id: string): Promise<void>
+  deleteInactiveUnusedCollaborator(id: string): Promise<void>
   deactivateCollaborator(collaboratorId: string): Promise<void>
   createAllocation(input: CreateAllocationInput): Promise<CreatedResource>
   closeAllocation(allocationId: string, input: CloseRecordInput): Promise<void>
@@ -208,7 +218,11 @@ export class HttpApiClient implements ApiClient {
     cycleId?: string,
   ): Promise<SpreadsheetImportPreview> {
     const query = cycleId ? `?cycleId=${encodeURIComponent(cycleId)}` : ''
-    return this.request(`/master-data/imports/${kind}/preview${query}`, {
+    const path =
+      kind === 'manager-assignments'
+        ? '/administration/manager-assignment-imports/preview'
+        : `/master-data/imports/${kind}/preview${query}`
+    return this.request(path, {
       method: 'POST',
       rawBody: file,
       requiresCsrf: true,
@@ -217,17 +231,26 @@ export class HttpApiClient implements ApiClient {
       },
     })
   }
-  getSpreadsheetPreview(id: string, page: number): Promise<SpreadsheetImportPreview> {
-    return this.request(`/master-data/imports/${encodeURIComponent(id)}?page=${page}`)
+  private spreadsheetPath(kind?: SpreadsheetImportKind): string {
+    return kind === 'manager-assignments'
+      ? '/administration/manager-assignment-imports'
+      : '/master-data/imports'
   }
-  confirmSpreadsheet(id: string): Promise<SpreadsheetImportResult> {
-    return this.request(`/master-data/imports/${encodeURIComponent(id)}/confirm`, {
+  getSpreadsheetPreview(
+    id: string,
+    page: number,
+    kind?: SpreadsheetImportKind,
+  ): Promise<SpreadsheetImportPreview> {
+    return this.request(`${this.spreadsheetPath(kind)}/${encodeURIComponent(id)}?page=${page}`)
+  }
+  confirmSpreadsheet(id: string, kind?: SpreadsheetImportKind): Promise<SpreadsheetImportResult> {
+    return this.request(`${this.spreadsheetPath(kind)}/${encodeURIComponent(id)}/confirm`, {
       method: 'POST',
       requiresCsrf: true,
     })
   }
-  discardSpreadsheet(id: string): Promise<void> {
-    return this.request(`/master-data/imports/${encodeURIComponent(id)}`, {
+  discardSpreadsheet(id: string, kind?: SpreadsheetImportKind): Promise<void> {
+    return this.request(`${this.spreadsheetPath(kind)}/${encodeURIComponent(id)}`, {
       method: 'DELETE',
       requiresCsrf: true,
     })
@@ -486,6 +509,26 @@ export class HttpApiClient implements ApiClient {
     })
   }
 
+  updateArea(id: string, input: NamedResourceInput): Promise<void> {
+    return this.request('/master-data/areas/' + encodeURIComponent(id), {
+      method: 'PATCH',
+      body: input,
+      requiresCsrf: true,
+    })
+  }
+  reactivateArea(id: string): Promise<void> {
+    return this.request('/master-data/areas/' + encodeURIComponent(id) + '/reactivate', {
+      method: 'PATCH',
+      requiresCsrf: true,
+    })
+  }
+  deleteInactiveUnusedArea(id: string): Promise<void> {
+    return this.request('/master-data/areas/' + encodeURIComponent(id), {
+      method: 'DELETE',
+      requiresCsrf: true,
+    })
+  }
+
   deactivateArea(areaId: string): Promise<void> {
     return this.request<void>(`/master-data/areas/${encodeURIComponent(areaId)}/deactivate`, {
       method: 'PATCH',
@@ -497,6 +540,26 @@ export class HttpApiClient implements ApiClient {
     return this.request<CreatedResource>('/master-data/collaborators', {
       method: 'POST',
       body: input,
+      requiresCsrf: true,
+    })
+  }
+
+  updateCollaborator(id: string, input: CreateCollaboratorInput): Promise<void> {
+    return this.request('/master-data/collaborators/' + encodeURIComponent(id), {
+      method: 'PATCH',
+      body: input,
+      requiresCsrf: true,
+    })
+  }
+  reactivateCollaborator(id: string): Promise<void> {
+    return this.request('/master-data/collaborators/' + encodeURIComponent(id) + '/reactivate', {
+      method: 'PATCH',
+      requiresCsrf: true,
+    })
+  }
+  deleteInactiveUnusedCollaborator(id: string): Promise<void> {
+    return this.request('/master-data/collaborators/' + encodeURIComponent(id), {
+      method: 'DELETE',
       requiresCsrf: true,
     })
   }

@@ -20,11 +20,19 @@ Manter conferência temporária em memória, limitada por ator e globalmente, co
 
 Revalidar a conferência com bloqueios UPDLOCK/HOLDLOCK na transação de confirmação e reutilizar os casos de uso auditados. Nenhuma escrita parcial. Repetição do mesmo UUID devolve o resultado já confirmado enquanto a prévia existir. Não alterar o schema para isso.
 
+## Ampliação ADC-IMP-003 — vínculos de gestão
+
+Em 16/09/2026, o usuário solicitou importação de vínculos gestor–colaborador e pediu definir o modelo com base na documentação e nas relações existentes. Reutilizar leitura restrita, limites, prévia e confirmação transacional, com regras de domínio próprias. Cabeçalhos: Conta avaliadora (nome de exibição da conta elegível no seletor), Colaborador e Início. Nomes ambíguos não são resolvidos automaticamente; vínculos de conta ou texto livre não substituem a escolha explícita.
+
+A permissão de vínculo é distinta de CADASTROS.GERIR. Usar namespace `/administration/manager-assignment-imports` com permissão específica antes da leitura do arquivo e nos métodos; validar também a família de permissão da prévia em todas as operações do serviço. Isso impede confirmar um lote de acesso pela rota de cadastros após perda da permissão de vínculo. Não expor login ou novas projeções de identidade. Modelo XLSX estático vazio disponível na SPA; nenhum arquivo enviado é armazenado.
+
+Manter vínculos idênticos, impedir substituição/sobreposição e preservar histórico. Ausência de conta ativa Gestor/RH ou colaborador ativo bloqueia; não provisionar contas/perfis. Operação solicitada amplia apenas o vínculo gestor–colaborador, não os outros dois tipos de vínculo.
+
 ## Consequências e limites
 
 - Reinício ou expiração exige nova conferência. Se houve commit seguido de perda da resposta/reinício, reenviar o modelo mostra registros existentes para conferência, sem atualizar nem duplicar automaticamente.
 - Homônimos e colaboradores inativos bloqueiam a importação; o nome não passa a ser chave única do cadastro. Novas pessoas homônimas exigem cadastro individual até definição de identificador apropriado.
-- Filial é descartada nas atribuições por instrução explícita do usuário. Somente o importador Lotações cria novos períodos abertos, sem substituir/encerrar o histórico; vínculos de gestão, usuários e permissões permanecem fora do escopo. Filial e área referenciam cadastros ativos existentes; gestor é texto.
+- Filial é descartada nas atribuições por instrução explícita do usuário. Somente o importador Lotações cria novos períodos abertos, sem substituir/encerrar o histórico; vínculos de gestão, usuários e permissões permanecem fora do escopo dos três importadores de cadastros; vínculos possuem o fluxo específico ADC-IMP-003. Filial e área referenciam cadastros ativos existentes; gestor é texto.
 - Consultas usam parâmetros, OPENJSON e apenas nomes do lote. Os bloqueios podem serializar cadastros durante a confirmação; o lote tem limite de 1.000 registros. Não há alegação de ensaio de carga produtiva.
 - Não há antimalware externo nesta extração de valores sem execução, armazenamento ou redistribuição. A introdução dessas capacidades ou de outro formato exige reavaliar verificação antimalware e retenção.
 - Limites por processo e prévias em memória precisam ser revistos antes de múltiplas instâncias. Não há nova integração nem infraestrutura implícita.

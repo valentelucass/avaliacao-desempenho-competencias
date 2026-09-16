@@ -6,6 +6,7 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+import br.com.avaliacao.desempenho.cadastros.api.ManagerAssignmentImportController;
 import br.com.avaliacao.desempenho.cadastros.api.MasterDataExceptionHandler;
 import br.com.avaliacao.desempenho.cadastros.api.SpreadsheetImportController;
 import br.com.avaliacao.desempenho.cadastros.application.*;
@@ -34,7 +35,9 @@ class SpreadsheetImportHttpTests {
         new AuthenticatedPrincipal(
             new AuthorizedUser(actor, "Pessoa fictícia", false, Set.of("CADASTROS.GERIR")),
             UUID.randomUUID());
-    return MockMvcBuilders.standaloneSetup(new SpreadsheetImportController(service))
+    return MockMvcBuilders.standaloneSetup(
+            new SpreadsheetImportController(service),
+            new ManagerAssignmentImportController(service))
         .setControllerAdvice(new MasterDataExceptionHandler())
         .addFilters(new RequestCorrelationFilter())
         .setCustomArgumentResolvers(
@@ -52,6 +55,53 @@ class SpreadsheetImportHttpTests {
               }
             })
         .build();
+  }
+
+  @Test
+  void managerPreviewUsesMinimizedDtoAndCannotBeReadThroughMasterDataRoutes() throws Exception {
+    var repository = mock(SpreadsheetImportRepository.class);
+    UUID person = UUID.randomUUID(), manager = UUID.randomUUID(), actor = UUID.randomUUID();
+    when(repository.managerAssignmentSnapshot(any(), any(), anyBoolean()))
+        .thenReturn(
+            new br.com.avaliacao.desempenho.cadastros.domain.model.ManagerAssignmentImport.Snapshot(
+                Map.of(
+                    "PESSOA",
+                    java.util.List.of(
+                        new br.com.avaliacao.desempenho.cadastros.domain.model.SpreadsheetImport
+                            .Collaborator(person, true))),
+                Map.of("GESTORA", java.util.List.of(manager)),
+                Map.of()));
+    var service =
+        new SpreadsheetImportService(
+            new RestrictedXlsxReader(),
+            repository,
+            mock(MasterDataApplicationService.class),
+            mock(TransactionTemplate.class),
+            Clock.systemUTC());
+    var mvc = mvc(service, actor);
+    String body =
+        mvc.perform(
+                post("/api/v1/administration/manager-assignment-imports/preview")
+                    .contentType(SpreadsheetImportController.XLSX)
+                    .content(ManagerAssignmentImportTests.file("Gestora", "Pessoa", "16/09/2026")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.creates").value(1))
+            .andExpect(jsonPath("$.rows[0].managerAssignment.manager").value("Gestora"))
+            .andExpect(jsonPath("$.rows[0].managerAssignment.startsOn").value("16/09/2026"))
+            .andExpect(jsonPath("$.rows[0].managerAssignment.managerUserId").doesNotExist())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    String id = JsonPath.read(body, "$.id");
+    assertThat(body)
+        .doesNotContain(person.toString(), manager.toString(), actor.toString(), "login");
+    mvc.perform(get("/api/v1/master-data/imports/" + id)).andExpect(status().isConflict());
+    mvc.perform(get("/api/v1/administration/manager-assignment-imports/" + id))
+        .andExpect(status().isOk());
+    mvc.perform(delete("/api/v1/administration/manager-assignment-imports/" + id))
+        .andExpect(status().isOk());
+    mvc.perform(get("/api/v1/administration/manager-assignment-imports/" + id))
+        .andExpect(status().isConflict());
   }
 
   @Test

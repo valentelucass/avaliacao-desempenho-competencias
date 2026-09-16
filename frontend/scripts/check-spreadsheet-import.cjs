@@ -89,7 +89,7 @@ module.exports = async function checkSpreadsheetImport({ send, frameId, css }) {
       })
       await evaluate(code)
       await ready(
-        "window.spreadsheetImportCalls.length===6 && document.querySelectorAll('.spreadsheet-import__toggle').length===3",
+        "window.spreadsheetImportCalls.length===8 && document.querySelectorAll('.spreadsheet-import__toggle').length===4",
       )
       // Fechar os avisos da base vazia antes de inspecionar a área de preparação.
       await evaluate(
@@ -99,7 +99,7 @@ module.exports = async function checkSpreadsheetImport({ send, frameId, css }) {
       await evaluate(
         `(()=>{const l=[...document.querySelectorAll('label')].find(e=>e.textContent==='Nome de exibição do colaborador');const i=document.getElementById(l.htmlFor);Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(i,'Pessoa fictícia em edição');i.dispatchEvent(new Event('input',{bubbles:true}));})()`,
       )
-      for (let index = 0; index < 3; index++) {
+      for (let index = 0; index < 4; index++) {
         await evaluate(
           `(()=>{const b=document.querySelectorAll('.spreadsheet-import__toggle')[${index}];b.scrollIntoView({block:'center',behavior:'instant'});b.focus()})()`,
         )
@@ -149,6 +149,8 @@ module.exports = async function checkSpreadsheetImport({ send, frameId, css }) {
         'listActiveAllocations',
         'listActiveQuestionnaireAssignments',
         'listQuestionnaireAssignmentOptions',
+        'getManagerAssignmentOptions',
+        'listActiveManagerAssignments',
       ])
       assert.equal(
         await evaluate(
@@ -156,7 +158,7 @@ module.exports = async function checkSpreadsheetImport({ send, frameId, css }) {
         ),
         'Pessoa fictícia em edição',
       )
-      for (const index of [0, 1, 2]) {
+      for (const index of [0, 1, 2, 3]) {
         await evaluate(`document.querySelectorAll('.spreadsheet-import__toggle')[${index}].click()`)
         await ready(`!document.querySelectorAll('.spreadsheet-import__panel')[${index}].hidden`)
         await evaluate(
@@ -203,6 +205,20 @@ module.exports = async function checkSpreadsheetImport({ send, frameId, css }) {
             true,
           )
         }
+        if (index === 3) {
+          assert.equal(
+            await evaluate(
+              `document.querySelectorAll('.spreadsheet-import__panel')[3].querySelector('td[data-label="Conta avaliadora"]').textContent`,
+            ),
+            'Gestora fictícia autorizada',
+          )
+          assert.equal(
+            await evaluate(
+              `document.querySelectorAll('.spreadsheet-import__panel')[3].querySelector('a[download]').getAttribute('href')`,
+            ),
+            '/templates/vinculos-gestor-colaborador.xlsx',
+          )
+        }
         if (index === 2) {
           assert.equal(
             await evaluate(
@@ -218,12 +234,12 @@ module.exports = async function checkSpreadsheetImport({ send, frameId, css }) {
             'Questionário fictício',
           )
         }
-        if ((index === 1 || index === 2) && width !== 320) {
+        if ((index === 1 || index === 2 || index === 3) && width !== 320) {
           await evaluate(
             `document.querySelectorAll('.spreadsheet-import__panel')[${index}].scrollIntoView({block:'start',behavior:'instant'})`,
           )
           fs.writeFileSync(
-            `dist/import-functional-${index === 1 ? 'allocations-' : ''}${theme}-${width}.png`,
+            `dist/import-functional-${index === 1 ? 'allocations-' : index === 3 ? 'managers-' : ''}${theme}-${width}.png`,
             Buffer.from((await send('Page.captureScreenshot', { format: 'png' })).data, 'base64'),
           )
         }
@@ -252,9 +268,9 @@ module.exports = async function checkSpreadsheetImport({ send, frameId, css }) {
       cases.push({
         theme,
         width,
-        sections: 3,
+        sections: 4,
         keyboard: true,
-        allThreeImportsEnabled: true,
+        allFourImportsEnabled: true,
         previewAndExplicitConfirmation: true,
         noCallsOnExpand: true,
         manualInputPreserved: true,

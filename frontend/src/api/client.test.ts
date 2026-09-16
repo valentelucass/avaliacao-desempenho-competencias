@@ -2,6 +2,35 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { HttpApiClient } from './client'
 
 describe('HttpApiClient', () => {
+  it('mantém todas as operações de importação de vínculo na rota autorizada e protege as escritas', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ token: 'csrf-synthetic' }))
+      .mockImplementation(async () =>
+        jsonResponse({ id: 'preview-1', rows: [], created: 1, existing: 0 }),
+      )
+    vi.stubGlobal('fetch', fetchMock)
+    const api = new HttpApiClient()
+    const file = new File(['synthetic xlsx'], 'exemplo.xlsx')
+    await api.previewSpreadsheet('manager-assignments', file)
+    await api.getSpreadsheetPreview('preview-1', 2, 'manager-assignments')
+    await api.confirmSpreadsheet('preview-1', 'manager-assignments')
+    await api.discardSpreadsheet('preview-1', 'manager-assignments')
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+      '/api/v1/auth/csrf',
+      '/api/v1/administration/manager-assignment-imports/preview',
+      '/api/v1/administration/manager-assignment-imports/preview-1?page=2',
+      '/api/v1/administration/manager-assignment-imports/preview-1/confirm',
+      '/api/v1/administration/manager-assignment-imports/preview-1',
+    ])
+    expect(fetchMock.mock.calls[1][1].body).toBe(file)
+    for (const index of [1, 3, 4]) {
+      expect(fetchMock.mock.calls[index][1].credentials).toBe('include')
+      expect(fetchMock.mock.calls[index][1].headers.get('X-CSRF-TOKEN')).toBe('csrf-synthetic')
+    }
+    expect(fetchMock.mock.calls[4][1].method).toBe('DELETE')
+  })
+
   it('restaura opcionalmente sem consultar identidade nem refresh quando não há sessão', async () => {
     const fetchMock = vi
       .fn()

@@ -81,7 +81,7 @@ public class RestrictedXlsxReader implements SpreadsheetReader {
                     : "";
         if (!name.getAttribute("name").equals("_xlnm._FilterDatabase")
             || !range.matches(
-                kind == Kind.ALLOCATIONS
+                (kind == Kind.ALLOCATIONS || kind == Kind.MANAGER_ASSIGNMENTS)
                     ? "\\$[A-Z]\\$[1-9][0-9]{0,4}:\\$[A-Z]\\$[1-9][0-9]{0,4}"
                     : "\\$[A-D]\\$[1-9][0-9]{0,4}:\\$[A-D]\\$[1-9][0-9]{0,4}"))
           throw failure(INVALID_FILE);
@@ -101,7 +101,7 @@ public class RestrictedXlsxReader implements SpreadsheetReader {
                 .contains(link.getAttribute("Target"))) worksheetLinked = true;
       }
       if (!worksheetLinked) throw failure(INVALID_FILE);
-      if (kind == Kind.ALLOCATIONS) {
+      if (kind == Kind.ALLOCATIONS || kind == Kind.MANAGER_ASSIGNMENTS) {
         NodeList properties = workbook.getElementsByTagNameNS(SHEET_NS, "workbookPr");
         if (properties.getLength() > 1) throw failure(INVALID_FILE);
         String dateSystem =
@@ -113,7 +113,8 @@ public class RestrictedXlsxReader implements SpreadsheetReader {
         return XlsxAllocationRows.read(
             required(parts, "xl/worksheets/sheet1.xml"),
             strings(parts.get("xl/sharedStrings.xml"), 26026),
-            dateSystem.equals("1") || dateSystem.equals("true"));
+            dateSystem.equals("1") || dateSystem.equals("true"),
+            kind == Kind.MANAGER_ASSIGNMENTS);
       }
       return rows(
           required(parts, "xl/worksheets/sheet1.xml"),

@@ -162,6 +162,8 @@ public class ApiSecurityConfiguration {
                     .requestMatchers(
                         HttpMethod.GET, "/api/v1/evaluation-cycles/*/administration-draft")
                     .hasAuthority("PERMISSION:CICLOS.GERIR")
+                    .requestMatchers("/api/v1/administration/manager-assignment-imports/**")
+                    .hasAuthority("PERMISSION:VINCULOS_GESTOR_COLABORADOR.GERIR")
                     .requestMatchers("/api/v1/master-data/imports/**")
                     .hasAuthority("PERMISSION:CADASTROS.GERIR")
                     .requestMatchers(

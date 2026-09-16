@@ -37,6 +37,7 @@ function setup(
     preview?: SpreadsheetImportPreview
     assignments?: boolean
     allocations?: boolean
+    managers?: boolean
     failure?: ApiError
   } = {},
 ) {
@@ -54,7 +55,13 @@ function setup(
   const view = render(
     <SpreadsheetImportPanel
       kind={
-        options.allocations ? 'allocations' : options.assignments ? 'assignments' : 'collaborators'
+        options.managers
+          ? 'manager-assignments'
+          : options.allocations
+            ? 'allocations'
+            : options.assignments
+              ? 'assignments'
+              : 'collaborators'
       }
       api={api}
       disabled={false}
@@ -80,6 +87,37 @@ function setup(
 }
 
 describe('SpreadsheetImportPanel', () => {
+  it('confere a conta avaliadora e usa o escopo de vínculos na confirmação e descarte', async () => {
+    const { api, file, imported, unmount, container } = setup({
+      managers: true,
+      preview: {
+        ...sample,
+        rows: [
+          {
+            ...sample.rows[0],
+            managerAssignment: { manager: 'Gestora fictícia', startsOn: '16/09/2026' },
+          },
+        ],
+      },
+    })
+    expect(screen.getByText(/Cada linha concede/)).toBeVisible()
+    fireEvent.click(screen.getByRole('button', { name: 'Conferir planilha' }))
+    await waitFor(() => expect(screen.getByText('Gestora fictícia')).toBeVisible())
+    expect(api.previewSpreadsheet).toHaveBeenCalledWith('manager-assignments', file, undefined)
+    expect(api.confirmSpreadsheet).not.toHaveBeenCalled()
+    expect(screen.getByText('16/09/2026')).toBeVisible()
+    expect(
+      (await axe(container, { rules: { 'color-contrast': { enabled: false } } })).violations,
+    ).toHaveLength(0)
+    fireEvent.click(screen.getByRole('button', { name: /Confirmar importação/ }))
+    await waitFor(() =>
+      expect(api.confirmSpreadsheet).toHaveBeenCalledWith('preview-1', 'manager-assignments'),
+    )
+    await waitFor(() => expect(imported).toHaveBeenCalledTimes(1))
+    unmount()
+    expect(api.discardSpreadsheet).toHaveBeenCalledWith('preview-1', 'manager-assignments')
+  })
+
   it.each(['assignments', 'allocations'])(
     'explica o bloqueio global de %s mesmo em página com linhas válidas',
     async (kind) => {

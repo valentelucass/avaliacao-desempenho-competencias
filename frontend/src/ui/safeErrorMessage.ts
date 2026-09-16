@@ -22,6 +22,10 @@ function withReference(message: string, error: unknown): string {
 function errorMessage(error: unknown): string {
   if (error instanceof ApiError) {
     const importErrors: Record<string, string> = {
+      MASTER_DATA_DELETE_BLOCKED:
+        'Só é possível excluir um cadastro desativado e sem uso. Lotações, vínculos, atribuições e avaliações, inclusive históricos, impedem a exclusão. Edite ou reative o cadastro.',
+      MASTER_DATA_DELETE_UNAVAILABLE:
+        'A exclusão ainda não foi habilitada neste ambiente. Solicite a configuração ao administrador; edição e reativação continuam disponíveis.',
       IMPORT_INVALID_FILE:
         'Use o modelo .xlsx com uma aba e os cabeçalhos esperados. A planilha deve conter somente valores, sem fórmulas, links ou objetos.',
       IMPORT_LIMIT_EXCEEDED:

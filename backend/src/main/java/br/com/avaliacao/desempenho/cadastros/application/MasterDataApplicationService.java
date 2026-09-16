@@ -72,6 +72,41 @@ public class MasterDataApplicationService {
         });
   }
 
+  public void updateArea(UUID resourceId, String name, MasterDataCommandContext context) {
+    var record =
+        new MasterDataRepository.NamedRecord(
+            MasterDataInput.requiredId(resourceId, "cadastro"),
+            MasterDataInput.requiredText(name, "nome", 200));
+    write(
+        () -> {
+          requireChange(repository.updateArea(record));
+          audit(context, "CADASTRO.AREA.EDITAR", "AREA", record.id());
+          return Boolean.TRUE;
+        });
+  }
+
+  public void reactivateArea(UUID resourceId, MasterDataCommandContext context) {
+    UUID id = MasterDataInput.requiredId(resourceId, "cadastro");
+    write(
+        () -> {
+          requireChange(repository.reactivateArea(id));
+          audit(context, "CADASTRO.AREA.REATIVAR", "AREA", id);
+          return Boolean.TRUE;
+        });
+  }
+
+  public void deleteInactiveUnusedArea(UUID resourceId, MasterDataCommandContext context) {
+    UUID id = MasterDataInput.requiredId(resourceId, "cadastro");
+    write(
+        () -> {
+          if (!repository.deleteInactiveUnusedArea(id))
+            throw new MasterDataException(
+                Reason.DELETION_BLOCKED, "Cadastro ativo ou com referências.");
+          audit(context, "CADASTRO.AREA.EXCLUIR", "AREA", id);
+          return Boolean.TRUE;
+        });
+  }
+
   public void deactivateArea(UUID areaId, MasterDataCommandContext context) {
     UUID id = MasterDataInput.requiredId(areaId, "área");
     write(
@@ -92,6 +127,41 @@ public class MasterDataApplicationService {
           requireChange(repository.createCollaborator(collaborator));
           audit(context, "CADASTRO.COLABORADOR.CRIAR", "COLABORADOR", id);
           return id;
+        });
+  }
+
+  public void updateCollaborator(UUID resourceId, String name, MasterDataCommandContext context) {
+    var record =
+        new MasterDataRepository.NamedRecord(
+            MasterDataInput.requiredId(resourceId, "cadastro"),
+            MasterDataInput.requiredText(name, "nome", 200));
+    write(
+        () -> {
+          requireChange(repository.updateCollaborator(record));
+          audit(context, "CADASTRO.COLABORADOR.EDITAR", "COLABORADOR", record.id());
+          return Boolean.TRUE;
+        });
+  }
+
+  public void reactivateCollaborator(UUID resourceId, MasterDataCommandContext context) {
+    UUID id = MasterDataInput.requiredId(resourceId, "cadastro");
+    write(
+        () -> {
+          requireChange(repository.reactivateCollaborator(id));
+          audit(context, "CADASTRO.COLABORADOR.REATIVAR", "COLABORADOR", id);
+          return Boolean.TRUE;
+        });
+  }
+
+  public void deleteInactiveUnusedCollaborator(UUID resourceId, MasterDataCommandContext context) {
+    UUID id = MasterDataInput.requiredId(resourceId, "cadastro");
+    write(
+        () -> {
+          if (!repository.deleteInactiveUnusedCollaborator(id))
+            throw new MasterDataException(
+                Reason.DELETION_BLOCKED, "Cadastro ativo ou com referências.");
+          audit(context, "CADASTRO.COLABORADOR.EXCLUIR", "COLABORADOR", id);
+          return Boolean.TRUE;
         });
   }
 

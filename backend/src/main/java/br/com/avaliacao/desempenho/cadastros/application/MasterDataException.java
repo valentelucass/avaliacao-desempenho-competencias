@@ -16,6 +16,8 @@ public final class MasterDataException extends RuntimeException {
 
   public enum Reason {
     INVALID_INPUT,
+    DELETION_BLOCKED,
+    DELETION_UNAVAILABLE,
     CONFLICT,
     UNAVAILABLE
   }

@@ -3838,8 +3838,10 @@ thead th {
     text-align: right;
   }
 
-  .master-data-quick-grid .administration-users .table-actions {
+  .master-data-administration .administration-users .table-actions {
     justify-content: flex-end;
+    flex-wrap: nowrap;
+    min-width: max-content;
   }
 
   .master-data-administration .master-data-allocation-form {

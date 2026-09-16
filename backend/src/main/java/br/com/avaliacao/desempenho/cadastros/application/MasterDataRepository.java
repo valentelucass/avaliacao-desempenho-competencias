@@ -19,9 +19,21 @@ public interface MasterDataRepository {
 
   boolean deactivateArea(UUID areaId);
 
+  boolean updateArea(NamedRecord record);
+
+  boolean reactivateArea(UUID id);
+
+  boolean deleteInactiveUnusedArea(UUID id);
+
   boolean createCollaborator(NamedRecord collaborator);
 
   boolean deactivateCollaborator(UUID collaboratorId);
+
+  boolean updateCollaborator(NamedRecord record);
+
+  boolean reactivateCollaborator(UUID id);
+
+  boolean deleteInactiveUnusedCollaborator(UUID id);
 
   boolean createAllocation(AllocationRecord allocation);
 

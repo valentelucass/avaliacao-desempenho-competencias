@@ -15,7 +15,8 @@ public final class SpreadsheetImport {
   public enum Kind {
     COLLABORATORS,
     ASSIGNMENTS,
-    ALLOCATIONS
+    ALLOCATIONS,
+    MANAGER_ASSIGNMENTS
   }
 
   public enum Status {
@@ -29,7 +30,17 @@ public final class SpreadsheetImport {
       String name,
       String cycle,
       String questionnaire,
-      AllocationImport.Fields allocation) {
+      AllocationImport.Fields allocation,
+      ManagerAssignmentImport.Fields managerAssignment) {
+    public SourceRow(
+        int line,
+        String name,
+        String cycle,
+        String questionnaire,
+        AllocationImport.Fields allocation) {
+      this(line, name, cycle, questionnaire, allocation, null);
+    }
+
     public SourceRow(int line, String name, String cycle, String questionnaire) {
       this(line, name, cycle, questionnaire, null);
     }
@@ -52,7 +63,29 @@ public final class SpreadsheetImport {
       String message,
       UUID collaboratorId,
       UUID questionnaireId,
-      AllocationImport.Resolved allocation) {
+      AllocationImport.Resolved allocation,
+      ManagerAssignmentImport.Resolved managerAssignment) {
+    public Row(
+        int line,
+        String name,
+        String questionnaire,
+        Status status,
+        String message,
+        UUID collaboratorId,
+        UUID questionnaireId,
+        AllocationImport.Resolved allocation) {
+      this(
+          line,
+          name,
+          questionnaire,
+          status,
+          message,
+          collaboratorId,
+          questionnaireId,
+          allocation,
+          null);
+    }
+
     public Row(
         int line,
         String name,

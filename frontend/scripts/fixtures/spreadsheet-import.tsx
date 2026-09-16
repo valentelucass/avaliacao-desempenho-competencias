@@ -1,9 +1,12 @@
 import { createRoot } from 'react-dom/client'
 import type { ApiClient } from '../../src/api/client'
+import { RelationshipAdministrationPanel } from '../../src/features/administration/RelationshipAdministrationPanel'
 import { MasterDataAdministrationPanel } from '../../src/features/administration/MasterDataAdministrationPanel'
 
 const calls: string[] = []
 const reads = new Set([
+  'getManagerAssignmentOptions',
+  'listActiveManagerAssignments',
   'listBranches',
   'listAreas',
   'listCollaborators',
@@ -35,6 +38,7 @@ const api = new Proxy({} as ApiClient, {
               manager: 'Gestor fictício responsável pela unidade de exemplo',
               startsOn: '15/09/2026',
             },
+            managerAssignment: { manager: 'Gestora fictícia autorizada', startsOn: '16/09/2026' },
             status: 'CREATE',
             message: 'Criar registro.',
           },
@@ -48,6 +52,7 @@ const api = new Proxy({} as ApiClient, {
               manager: 'Gestor Exemplo',
               startsOn: '15/09/2026',
             },
+            managerAssignment: { manager: 'Gestora fictícia autorizada', startsOn: '16/09/2026' },
             status: 'EXISTS',
             message: 'Registro já cadastrado; será mantido.',
           },
@@ -55,6 +60,11 @@ const api = new Proxy({} as ApiClient, {
       }
     if (method === 'confirmSpreadsheet') return { created: 1, existing: 1 }
     if (method === 'discardSpreadsheet') return undefined
+    if (method === 'getManagerAssignmentOptions')
+      return {
+        managers: [{ id: 'manager-fixture', displayName: 'Gestora fictícia autorizada' }],
+        collaborators: [{ id: 'collaborator-fixture', displayName: 'Pessoa fictícia' }],
+      }
     if (!reads.has(method)) throw new Error('Chamada inesperada no teste de importação.')
     if (method === 'listQuestionnaireAssignmentOptions')
       return [
@@ -83,6 +93,13 @@ createRoot(document.getElementById('root')!).render(
         <MasterDataAdministrationPanel
           api={api}
           permissions={['CADASTROS.GERIR']}
+          onSessionExpired={() => {
+            throw new Error('Sessão fictícia não deve expirar.')
+          }}
+        />
+        <RelationshipAdministrationPanel
+          api={api}
+          permissions={['VINCULOS_GESTOR_COLABORADOR.GERIR']}
           onSessionExpired={() => {
             throw new Error('Sessão fictícia não deve expirar.')
           }}

@@ -293,6 +293,7 @@ async function mount(d, key) {
       'check-sidebar-cards',
       'check-cycle-recovery',
       'check-spreadsheet-import',
+      'check-master-data-maintenance',
     ]) {
       browserPhase = phase
       // Cada suíte tem o mesmo limite; as anteriores não consomem o tempo da próxima.

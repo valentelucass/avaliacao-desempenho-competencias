@@ -162,3 +162,14 @@ Uma pessoa já autorizada a abrir o detalhe de uma avaliação pode solicitar a 
 7. RH publica uma avaliação de gestor completa: ela fica `PUBLICADA` com feedback `PENDENTE`; somente o gestor autor a conclui com data e comentário.
 8. RH reabre uma avaliação com feedback concluído: a versão anterior e sua conclusão permanecem consultáveis; ao publicar a nova versão, o feedback retorna a `PENDENTE`.
 9. Uma autoavaliação publicada fica com feedback `NAO_APLICAVEL`; tentar registrar feedback nela é negado.
+
+
+## Manutenção de cadastros e vínculos em lote (ADC-COR-022 / ADC-IMP-003)
+
+Origem: pedido do usuário em 16/09/2026, encaminhando pendência do gestor em produção. Usuário pediu definir o modelo do lote a partir da documentação/relações existentes. Responsável nominal de aceite de negócio não informado.
+
+Correções de nomes e reativação de Áreas/Colaboradores preservam IDs, referências e avaliações. Reativação do colaborador volta a permitir sua participação em vínculos ainda vigentes; não restaura relações encerradas nem cria conta/perfil. Exclusão é definitiva, explicitamente confirmada e limitada a cadastro inativo sem qualquer referência, inclusive histórica. Auditoria é preservada. Exemplo: pessoa desativada por engano deve ser reativada e a planilha novamente conferida; não criar uma segunda pessoa.
+
+Importação de vínculos usa o nome de exibição da conta elegível no seletor, nome do colaborador e data de início. Exige permissão de gerir vínculo; impede homônimos, sobreposição e substituição silenciosa. Exemplo: vínculo encerrado em 16/09 permite outro somente após esse dia. Respeita a unicidade já definida e preserva os vínculos individuais Diretoria–Gerência/conta–colaborador.
+
+Regressões afetadas: domínio de conferência, leitor/modelo XLSX, contrato HTTP, CSRF/RBAC, isolamento das prévias, identidade e histórico dos cadastros, auditoria/atomicidade no SQL DEV, componentes e navegador responsivo. [Procedimento e limites](../operations/manutencao-cadastros-e-importacao-vinculos.md).

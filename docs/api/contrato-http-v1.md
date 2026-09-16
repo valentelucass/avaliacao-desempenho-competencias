@@ -252,3 +252,34 @@ Lotações exige colaborador único ativo e início válido; filial/área opcion
 Na confirmação, erros de linha ou dados alterados rejeitam todo o lote. Escritas e auditorias são atômicas, reaproveitando ações individuais. Repetir o mesmo UUID após sucesso retorna o mesmo resultado enquanto válido. Reinício perde prévias; reenviar o arquivo exige nova conferência e identifica registros existentes. Não há deduplicação por hash do arquivo nem autorização para atualizar/remover cadastros.
 
 Erros seguem Problem Details e `requestId`, com `code`: `IMPORT_INVALID_FILE` (422), `IMPORT_LIMIT_EXCEEDED` (413), `IMPORT_EXPIRED` (409, também para UUID de outro ator), `IMPORT_STALE` (409), `IMPORT_RATE_LIMITED` (429). Conteúdo e causas internas não são incluídos. Limites: dez tentativas de upload/confirmação por ator por minuto, duas leituras simultâneas, quatro prévias por ator e 32 globais; instância única. Limpeza de prévias a cada minuto; sem arquivo em disco.
+
+
+## Manutenção de Áreas e Colaboradores — ADC-COR-022
+
+Extensão aditiva, com `CADASTROS.GERIR`, CSRF e ator obtido da sessão:
+
+| Rota | Corpo / comportamento |
+| --- | --- |
+| `PATCH /master-data/areas/{id}` | `{ name }`; corrige nome inclusive inativo, preserva situação/ID. |
+| `PATCH /master-data/collaborators/{id}` | `{ displayName }`; corrige nome inclusive inativo, preserva situação/ID. |
+| `PATCH /master-data/areas/{id}/reactivate` | Sem corpo; inativo → ativo. |
+| `PATCH /master-data/collaborators/{id}/reactivate` | Sem corpo; inativo → ativo, sem alterar vínculos. |
+| `DELETE /master-data/areas/{id}` | Somente inativo sem lotação, inclusive histórica. |
+| `DELETE /master-data/collaborators/{id}` | Somente inativo sem lotações, vínculos, atribuições ou avaliações, inclusive históricos. |
+
+Sucesso: 204. Nome obrigatório, até 200 caracteres; campos extras rejeitados também nos DTOs compartilhados de criação. Estado incompatível/recurso ausente continua conflito, sem vazamento de SQL. Exclusão negada por uso/atividade: 409 `MASTER_DATA_DELETE_BLOCKED`; falta de habilitação SQL: 503 `MASTER_DATA_DELETE_UNAVAILABLE`. Auditoria mínima transacional em todas as operações, sem apagar histórico. Nomes são rótulos atuais do mesmo cadastro, inclusive em consultas históricas, não novos IDs ou versões de avaliação.
+
+## Importação de vínculos gestor–colaborador — ADC-IMP-003
+
+Prefixo `/administration/manager-assignment-imports`, permissão `VINCULOS_GESTOR_COLABORADOR.GERIR` em todas as rotas; CSRF nas escritas:
+
+| Rota | Contrato |
+| --- | --- |
+| `POST /preview` | Binário XLSX, até 1 MB/1.000 linhas; Conta avaliadora, Colaborador e Início. Sem ciclo. |
+| `GET /{id}?page=1` | Mesma projeção paginada das importações, páginas de 25 linhas. |
+| `POST /{id}/confirm` | Sem corpo; revalidação e criação atômica. Retorna `{ created, existing }`. |
+| `DELETE /{id}` | Descartar apenas prévia do próprio ator/família. Não remove vínculos. |
+
+A linha da prévia acrescenta `managerAssignment: { manager, startsOn }`: nome fornecido da conta e data normalizada, sem login, IDs resolvidos, papel ou histórico. Campos existentes dos outros importadores permanecem compatíveis. Mesmos códigos `IMPORT_*`, prazo e limites de memória/taxa. Endpoints de cadastros não acessam tokens de vínculo e vice-versa; a proteção vale também para o mesmo ator com ambas as permissões. Confirmação com permissão revogada é negada antes do serviço, incluindo reenvios. Nomes duplicados/ambíguos, conta inelegível e sobreposição bloqueiam sem criação parcial ou concessão implícita.
+
+Detalhes operacionais: [manutenção e vínculos](../operations/manutencao-cadastros-e-importacao-vinculos.md).

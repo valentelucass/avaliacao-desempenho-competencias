@@ -86,6 +86,37 @@ public class MasterDataController {
     return created("/api/v1/master-data/areas", id);
   }
 
+  @PatchMapping("/areas/{id}")
+  @PreAuthorize(MANAGE_MASTER_DATA)
+  public ResponseEntity<Void> updateArea(
+      @PathVariable UUID id,
+      @Valid @RequestBody NamedResource request,
+      @AuthenticationPrincipal AuthenticatedPrincipal principal,
+      HttpServletRequest servletRequest) {
+    service.updateArea(id, request.name(), context(principal, servletRequest));
+    return ResponseEntity.noContent().build();
+  }
+
+  @PatchMapping("/areas/{id}/reactivate")
+  @PreAuthorize(MANAGE_MASTER_DATA)
+  public ResponseEntity<Void> reactivateArea(
+      @PathVariable UUID id,
+      @AuthenticationPrincipal AuthenticatedPrincipal principal,
+      HttpServletRequest servletRequest) {
+    service.reactivateArea(id, context(principal, servletRequest));
+    return ResponseEntity.noContent().build();
+  }
+
+  @DeleteMapping("/areas/{id}")
+  @PreAuthorize(MANAGE_MASTER_DATA)
+  public ResponseEntity<Void> deleteInactiveUnusedArea(
+      @PathVariable UUID id,
+      @AuthenticationPrincipal AuthenticatedPrincipal principal,
+      HttpServletRequest servletRequest) {
+    service.deleteInactiveUnusedArea(id, context(principal, servletRequest));
+    return ResponseEntity.noContent().build();
+  }
+
   @PatchMapping("/areas/{areaId}/deactivate")
   @PreAuthorize(MANAGE_MASTER_DATA)
   public ResponseEntity<Void> deactivateArea(
@@ -104,6 +135,37 @@ public class MasterDataController {
       HttpServletRequest servletRequest) {
     UUID id = service.createCollaborator(request.displayName(), context(principal, servletRequest));
     return created("/api/v1/master-data/collaborators", id);
+  }
+
+  @PatchMapping("/collaborators/{id}")
+  @PreAuthorize(MANAGE_MASTER_DATA)
+  public ResponseEntity<Void> updateCollaborator(
+      @PathVariable UUID id,
+      @Valid @RequestBody Collaborator request,
+      @AuthenticationPrincipal AuthenticatedPrincipal principal,
+      HttpServletRequest servletRequest) {
+    service.updateCollaborator(id, request.displayName(), context(principal, servletRequest));
+    return ResponseEntity.noContent().build();
+  }
+
+  @PatchMapping("/collaborators/{id}/reactivate")
+  @PreAuthorize(MANAGE_MASTER_DATA)
+  public ResponseEntity<Void> reactivateCollaborator(
+      @PathVariable UUID id,
+      @AuthenticationPrincipal AuthenticatedPrincipal principal,
+      HttpServletRequest servletRequest) {
+    service.reactivateCollaborator(id, context(principal, servletRequest));
+    return ResponseEntity.noContent().build();
+  }
+
+  @DeleteMapping("/collaborators/{id}")
+  @PreAuthorize(MANAGE_MASTER_DATA)
+  public ResponseEntity<Void> deleteInactiveUnusedCollaborator(
+      @PathVariable UUID id,
+      @AuthenticationPrincipal AuthenticatedPrincipal principal,
+      HttpServletRequest servletRequest) {
+    service.deleteInactiveUnusedCollaborator(id, context(principal, servletRequest));
+    return ResponseEntity.noContent().build();
   }
 
   @PatchMapping("/collaborators/{collaboratorId}/deactivate")

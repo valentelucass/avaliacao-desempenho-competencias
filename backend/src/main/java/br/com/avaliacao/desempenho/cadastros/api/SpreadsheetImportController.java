@@ -34,7 +34,10 @@ public class SpreadsheetImportController {
       String questionnaire,
       String status,
       String message,
-      AllocationPreview allocation) {}
+      AllocationPreview allocation,
+      ManagerAssignmentPreview managerAssignment) {}
+
+  public record ManagerAssignmentPreview(String manager, String startsOn) {}
 
   public record AllocationPreview(String branch, String area, String manager, String startsOn) {}
 
@@ -101,7 +104,7 @@ public class SpreadsheetImportController {
     service.discard(id, principal.userId());
   }
 
-  private static PreviewResponse response(SpreadsheetImportService.Preview preview, int page) {
+  static PreviewResponse response(SpreadsheetImportService.Preview preview, int page) {
     int pages = (preview.rows().size() + 24) / 25;
     if (page < 1 || page > pages)
       throw new SpreadsheetImportException(SpreadsheetImportException.Reason.INVALID_FILE);
@@ -131,7 +134,12 @@ public class SpreadsheetImportController {
                                 row.allocation().fields().branch(),
                                 row.allocation().fields().area(),
                                 row.allocation().fields().manager(),
-                                row.allocation().fields().startsOn())))
+                                row.allocation().fields().startsOn()),
+                        row.managerAssignment() == null || row.managerAssignment().fields() == null
+                            ? null
+                            : new ManagerAssignmentPreview(
+                                row.managerAssignment().fields().manager(),
+                                row.managerAssignment().fields().startsOn())))
             .toList());
   }
 }
