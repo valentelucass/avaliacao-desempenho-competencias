@@ -14,7 +14,7 @@ import { FeedbackMessage } from '../../ui/Feedback'
 import { EmptyState } from '../../ui/EmptyState'
 import { ContextHelp } from '../../ui/ContextHelp'
 import { Pagination } from '../../ui/Pagination'
-import { safeErrorMessage } from '../../ui/safeErrorMessage'
+import { safeErrorMessage, safeLoadErrorMessage } from '../../ui/safeErrorMessage'
 import { useClientPagination } from '../../ui/useClientPagination'
 import {
   assessmentScale,
@@ -83,7 +83,7 @@ export function QuestionnaireAdministrationPanel({
         onSessionExpired()
         return
       }
-      setLoadError(safeErrorMessage(requestError))
+      setLoadError(safeLoadErrorMessage(requestError, 'os questionários aprovados'))
     } finally {
       setIsLoadingVersions(false)
     }

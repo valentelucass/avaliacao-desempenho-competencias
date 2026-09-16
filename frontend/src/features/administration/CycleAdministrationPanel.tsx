@@ -19,6 +19,7 @@ import { Pagination } from '../../ui/Pagination'
 import { safeErrorMessage } from '../../ui/safeErrorMessage'
 import { useClientPagination } from '../../ui/useClientPagination'
 import { useInlinePanelFocus } from '../../ui/useInlinePanelFocus'
+import { administrativeRead, useAdministrativeLoad } from './useAdministrativeLoad'
 
 type CycleAdministrationPanelProps = {
   api: ApiClient
@@ -60,6 +61,7 @@ export function CycleAdministrationPanel({
   const timeZoneId = useId()
   const selfAssessmentId = useId()
   const questionnairesFieldsetId = useId()
+  const formErrorId = useId()
   const [cycles, setCycles] = useState<readonly EvaluationCycle[]>([])
   const [versions, setVersions] = useState<readonly ApprovedQuestionnaireVersion[]>([])
   const [selectedCycle, setSelectedCycle] = useState<EvaluationCycle>()
@@ -67,7 +69,12 @@ export function CycleAdministrationPanel({
   const [appliedQuestionnaire, setAppliedQuestionnaire] = useState<AppliedCycleQuestionnaire>()
   const [form, setForm] = useState<CycleForm>(emptyForm)
   const [selectedOptionKeys, setSelectedOptionKeys] = useState<readonly string[]>([])
-  const [isLoading, setIsLoading] = useState(false)
+  const {
+    load,
+    isLoading,
+    isAvailable,
+    errors: loadErrors,
+  } = useAdministrativeLoad(onSessionExpired)
   const [isLoadingDraft, setIsLoadingDraft] = useState(false)
   const [isLoadingAppliedQuestionnaire, setIsLoadingAppliedQuestionnaire] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
@@ -126,25 +133,16 @@ export function CycleAdministrationPanel({
       return
     }
 
-    setIsLoading(true)
-    setError(undefined)
-    try {
-      const [loadedCycles, loadedVersions] = await Promise.all([
-        api.listAllCycles(),
-        api.listApprovedQuestionnaireVersions(),
-      ])
-      setCycles(loadedCycles)
-      setVersions(loadedVersions)
-    } catch (requestError) {
-      if (isAuthenticationError(requestError)) {
-        onSessionExpired()
-        return
-      }
-      setError(safeErrorMessage(requestError))
-    } finally {
-      setIsLoading(false)
-    }
-  }, [api, canManageCycles, onSessionExpired])
+    await load([
+      administrativeRead('cycles', 'os ciclos', () => api.listAllCycles(), setCycles),
+      administrativeRead(
+        'versions',
+        'os questionários aprovados',
+        () => api.listApprovedQuestionnaireVersions(),
+        setVersions,
+      ),
+    ])
+  }, [api, canManageCycles, load])
 
   useEffect(() => {
     if (!canManageCycles) {
@@ -234,6 +232,10 @@ export function CycleAdministrationPanel({
       setError('Informe o código e o nome do ciclo.')
       return
     }
+    if (!selectedCycle && !/^[A-Za-z0-9_.-]+$/.test(code)) {
+      setError('Use somente letras sem acentos, números, ponto, hífen ou sublinhado no código.')
+      return
+    }
     if (!form.openingAtLocal || !form.closingAtLocal) {
       setError('Informe as datas de abertura e encerramento do ciclo.')
       return
@@ -242,8 +244,26 @@ export function CycleAdministrationPanel({
       setError('O encerramento deve ocorrer depois da abertura.')
       return
     }
-    if (!form.timeZone.trim()) {
-      setError('Informe o fuso horário do ciclo.')
+    if (form.timeZone.trim() !== 'America/Sao_Paulo') {
+      setError('O fuso horário do ciclo deve ser America/Sao_Paulo.')
+      return
+    }
+    const annualOpening = /^(\d{4})-09-01T00:00(?::00(?:\.0+)?)?$/.exec(form.openingAtLocal)
+    const annualClosing = /^(\d{4})-09-16T00:00(?::00(?:\.0+)?)?$/.exec(form.closingAtLocal)
+    if (!annualOpening || !annualClosing || annualOpening[1] !== annualClosing[1]) {
+      setError('O ciclo deve abrir em 01/09 às 00:00 e encerrar em 16/09 às 00:00 do mesmo ano.')
+      return
+    }
+    if (!isAvailable('versions')) {
+      setError('Atualize os questionários aprovados antes de salvar o ciclo.')
+      return
+    }
+    if (
+      selectedQuestionnaires.length > 20 ||
+      new Set(selectedQuestionnaires.map((item) => item.questionnaireVersionId)).size !==
+        selectedQuestionnaires.length
+    ) {
+      setError('Selecione no máximo 20 questionários, com uma configuração por versão.')
       return
     }
     if (selectedQuestionnaires.length === 0) {
@@ -455,7 +475,16 @@ export function CycleAdministrationPanel({
         </div>
       </div>
 
-      {error ? <FeedbackMessage kind="error">{error}</FeedbackMessage> : null}
+      {error ? (
+        <div id={formErrorId}>
+          <FeedbackMessage kind="error">{error}</FeedbackMessage>
+        </div>
+      ) : null}
+      {loadErrors.map((message) => (
+        <FeedbackMessage kind="error" key={message}>
+          {message}
+        </FeedbackMessage>
+      ))}
       {notice ? <FeedbackMessage kind="status">{notice}</FeedbackMessage> : null}
       {isLoading ? (
         <FeedbackMessage kind="info">Carregando ciclos e versões aprovadas…</FeedbackMessage>
@@ -471,13 +500,13 @@ export function CycleAdministrationPanel({
             </p>
           </ContextHelp>
         </div>
-        {!isLoading && cycles.length === 0 ? (
+        {isAvailable('cycles') && cycles.length === 0 ? (
           <EmptyState className="empty-state--compact" title="Nenhum ciclo disponível">
             Ainda não há ciclos que esta conta possa consultar. Crie um ciclo para iniciar a
             configuração de questionários e jornadas.
           </EmptyState>
         ) : null}
-        {cycles.length > 0 ? (
+        {isAvailable('cycles') && cycles.length > 0 ? (
           <div className="administration-users">
             <AdministrativeTable>
               <caption className="visually-hidden">Ciclos disponíveis</caption>
@@ -532,6 +561,7 @@ export function CycleAdministrationPanel({
 
       <form
         aria-labelledby="cycle-configuration-title"
+        aria-describedby={error ? formErrorId : undefined}
         className={`card stack-form cycle-configuration-form inline-panel-focus${
           isHighlighted ? ' inline-panel-focus--highlighted' : ''
         }`}
@@ -573,9 +603,13 @@ export function CycleAdministrationPanel({
               id={codeId}
               value={form.code}
               maxLength={100}
+              aria-describedby={`${codeId}-hint`}
               disabled={Boolean(selectedCycle) || isLoadingDraft || isSaving}
               onChange={(event) => updateForm('code', event.currentTarget.value)}
             />
+            <p className="field-hint" id={`${codeId}-hint`}>
+              Letras sem acentos, números, ponto, hífen ou sublinhado.
+            </p>
           </div>
           <div className={fieldClassName(nameId)}>
             <label htmlFor={nameId}>Nome do ciclo</label>
@@ -592,10 +626,14 @@ export function CycleAdministrationPanel({
             <input
               id={timeZoneId}
               value={form.timeZone}
+              aria-describedby={`${timeZoneId}-hint`}
               maxLength={100}
               disabled={selectedCycle?.status !== undefined && selectedCycle.status !== 'RASCUNHO'}
               onChange={(event) => updateForm('timeZone', event.currentTarget.value)}
             />
+            <p className="field-hint" id={`${timeZoneId}-hint`}>
+              Fuso exigido: America/Sao_Paulo.
+            </p>
           </div>
           <div className={fieldClassName(openingId)}>
             <label htmlFor={openingId}>Abertura</label>
@@ -603,9 +641,13 @@ export function CycleAdministrationPanel({
               id={openingId}
               type="datetime-local"
               value={form.openingAtLocal}
+              aria-describedby={`${openingId}-hint`}
               disabled={selectedCycle?.status !== undefined && selectedCycle.status !== 'RASCUNHO'}
               onChange={(event) => updateForm('openingAtLocal', event.currentTarget.value)}
             />
+            <p className="field-hint" id={`${openingId}-hint`}>
+              01 de setembro às 00:00.
+            </p>
           </div>
           <div className={fieldClassName(closingId)}>
             <label htmlFor={closingId}>Encerramento</label>
@@ -613,9 +655,13 @@ export function CycleAdministrationPanel({
               id={closingId}
               type="datetime-local"
               value={form.closingAtLocal}
+              aria-describedby={`${closingId}-hint`}
               disabled={selectedCycle?.status !== undefined && selectedCycle.status !== 'RASCUNHO'}
               onChange={(event) => updateForm('closingAtLocal', event.currentTarget.value)}
             />
+            <p className="field-hint" id={`${closingId}-hint`}>
+              16 de setembro às 00:00 do mesmo ano; inclui todo o dia 15.
+            </p>
           </div>
           <label
             className={inlineRevealClassName(selfAssessmentId, 'checkbox-field')}
@@ -644,12 +690,12 @@ export function CycleAdministrationPanel({
           id={questionnairesFieldsetId}
         >
           <legend>Questionários aplicados</legend>
-          {versions.length === 0 && !isLoading ? (
+          {isAvailable('versions') && versions.length === 0 ? (
             <EmptyState className="empty-state--compact" title="Nenhuma versão aprovada">
               Não há versões aprovadas disponíveis para aplicar a um ciclo. Aprove um questionário
               antes de configurar este ciclo.
             </EmptyState>
-          ) : (
+          ) : isAvailable('versions') ? (
             <div className="cycle-questionnaire-table">
               <AdministrativeTable>
                 <caption className="visually-hidden">
@@ -737,7 +783,7 @@ export function CycleAdministrationPanel({
                 totalPages={versionsPagination.totalPages}
               />
             </div>
-          )}
+          ) : null}
         </fieldset>
 
         {selectedCycle?.status === 'RASCUNHO' || !selectedCycle ? (
@@ -745,7 +791,7 @@ export function CycleAdministrationPanel({
             <button
               className="button button--success"
               type="submit"
-              disabled={isSaving || isLoadingDraft}
+              disabled={isSaving || isLoadingDraft || isLoading || !isAvailable('versions')}
             >
               <CheckCircle2 aria-hidden="true" size={17} strokeWidth={2} />
               {isSaving ? 'Salvando…' : selectedCycle ? 'Salvar configuração' : 'Criar ciclo'}

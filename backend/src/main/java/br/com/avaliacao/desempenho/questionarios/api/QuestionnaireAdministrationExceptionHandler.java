@@ -25,22 +25,25 @@ public class QuestionnaireAdministrationExceptionHandler {
   @ExceptionHandler(QuestionnaireAdministrationException.class)
   ResponseEntity<ProblemDetail> administrationFailure(
       QuestionnaireAdministrationException exception, HttpServletRequest request) {
-    return switch (exception.reason()) {
-      case CONFLICT ->
-          problem(
-              request,
-              HttpStatus.CONFLICT,
-              "CONFLICT",
-              "Operação não permitida",
-              "A versão conflita com o catálogo ou versão já existente.");
-      case UNAVAILABLE ->
-          problem(
-              request,
-              HttpStatus.SERVICE_UNAVAILABLE,
-              "SERVICE_UNAVAILABLE",
-              "Recurso indisponível",
-              "O recurso administrativo ainda não está disponível.");
-    };
+    ResponseEntity<ProblemDetail> response =
+        switch (exception.reason()) {
+          case CONFLICT ->
+              problem(
+                  request,
+                  HttpStatus.CONFLICT,
+                  "CONFLICT",
+                  "Operação não permitida",
+                  "A versão conflita com o catálogo ou versão já existente.");
+          case UNAVAILABLE ->
+              problem(
+                  request,
+                  HttpStatus.SERVICE_UNAVAILABLE,
+                  "SERVICE_UNAVAILABLE",
+                  "Recurso indisponível",
+                  "O recurso administrativo ainda não está disponível.");
+        };
+    response.getBody().setProperty("reasonCode", exception.reasonCode());
+    return response;
   }
 
   @ExceptionHandler({

@@ -1,8 +1,16 @@
 # Estado atual — Avaliação de Desempenho e Competências
 
-> Atualizado em 2026-09-15. Inclui a correção local da perda de edição no formulário de ciclos (`ADC-COR-006`) e o gate completo aprovado. Preserva a publicação histórica de 2026-09-09 (`ADC-COR-005`) e as evidências anteriores. Nenhuma nova publicação foi executada nesta correção.
+> Atualizado em 2026-09-15. Candidata revalidada em `ADC-VAL-011`: criação/leitura/edição pelo HTTP com serviço e SQL Server DEV reais, rollback conferido, Edge celular/desktop, gate e preflight aprovados. Correções `ADC-COR-007`–`ADC-COR-010` confirmadas nos cenários reproduzidos; nenhuma publicação executada. A requisição produtiva original continua sem causa individual confirmada.
 
 ## Resultado vigente
+
+`ADC-VAL-011`: revisão técnica da candidata concluída. 206 testes Java no gate e um teste HTTP/SQL DEV executado explicitamente aprovados (207 no total); 162 testes front-end e suíte Edge aprovados. Três integrações antigas continuam não executadas. Preflight `iniciar-prod.bat --check`, auditorias e validação SQL/migrations somente leitura aprovados. Sem novo defeito da aplicação encontrado, sem deploy; publicar API compatível antes da SPA.
+
+`ADC-COR-007`–`ADC-COR-010`: correções locais concluídas. Leituras independentes e estados de falha/vazio corrigidos em Ciclos/Cadastros/Vínculos; paginação defensiva; rastreabilidade segura com `requestId`/`reasonCode`; CSRF separado de autorização; formulário alinhado às regras vigentes. 209 testes Java (três SQL opt-in ignorados), 162 testes front-end, builds/lint/formatter, Edge real, scanners e validação SQL somente leitura aprovados. A sequência de verificações e suas limitações está na seção abaixo.
+
+`ADC-DIAG-001`: rastreamento local concluído; incidente produtivo ainda não fechado. O usuário esclareceu que houve clique em **Novo ciclo**, sem preenchimento/envio. O ensaio confirmou que o botão não chama a API e reproduziu erro de leitura pendente aparecendo após o clique. Confirmados estados vazios enganosos em Ciclos/Cadastros/Vínculos, proteção de cursor repetido inoperante e repetição de 403 também por permissão. Detalhes, distinção entre defeitos comprovados e hipóteses, evidências e próximos trabalhos no [diagnóstico de ciclos](docs/operations/diagnostico-ciclos-2026-09-15.md).
+
+Validação histórica do diagnóstico, antes da correção: 24 testes Java, 39 testes front-end existentes e oito ensaios locais de diagnóstico aprovados; serialização Spring isolada mantém `nextCursor: null`. Leitura local dos logs da API não encontrou as rotas investigadas; não houve autenticação produtiva, consulta SQL, escrita de negócio, alteração de código da aplicação, serviço ou deploy. Scanner de segredos sem achados, UTF-8/diff revisados e Prettier do relatório aprovado. Gate completo, navegador real e auditorias de dependências não foram reexecutados nesta tarefa documental. Os ensaios adicionais usam API simulada e afirmam os defeitos atuais; não significam que foram corrigidos.
 
 `ADC-COR-006`: perda de edição corrigida localmente e validada. A consulta ao PM2 em 2026-09-15 mostrou `avaliacao-api-18081` e `avaliacao-front-18080` já parados antes do gate e ainda parados ao final; nenhum processo produtivo foi iniciado ou reiniciado nesta tarefa.
 
@@ -11,6 +19,34 @@
 `ADC-COR-001`: os cinco achados da auditoria foram corrigidos no código. `ADC-DEV-002`: a massa complementar foi efetivamente gravada em `AVALIACAO_DEV`, validada por API e preservada na reexecução. Gate final completo aprovado, com revisão do diff e evidências abaixo.
 
 Nas tarefas anteriores `ADC-COR-001` e `ADC-DEV-002`, não houve escrita em PROD, migration nova, mudança de concessões, deploy de produção ou exclusão de avaliação/histórico. As alterações preexistentes do usuário foram preservadas. Na etapa anterior de auditoria/massa, o DEV foi recompilado e iniciado com o back-end atualizado para testar as jornadas reais. A integração de tabelas não iniciou/encerrou serviços nem gravou dados no banco.
+
+## Revalidação antes da subida — ADC-VAL-011
+
+O usuário pediu verificar a correção antes de publicar. A lacuna de persistência da rodada anterior foi coberta por `CycleCreationDevSqlTests`: controllers HTTP em MockMvc, serviços/repositórios reais e SQL Server `AVALIACAO_DEV`; somente o principal é fornecido pelo teste. Não é login real nem teste da API produtiva. O alvo DEV é fixo, `DB_NAME()` é conferido e uma conta fictícia existente é reutilizada sem alterar permissões.
+
+Cenários aprovados: consulta de questionários aprovados 200; data inválida 422 sem ciclo; criação 201 com questionário, datas UTC e auditoria corretos; leitura paginada incluindo o ciclo; edição 204 preservando associação; duplicidade 409. A transação é marcada para rollback antes da escrita; ao final, conferida ausência do ciclo, da transição e da auditoria do ensaio. Não houve commit de dados de teste, nova conta, schema, migration, avaliação ou alteração de registros existentes. O primeiro ensaio detectou apenas expectativa incorreta do próprio teste sobre normalização do código para maiúsculas; a expectativa foi alinhada à regra existente, sem modificar aplicação ou regra.
+
+Gate na cópia isolada, Windows PowerShell: `verify-quality.ps1 -SkipDatabase`, código 0. 210 testes Java registrados, quatro opt-in ignorados na execução padrão; o novo opt-in HTTP/SQL foi executado à parte com sucesso, restando três integrações antigas não executadas. 162 testes front-end, builds, formatter/lint, scanner, verificações estáticas, suíte Edge completa e auditorias SBOM/OSV/npm aprovados. O SQL/migrations foi validado separadamente na raiz com `database/executar-database.bat --validate`, código 0. A cópia não recebeu configuração protegida.
+
+Preflight `iniciar-prod.bat --check` e `check-operation.ps1` passaram. A checagem genérica reiterou o firewall desabilitado e a ausência do ponteiro de logs no ambiente daquela chamada; o preflight específico carregou a configuração externa e validou o diretório de logs. Não houve mudança operacional.
+
+Evidências ignoradas pelo Git: `backend/target/cycle-release-{sql,gate,database,preflight,operation}.log`; a tentativa inicial está em `cycle-release-sql-first-attempt.log`. `cycle-release-source-verification.json` confirma 339 arquivos de fontes equivalentes ao worktree testado e arquivos de produção preservados. PIDs dos listeners 18080/18081 mantidos. UTF-8/diff revisados e scanner final aprovado.
+
+Observação operacional confirmada no BAT: o gate/build recompila `frontend/dist` antes do reinício da API. Se o preview estiver ativo, isso expõe os novos arquivos durante a subida. Usar janela de manutenção; a recomendação de API antes da SPA refere-se à ativação controlada, e não é garantida pela ordem dos builds do BAT atual. O cliente novo com API antiga mantém a negação segura de 403 e pode exigir recarregamento/tentativa manual até a API ser atualizada. O launcher não foi alterado nesta revisão.
+
+Conclusão: correções confirmadas nos cenários reproduzidos e candidata tecnicamente validada para a atualização. Permanece necessário atualizar API antes da SPA. Isso não certifica a causa individual do incidente original, o ambiente produtivo autenticado ou os pré-requisitos externos de infraestrutura/negócio. Recuperação continua por reversão dos arquivos da correção e procedimento de release existente; sem migration ou dado novo persistido.
+
+## Correção de falhas administrativas — ADC-COR-007 a ADC-COR-010
+
+Implementação autorizada pelo pedido “corrija e teste”. Evidências e detalhes no [relatório atualizado](docs/operations/diagnostico-ciclos-2026-09-15.md#correção-local-e-verificação--adc-cor-007-a-adc-cor-010). Testes adicionais versionados cobrem falha parcial/tardia, recuperação, respostas ultrapassadas, paginação, repetição de CSRF e ausência de dados sensíveis em logs. Os ensaios antigos em `coverage` documentam o defeito anterior e estão excluídos da descoberta normal.
+
+Gate iniciado em worktree isolado para não sobrescrever o `dist` servido em produção: build, testes, formatter/lint, scanner e verificações estáticas aprovados. O gate inicial parou porque o launcher do Edge não repassou o endereço de depuração por stderr; o executor passou a ler também o arquivo `DevToolsActivePort` do perfil exclusivo. Sem ampliar timeout, a suíte completa Edge passou em execução separada, incluindo o novo cenário com larguras 375/1440. Etapas restantes SBOM/OSV e npm aprovadas separadamente; SQL/migrations validados somente em leitura no workspace. Não se afirma sucesso de uma execução única do gate.
+
+Browser: componente/cliente reais, API simulada; Novo ciclo sem escrita, falha tardia contextual com referência, recuperação por Atualizar, data inválida sem POST e formulário válido com um POST. Java: contrato HTTP/validações reais em MockMvc com serviço simulado, além das suítes existentes. Não há evidência nova de gravação SQL ou criação autenticada em produção.
+
+Logs locais: `backend/target/cycle-recovery-{gate,browser,browser-final,java-audit,database}.log`. As capturas foram inspecionadas; um ajuste de alinhamento dos campos com ajuda foi seguido de novo build e suíte Edge completa. Scanner final, UTF-8 e `git diff --check` aprovados. Capturas reais com dados fictícios: `backend/target/cycle-recovery-{375,1440}.png`. A conferência das fontes testadas e a preservação dos 14 arquivos de `frontend/dist`/PIDs estão em `cycle-recovery-source-verification.json` e `cycle-recovery-production-verification.json`, no mesmo diretório. Os listeners atuais foram observados em 127.0.0.1:18081 e :18080, sem mudança durante a tarefa; isso é posterior ao registro de processos parados em ADC-COR-006.
+
+Limites: correção não implantada; causa individual do 409/403/422 original não confirmada; três testes SQL opt-in ignorados; aviso conhecido de bundle acima de 500 kB e aceite assistivo humano pendentes. Publicação futura deve atualizar API antes da SPA para o contrato CSRF. Recuperação local por reversão dos arquivos da correção, preservando trabalho anterior; sem alteração de migration, dado, concessão ou infraestrutura.
 
 ## Correção da edição de ciclos — ADC-COR-006, 2026-09-15
 
@@ -174,6 +210,16 @@ O catálogo contém 14 migrations imutáveis (`V0001`–`V0014`). A reconciliaç
 O release produtivo e a infraestrutura existentes não foram modificados nem tiveram seu estado corrente recertificado nesta auditoria. Evidências anteriores de PM2, HTTPS e restauração técnica são históricas; não significam que esta correção foi implantada em produção.
 
 ## Tarefas pendentes reais
+
+- `ADC-VAL-011`, concluída: candidata revalidada com HTTP/SQL DEV reais e rollback conferido, gate isolado e preflight aprovados. Evidências acima; publicação não executada.
+
+- `ADC-COR-007`–`ADC-COR-010` concluídas localmente em 2026-09-15, conforme evidências acima. Publicação não executada nem implicitamente autorizada; a versão produtiva ainda não contém estas correções.
+
+- `ADC-DIAG-001`, rastreamento local concluído (2026-09-15), incidente produtivo sem causa individual confirmada: clique em Novo ciclo sem envio não explica por si só o HTTP 422. Consultas pendentes e apresentação incorreta foram reproduzidas; método/corpo/parâmetros/`requestId` da falha original não estão disponíveis nas capturas ou nos logs locais consultados. A análise não autoriza deploy, alteração de negócio, concessão, carga ou migration.
+- `ADC-COR-007`, concluída localmente: estados de leitura/falha/vazio corrigidos em Ciclos/Cadastros/Vínculos, respostas válidas aproveitadas e erro de leitura preservado em Novo ciclo; regressões de falha parcial/tardia e recuperação aprovadas.
+- `ADC-COR-008`, concluída localmente: cursor repetido/ausente/inválido rejeitado antes de nova consulta; regressões aprovadas. Ausência de `nextCursor` continua sendo cenário simulado, não observado no servidor original.
+- `ADC-COR-009`, concluída localmente: códigos específicos e referência segura, mensagens contextuais, logs minimizados e repetição restrita a CSRF implementados e testados; visibilidade produtiva depende de publicação.
+- `ADC-COR-010`, concluída localmente: orientação/validação do formulário alinhadas à janela/fuso existentes e contrato real coberto; regra de negócio preservada. Não é causa comprovada do clique sem envio.
 
 - `ADC-COR-006`, perda de edição concluída localmente (2026-09-15): captura imediata dos valores dos campos, regressão sensível ao defeito e gate completo aprovado; evidências e limites na seção acima. Nenhuma nova publicação executada.
 

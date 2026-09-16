@@ -1,7 +1,7 @@
 import react from '@vitejs/plugin-react'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath, URL } from 'node:url'
-import { defineConfig } from 'vitest/config'
+import { configDefaults, defineConfig } from 'vitest/config'
 
 const allowedPublicHosts = ['formulario.rodogarcia.com.br']
 const publicPreviewHeaders = {
@@ -113,6 +113,7 @@ export default defineConfig({
     headers: publicPreviewHeaders,
   },
   test: {
+    exclude: [...configDefaults.exclude, '**/coverage/**'],
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
   },

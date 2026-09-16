@@ -1,3 +1,4 @@
+import { administrativeRead, useAdministrativeLoad } from './useAdministrativeLoad'
 import { AdministrativeTable } from '@/components/ui/administrative-table'
 import { useCallback, useEffect, useId, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
@@ -79,7 +80,12 @@ export function RelationshipAdministrationPanel({
   const [linkedStartsOn, setLinkedStartsOn] = useState('')
   const [closeTarget, setCloseTarget] = useState<CloseTarget>()
   const [endsOn, setEndsOn] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
+  const {
+    load,
+    isLoading,
+    isAvailable,
+    errors: loadErrors,
+  } = useAdministrativeLoad(onSessionExpired)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string>()
   const [notice, setNotice] = useState<string>()
@@ -119,54 +125,63 @@ export function RelationshipAdministrationPanel({
       return
     }
 
-    setIsLoading(true)
-    setError(undefined)
-    try {
-      const [
-        loadedManagerOptions,
-        loadedDirectorManagerOptions,
-        loadedUserLinkOptions,
-        loadedManagerAssignments,
-        loadedDirectorManagerAssignments,
-        loadedUserLinks,
-      ] = await Promise.all([
-        canManageManagerAssignments
-          ? api.getManagerAssignmentOptions()
-          : Promise.resolve({ managers: [], collaborators: [] }),
-        canManageDirectorManagerAssignments
-          ? api.getDirectorManagerAssignmentOptions()
-          : Promise.resolve({ directors: [], collaborators: [] }),
-        canManageUserLinks
-          ? api.getUserCollaboratorLinkOptions()
-          : Promise.resolve({ users: [], collaborators: [] }),
-        canManageManagerAssignments ? api.listActiveManagerAssignments() : Promise.resolve([]),
-        canManageDirectorManagerAssignments
-          ? api.listActiveDirectorManagerAssignments()
-          : Promise.resolve([]),
-        canManageUserLinks ? api.listActiveUserCollaboratorLinks() : Promise.resolve([]),
-      ])
-      setManagerOptions(loadedManagerOptions)
-      setDirectorManagerOptions(loadedDirectorManagerOptions)
-      setUserLinkOptions(loadedUserLinkOptions)
-      setManagerAssignments(loadedManagerAssignments)
-      setDirectorManagerAssignments(loadedDirectorManagerAssignments)
-      setUserLinks(loadedUserLinks)
-    } catch (requestError) {
-      if (isAuthenticationError(requestError)) {
-        onSessionExpired()
-        return
-      }
-      setError(safeErrorMessage(requestError))
-    } finally {
-      setIsLoading(false)
-    }
+    await load([
+      ...(canManageManagerAssignments
+        ? [
+            administrativeRead(
+              'managerOptions',
+              'as opções de gestão',
+              () => api.getManagerAssignmentOptions(),
+              setManagerOptions,
+            ),
+            administrativeRead(
+              'managers',
+              'os vínculos de gestão',
+              () => api.listActiveManagerAssignments(),
+              setManagerAssignments,
+            ),
+          ]
+        : []),
+      ...(canManageDirectorManagerAssignments
+        ? [
+            administrativeRead(
+              'directorOptions',
+              'as opções de Diretoria e Gerência',
+              () => api.getDirectorManagerAssignmentOptions(),
+              setDirectorManagerOptions,
+            ),
+            administrativeRead(
+              'directors',
+              'os vínculos de Diretoria e Gerência',
+              () => api.listActiveDirectorManagerAssignments(),
+              setDirectorManagerAssignments,
+            ),
+          ]
+        : []),
+      ...(canManageUserLinks
+        ? [
+            administrativeRead(
+              'userOptions',
+              'as opções de contas e colaboradores',
+              () => api.getUserCollaboratorLinkOptions(),
+              setUserLinkOptions,
+            ),
+            administrativeRead(
+              'users',
+              'os vínculos de contas',
+              () => api.listActiveUserCollaboratorLinks(),
+              setUserLinks,
+            ),
+          ]
+        : []),
+    ])
   }, [
     api,
     canManageManagerAssignments,
     canManageDirectorManagerAssignments,
     canManageRelationships,
     canManageUserLinks,
-    onSessionExpired,
+    load,
   ])
 
   useEffect(() => {
@@ -327,11 +342,17 @@ export function RelationshipAdministrationPanel({
   }
 
   const hasManagerSelectionOptions =
-    managerOptions.managers.length > 0 && managerOptions.collaborators.length > 0
+    isAvailable('managerOptions') &&
+    managerOptions.managers.length > 0 &&
+    managerOptions.collaborators.length > 0
   const hasUserLinkSelectionOptions =
-    userLinkOptions.users.length > 0 && userLinkOptions.collaborators.length > 0
+    isAvailable('userOptions') &&
+    userLinkOptions.users.length > 0 &&
+    userLinkOptions.collaborators.length > 0
   const hasDirectorManagerSelectionOptions =
-    directorManagerOptions.directors.length > 0 && directorManagerOptions.collaborators.length > 0
+    isAvailable('directorOptions') &&
+    directorManagerOptions.directors.length > 0 &&
+    directorManagerOptions.collaborators.length > 0
 
   return (
     <section aria-labelledby="relationship-administration-title" className="stack-form">
@@ -368,11 +389,17 @@ export function RelationshipAdministrationPanel({
       </div>
 
       {error ? <FeedbackMessage kind="error">{error}</FeedbackMessage> : null}
+      {loadErrors.map((message) => (
+        <FeedbackMessage kind="error" key={message}>
+          {message}
+        </FeedbackMessage>
+      ))}
       {notice ? <FeedbackMessage kind="status">{notice}</FeedbackMessage> : null}
       {isLoading ? (
         <FeedbackMessage kind="info">Carregando vínculos ativos…</FeedbackMessage>
       ) : null}
       {!isLoading &&
+      loadErrors.length === 0 &&
       ((canManageManagerAssignments && !hasManagerSelectionOptions) ||
         (canManageDirectorManagerAssignments && !hasDirectorManagerSelectionOptions) ||
         (canManageUserLinks && !hasUserLinkSelectionOptions)) ? (
@@ -462,24 +489,26 @@ export function RelationshipAdministrationPanel({
             </div>
           </form>
 
-          <RelationshipTable
-            entries={managerAssignments}
-            getAccountName={(entry) => accountLabel(managerNamesById, entry.managerUserId)}
-            getCollaboratorName={(entry) =>
-              collaboratorLabel(collaboratorNamesById, entry.collaboratorId)
-            }
-            accountColumn="Avaliador"
-            onClose={(entry) =>
-              setCloseTarget({
-                kind: 'MANAGER',
-                id: entry.id,
-                label: `${accountLabel(managerNamesById, entry.managerUserId)} · ${collaboratorLabel(
-                  collaboratorNamesById,
-                  entry.collaboratorId,
-                )}`,
-              })
-            }
-          />
+          {isAvailable('managers') && isAvailable('managerOptions') ? (
+            <RelationshipTable
+              entries={managerAssignments}
+              getAccountName={(entry) => accountLabel(managerNamesById, entry.managerUserId)}
+              getCollaboratorName={(entry) =>
+                collaboratorLabel(collaboratorNamesById, entry.collaboratorId)
+              }
+              accountColumn="Avaliador"
+              onClose={(entry) =>
+                setCloseTarget({
+                  kind: 'MANAGER',
+                  id: entry.id,
+                  label: `${accountLabel(managerNamesById, entry.managerUserId)} · ${collaboratorLabel(
+                    collaboratorNamesById,
+                    entry.collaboratorId,
+                  )}`,
+                })
+              }
+            />
+          ) : null}
         </section>
       ) : null}
 
@@ -563,25 +592,27 @@ export function RelationshipAdministrationPanel({
             </div>
           </form>
 
-          <RelationshipTable
-            entries={directorManagerAssignments}
-            getAccountName={(entry) => accountLabel(directorNamesById, entry.directorUserId)}
-            getCollaboratorName={(entry) =>
-              collaboratorLabel(collaboratorNamesById, entry.managerCollaboratorId)
-            }
-            accountColumn="Diretoria"
-            collaboratorColumn="Gerência"
-            onClose={(entry) =>
-              setCloseTarget({
-                kind: 'DIRECTOR',
-                id: entry.id,
-                label: `${accountLabel(directorNamesById, entry.directorUserId)} · ${collaboratorLabel(
-                  collaboratorNamesById,
-                  entry.managerCollaboratorId,
-                )}`,
-              })
-            }
-          />
+          {isAvailable('directors') && isAvailable('directorOptions') ? (
+            <RelationshipTable
+              entries={directorManagerAssignments}
+              getAccountName={(entry) => accountLabel(directorNamesById, entry.directorUserId)}
+              getCollaboratorName={(entry) =>
+                collaboratorLabel(collaboratorNamesById, entry.managerCollaboratorId)
+              }
+              accountColumn="Diretoria"
+              collaboratorColumn="Gerência"
+              onClose={(entry) =>
+                setCloseTarget({
+                  kind: 'DIRECTOR',
+                  id: entry.id,
+                  label: `${accountLabel(directorNamesById, entry.directorUserId)} · ${collaboratorLabel(
+                    collaboratorNamesById,
+                    entry.managerCollaboratorId,
+                  )}`,
+                })
+              }
+            />
+          ) : null}
         </section>
       ) : null}
 
@@ -663,24 +694,26 @@ export function RelationshipAdministrationPanel({
             </div>
           </form>
 
-          <RelationshipTable
-            entries={userLinks}
-            getAccountName={(entry) => accountLabel(userNamesById, entry.userId)}
-            getCollaboratorName={(entry) =>
-              collaboratorLabel(collaboratorNamesById, entry.collaboratorId)
-            }
-            accountColumn="Conta"
-            onClose={(entry) =>
-              setCloseTarget({
-                kind: 'USER',
-                id: entry.id,
-                label: `${accountLabel(userNamesById, entry.userId)} · ${collaboratorLabel(
-                  collaboratorNamesById,
-                  entry.collaboratorId,
-                )}`,
-              })
-            }
-          />
+          {isAvailable('users') && isAvailable('userOptions') ? (
+            <RelationshipTable
+              entries={userLinks}
+              getAccountName={(entry) => accountLabel(userNamesById, entry.userId)}
+              getCollaboratorName={(entry) =>
+                collaboratorLabel(collaboratorNamesById, entry.collaboratorId)
+              }
+              accountColumn="Conta"
+              onClose={(entry) =>
+                setCloseTarget({
+                  kind: 'USER',
+                  id: entry.id,
+                  label: `${accountLabel(userNamesById, entry.userId)} · ${collaboratorLabel(
+                    collaboratorNamesById,
+                    entry.collaboratorId,
+                  )}`,
+                })
+              }
+            />
+          ) : null}
         </section>
       ) : null}
 

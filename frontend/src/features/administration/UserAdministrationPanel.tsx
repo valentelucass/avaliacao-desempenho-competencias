@@ -14,7 +14,7 @@ import { FeedbackMessage } from '../../ui/Feedback'
 import { ContextHelp } from '../../ui/ContextHelp'
 import { EmptyState } from '../../ui/EmptyState'
 import { Pagination } from '../../ui/Pagination'
-import { safeErrorMessage } from '../../ui/safeErrorMessage'
+import { safeErrorMessage, safeLoadErrorMessage } from '../../ui/safeErrorMessage'
 import { useAccessibleDialog } from '../../ui/useAccessibleDialog'
 import { useClientPagination } from '../../ui/useClientPagination'
 
@@ -234,7 +234,7 @@ export function UserAdministrationPanel({
         onSessionExpired()
         return
       }
-      setListError(safeErrorMessage(requestError))
+      setListError(safeLoadErrorMessage(requestError, 'as contas'))
     } finally {
       setIsLoadingUsers(false)
     }

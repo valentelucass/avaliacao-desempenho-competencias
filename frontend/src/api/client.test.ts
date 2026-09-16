@@ -61,7 +61,7 @@ describe('HttpApiClient', () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(jsonResponse({ token: 'csrf-expirado' }))
-      .mockResolvedValueOnce(new Response(null, { status: 403 }))
+      .mockResolvedValueOnce(jsonResponse({ code: 'CSRF_INVALID' }, 403))
       .mockResolvedValueOnce(jsonResponse({ token: 'csrf-atualizado' }))
       .mockResolvedValueOnce(new Response(null, { status: 204 }))
     vi.stubGlobal('fetch', fetchMock)
@@ -92,7 +92,7 @@ describe('HttpApiClient', () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(jsonResponse({ token: 'csrf-expirado' }))
-      .mockResolvedValueOnce(new Response(null, { status: 403 }))
+      .mockResolvedValueOnce(jsonResponse({ code: 'CSRF_INVALID' }, 403))
       .mockResolvedValueOnce(jsonResponse({ token: 'csrf-atualizado' }))
       .mockResolvedValueOnce(jsonResponse({ id: 'branch-1' }))
     vi.stubGlobal('fetch', fetchMock)
@@ -256,7 +256,7 @@ describe('HttpApiClient', () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(jsonResponse({ token: 'csrf-expirado' }))
-      .mockResolvedValueOnce(new Response(null, { status: 403 }))
+      .mockResolvedValueOnce(jsonResponse({ code: 'CSRF_INVALID' }, 403))
       .mockResolvedValueOnce(jsonResponse({ token: 'csrf-atualizado' }))
       .mockResolvedValueOnce(jsonResponse(response))
     vi.stubGlobal('fetch', fetchMock)
@@ -303,7 +303,7 @@ describe('HttpApiClient', () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(jsonResponse({ token: 'csrf-expirado' }))
-      .mockResolvedValueOnce(new Response(null, { status: 403 }))
+      .mockResolvedValueOnce(jsonResponse({ code: 'CSRF_INVALID' }, 403))
       .mockResolvedValueOnce(jsonResponse({ token: 'csrf-atualizado' }))
       .mockResolvedValueOnce(new Response(null, { status: 204 }))
     vi.stubGlobal('fetch', fetchMock)
@@ -1038,11 +1038,13 @@ describe('HttpApiClient', () => {
         return Promise.resolve(
           jsonResponse({
             items: [{ id: 'cycle-1', name: 'Ciclo 1', status: 'ABERTO' }],
-            page: { limit: 100, nextCursor: 'second cursor' },
+            page: { limit: 100, nextCursor: '00000000-0000-0000-0000-000000000002' },
           }),
         )
       }
-      if (url === '/api/v1/evaluation-cycles?limit=100&cursor=second+cursor') {
+      if (
+        url === '/api/v1/evaluation-cycles?limit=100&cursor=00000000-0000-0000-0000-000000000002'
+      ) {
         return Promise.resolve(
           jsonResponse({
             items: [{ id: 'cycle-2', name: 'Ciclo 2', status: 'ENCERRADO' }],
@@ -1159,7 +1161,7 @@ describe('HttpApiClient', () => {
         csrf: null,
       },
       {
-        url: '/api/v1/evaluation-cycles?limit=100&cursor=second+cursor',
+        url: '/api/v1/evaluation-cycles?limit=100&cursor=00000000-0000-0000-0000-000000000002',
         method: 'GET',
         body: undefined,
         csrf: null,
@@ -1239,8 +1241,9 @@ describe('HttpApiClient', () => {
   })
 })
 
-function jsonResponse(payload: unknown): Response {
+function jsonResponse(payload: unknown, status = 200): Response {
   return new Response(JSON.stringify(payload), {
+    status,
     headers: { 'Content-Type': 'application/json' },
   })
 }

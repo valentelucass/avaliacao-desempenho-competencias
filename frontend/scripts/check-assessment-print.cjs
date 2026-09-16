@@ -158,12 +158,32 @@ async function mount(d, key) {
   try {
     const browserUrl = await new Promise((resolve, reject) => {
       let out = ''
-      edge.stderr.on('data', (b) => {
+      // No Windows, o launcher pode iniciar outro processo sem repassar stderr.
+      // O arquivo pertence ao perfil temporário exclusivo deste teste.
+      const portFile = path.join(profile, 'DevToolsActivePort')
+      const poll = setInterval(() => {
+        if (!fs.existsSync(portFile)) return
+        const [port, endpoint] = fs.readFileSync(portFile, 'utf8').trim().split(/\r?\n/)
+        if (/^\d+$/.test(port) && endpoint?.startsWith('/devtools/browser/'))
+          finish('ws://127.0.0.1:' + port + endpoint)
+      }, 100)
+      const finish = (url) => {
+        clearInterval(poll)
+        edge.stderr.off('data', onData)
+        edge.off('error', onError)
+        resolve(url)
+      }
+      const onData = (b) => {
         out += b
         const m = out.match(/DevTools listening on (ws:\/\/[^\r\n]+)/)
-        if (m) resolve(m[1])
-      })
-      edge.on('error', reject)
+        if (m) finish(m[1])
+      }
+      const onError = (error) => {
+        clearInterval(poll)
+        reject(error)
+      }
+      edge.stderr.on('data', onData)
+      edge.on('error', onError)
     })
     const origin = browserUrl.replace(/^ws:/, 'http:').split('/devtools/')[0]
     const targets = await (await fetch(origin + '/json/list')).json()
@@ -269,6 +289,7 @@ async function mount(d, key) {
     await require('./check-global-buttons.cjs')({ send, frameId: frameTree.frame.id, css })
     await require('./check-assessment-filters.cjs')({ send, frameId: frameTree.frame.id, css })
     await require('./check-sidebar-cards.cjs')({ send, frameId: frameTree.frame.id, css })
+    await require('./check-cycle-recovery.cjs')({ send, frameId: frameTree.frame.id, css })
     await send('Browser.close').catch(() => {})
   } finally {
     clearTimeout(timer)

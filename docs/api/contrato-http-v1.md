@@ -30,7 +30,7 @@ As coleções não são uniformes nesta primeira entrega: ciclos aceitam `limit`
 | ---- | ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
 | 400  | `REQUEST_MALFORMED`                                                                                           | JSON, UUID, parâmetro ou cabeçalho malformado.                     |
 | 401  | `AUTHENTICATION_FAILED` / `AUTHENTICATION_REQUIRED`                                                           | Login, token ou sessão inválidos, sem revelar existência de conta. |
-| 403  | `ACCESS_DENIED`                                                                                               | Permissão, papel, segregação ou escopo insuficiente.               |
+| 403  | `ACCESS_DENIED`, `CSRF_INVALID`                                                                               | Permissão/escopo insuficiente ou falha de CSRF.                    |
 | 404  | `RESOURCE_NOT_FOUND`                                                                                          | Recurso inexistente ou fora do escopo.                             |
 | 409  | `CONFLICT`, `INVALID_STATE_TRANSITION`, `DUPLICATE_EVALUATION`, `REVISION_MISMATCH`, `IDEMPOTENCY_KEY_REUSED` | Concorrência, estado ou reenvio incompatível.                      |
 | 422  | `VALIDATION_FAILED`                                                                                           | Entrada semanticamente inválida.                                   |
@@ -38,6 +38,18 @@ As coleções não são uniformes nesta primeira entrega: ciclos aceitam `limit`
 | 503  | `SERVICE_UNAVAILABLE`                                                                                         | Estrutura/migration exigida não disponível.                        |
 
 ## Sessão local
+
+### Diagnóstico de falhas e recuperação de CSRF
+
+Extensão aditiva de v1 em 2026-09-15: uma rejeição pelo filtro CSRF retorna `403 CSRF_INVALID`; negações por permissão/escopo continuam `403 ACCESS_DENIED`. O cliente renova o CSRF e repete a escrita **uma única vez**, somente para `CSRF_INVALID`. Não repete uma negação de autorização ou uma resposta 403 sem esse código. Publicar a API compatível antes da SPA; com API anterior, o cliente novo mantém a negação e exige nova tentativa manual, preservando segurança.
+
+Erros de configuração de ciclos mantêm `422 VALIDATION_FAILED` e acrescentam `reasonCode`: `CYCLE_WINDOW_INVALID`, `CYCLE_TIME_ZONE_INVALID`, `CYCLE_CODE_INVALID`, `CYCLE_QUESTIONNAIRE_COUNT_INVALID`, `CYCLE_QUESTIONNAIRE_REPEATED` ou `CYCLE_CONFIGURATION_INVALID`. Nenhuma janela, cálculo ou regra de negócio foi flexibilizada.
+
+Conflitos de questionário mantêm `409 CONFLICT` e acrescentam motivo estável: `QUESTIONNAIRE_CATALOG_CONFLICT`, `COMPETENCY_CATALOG_CONFLICT`, `COMPETENCY_VERSION_CONFLICT`, `CALCULATION_CONFIGURATION_CONFLICT`, `CLASSIFICATION_MATRIX_CONFLICT`, `QUESTIONNAIRE_STATE_CONFLICT` ou `QUESTIONNAIRE_INTEGRITY_CONFLICT`. O último cobre restrições de integridade sem revelar nomes de tabelas ou dados conflitantes; não afirma que toda falha é duplicidade de versão.
+
+`reasonCode` é opcional, e clientes devem preservar o tratamento genérico para valores ausentes/desconhecidos. A interface usa mensagens locais de uma lista permitida e mostra `requestId` validado também em 403/409/422. Erros de leitura identificam a consulta que falhou e não pedem correção de campos não enviados.
+
+Falhas HTTP tratadas são registradas com método, rota-modelo (ou família permitida antes do mapeamento), status, `code`, `reasonCode` e `requestId`. Não entram no registro corpo, query string, identificador do recurso, cookie, credencial, comentário nem mensagem interna da exceção. Esta instrumentação local precisa ser publicada para produzir evidência no runtime; não reconstrói tentativas anteriores.
 
 | Operação                        | Corpo / retorno                                                                  | Regra                                                                                           |
 | ------------------------------- | -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
@@ -103,7 +115,7 @@ As leituras abaixo permitem apenas reconstruir as seleções e ações administr
 | `GET /master-data/collaborators`                    | `CADASTROS.GERIR`                    | Lista `{ id, displayName, active }` de colaboradores.                                                                                                                    |
 | `GET /master-data/allocations/active`               | `CADASTROS.GERIR`                    | Lista somente lotações não encerradas: `{ id, collaboratorId, branchId?, areaId?, managerText?, startsOn? }`.                                                            |
 | `GET /administration/manager-assignments/active`    | `VINCULOS_GESTOR_COLABORADOR.GERIR`  | Lista somente vínculos não revogados: `{ id, managerUserId, collaboratorId, startsOn? }`.                                                                                |
-| `GET /administration/manager-assignments/options`   | `VINCULOS_GESTOR_COLABORADOR.GERIR`  | `{ managers: [{ id, displayName }], collaborators: [{ id, displayName }] }`; somente contas ativas com papel `GESTOR` ou `GERENCIA_RH` vigente e colaboradores ativos.                    |
+| `GET /administration/manager-assignments/options`   | `VINCULOS_GESTOR_COLABORADOR.GERIR`  | `{ managers: [{ id, displayName }], collaborators: [{ id, displayName }] }`; somente contas ativas com papel `GESTOR` ou `GERENCIA_RH` vigente e colaboradores ativos.   |
 | `GET /master-data/user-collaborator-links/active`   | `VINCULOS_USUARIO_COLABORADOR.GERIR` | Lista somente vínculos não encerrados: `{ id, userId, collaboratorId, startsOn }`.                                                                                       |
 | `GET /master-data/user-collaborator-links/options`  | `VINCULOS_USUARIO_COLABORADOR.GERIR` | `{ users: [{ id, displayName }], collaborators: [{ id, displayName }] }`; somente contas e colaboradores ativos.                                                         |
 | `GET /master-data/questionnaire-assignments/active` | `CADASTROS.GERIR`                    | Lista somente atribuições não revogadas, inclusive de ciclos abertos: `{ id, cycleId, cycleCode, cycleName, collaboratorId, cycleQuestionnaireId, questionnaireTitle }`. |
@@ -144,29 +156,29 @@ Essas rotas exigem `VINCULOS_DIRETORIA_GERENCIA.GERIR`, CSRF nas escritas e pres
 
 ## Avaliações
 
-| Operação                                                                            | Regra                                                                                                                                                                                                                             |
-| ----------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `GET /assessments` | Retorna `{ items, page: { limit, nextCursor } }` no escopo do ator. Aceita `limit=1..100`, `cursor` opaco e os filtros opcionais abaixo; `nextCursor` só deve ser reutilizado com os mesmos filtros. |
-| `GET /assessments/creation-options?cycleId={UUID}`                                  | Gestor recebe somente `{ collaborators: [{ id, displayName }] }` ainda avaliáveis por ele no ciclo.                                                                                                                               |
-| `GET /assessments/director-creation-options?cycleId={UUID}`                         | Diretoria recebe somente Gerências vinculadas e ainda avaliáveis por ela no ciclo.                                                                                                                                                |
-| `GET /assessments/{assessmentId}`                                                   | Retorna detalhe somente quando o ator possui escopo do recurso.                                                                                                                                                                   |
-| `POST /assessments/{assessmentId}/print-events`                                     | Requer o mesmo escopo de leitura do detalhe e CSRF; registra a solicitação de impressão e retorna `204`, sem gerar ou devolver arquivo.                                                                                           |
-| `POST /assessments`                                                                 | Requer `Idempotency-Key`; aceita gestor ou Diretoria–Gerência com `{ type, cycleId, collaboratorId }`, ou autoavaliação com `{ type: "AUTOAVALIACAO", cycleId }`. O servidor valida o vínculo adequado ao tipo.                   |
-| `PATCH /assessments/{assessmentId}`                                                 | Requer `If-Match`; salva respostas, comentário e plano somente em rascunho autorizado.                                                                                                                                            |
-| `POST /assessments/{assessmentId}/submit`                                           | Requer `If-Match` e `Idempotency-Key`; valida todas as respostas e calcula resultado no servidor.                                                                                                                                 |
-| `POST /assessments/{assessmentId}/publish`                                          | Requer `Idempotency-Key`; somente RH/Diretoria publicam avaliação enviada. Gestor e Diretoria–Gerência iniciam feedback `PENDENTE`; autoavaliação fica `NAO_APLICAVEL`.                                                           |
-| `POST /assessments/{assessmentId}/feedback`                                         | Requer `Idempotency-Key`; `{ feedbackDate: "YYYY-MM-DD", comment }`. Somente o autor original conclui feedback de sua avaliação publicada elegível. Repetição com a mesma chave é idempotente; não há edição/substituição.        |
-| `POST /assessments/{assessmentId}/reopen`                                           | Requer `Idempotency-Key` e `{ reason }` de até 80 caracteres; somente RH/Diretoria reabrem avaliação publicada. A versão e eventual feedback anteriores permanecem históricos.                                                    |
+| Operação                                                    | Regra                                                                                                                                                                                                                      |
+| ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /assessments`                                          | Retorna `{ items, page: { limit, nextCursor } }` no escopo do ator. Aceita `limit=1..100`, `cursor` opaco e os filtros opcionais abaixo; `nextCursor` só deve ser reutilizado com os mesmos filtros.                       |
+| `GET /assessments/creation-options?cycleId={UUID}`          | Gestor recebe somente `{ collaborators: [{ id, displayName }] }` ainda avaliáveis por ele no ciclo.                                                                                                                        |
+| `GET /assessments/director-creation-options?cycleId={UUID}` | Diretoria recebe somente Gerências vinculadas e ainda avaliáveis por ela no ciclo.                                                                                                                                         |
+| `GET /assessments/{assessmentId}`                           | Retorna detalhe somente quando o ator possui escopo do recurso.                                                                                                                                                            |
+| `POST /assessments/{assessmentId}/print-events`             | Requer o mesmo escopo de leitura do detalhe e CSRF; registra a solicitação de impressão e retorna `204`, sem gerar ou devolver arquivo.                                                                                    |
+| `POST /assessments`                                         | Requer `Idempotency-Key`; aceita gestor ou Diretoria–Gerência com `{ type, cycleId, collaboratorId }`, ou autoavaliação com `{ type: "AUTOAVALIACAO", cycleId }`. O servidor valida o vínculo adequado ao tipo.            |
+| `PATCH /assessments/{assessmentId}`                         | Requer `If-Match`; salva respostas, comentário e plano somente em rascunho autorizado.                                                                                                                                     |
+| `POST /assessments/{assessmentId}/submit`                   | Requer `If-Match` e `Idempotency-Key`; valida todas as respostas e calcula resultado no servidor.                                                                                                                          |
+| `POST /assessments/{assessmentId}/publish`                  | Requer `Idempotency-Key`; somente RH/Diretoria publicam avaliação enviada. Gestor e Diretoria–Gerência iniciam feedback `PENDENTE`; autoavaliação fica `NAO_APLICAVEL`.                                                    |
+| `POST /assessments/{assessmentId}/feedback`                 | Requer `Idempotency-Key`; `{ feedbackDate: "YYYY-MM-DD", comment }`. Somente o autor original conclui feedback de sua avaliação publicada elegível. Repetição com a mesma chave é idempotente; não há edição/substituição. |
+| `POST /assessments/{assessmentId}/reopen`                   | Requer `Idempotency-Key` e `{ reason }` de até 80 caracteres; somente RH/Diretoria reabrem avaliação publicada. A versão e eventual feedback anteriores permanecem históricos.                                             |
 
 Filtros de listagem (aditivos em v1, ADC-UI-051):
 
-| Parâmetro | Semântica |
-| --- | --- |
-| `cycleId`, `collaboratorId` | UUIDs opcionais já existentes para localização/pré-visualização administrativa. |
-| `evaluatedName` | Trecho literal do nome de exibição do colaborador avaliado. |
-| `managerName` | Trecho literal do nome de exibição da conta avaliadora registrada em `GESTOR` ou `DIRETORIA_GERENCIA`; não usa o gestor atual da lotação. Autoavaliação não corresponde a este filtro. |
-| `status` | `RASCUNHO`, `ENVIADA` ou `PUBLICADA`. |
-| `feedbackStatus` | `PENDENTE`, `CONCLUIDO` ou `NAO_APLICAVEL`, conforme a mesma situação efetiva devolvida na lista e a versão atual da avaliação. |
+| Parâmetro                   | Semântica                                                                                                                                                                              |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `cycleId`, `collaboratorId` | UUIDs opcionais já existentes para localização/pré-visualização administrativa.                                                                                                        |
+| `evaluatedName`             | Trecho literal do nome de exibição do colaborador avaliado.                                                                                                                            |
+| `managerName`               | Trecho literal do nome de exibição da conta avaliadora registrada em `GESTOR` ou `DIRETORIA_GERENCIA`; não usa o gestor atual da lotação. Autoavaliação não corresponde a este filtro. |
+| `status`                    | `RASCUNHO`, `ENVIADA` ou `PUBLICADA`.                                                                                                                                                  |
+| `feedbackStatus`            | `PENDENTE`, `CONCLUIDO` ou `NAO_APLICAVEL`, conforme a mesma situação efetiva devolvida na lista e a versão atual da avaliação.                                                        |
 
 Os filtros são combinados por **E**, sempre dentro da autorização existente e antes do limite/cursor no SQL. Nomes aceitam até 160 caracteres sem controles, com espaços externos removidos; vazio significa sem filtro. A busca ignora caixa e acentos (`Latin1_General_100_CI_AI`); `%`, `_`, colchetes e apóstrofos não são curingas nem SQL. Estados/nome inválidos retornam `422` genérico, sem ecoar a entrada. O resumo e suas permissões não mudaram. Front-end novo deve ser usado com back-end atualizado: versões anteriores podem ignorar os parâmetros novos. Nenhuma migration é necessária.
 

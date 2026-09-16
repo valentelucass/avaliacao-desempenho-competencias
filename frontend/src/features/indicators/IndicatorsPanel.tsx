@@ -16,7 +16,7 @@ import type {
 import { FeedbackMessage } from '../../ui/Feedback'
 import { ContextHelp } from '../../ui/ContextHelp'
 import { Pagination } from '../../ui/Pagination'
-import { safeErrorMessage } from '../../ui/safeErrorMessage'
+import { safeErrorMessage, safeLoadErrorMessage } from '../../ui/safeErrorMessage'
 import { useClientPagination } from '../../ui/useClientPagination'
 
 type IndicatorsPanelProps = {
@@ -86,7 +86,7 @@ export function IndicatorsPanel({ api, canExport, onSessionExpired }: Indicators
           return
         }
         if (isCurrent) {
-          setError(safeErrorMessage(requestError))
+          setError(safeLoadErrorMessage(requestError, 'os ciclos'))
         }
       } finally {
         if (isCurrent) {
@@ -121,7 +121,7 @@ export function IndicatorsPanel({ api, canExport, onSessionExpired }: Indicators
         }
         if (isCurrent) {
           setFilterOptions(emptyFilterOptions)
-          setError(safeErrorMessage(requestError))
+          setError(safeLoadErrorMessage(requestError, 'as opções dos indicadores'))
         }
       } finally {
         if (isCurrent) {

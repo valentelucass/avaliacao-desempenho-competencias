@@ -43,8 +43,15 @@ public class EvaluationCycleAdministrationExceptionHandler {
     };
   }
 
+  @ExceptionHandler(CycleAdministrationRuleViolation.class)
+  ResponseEntity<ProblemDetail> invalidConfiguration(
+      CycleAdministrationRuleViolation exception, HttpServletRequest request) {
+    ResponseEntity<ProblemDetail> response = invalidRequest(request);
+    response.getBody().setProperty("reasonCode", exception.reasonCode());
+    return response;
+  }
+
   @ExceptionHandler({
-    CycleAdministrationRuleViolation.class,
     MethodArgumentNotValidException.class,
     ConstraintViolationException.class,
     HttpMessageNotReadableException.class,

@@ -313,6 +313,7 @@ export interface CreatedEvaluationCycle {
 }
 
 export interface ApiProblem {
+  reasonCode?: string
   status: number
   code?: string
   requestId?: string

@@ -16,7 +16,7 @@ import { FeedbackMessage } from '../../ui/Feedback'
 import { ContextHelp } from '../../ui/ContextHelp'
 import { EmptyState } from '../../ui/EmptyState'
 import { Pagination } from '../../ui/Pagination'
-import { safeErrorMessage } from '../../ui/safeErrorMessage'
+import { safeErrorMessage, safeLoadErrorMessage } from '../../ui/safeErrorMessage'
 import { AssessmentEditor } from './AssessmentEditor'
 import { IndividualAssessmentSummary } from './IndividualAssessmentSummary'
 import { AssessmentListFilters, type AssessmentFilters } from './AssessmentListFilters'
@@ -218,7 +218,7 @@ export function AssessmentsPanel({
           onSessionExpired()
           return
         }
-        setError(safeErrorMessage(requestError))
+        setError(safeLoadErrorMessage(requestError, 'as avaliações'))
       } finally {
         if (requestId === listRequestId.current) {
           isPageNavigationPending.current = false
@@ -267,7 +267,7 @@ export function AssessmentsPanel({
         if (isAuthenticationError(requestError)) {
           onSessionExpired()
         } else if (isCurrent) {
-          setError(safeErrorMessage(requestError))
+          setError(safeLoadErrorMessage(requestError, 'as opções de avaliação'))
         }
       }
     }

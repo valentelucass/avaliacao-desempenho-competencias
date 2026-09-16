@@ -42,6 +42,17 @@ public final class SecurityProblemWriter {
         "Você não possui permissão para esta operação.");
   }
 
+  public void writeCsrfInvalid(HttpServletRequest request, HttpServletResponse response)
+      throws IOException {
+    write(
+        request,
+        response,
+        HttpStatus.FORBIDDEN,
+        "CSRF_INVALID",
+        "Solicitação não validada",
+        "Atualize a página e tente novamente.");
+  }
+
   private void write(
       HttpServletRequest request,
       HttpServletResponse response,
@@ -59,6 +70,7 @@ public final class SecurityProblemWriter {
     problem.setTitle(title);
     problem.setProperty("code", code);
     problem.setProperty("requestId", RequestCorrelationFilter.getRequestId(request));
+    RequestCorrelationFilter.recordProblem(request, code, null);
 
     response.setStatus(status.value());
     response.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);

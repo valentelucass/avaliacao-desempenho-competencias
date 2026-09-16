@@ -26,6 +26,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.context.SecurityContextHolderFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfException;
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy;
 import org.springframework.security.web.header.writers.StaticHeadersWriter;
 import org.springframework.security.web.util.matcher.AnyRequestMatcher;
@@ -71,7 +72,11 @@ public class ApiSecurityConfiguration {
                     .accessDeniedHandler(
                         (request, response, exception) -> {
                           writeDeniedAudit(request, identityAccessRepository.getIfAvailable());
-                          securityProblemWriter.writeAccessDenied(request, response);
+                          if (exception instanceof CsrfException) {
+                            securityProblemWriter.writeCsrfInvalid(request, response);
+                          } else {
+                            securityProblemWriter.writeAccessDenied(request, response);
+                          }
                         }))
         .headers(
             headers ->

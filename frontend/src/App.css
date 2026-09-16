@@ -3021,6 +3021,7 @@ thead th {
 }
 
 .cycle-configuration-form__details-grid {
+  align-items: start;
   display: grid;
   gap: 0.9rem 1.25rem;
 }

@@ -10,6 +10,10 @@ Execute na raiz do repositório:
 
 O comando é um gate local. Ele não cria usuários, dados de negócio, migrations, processos PM2, regras de firewall ou rotas da Cloudflare.
 
+O build grava `frontend/dist`. Se o preview produtivo estiver servindo esse diretório, execute o gate em uma cópia isolada das fontes atuais para não publicar arquivos por efeito do teste. Na correção de ciclos de 2026-09-15, um worktree temporário recebeu as alterações locais, usou as dependências existentes e executou `verify-quality.ps1 -SkipDatabase`; a validação SQL somente leitura foi executada separadamente na raiz autorizada. Um manifesto de hashes conferiu equivalência das fontes testadas, e os hashes de `dist` e PIDs produtivos foram comparados antes/depois.
+
+O ensaio Edge inclui `check-cycle-recovery.cjs`, com componente e cliente HTTP reais compilados em modo de produção e transporte inteiramente fictício. Verifica clique em Novo ciclo sem escrita, erro tardio de leitura, preservação da referência, recuperação por Atualizar, rejeição local de data inválida e criação fictícia após preencher dados válidos, em 375/1440 px. A suíte normal ignora `coverage/`, onde permanecem os ensaios históricos que afirmavam o comportamento defeituoso; as regressões da correção estão versionadas em `src/`.
+
 O gate inclui regressões dos launchers com processos simulados e impressão/hover em Microsoft Edge headless instalado no caminho padrão do Windows. O teste do navegador usa componentes reais, o CSS compilado e dados inteiramente fictícios, sem conexão com a API; valida uma única página A4, 21 notas, ausência de espaço no topo, tamanho físico dos rótulos e alternativas desabilitadas sem hover. Para executá-lo isoladamente após o build: `node frontend/scripts/check-assessment-print.cjs`. Aguarda fontes e quadros de renderização antes das medições; não substitui o aceite da impressora real.
 
 O mesmo ensaio também executa a [alternância de tema com cortina](operations/alternancia-tema-cortina.md) com React no Edge: animação real em 375/1440 px, Enter/foco, troca nos dois sentidos, tema das tabelas, campos preservados, movimento reduzido, impressão e desmontagem. A fixture é compilada em memória pelo Vite, sem modificar a SPA ou acessar API/dados reais.
@@ -27,6 +31,16 @@ A regressão de `Encerrar` é verificada adicionalmente no `RelationshipAdminist
 | Dependências | `npm audit --audit-level=high` e verificação do SBOM Java pelo OSV Scanner. As consultas de vulnerabilidade dependem de conectividade externa; o binário oficial do scanner Java é fixado por versão e validado por SHA-256 antes da execução. |
 
 Use o comando sem `-SkipDatabase` no banco local dedicado. O catálogo versionado atual contém `V0001`–`V0014`; a reconciliação somente leitura dos dois bancos foi registrada em 2026-09-08. Use `-SkipDatabase` somente quando o alvo SQL Server não estiver disponível para o gate; essa opção ainda valida os arquivos de migration, mas não substitui a execução completa contra SQL Server antes da liberação.
+
+## Criação de ciclo com SQL Server DEV e rollback
+
+`CycleCreationDevSqlTests` é opt-in por `-Dadc.dev.cycles.rollback=true`. Executa controllers HTTP, serviços, validações e repositórios reais sobre `AVALIACAO_DEV`: questionários aprovados, data inválida, criação, persistência das datas/versões, paginação completa, edição e duplicidade. O principal é fornecido pelo teste; autenticação e filtros são cobertos separadamente. Não inicia servidor, não usa a configuração de produção e exige uma conta fictícia ativa `qa.feedback.rh.%` já existente.
+
+A URL DEV é fixa e `DB_NAME()` é conferido antes da escrita. A transação é marcada para rollback antes do primeiro comando; depois, o teste exige ausência do ciclo, da transição e da auditoria correspondente. Nenhuma conta, migration, schema ou avaliação é criada. A autenticação integrada usa a DLL local compatível com o driver JDBC, pela propriedade `java.library.path`. Executar de `backend`, passando o caminho dessa DLL como argumento da JVM de teste:
+
+`mvnw.cmd -Dtest=CycleCreationDevSqlTests -Dadc.dev.cycles.rollback=true "-DargLine=-Djava.library.path=<diretório da DLL local>" test`
+
+O ensaio não é ativado pelo gate padrão. Sua execução explícita foi aprovada em ADC-VAL-011; as integrações antigas continuam com suas próprias opções.
 
 ## Acessibilidade
 

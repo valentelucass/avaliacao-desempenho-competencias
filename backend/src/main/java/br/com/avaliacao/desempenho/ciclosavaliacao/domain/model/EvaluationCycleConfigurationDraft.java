@@ -29,7 +29,8 @@ public record EvaluationCycleConfigurationDraft(
     openingAtLocal = Objects.requireNonNull(openingAtLocal, "abertura não pode ser nula");
     closingAtLocal = Objects.requireNonNull(closingAtLocal, "encerramento não pode ser nulo");
     if (!TIME_ZONE.equals(timeZone)) {
-      throw violation("O ciclo 2024.1 exige o fuso America/Sao_Paulo.");
+      throw new CycleAdministrationRuleViolation(
+          "CYCLE_TIME_ZONE_INVALID", "O ciclo 2024.1 exige o fuso America/Sao_Paulo.");
     }
     questionnaires = copyQuestionnaires(questionnaires);
     requireAnnualWindow(openingAtLocal, closingAtLocal);
@@ -60,7 +61,9 @@ public record EvaluationCycleConfigurationDraft(
   private static List<AppliedQuestionnaireDraft> copyQuestionnaires(
       List<AppliedQuestionnaireDraft> values) {
     if (values == null || values.isEmpty() || values.size() > 20) {
-      throw violation("O ciclo deve ter entre um e vinte questionários aplicados.");
+      throw new CycleAdministrationRuleViolation(
+          "CYCLE_QUESTIONNAIRE_COUNT_INVALID",
+          "O ciclo deve ter entre um e vinte questionários aplicados.");
     }
     if (values.stream().anyMatch(Objects::isNull)) {
       throw violation("O ciclo não pode conter um questionário aplicado nulo.");
@@ -71,7 +74,9 @@ public record EvaluationCycleConfigurationDraft(
             .map(AppliedQuestionnaireDraft::questionnaireVersionId)
             .collect(Collectors.toUnmodifiableSet());
     if (versions.size() != copy.size()) {
-      throw violation("Uma versão de questionário só pode ser aplicada uma vez no ciclo.");
+      throw new CycleAdministrationRuleViolation(
+          "CYCLE_QUESTIONNAIRE_REPEATED",
+          "Uma versão de questionário só pode ser aplicada uma vez no ciclo.");
     }
     return copy;
   }
@@ -86,7 +91,8 @@ public record EvaluationCycleConfigurationDraft(
         || closingAtLocal.getMonth() != Month.SEPTEMBER
         || closingAtLocal.getDayOfMonth() != 16
         || !closingAtLocal.toLocalTime().equals(LocalTime.MIDNIGHT)) {
-      throw violation(
+      throw new CycleAdministrationRuleViolation(
+          "CYCLE_WINDOW_INVALID",
           "O ciclo anual deve abrir em 1º de setembro às 00:00 e encerrar em 16 de setembro às 00:00.");
     }
   }

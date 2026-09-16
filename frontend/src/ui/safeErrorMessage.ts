@@ -1,21 +1,64 @@
 import { ApiError } from '../api/client'
 
 export function safeErrorMessage(error: unknown): string {
+  return withReference(errorMessage(error), error)
+}
+
+export function safeLoadErrorMessage(error: unknown, resource: string): string {
+  const reason =
+    error instanceof ApiError && (error.status === 401 || error.status === 403)
+      ? errorMessage(error)
+      : 'Tente atualizar os dados ou recarregue a página.'
+  return withReference(`Não foi possível carregar ${resource}. ${reason}`, error)
+}
+
+function withReference(message: string, error: unknown): string {
+  const requestId = error instanceof ApiError ? error.requestId : undefined
+  return requestId && /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(requestId)
+    ? `${message} Referência: ${requestId}.`
+    : message
+}
+
+function errorMessage(error: unknown): string {
   if (error instanceof ApiError) {
     if (error.status === 401) {
       return 'Sua sessão não está disponível. Entre novamente para continuar.'
     }
     if (error.status === 403) {
+      if (error.code === 'CSRF_INVALID') return 'Atualize a página e tente novamente.'
       return 'Você não possui acesso a esta operação.'
     }
     if (error.status === 409) {
+      if (error.reasonCode === 'QUESTIONNAIRE_INTEGRITY_CONFLICT')
+        return 'O código ou a versão do questionário conflita com um registro existente. Confira as versões aprovadas.'
+      if (error.reasonCode === 'QUESTIONNAIRE_CATALOG_CONFLICT')
+        return 'Esse código de questionário já pertence a outro catálogo. Confira o código e o nome.'
+      if (
+        error.reasonCode === 'COMPETENCY_CATALOG_CONFLICT' ||
+        error.reasonCode === 'COMPETENCY_VERSION_CONFLICT'
+      )
+        return 'Uma competência conflita com o catálogo ou a versão existente. Confira seu código e conteúdo.'
+      if (
+        error.reasonCode === 'CALCULATION_CONFIGURATION_CONFLICT' ||
+        error.reasonCode === 'CLASSIFICATION_MATRIX_CONFLICT'
+      )
+        return 'A configuração de cálculo ou a matriz não é compatível com a versão selecionada.'
       return 'O recurso foi alterado em outra sessão ou não está mais no estado necessário. Atualize os dados antes de continuar.'
     }
     if (error.status === 422) {
+      const cycleReasons: Record<string, string> = {
+        CYCLE_WINDOW_INVALID:
+          'O ciclo deve abrir em 01/09 às 00:00 e encerrar em 16/09 às 00:00 do mesmo ano.',
+        CYCLE_TIME_ZONE_INVALID: 'O fuso horário do ciclo deve ser America/Sao_Paulo.',
+        CYCLE_CODE_INVALID:
+          'Use somente letras sem acentos, números, ponto, hífen ou sublinhado no código.',
+        CYCLE_QUESTIONNAIRE_REPEATED:
+          'Selecione somente uma configuração por versão de questionário.',
+        CYCLE_QUESTIONNAIRE_COUNT_INVALID: 'Selecione entre um e 20 questionários aprovados.',
+      }
+      if (error.reasonCode && Object.hasOwn(cycleReasons, error.reasonCode))
+        return cycleReasons[error.reasonCode]
       return 'Revise os campos informados e tente novamente.'
-    }
-    if (error.requestId) {
-      return `Não foi possível concluir a solicitação. Referência: ${error.requestId}.`
     }
   }
 

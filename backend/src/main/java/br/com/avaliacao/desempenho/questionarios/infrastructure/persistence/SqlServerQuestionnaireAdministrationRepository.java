@@ -143,7 +143,9 @@ public class SqlServerQuestionnaireAdministrationRepository
     }
     BaseCatalogRow row = existing.getFirst();
     if (!row.active() || !row.name().equals(questionnaire.name())) {
-      throw conflict("O código de questionário já representa outro catálogo.");
+      throw conflict(
+          "QUESTIONNAIRE_CATALOG_CONFLICT",
+          "O código de questionário já representa outro catálogo.");
     }
     return row.id();
   }
@@ -172,7 +174,8 @@ public class SqlServerQuestionnaireAdministrationRepository
     }
     BaseCatalogRow row = existing.getFirst();
     if (!row.active() || !row.name().equals(competency.name())) {
-      throw conflict("O código de competência já representa outro catálogo.");
+      throw conflict(
+          "COMPETENCY_CATALOG_CONFLICT", "O código de competência já representa outro catálogo.");
     }
     return row.id();
   }
@@ -201,7 +204,8 @@ public class SqlServerQuestionnaireAdministrationRepository
     CompetencyVersionRow row = existing.getFirst();
     if (!row.name().equals(competency.name())
         || !Objects.equals(row.description(), competency.description())) {
-      throw conflict("A versão de competência já representa outro conteúdo.");
+      throw conflict(
+          "COMPETENCY_VERSION_CONFLICT", "A versão de competência já representa outro conteúdo.");
     }
     return row.id();
   }
@@ -242,7 +246,9 @@ public class SqlServerQuestionnaireAdministrationRepository
     }
     CalculationConfigurationRow row = existing.getFirst();
     if (!matches2024Calculation(row)) {
-      throw conflict("A configuração de cálculo já representa outra regra ou não está aprovada.");
+      throw conflict(
+          "CALCULATION_CONFIGURATION_CONFLICT",
+          "A configuração de cálculo já representa outra regra ou não está aprovada.");
     }
     return new VersionedArtifact(row.id(), false);
   }
@@ -279,7 +285,9 @@ public class SqlServerQuestionnaireAdministrationRepository
     if (!row.calculationConfigurationVersionId().equals(calculationConfigurationVersionId)
         || row.approvedAt() == null
         || !hasGeneralClassificationBands(row.id())) {
-      throw conflict("A matriz GERAL já representa outra configuração ou não está aprovada.");
+      throw conflict(
+          "CLASSIFICATION_MATRIX_CONFLICT",
+          "A matriz GERAL já representa outra configuração ou não está aprovada.");
     }
     return new VersionedArtifact(row.id(), false);
   }
@@ -560,7 +568,7 @@ public class SqlServerQuestionnaireAdministrationRepository
 
   private static void requireOne(int affectedRows) {
     if (affectedRows != 1) {
-      throw conflict("O recurso não está no estado esperado.");
+      throw conflict("QUESTIONNAIRE_STATE_CONFLICT", "O recurso não está no estado esperado.");
     }
   }
 
@@ -578,9 +586,9 @@ public class SqlServerQuestionnaireAdministrationRepository
     return left != null && right != null && left.compareTo(right) == 0;
   }
 
-  private static QuestionnaireAdministrationException conflict(String message) {
+  private static QuestionnaireAdministrationException conflict(String reasonCode, String message) {
     return new QuestionnaireAdministrationException(
-        QuestionnaireAdministrationException.Reason.CONFLICT, message);
+        QuestionnaireAdministrationException.Reason.CONFLICT, reasonCode, message);
   }
 
   private static QuestionnaireAdministrationException unavailable() {

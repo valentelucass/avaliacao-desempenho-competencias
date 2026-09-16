@@ -39,10 +39,10 @@ describe('CycleAdministrationPanel', () => {
       target: { value: 'Ciclo de avaliação 2026.2' },
     })
     fireEvent.change(screen.getByLabelText('Abertura'), {
-      target: { value: '2026-09-01T08:00' },
+      target: { value: '2026-09-01T00:00' },
     })
     fireEvent.change(screen.getByLabelText('Encerramento'), {
-      target: { value: '2026-10-31T18:00' },
+      target: { value: '2026-09-16T00:00' },
     })
     fireEvent.click(screen.getByRole('checkbox', { name: 'MEDIA_SIMPLES_2024_1 v1 · GERAL v1' }))
     fireEvent.click(screen.getByRole('button', { name: 'Criar ciclo' }))
@@ -52,8 +52,8 @@ describe('CycleAdministrationPanel', () => {
         code: '2026.2',
         configuration: {
           name: 'Ciclo de avaliação 2026.2',
-          openingAtLocal: '2026-09-01T08:00',
-          closingAtLocal: '2026-10-31T18:00',
+          openingAtLocal: '2026-09-01T00:00',
+          closingAtLocal: '2026-09-16T00:00',
           timeZone: 'America/Sao_Paulo',
           selfAssessmentEnabled: false,
           questionnaires: [
@@ -97,8 +97,8 @@ describe('CycleAdministrationPanel', () => {
       expect(api.replaceEvaluationCycle).toHaveBeenCalledWith('cycle-draft-1', {
         configuration: {
           name: 'Ciclo de avaliação revisado',
-          openingAtLocal: '2026-09-01T08:00',
-          closingAtLocal: '2026-10-31T18:00',
+          openingAtLocal: '2026-09-01T00:00',
+          closingAtLocal: '2026-09-16T00:00',
           timeZone: 'America/Sao_Paulo',
           selfAssessmentEnabled: true,
           questionnaires: [
@@ -161,9 +161,14 @@ describe('CycleAdministrationPanel', () => {
         await act(async () => {
           fireEvent.click(screen.getByRole('button', { name: 'Salvar configuração' }))
         })
-        expect(api.replaceEvaluationCycle).toHaveBeenCalledWith('cycle-draft-1', {
-          configuration: expect.objectContaining({ [field]: value }),
-        })
+        if (field === 'timeZone' || field === 'openingAtLocal' || field === 'closingAtLocal') {
+          expect(api.replaceEvaluationCycle).not.toHaveBeenCalled()
+          expect(screen.getByRole('alert')).toBeInTheDocument()
+        } else {
+          expect(api.replaceEvaluationCycle).toHaveBeenCalledWith('cycle-draft-1', {
+            configuration: expect.objectContaining({ [field]: value }),
+          })
+        }
       } finally {
         vi.useRealTimers()
       }
@@ -389,8 +394,8 @@ function sampleDraft(overrides: Partial<DraftCycleConfiguration> = {}): DraftCyc
     cycleId: 'cycle-draft-1',
     code: '2026.2',
     name: 'Ciclo de avaliação 2026.2',
-    openingAtLocal: '2026-09-01T08:00',
-    closingAtLocal: '2026-10-31T18:00',
+    openingAtLocal: '2026-09-01T00:00',
+    closingAtLocal: '2026-09-16T00:00',
     timeZone: 'America/Sao_Paulo',
     selfAssessmentEnabled: true,
     questionnaires: [

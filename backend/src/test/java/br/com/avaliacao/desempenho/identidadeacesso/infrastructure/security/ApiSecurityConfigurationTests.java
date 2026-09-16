@@ -1,10 +1,12 @@
 package br.com.avaliacao.desempenho.identidadeacesso.infrastructure.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -137,6 +139,18 @@ class ApiSecurityConfigurationTests {
                         .authorities(new SimpleGrantedAuthority("PERMISSION:CICLOS.GERIR"))))
         // A rota persistida não é registrada neste contexto; 404 prova que o gate não devolveu 403.
         .andExpect(status().isNotFound());
+  }
+
+  @Test
+  void distinguishesInvalidCsrfFromPermissionDenialForWrites() throws Exception {
+    mockMvc
+        .perform(post("/api/v1/evaluation-cycles").with(user("test-operator")))
+        .andExpect(status().isForbidden())
+        .andExpect(jsonPath("$.code").value("CSRF_INVALID"));
+    mockMvc
+        .perform(post("/api/v1/evaluation-cycles").with(user("test-operator")).with(csrf()))
+        .andExpect(status().isForbidden())
+        .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
   }
 
   @Test

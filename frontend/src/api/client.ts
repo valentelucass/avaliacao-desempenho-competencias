@@ -57,6 +57,7 @@ const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '/api/v1').replace(/\
 export class ApiError extends Error {
   readonly status: number
   readonly code?: string
+  readonly reasonCode?: string
   readonly requestId?: string
   readonly fieldErrors: readonly {
     field: string
@@ -68,6 +69,7 @@ export class ApiError extends Error {
     this.name = 'ApiError'
     this.status = problem.status
     this.code = problem.code
+    this.reasonCode = problem.reasonCode
     this.requestId = problem.requestId
     this.fieldErrors = problem.errors ?? []
   }
@@ -569,11 +571,28 @@ export class HttpApiClient implements ApiClient {
       const page = await this.request<Page<EvaluationCycle>>(
         `/evaluation-cycles?${parameters.toString()}`,
       )
+      if (
+        !page ||
+        !Array.isArray(page.items) ||
+        !page.page ||
+        !(
+          page.page.nextCursor === null ||
+          (typeof page.page.nextCursor === 'string' &&
+            /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+              page.page.nextCursor,
+            ))
+        )
+      ) {
+        throw new ApiError({ status: 502, code: 'INVALID_CYCLE_PAGINATION' })
+      }
       cycles.push(...page.items)
       cursor = page.page.nextCursor
 
-      if (cursor !== null && !seenCursors.add(cursor)) {
-        throw new ApiError({ status: 500, code: 'INVALID_CYCLE_PAGINATION' })
+      if (cursor !== null) {
+        if (seenCursors.has(cursor)) {
+          throw new ApiError({ status: 502, code: 'INVALID_CYCLE_PAGINATION' })
+        }
+        seenCursors.add(cursor)
       }
     } while (cursor !== null)
 
@@ -822,7 +841,12 @@ export class HttpApiClient implements ApiClient {
         response = await this.send(path, options)
       }
     }
-    if (!response.ok && response.status === 403 && options.requiresCsrf) {
+    if (
+      !response.ok &&
+      response.status === 403 &&
+      options.requiresCsrf &&
+      (await toApiError(response.clone())).code === 'CSRF_INVALID'
+    ) {
       // O filtro CSRF rejeita a chamada antes de alcançar controller, serviço, auditoria ou
       // persistência. Uma única repetição com token novo recupera um cookie rotacionado sem
       // duplicar a operação de escrita.
@@ -936,6 +960,7 @@ async function toApiError(response: Response): Promise<ApiError> {
   return new ApiError({
     status: response.status,
     code: typeof problem.code === 'string' ? problem.code : undefined,
+    reasonCode: typeof problem.reasonCode === 'string' ? problem.reasonCode : undefined,
     requestId: typeof problem.requestId === 'string' ? problem.requestId : undefined,
     errors: Array.isArray(problem.errors) ? problem.errors : undefined,
   })

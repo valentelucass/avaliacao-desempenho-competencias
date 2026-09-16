@@ -13,11 +13,13 @@ public record EvaluationCycleDraft(String code, EvaluationCycleConfigurationDraf
 
   private static String requiredCode(String value) {
     if (value == null) {
-      throw new CycleAdministrationRuleViolation("Código do ciclo é obrigatório.");
+      throw new CycleAdministrationRuleViolation(
+          "CYCLE_CODE_INVALID", "Código do ciclo é obrigatório.");
     }
     String normalized = value.strip().toUpperCase(Locale.ROOT);
     if (normalized.isEmpty() || normalized.length() > 100 || !normalized.matches("[A-Z0-9_.-]+")) {
-      throw new CycleAdministrationRuleViolation("Código do ciclo é inválido.");
+      throw new CycleAdministrationRuleViolation(
+          "CYCLE_CODE_INVALID", "Código do ciclo é inválido.");
     }
     return normalized;
   }

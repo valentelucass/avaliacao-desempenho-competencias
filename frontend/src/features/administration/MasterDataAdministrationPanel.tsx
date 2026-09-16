@@ -1,3 +1,4 @@
+import { administrativeRead, useAdministrativeLoad } from './useAdministrativeLoad'
 import { AdministrativeTable } from '@/components/ui/administrative-table'
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
@@ -95,9 +96,13 @@ export function MasterDataAdministrationPanel({
   const [assignmentOptions, setAssignmentOptions] = useState<
     readonly QuestionnaireAssignmentOption[]
   >([])
-  const [isLoading, setIsLoading] = useState(false)
+  const {
+    load,
+    isLoading,
+    isAvailable,
+    errors: loadErrors,
+  } = useAdministrativeLoad(onSessionExpired)
   const [isWriting, setIsWriting] = useState(false)
-  const [loadError, setLoadError] = useState<string>()
   const [operationError, setOperationError] = useState<string>()
   const [confirmationError, setConfirmationError] = useState<string>()
   const [notice, setNotice] = useState<string>()
@@ -137,40 +142,35 @@ export function MasterDataAdministrationPanel({
       return
     }
 
-    setIsLoading(true)
-    setLoadError(undefined)
-    try {
-      const [
-        loadedBranches,
-        loadedAreas,
-        loadedCollaborators,
-        loadedAllocations,
-        loadedAssignments,
-        options,
-      ] = await Promise.all([
-        api.listBranches(),
-        api.listAreas(),
-        api.listCollaborators(),
-        api.listActiveAllocations(),
-        api.listActiveQuestionnaireAssignments(),
-        api.listQuestionnaireAssignmentOptions(),
-      ])
-      setBranches(loadedBranches)
-      setAreas(loadedAreas)
-      setCollaborators(loadedCollaborators)
-      setAllocations(loadedAllocations)
-      setQuestionnaireAssignments(loadedAssignments)
-      setAssignmentOptions(options)
-    } catch (requestError) {
-      if (isAuthenticationError(requestError)) {
-        onSessionExpired()
-        return
-      }
-      setLoadError(safeErrorMessage(requestError))
-    } finally {
-      setIsLoading(false)
-    }
-  }, [api, canManageMasterData, onSessionExpired])
+    await load([
+      administrativeRead('branches', 'as filiais', () => api.listBranches(), setBranches),
+      administrativeRead('areas', 'as áreas', () => api.listAreas(), setAreas),
+      administrativeRead(
+        'collaborators',
+        'os colaboradores',
+        () => api.listCollaborators(),
+        setCollaborators,
+      ),
+      administrativeRead(
+        'allocations',
+        'as lotações',
+        () => api.listActiveAllocations(),
+        setAllocations,
+      ),
+      administrativeRead(
+        'assignments',
+        'as atribuições',
+        () => api.listActiveQuestionnaireAssignments(),
+        setQuestionnaireAssignments,
+      ),
+      administrativeRead(
+        'options',
+        'as opções de atribuição',
+        () => api.listQuestionnaireAssignmentOptions(),
+        setAssignmentOptions,
+      ),
+    ])
+  }, [api, canManageMasterData, load])
 
   useEffect(() => {
     if (!canManageMasterData) {
@@ -449,7 +449,11 @@ export function MasterDataAdministrationPanel({
       </div>
 
       {notice ? <FeedbackMessage kind="status">{notice}</FeedbackMessage> : null}
-      {loadError ? <FeedbackMessage kind="error">{loadError}</FeedbackMessage> : null}
+      {loadErrors.map((message) => (
+        <FeedbackMessage kind="error" key={message}>
+          {message}
+        </FeedbackMessage>
+      ))}
       {operationError ? <FeedbackMessage kind="error">{operationError}</FeedbackMessage> : null}
       {isLoading ? (
         <FeedbackMessage kind="info">Carregando cadastros autorizados…</FeedbackMessage>
@@ -481,7 +485,7 @@ export function MasterDataAdministrationPanel({
                 id={branchNameId}
                 value={branchName}
                 onChange={(event) => setBranchName(event.target.value)}
-                disabled={isLoading || isWriting}
+                disabled={isLoading || loadErrors.length > 0 || isWriting}
                 maxLength={200}
                 required
               />
@@ -490,33 +494,35 @@ export function MasterDataAdministrationPanel({
               <button
                 className="button button--success"
                 type="submit"
-                disabled={isLoading || isWriting}
+                disabled={isLoading || loadErrors.length > 0 || isWriting}
               >
                 <Plus aria-hidden="true" size={17} strokeWidth={2} />
                 Criar filial
               </button>
             </div>
           </form>
-          <NamedResourcesTable
-            caption="Filiais cadastradas"
-            resources={branches}
-            resourceLabel="filial"
-            isBusy={isLoading || isWriting}
-            onDeactivate={(branch) =>
-              requestConfirmation({
-                kind: 'DEACTIVATE_BRANCH',
-                id: branch.id,
-                subject: branch.name,
-              })
-            }
-            onDeleteInactive={(branch) =>
-              requestConfirmation({
-                kind: 'DELETE_BRANCH',
-                id: branch.id,
-                subject: branch.name,
-              })
-            }
-          />
+          {isAvailable('branches') ? (
+            <NamedResourcesTable
+              caption="Filiais cadastradas"
+              resources={branches}
+              resourceLabel="filial"
+              isBusy={isLoading || isWriting}
+              onDeactivate={(branch) =>
+                requestConfirmation({
+                  kind: 'DEACTIVATE_BRANCH',
+                  id: branch.id,
+                  subject: branch.name,
+                })
+              }
+              onDeleteInactive={(branch) =>
+                requestConfirmation({
+                  kind: 'DELETE_BRANCH',
+                  id: branch.id,
+                  subject: branch.name,
+                })
+              }
+            />
+          ) : null}
         </section>
 
         <section className="card" aria-labelledby="areas-title">
@@ -544,7 +550,7 @@ export function MasterDataAdministrationPanel({
                 id={areaNameId}
                 value={areaName}
                 onChange={(event) => setAreaName(event.target.value)}
-                disabled={isLoading || isWriting}
+                disabled={isLoading || loadErrors.length > 0 || isWriting}
                 maxLength={200}
                 required
               />
@@ -553,22 +559,24 @@ export function MasterDataAdministrationPanel({
               <button
                 className="button button--success"
                 type="submit"
-                disabled={isLoading || isWriting}
+                disabled={isLoading || loadErrors.length > 0 || isWriting}
               >
                 <Plus aria-hidden="true" size={17} strokeWidth={2} />
                 Criar área
               </button>
             </div>
           </form>
-          <NamedResourcesTable
-            caption="Áreas cadastradas"
-            resources={areas}
-            resourceLabel="área"
-            isBusy={isLoading || isWriting}
-            onDeactivate={(area) =>
-              requestConfirmation({ kind: 'DEACTIVATE_AREA', id: area.id, subject: area.name })
-            }
-          />
+          {isAvailable('areas') ? (
+            <NamedResourcesTable
+              caption="Áreas cadastradas"
+              resources={areas}
+              resourceLabel="área"
+              isBusy={isLoading || isWriting}
+              onDeactivate={(area) =>
+                requestConfirmation({ kind: 'DEACTIVATE_AREA', id: area.id, subject: area.name })
+              }
+            />
+          ) : null}
         </section>
       </div>
 
@@ -597,7 +605,7 @@ export function MasterDataAdministrationPanel({
               id={collaboratorNameId}
               value={collaboratorName}
               onChange={(event) => setCollaboratorName(event.target.value)}
-              disabled={isLoading || isWriting}
+              disabled={isLoading || loadErrors.length > 0 || isWriting}
               maxLength={200}
               required
             />
@@ -606,24 +614,26 @@ export function MasterDataAdministrationPanel({
             <button
               className="button button--success"
               type="submit"
-              disabled={isLoading || isWriting}
+              disabled={isLoading || loadErrors.length > 0 || isWriting}
             >
               <Plus aria-hidden="true" size={17} strokeWidth={2} />
               Criar colaborador
             </button>
           </div>
         </form>
-        <CollaboratorsTable
-          collaborators={collaborators}
-          isBusy={isLoading || isWriting}
-          onDeactivate={(collaborator) =>
-            requestConfirmation({
-              kind: 'DEACTIVATE_COLLABORATOR',
-              id: collaborator.id,
-              subject: collaborator.displayName,
-            })
-          }
-        />
+        {isAvailable('collaborators') ? (
+          <CollaboratorsTable
+            collaborators={collaborators}
+            isBusy={isLoading || isWriting}
+            onDeactivate={(collaborator) =>
+              requestConfirmation({
+                kind: 'DEACTIVATE_COLLABORATOR',
+                id: collaborator.id,
+                subject: collaborator.displayName,
+              })
+            }
+          />
+        ) : null}
       </section>
 
       <section className="card" aria-labelledby="allocations-title">
@@ -655,7 +665,7 @@ export function MasterDataAdministrationPanel({
               id={allocationCollaboratorId}
               value={allocationCollaborator}
               onChange={(event) => setAllocationCollaborator(event.target.value)}
-              disabled={isLoading || isWriting}
+              disabled={isLoading || loadErrors.length > 0 || isWriting}
               required
             >
               <option value="">Selecione um colaborador</option>
@@ -672,7 +682,7 @@ export function MasterDataAdministrationPanel({
               id={allocationBranchId}
               value={allocationBranch}
               onChange={(event) => setAllocationBranch(event.target.value)}
-              disabled={isLoading || isWriting}
+              disabled={isLoading || loadErrors.length > 0 || isWriting}
             >
               <option value="">Não informar filial</option>
               {activeBranches.map((branch) => (
@@ -688,7 +698,7 @@ export function MasterDataAdministrationPanel({
               id={allocationAreaId}
               value={allocationArea}
               onChange={(event) => setAllocationArea(event.target.value)}
-              disabled={isLoading || isWriting}
+              disabled={isLoading || loadErrors.length > 0 || isWriting}
             >
               <option value="">Não informar área</option>
               {activeAreas.map((area) => (
@@ -704,7 +714,7 @@ export function MasterDataAdministrationPanel({
               id={allocationManagerId}
               value={allocationManager}
               onChange={(event) => setAllocationManager(event.target.value)}
-              disabled={isLoading || isWriting}
+              disabled={isLoading || loadErrors.length > 0 || isWriting}
               maxLength={200}
             />
           </div>
@@ -715,7 +725,7 @@ export function MasterDataAdministrationPanel({
               type="date"
               value={allocationStartsOn}
               onChange={(event) => setAllocationStartsOn(event.target.value)}
-              disabled={isLoading || isWriting}
+              disabled={isLoading || loadErrors.length > 0 || isWriting}
               required
             />
           </div>
@@ -723,29 +733,34 @@ export function MasterDataAdministrationPanel({
             <button
               className="button button--success"
               type="submit"
-              disabled={isLoading || isWriting}
+              disabled={isLoading || loadErrors.length > 0 || isWriting}
             >
               <Plus aria-hidden="true" size={17} strokeWidth={2} />
               Criar lotação
             </button>
           </div>
         </form>
-        <AllocationsTable
-          allocations={allocations}
-          branchNames={branchNames}
-          areaNames={areaNames}
-          collaboratorNames={collaboratorNames}
-          isBusy={isLoading || isWriting}
-          onClose={(allocation) =>
-            requestConfirmation({
-              kind: 'CLOSE_ALLOCATION',
-              id: allocation.id,
-              subject:
-                collaboratorNames.get(allocation.collaboratorId) ?? 'colaborador selecionado',
-              endsOn: '',
-            })
-          }
-        />
+        {isAvailable('allocations') &&
+        isAvailable('branches') &&
+        isAvailable('areas') &&
+        isAvailable('collaborators') ? (
+          <AllocationsTable
+            allocations={allocations}
+            branchNames={branchNames}
+            areaNames={areaNames}
+            collaboratorNames={collaboratorNames}
+            isBusy={isLoading || isWriting}
+            onClose={(allocation) =>
+              requestConfirmation({
+                kind: 'CLOSE_ALLOCATION',
+                id: allocation.id,
+                subject:
+                  collaboratorNames.get(allocation.collaboratorId) ?? 'colaborador selecionado',
+                endsOn: '',
+              })
+            }
+          />
+        ) : null}
       </section>
 
       <section className="card" aria-labelledby="questionnaire-assignments-title">
@@ -780,7 +795,9 @@ export function MasterDataAdministrationPanel({
                 setAssignmentCycle(event.target.value)
                 setAssignmentQuestionnaire('')
               }}
-              disabled={isLoading || isWriting || assignmentOptions.length === 0}
+              disabled={
+                isLoading || loadErrors.length > 0 || isWriting || assignmentOptions.length === 0
+              }
               required
             >
               <option value="">Selecione um ciclo</option>
@@ -797,7 +814,7 @@ export function MasterDataAdministrationPanel({
               id={assignmentCollaboratorId}
               value={assignmentCollaborator}
               onChange={(event) => setAssignmentCollaborator(event.target.value)}
-              disabled={isLoading || isWriting}
+              disabled={isLoading || loadErrors.length > 0 || isWriting}
               required
             >
               <option value="">Selecione um colaborador</option>
@@ -837,37 +854,41 @@ export function MasterDataAdministrationPanel({
             <button
               className="button button--success"
               type="submit"
-              disabled={isLoading || isWriting || assignmentOptions.length === 0}
+              disabled={
+                isLoading || loadErrors.length > 0 || isWriting || assignmentOptions.length === 0
+              }
             >
               <Plus aria-hidden="true" size={17} strokeWidth={2} />
               Criar atribuição
             </button>
           </div>
         </form>
-        {assignmentOptions.length === 0 ? (
+        {isAvailable('options') && assignmentOptions.length === 0 ? (
           <FeedbackMessage kind="warning">
             Para criar uma atribuição, primeiro crie um ciclo em rascunho e aplique ao menos um
             questionário aprovado nele.
           </FeedbackMessage>
         ) : null}
-        {activeCollaborators.length === 0 ? (
+        {isAvailable('collaborators') && activeCollaborators.length === 0 ? (
           <FeedbackMessage kind="warning">
             Cadastre e mantenha ao menos um colaborador ativo antes de atribuir um questionário.
           </FeedbackMessage>
         ) : null}
-        <QuestionnaireAssignmentsTable
-          assignments={questionnaireAssignments}
-          collaboratorNames={collaboratorNames}
-          isBusy={isLoading || isWriting}
-          onRevoke={(assignment) =>
-            requestConfirmation({
-              kind: 'REVOKE_QUESTIONNAIRE_ASSIGNMENT',
-              id: assignment.id,
-              subject: questionnaireAssignmentSubject(assignment, collaboratorNames),
-              reason: '',
-            })
-          }
-        />
+        {isAvailable('assignments') && isAvailable('collaborators') ? (
+          <QuestionnaireAssignmentsTable
+            assignments={questionnaireAssignments}
+            collaboratorNames={collaboratorNames}
+            isBusy={isLoading || isWriting}
+            onRevoke={(assignment) =>
+              requestConfirmation({
+                kind: 'REVOKE_QUESTIONNAIRE_ASSIGNMENT',
+                id: assignment.id,
+                subject: questionnaireAssignmentSubject(assignment, collaboratorNames),
+                reason: '',
+              })
+            }
+          />
+        ) : null}
       </section>
 
       {pendingAction ? (
