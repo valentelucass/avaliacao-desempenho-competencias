@@ -839,13 +839,13 @@ body:has(:is([role='dialog'], [role='alertdialog'])[aria-modal='true']) > .feedb
 .status-badge {
   align-items: center;
   background: var(--surface-muted);
-  border: 0;
+  border: 1px solid color-mix(in srgb, var(--muted) 28%, var(--border));
   border-radius: 999px;
   color: var(--muted);
   display: inline-flex;
   font-size: 0.68rem;
   font-weight: 700;
-  letter-spacing: 0.025em;
+  letter-spacing: 0.03em;
   line-height: 1;
   margin: 0;
   min-height: 1.6rem;
@@ -857,26 +857,43 @@ body:has(:is([role='dialog'], [role='alertdialog'])[aria-modal='true']) > .feedb
 .status-badge--active,
 .status-badge--published {
   background: var(--success-bg);
+  border-color: color-mix(in srgb, var(--success) 35%, var(--border));
   color: var(--success);
 }
 .status-badge--enviada {
-  background: var(--primary-soft);
-  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 12%, var(--surface));
+  border-color: color-mix(in srgb, var(--primary) 35%, var(--border));
+  color: var(--primary-strong);
 }
 .status-badge--aberto,
 .status-badge--open {
-  background: var(--primary-soft);
-  color: var(--primary);
+  background: color-mix(in srgb, #0284c7 12%, var(--surface));
+  border-color: color-mix(in srgb, #0284c7 35%, var(--border));
+  color: #0369a1;
 }
 .status-badge--rascunho,
 .status-badge--draft {
-  background: var(--warning-bg);
-  color: var(--warning);
+  background: color-mix(in srgb, #f59e0b 14%, var(--surface));
+  border-color: color-mix(in srgb, #d97706 38%, var(--border));
+  color: #92400e;
+}
+.status-badge--encerrado,
+.status-badge--closed {
+  background: color-mix(in srgb, var(--muted) 12%, var(--surface));
+  border-color: color-mix(in srgb, var(--muted) 32%, var(--border));
+  color: var(--muted);
+}
+.status-badge--futuro,
+.status-badge--future {
+  background: color-mix(in srgb, #7c3aed 12%, var(--surface));
+  border-color: color-mix(in srgb, #7c3aed 35%, var(--border));
+  color: #5b21b6;
 }
 .status-badge--blocked,
 .status-badge--disabled {
   background: var(--error-bg);
-  color: var(--error);
+  border-color: color-mix(in srgb, var(--error) 35%, var(--border));
+  color: var(--error-strong);
 }
 .assessment-editor {
   display: grid;
@@ -1265,6 +1282,12 @@ tbody tr:nth-child(even) {
 tbody tr:last-child th,
 tbody tr:last-child td {
   border-bottom: 0;
+}
+@media screen and (min-width: 48.0625rem) {
+  table th:not(:last-child),
+  table td:not(:last-child) {
+    border-right: 1px solid var(--border);
+  }
 }
 thead th {
   background: var(--surface-muted);

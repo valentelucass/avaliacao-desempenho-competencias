@@ -854,9 +854,7 @@
     border: 1px solid var(--action-border);
     border-radius: 0.625rem;
     background: var(--action-bg);
-    box-shadow:
-      0 1px 2px rgb(15 23 42 / 6%),
-      0 1px 3px rgb(15 23 42 / 4%);
+    box-shadow: none;
     color: var(--action-text);
     font-family: var(--sans);
     font-size: 0.875rem;
@@ -913,9 +911,7 @@
     ):hover {
     background: var(--action-hover);
     border-color: var(--action-border);
-    box-shadow:
-      0 2px 4px rgb(15 23 42 / 8%),
-      0 2px 6px rgb(15 23 42 / 5%);
+    box-shadow: none;
     color: var(--action-text);
     transform: none;
   }
@@ -925,8 +921,8 @@
       [aria-disabled='true']
     ):active {
     background: var(--action-hover);
-    box-shadow: inset 0 1px 3px rgb(0 0 0 / 12%);
-    transform: translateY(0.5px);
+    box-shadow: inset 0 0 0 2px rgb(0 0 0 / 10%);
+    transform: none;
   }
 
   :root .button.button--quiet {
@@ -941,15 +937,6 @@
     --action-hover: #1e478e;
     --action-border: #1e478e;
     --action-text: #ffffff;
-    box-shadow:
-      0 1px 3px rgb(37 85 164 / 22%),
-      0 2px 6px rgb(37 85 164 / 12%);
-  }
-
-  :root .button.button--primary:not(:disabled):hover {
-    box-shadow:
-      0 2px 6px rgb(37 85 164 / 28%),
-      0 4px 10px rgb(37 85 164 / 16%);
   }
 
   :root .button.button--success {
@@ -957,15 +944,6 @@
     --action-hover: #00694c;
     --action-border: #00694c;
     --action-text: #ffffff;
-    box-shadow:
-      0 1px 3px rgb(0 122 88 / 20%),
-      0 2px 6px rgb(0 122 88 / 10%);
-  }
-
-  :root .button.button--success:not(:disabled):hover {
-    box-shadow:
-      0 2px 6px rgb(0 122 88 / 26%),
-      0 4px 10px rgb(0 122 88 / 14%);
   }
 
   :root .button.button--danger,
@@ -974,16 +952,6 @@
     --action-hover: #c12630;
     --action-border: #c12630;
     --action-text: #ffffff;
-    box-shadow:
-      0 1px 3px rgb(220 48 56 / 18%),
-      0 2px 6px rgb(220 48 56 / 10%);
-  }
-
-  :root .button.button--danger:not(:disabled):hover,
-  :root .button.button--danger.button--quiet:not(:disabled):hover {
-    box-shadow:
-      0 2px 6px rgb(220 48 56 / 24%),
-      0 4px 10px rgb(220 48 56 / 14%);
   }
 
   /* ── Botões de ação dentro de tabelas ─────────────────────────────────────
@@ -1121,18 +1089,9 @@
     color: #071525;
   }
 
-  /* Dark theme: botões gerais recebem sombra escura e profundidade */
+  /* Dark theme: botões gerais sólidos sem sombra decorativa */
   :root[data-theme='dark'] :is(.button, .icon-button, .account-actions__trigger) {
-    box-shadow:
-      0 1px 2px rgb(0 0 0 / 22%),
-      0 1px 3px rgb(0 0 0 / 16%);
-  }
-
-  :root[data-theme='dark']
-    :is(.button, .icon-button, .account-actions__trigger):not(:disabled):hover {
-    box-shadow:
-      0 2px 5px rgb(0 0 0 / 28%),
-      0 3px 8px rgb(0 0 0 / 18%);
+    box-shadow: none;
   }
 
   /* Dark theme: botões ghost de tabela — bordas mais visíveis */
@@ -1175,32 +1134,110 @@
   }
 
   .status-badge {
-    border: 1px solid transparent;
+    border: 1px solid color-mix(in srgb, var(--muted) 28%, var(--border));
     border-radius: 999px;
     font-size: 0.66rem;
+    font-weight: 700;
     letter-spacing: 0.04em;
   }
 
   .status-badge--active,
   .status-badge--published,
   .status-badge--publicada {
-    border-color: color-mix(in srgb, var(--success) 28%, transparent);
+    background: color-mix(in srgb, var(--success) 12%, var(--surface));
+    border-color: color-mix(in srgb, var(--success) 35%, var(--border));
+    color: var(--success);
   }
 
   .status-badge--disabled,
   .status-badge--blocked {
-    border-color: color-mix(in srgb, var(--error) 22%, transparent);
+    background: color-mix(in srgb, var(--error) 10%, var(--surface));
+    border-color: color-mix(in srgb, var(--error) 32%, var(--border));
+    color: var(--error-strong);
   }
 
-  .status-badge--enviada,
+  .status-badge--enviada {
+    background: color-mix(in srgb, var(--primary) 12%, var(--surface));
+    border-color: color-mix(in srgb, var(--primary) 35%, var(--border));
+    color: var(--primary-strong);
+  }
+
   .status-badge--aberto,
   .status-badge--open {
-    border-color: color-mix(in srgb, var(--primary) 22%, transparent);
+    background: color-mix(in srgb, #0284c7 12%, var(--surface));
+    border-color: color-mix(in srgb, #0284c7 35%, var(--border));
+    color: #0369a1;
   }
 
   .status-badge--rascunho,
   .status-badge--draft {
-    border-color: color-mix(in srgb, var(--warning) 22%, transparent);
+    background: color-mix(in srgb, #f59e0b 14%, var(--surface));
+    border-color: color-mix(in srgb, #d97706 38%, var(--border));
+    color: #92400e;
+  }
+
+  .status-badge--encerrado,
+  .status-badge--closed {
+    background: color-mix(in srgb, var(--muted) 12%, var(--surface));
+    border-color: color-mix(in srgb, var(--muted) 32%, var(--border));
+    color: var(--muted);
+  }
+
+  .status-badge--futuro,
+  .status-badge--future {
+    background: color-mix(in srgb, #7c3aed 12%, var(--surface));
+    border-color: color-mix(in srgb, #7c3aed 35%, var(--border));
+    color: #5b21b6;
+  }
+
+  /* Dark theme para badges de status */
+  :root[data-theme='dark'] .status-badge--active,
+  :root[data-theme='dark'] .status-badge--published,
+  :root[data-theme='dark'] .status-badge--publicada {
+    background: color-mix(in srgb, var(--success) 22%, var(--surface));
+    border-color: color-mix(in srgb, var(--success) 45%, transparent);
+    color: #a7f3d0;
+  }
+
+  :root[data-theme='dark'] .status-badge--disabled,
+  :root[data-theme='dark'] .status-badge--blocked {
+    background: color-mix(in srgb, var(--error) 22%, var(--surface));
+    border-color: color-mix(in srgb, var(--error) 45%, transparent);
+    color: #fecaca;
+  }
+
+  :root[data-theme='dark'] .status-badge--enviada {
+    background: color-mix(in srgb, var(--primary) 22%, var(--surface));
+    border-color: color-mix(in srgb, var(--primary) 45%, transparent);
+    color: #93c5fd;
+  }
+
+  :root[data-theme='dark'] .status-badge--aberto,
+  :root[data-theme='dark'] .status-badge--open {
+    background: color-mix(in srgb, #0284c7 22%, var(--surface));
+    border-color: color-mix(in srgb, #38bdf8 45%, transparent);
+    color: #7dd3fc;
+  }
+
+  :root[data-theme='dark'] .status-badge--rascunho,
+  :root[data-theme='dark'] .status-badge--draft {
+    background: color-mix(in srgb, #f59e0b 22%, var(--surface));
+    border-color: color-mix(in srgb, #fbbf24 45%, transparent);
+    color: #fde68a;
+  }
+
+  :root[data-theme='dark'] .status-badge--encerrado,
+  :root[data-theme='dark'] .status-badge--closed {
+    background: color-mix(in srgb, var(--muted) 20%, var(--surface));
+    border-color: color-mix(in srgb, var(--muted) 40%, transparent);
+    color: #cbd5e1;
+  }
+
+  :root[data-theme='dark'] .status-badge--futuro,
+  :root[data-theme='dark'] .status-badge--future {
+    background: color-mix(in srgb, #7c3aed 22%, var(--surface));
+    border-color: color-mix(in srgb, #a78bfa 45%, transparent);
+    color: #ddd6fe;
   }
 
   .feedback {
@@ -1256,6 +1293,21 @@
     border-bottom-color: color-mix(in srgb, var(--primary) 10%, var(--border));
   }
 
+  @media (min-width: 48.0625rem) {
+    thead th:not(:last-child) {
+      border-right-color: color-mix(in srgb, var(--primary) 20%, var(--border));
+    }
+
+    .administration-users th:not(:last-child),
+    .administration-users td:not(:last-child),
+    .indicator-results th:not(:last-child),
+    .indicator-results td:not(:last-child),
+    .cycle-questionnaire-table th:not(:last-child),
+    .cycle-questionnaire-table td:not(:last-child) {
+      border-right-color: color-mix(in srgb, var(--primary) 10%, var(--border));
+    }
+  }
+
   @media (hover: hover) {
     .administration-users tbody tr:hover,
     .indicator-results tbody tr:hover {
@@ -1283,34 +1335,30 @@
 
   :root .pagination .icon-button {
     background: transparent;
-    border: 1px solid color-mix(in srgb, var(--border) 68%, transparent);
-    border-radius: 0.5rem;
+    border: 0;
+    border-radius: 0;
     box-shadow: none;
     color: var(--muted);
     height: 2rem;
     min-height: 2rem;
     width: 2rem;
     min-width: 2rem;
-    transition:
-      background-color 150ms ease,
-      border-color 150ms ease,
-      color 150ms ease;
+    transition: color 150ms ease;
   }
 
   :root .pagination .icon-button:not(:disabled):hover {
-    background: color-mix(in srgb, var(--primary) 8%, var(--surface));
-    border-color: color-mix(in srgb, var(--primary) 32%, var(--border));
+    background: transparent;
     box-shadow: none;
-    color: var(--primary);
+    color: var(--text-h);
   }
 
   :root .pagination .icon-button:not(:disabled):active {
-    background: color-mix(in srgb, var(--primary) 14%, var(--surface));
+    background: transparent;
   }
 
   :root .pagination .icon-button:disabled {
     background: transparent;
-    border-color: transparent;
+    border: 0;
     box-shadow: none;
     color: color-mix(in srgb, var(--muted) 42%, transparent);
     opacity: 1;
@@ -1442,22 +1490,44 @@
     padding-top: 0.65rem;
   }
 
-  /* O wrapper do import desaparece como box, promovendo entry e panel
-     a filhos diretos do flex. O entry (botão) fica ao lado do verde;
-     o panel usa order alto + flex-basis 100% para SEMPRE descer a uma
-     nova linha sem mover os botões acima. */
+  /* Mantém o botão de importação na linha de ações. Somente o painel aberto
+     ocupa a linha seguinte, sem deslocar o gatilho. */
   .action-row > .spreadsheet-import {
     display: contents;
   }
 
   .action-row .spreadsheet-import__entry {
-    order: 0;
+    flex: 0 0 auto;
   }
 
   .action-row .spreadsheet-import__panel:not([hidden]) {
-    order: 99;
-    flex-basis: 100%;
+    flex: 0 0 100%;
     margin-top: 0.25rem;
+  }
+
+  @media (min-width: 48.0625rem) {
+    .master-data-administration .master-data-quick-form {
+      grid-template-columns: minmax(0, 1fr) auto auto;
+    }
+
+    .master-data-administration .master-data-quick-form > .action-row,
+    .master-data-administration .master-data-quick-form .action-row > .spreadsheet-import {
+      display: contents;
+    }
+
+    .master-data-administration .master-data-quick-form .action-row > .button {
+      grid-column: 2;
+    }
+
+    .master-data-administration .master-data-quick-form .spreadsheet-import__entry {
+      align-self: end;
+      grid-column: 3;
+    }
+
+    .master-data-administration .master-data-quick-form .spreadsheet-import__panel:not([hidden]) {
+      grid-column: 1 / -1;
+      margin-top: 0;
+    }
   }
 
   /* ── Filter-fieldset sem aparência de card quando dentro de .card ── */
@@ -1602,7 +1672,46 @@
 
   /* ── Context help heading inline ───────────────────────────────── */
   .context-help__heading {
+    align-items: center;
+    display: inline-flex;
     gap: 0.35rem;
+    min-width: 0;
+  }
+
+  .context-help__heading > :is(h2, h3, h4) {
+    margin: 0;
+  }
+
+  .context-help {
+    display: inline-flex;
+    flex: 0 0 auto;
+  }
+
+  .context-help__button {
+    align-items: center;
+    appearance: none;
+    background: transparent;
+    border: 0;
+    border-radius: 999px;
+    color: var(--primary-strong);
+    cursor: help;
+    display: inline-flex;
+    height: 1.5rem;
+    justify-content: center;
+    padding: 0;
+    width: 1.5rem;
+  }
+
+  .context-help__button:hover {
+    background: color-mix(in srgb, var(--primary-soft) 72%, var(--surface));
+  }
+
+  .context-help__button:focus-visible {
+    background: color-mix(in srgb, var(--primary-soft) 72%, var(--surface));
+    box-shadow:
+      0 0 0 2px var(--surface),
+      0 0 0 4px var(--ring);
+    outline: 0;
   }
 
   /* ── Definition list / overview cells: compactas ───────────────── */

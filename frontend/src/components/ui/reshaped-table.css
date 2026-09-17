@@ -41,6 +41,11 @@
     vertical-align: middle;
   }
 
+  .adc-administrative-table > thead > tr > th:not(:last-child),
+  .adc-administrative-table > tbody > tr > :is(th, td):not(:last-child) {
+    border-right: 1px solid var(--border);
+  }
+
   .adc-administrative-table > tbody > tr > td {
     border-top: 1px solid var(--border);
   }
