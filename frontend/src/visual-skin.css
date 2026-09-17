@@ -1141,6 +1141,17 @@
     letter-spacing: 0.04em;
   }
 
+  /* A coluna de situação precisa comportar o maior estado sem invadir a ação. */
+  .administration-users .adc-administrative-table :is(th, td):nth-child(2) {
+    min-width: 7.5rem;
+  }
+
+  .administration-users td[data-label='Situação'] .status-badge {
+    box-sizing: border-box;
+    max-width: 100%;
+    padding-inline: 0.55rem;
+  }
+
   .status-badge--active,
   .status-badge--published,
   .status-badge--publicada {
