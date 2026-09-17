@@ -1336,7 +1336,7 @@
   :root .pagination .icon-button {
     background: transparent;
     border: 0;
-    border-radius: 0;
+    border-radius: 0.625rem;
     box-shadow: none;
     color: var(--muted);
     height: 2.25rem;
@@ -1501,8 +1501,37 @@
   }
 
   .action-row .spreadsheet-import__panel:not([hidden]) {
+    box-sizing: border-box;
     flex: 0 0 100%;
     margin-top: 0.25rem;
+    width: 100%;
+  }
+
+  @media (max-width: 48rem) {
+    .action-row:has(> .spreadsheet-import) {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      justify-content: stretch;
+    }
+
+    .action-row:has(> .spreadsheet-import) .spreadsheet-import__entry,
+    .action-row:has(> .spreadsheet-import) .spreadsheet-import__panel:not([hidden]) {
+      grid-column: 1;
+    }
+
+    .master-data-administration .master-data-quick-form {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .master-data-administration .master-data-quick-form .action-row {
+      align-items: stretch;
+      flex-direction: column;
+      width: 100%;
+    }
+
+    .master-data-administration .master-data-quick-form .spreadsheet-import__entry {
+      width: 100%;
+    }
   }
 
   @media (min-width: 48.0625rem) {

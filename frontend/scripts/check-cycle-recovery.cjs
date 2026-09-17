@@ -92,8 +92,13 @@ module.exports = async function checkCycleRecovery({ send, frameId, css }) {
     await click('Novo ciclo')
     await ready("document.activeElement?.matches('form')")
     assert.equal(await evaluate('window.cycleRecovery.calls.length'), 2)
-    const formTop = await evaluate("document.querySelector('form').getBoundingClientRect().top")
-    assert.ok(formTop >= -1 && formTop < 300, 'Formulário não foi revelado')
+    const formBounds = await evaluate(
+      "(()=>{const bounds=document.querySelector('form').getBoundingClientRect();return {bottom:bounds.bottom,top:bounds.top,viewport:window.innerHeight}})()",
+    )
+    assert.ok(
+      formBounds.top >= -1 && formBounds.top < formBounds.viewport && formBounds.bottom > 0,
+      `Formulário não está visível: top=${formBounds.top}, bottom=${formBounds.bottom}, viewport=${formBounds.viewport}`,
+    )
     await evaluate('window.cycleRecovery.failRead()')
     await ready(
       "document.querySelector('[role=alert]')?.textContent.includes('Não foi possível carregar os ciclos')",

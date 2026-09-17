@@ -108,7 +108,7 @@ module.exports = async function checkSpreadsheetImport({ send, frameId, css }) {
           `document.querySelectorAll('.spreadsheet-import__toggle')[${index}].getAttribute('aria-expanded')==='true'`,
         )
         const metrics = await evaluate(
-          `(()=>{const scope=document.querySelectorAll('.spreadsheet-import')[${index}],p=scope.querySelector('[role=region]'),b=scope.querySelector('button'),r=p.getBoundingClientRect();return {visible:!p.hidden,labelled:!!document.getElementById(p.getAttribute('aria-labelledby')),fileDisabled:p.querySelector('input').disabled,reviewDisabled:p.querySelector('button').disabled,focus:document.activeElement===b,outline:getComputedStyle(b).outlineStyle,left:r.left,right:r.right,overflow:document.documentElement.scrollWidth>innerWidth+1,controlsFit:[...p.querySelectorAll('input,button')].every(e=>{const c=e.getBoundingClientRect();return c.left>=r.left&&c.right<=r.right+1})}})()`,
+          `(()=>{const scope=document.querySelectorAll('.spreadsheet-import')[${index}],p=scope.querySelector('[role=region]'),b=scope.querySelector('button'),r=p.getBoundingClientRect(),a=p.parentElement,g=a.parentElement;return {visible:!p.hidden,labelled:!!document.getElementById(p.getAttribute('aria-labelledby')),fileDisabled:p.querySelector('input').disabled,reviewDisabled:p.querySelector('button').disabled,focus:document.activeElement===b,outline:getComputedStyle(b).outlineStyle,left:r.left,right:r.right,overflow:document.documentElement.scrollWidth>innerWidth+1,controlsFit:[...p.querySelectorAll('input,button')].every(e=>{const c=e.getBoundingClientRect();return c.left>=r.left&&c.right<=r.right+1}),parent:{class:g.className,display:getComputedStyle(g).display,flexDirection:getComputedStyle(g).flexDirection,left:g.getBoundingClientRect().left,right:g.getBoundingClientRect().right},scrollX}})()`,
         )
         assert.equal(
           metrics.visible &&
@@ -129,7 +129,10 @@ module.exports = async function checkSpreadsheetImport({ send, frameId, css }) {
           'Contraste do texto da preparação abaixo de 4,5:1',
         )
         assert.equal(metrics.overflow, false)
-        assert.ok(metrics.left >= 0 && metrics.right <= width)
+        assert.ok(
+          metrics.left >= 0 && metrics.right <= width,
+          `Painel de importação fora da viewport: ${JSON.stringify({ index, width, left: metrics.left, right: metrics.right, parent: metrics.parent, scrollX: metrics.scrollX })}`,
+        )
         if (index === 2 && width !== 320) {
           await evaluate(
             `document.querySelectorAll('.spreadsheet-import')[${index}].scrollIntoView({block:'start',behavior:'instant'})`,

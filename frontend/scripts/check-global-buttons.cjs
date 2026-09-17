@@ -123,12 +123,22 @@ module.exports = async function checkGlobalButtons({ send, frameId, css }) {
       throw new Error('Falha na medição dos botões: ' + r.exceptionDetails.text)
     return r.result.value
   }
-  const measure = `(() => [...document.querySelectorAll('button')].map(b => {
+  const measure = `(() => {
+    const visibleBackground = (element) => {
+      for (let current = element; current; current = current.parentElement) {
+        const color = getComputedStyle(current).backgroundColor
+        if (color !== 'rgba(0, 0, 0, 0)' && color !== 'transparent') return color
+      }
+      return 'rgb(255, 255, 255)'
+    }
+    return [...document.querySelectorAll('button')].map(b => {
     const s=getComputedStyle(b),r=b.getBoundingClientRect(),svg=b.querySelector('svg').getBoundingClientRect();
-    return {id:b.id,bg:s.backgroundColor,image:s.backgroundImage,color:s.color,radius:s.borderRadius,
+    return {id:b.id,bg:visibleBackground(b),image:s.backgroundImage,color:s.color,radius:s.borderRadius,
       font:parseFloat(s.fontSize),weight:s.fontWeight,shadow:s.boxShadow,height:r.height,left:r.left,right:r.right,
       svgWidth:svg.width,gap:parseFloat(s.columnGap),scroll:b.scrollWidth,client:b.clientWidth,
-      disabled:b.disabled||b.getAttribute('aria-disabled')==='true',pointer:s.pointerEvents,transform:s.transform};}))()`
+      disabled:b.disabled||b.getAttribute('aria-disabled')==='true',pointer:s.pointerEvents,transform:s.transform};
+    })
+  })()`
   const summaries = []
   await send('Emulation.setEmulatedMedia', {
     media: 'screen',
