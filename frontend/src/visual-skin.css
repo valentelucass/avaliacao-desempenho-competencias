@@ -1339,10 +1339,10 @@
     border-radius: 0;
     box-shadow: none;
     color: var(--muted);
-    height: 2rem;
-    min-height: 2rem;
-    width: 2rem;
-    min-width: 2rem;
+    height: 2.25rem;
+    min-height: 2.25rem;
+    width: 2.25rem;
+    min-width: 2.25rem;
     transition: color 150ms ease;
   }
 
@@ -1392,8 +1392,8 @@
 
   /* Dark theme */
   :root[data-theme='dark'] .pagination .icon-button:not(:disabled):hover {
-    background: color-mix(in srgb, var(--primary) 12%, var(--surface));
-    color: var(--primary-strong);
+    background: transparent;
+    color: var(--text-h);
   }
 
   :root[data-theme='dark'] .pagination__page[aria-current='page'] {
