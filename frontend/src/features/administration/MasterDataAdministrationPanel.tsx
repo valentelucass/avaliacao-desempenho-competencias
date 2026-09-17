@@ -38,9 +38,19 @@ type MasterDataAdministrationPanelProps = {
 }
 
 type PendingAction =
-  | { kind: 'EDIT_AREA' | 'EDIT_COLLABORATOR'; id: string; subject: string; name: string }
   | {
-      kind: 'REACTIVATE_AREA' | 'REACTIVATE_COLLABORATOR' | 'DELETE_AREA' | 'DELETE_COLLABORATOR'
+      kind: 'EDIT_BRANCH' | 'EDIT_AREA' | 'EDIT_COLLABORATOR'
+      id: string
+      subject: string
+      name: string
+    }
+  | {
+      kind:
+        | 'REACTIVATE_BRANCH'
+        | 'REACTIVATE_AREA'
+        | 'REACTIVATE_COLLABORATOR'
+        | 'DELETE_AREA'
+        | 'DELETE_COLLABORATOR'
       id: string
       subject: string
     }
@@ -340,7 +350,11 @@ export function MasterDataAdministrationPanel({
     setConfirmationError(undefined)
     let completed = false
 
-    if (pendingAction.kind === 'EDIT_AREA' || pendingAction.kind === 'EDIT_COLLABORATOR') {
+    if (
+      pendingAction.kind === 'EDIT_BRANCH' ||
+      pendingAction.kind === 'EDIT_AREA' ||
+      pendingAction.kind === 'EDIT_COLLABORATOR'
+    ) {
       const name = pendingAction.name.trim()
       if (!name) {
         setConfirmationError('Informe o nome do cadastro.')
@@ -348,21 +362,26 @@ export function MasterDataAdministrationPanel({
       }
       completed = await runWrite(
         () =>
-          pendingAction.kind === 'EDIT_AREA'
-            ? api.updateArea(pendingAction.id, { name })
-            : api.updateCollaborator(pendingAction.id, { displayName: name }),
+          pendingAction.kind === 'EDIT_BRANCH'
+            ? api.updateBranch(pendingAction.id, { name })
+            : pendingAction.kind === 'EDIT_AREA'
+              ? api.updateArea(pendingAction.id, { name })
+              : api.updateCollaborator(pendingAction.id, { displayName: name }),
         'Nome atualizado. A situação e os vínculos foram preservados.',
       )
     }
     if (
+      pendingAction.kind === 'REACTIVATE_BRANCH' ||
       pendingAction.kind === 'REACTIVATE_AREA' ||
       pendingAction.kind === 'REACTIVATE_COLLABORATOR'
     ) {
       completed = await runWrite(
         () =>
-          pendingAction.kind === 'REACTIVATE_AREA'
-            ? api.reactivateArea(pendingAction.id)
-            : api.reactivateCollaborator(pendingAction.id),
+          pendingAction.kind === 'REACTIVATE_BRANCH'
+            ? api.reactivateBranch(pendingAction.id)
+            : pendingAction.kind === 'REACTIVATE_AREA'
+              ? api.reactivateArea(pendingAction.id)
+              : api.reactivateCollaborator(pendingAction.id),
         'Cadastro reativado. Confira novamente a planilha antes de importar.',
       )
     }
@@ -568,6 +587,21 @@ export function MasterDataAdministrationPanel({
               resources={branches}
               resourceLabel="filial"
               isBusy={isLoading || isWriting}
+              onEdit={(branch) =>
+                requestConfirmation({
+                  kind: 'EDIT_BRANCH',
+                  id: branch.id,
+                  subject: branch.name,
+                  name: branch.name,
+                })
+              }
+              onReactivate={(branch) =>
+                requestConfirmation({
+                  kind: 'REACTIVATE_BRANCH',
+                  id: branch.id,
+                  subject: branch.name,
+                })
+              }
               onDeactivate={(branch) =>
                 requestConfirmation({
                   kind: 'DEACTIVATE_BRANCH',
@@ -668,14 +702,6 @@ export function MasterDataAdministrationPanel({
           </div>
           <ClipboardList aria-hidden="true" size={19} strokeWidth={2} />
         </div>
-        <SpreadsheetImportPanel
-          kind="collaborators"
-          api={api}
-          disabled={isLoading || isWriting}
-          onBusyChange={setIsWriting}
-          onImported={loadMasterData}
-          onSessionExpired={onSessionExpired}
-        />
         <form
           className="stack-form master-data-quick-form"
           onSubmit={createCollaborator}
@@ -702,6 +728,14 @@ export function MasterDataAdministrationPanel({
               <Plus aria-hidden="true" size={17} strokeWidth={2} />
               Criar colaborador
             </button>
+            <SpreadsheetImportPanel
+              kind="collaborators"
+              api={api}
+              disabled={isLoading || isWriting}
+              onBusyChange={setIsWriting}
+              onImported={loadMasterData}
+              onSessionExpired={onSessionExpired}
+            />
           </div>
         </form>
         {isAvailable('collaborators') ? (
@@ -754,14 +788,6 @@ export function MasterDataAdministrationPanel({
           </div>
           <MapPin aria-hidden="true" size={19} strokeWidth={2} />
         </div>
-        <SpreadsheetImportPanel
-          kind="allocations"
-          api={api}
-          disabled={isLoading || isWriting}
-          onBusyChange={setIsWriting}
-          onImported={loadMasterData}
-          onSessionExpired={onSessionExpired}
-        />
         <p className="muted">
           Selecione recursos ativos. Filial, área e gestor em texto são opcionais; a vigência é
           validada pelo servidor.
@@ -851,6 +877,14 @@ export function MasterDataAdministrationPanel({
               <Plus aria-hidden="true" size={17} strokeWidth={2} />
               Criar lotação
             </button>
+            <SpreadsheetImportPanel
+              kind="allocations"
+              api={api}
+              disabled={isLoading || isWriting}
+              onBusyChange={setIsWriting}
+              onImported={loadMasterData}
+              onSessionExpired={onSessionExpired}
+            />
           </div>
         </form>
         {isAvailable('allocations') &&
@@ -889,15 +923,6 @@ export function MasterDataAdministrationPanel({
           </div>
           <ClipboardList aria-hidden="true" size={19} strokeWidth={2} />
         </div>
-        <SpreadsheetImportPanel
-          kind="assignments"
-          api={api}
-          cycles={assignmentOptions}
-          disabled={isLoading || isWriting}
-          onBusyChange={setIsWriting}
-          onImported={loadMasterData}
-          onSessionExpired={onSessionExpired}
-        />
         <p className="muted">
           A atribuição utiliza somente questionários já aplicados em ciclos de rascunho e
           colaboradores ativos. A API continua verificando todas as regras antes de confirmar.
@@ -983,6 +1008,15 @@ export function MasterDataAdministrationPanel({
               <Plus aria-hidden="true" size={17} strokeWidth={2} />
               Criar atribuição
             </button>
+            <SpreadsheetImportPanel
+              kind="assignments"
+              api={api}
+              cycles={assignmentOptions}
+              disabled={isLoading || isWriting}
+              onBusyChange={setIsWriting}
+              onImported={loadMasterData}
+              onSessionExpired={onSessionExpired}
+            />
           </div>
         </form>
         {isAvailable('options') && assignmentOptions.length === 0 ? (
@@ -1208,49 +1242,49 @@ function NamedResourcesTable({
                 >
                   {onEdit && (
                     <button
-                      className="button button--quiet"
+                      className="button button--quiet master-data-action-button"
                       type="button"
                       disabled={isBusy}
                       onClick={() => onEdit(resource)}
                       aria-label={'Editar ' + resourceLabel + ' ' + resource.name}
+                      title={'Editar ' + resourceLabel}
                     >
                       <Pencil aria-hidden="true" size={16} />
-                      Editar
                     </button>
                   )}
                   {!resource.active && onReactivate && (
                     <button
-                      className="button button--success button--quiet"
+                      className="button button--success button--quiet master-data-action-button"
                       type="button"
                       disabled={isBusy}
                       onClick={() => onReactivate(resource)}
                       aria-label={'Reativar ' + resourceLabel + ' ' + resource.name}
+                      title={'Reativar ' + resourceLabel}
                     >
                       <Power aria-hidden="true" size={16} />
-                      Reativar
                     </button>
                   )}
                   {resource.active ? (
                     <button
                       aria-label={`Desativar ${resourceLabel} ${resource.name}`}
-                      className="button button--danger button--quiet"
+                      className="button button--danger button--quiet master-data-action-button"
                       type="button"
                       onClick={() => onDeactivate(resource)}
                       disabled={isBusy}
+                      title={'Desativar ' + resourceLabel}
                     >
                       <Power aria-hidden="true" size={16} strokeWidth={2} />
-                      Desativar
                     </button>
                   ) : onDeleteInactive ? (
                     <button
                       aria-label={`Excluir ${resourceLabel} ${resource.name}`}
-                      className="button button--danger"
+                      className="button button--danger master-data-action-button"
                       type="button"
                       onClick={() => onDeleteInactive(resource)}
                       disabled={isBusy}
+                      title={'Excluir ' + resourceLabel}
                     >
                       <Trash2 aria-hidden="true" size={16} strokeWidth={2} />
-                      Excluir
                     </button>
                   ) : (
                     <span className="field-hint">Sem ação disponível</span>
@@ -1310,7 +1344,7 @@ function CollaboratorsTable({
   }
 
   return (
-    <div className="administration-users">
+    <div className="administration-users collaborators-table">
       <AdministrativeTable>
         <caption className="visually-hidden">Colaboradores cadastrados</caption>
         <AdministrativeTable.Head>
@@ -1626,8 +1660,10 @@ function formatQuestionnaireAssignment(assignment: ActiveQuestionnaireAssignment
 
 function confirmationDescription(action: PendingAction): string {
   const labels: Record<PendingAction['kind'], string> = {
+    EDIT_BRANCH: 'Você está corrigindo o nome da filial',
     EDIT_AREA: 'Você está corrigindo o nome da área',
     EDIT_COLLABORATOR: 'Você está corrigindo o nome do colaborador',
+    REACTIVATE_BRANCH: 'Você está prestes a reativar a filial',
     REACTIVATE_AREA: 'Você está prestes a reativar a área',
     REACTIVATE_COLLABORATOR: 'Você está prestes a reativar o colaborador',
     DELETE_AREA: 'Você está prestes a excluir permanentemente a área',
@@ -1644,8 +1680,10 @@ function confirmationDescription(action: PendingAction): string {
 
 function confirmationButtonLabel(action: PendingAction): string {
   const labels: Record<PendingAction['kind'], string> = {
+    EDIT_BRANCH: 'Salvar nome da filial',
     EDIT_AREA: 'Salvar nome da área',
     EDIT_COLLABORATOR: 'Salvar nome do colaborador',
+    REACTIVATE_BRANCH: 'Confirmar reativação da filial',
     REACTIVATE_AREA: 'Confirmar reativação da área',
     REACTIVATE_COLLABORATOR: 'Confirmar reativação do colaborador',
     DELETE_AREA: 'Confirmar exclusão definitiva da área',

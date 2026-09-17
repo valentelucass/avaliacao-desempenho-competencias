@@ -49,6 +49,29 @@ public class MasterDataApplicationService {
         });
   }
 
+  public void updateBranch(UUID resourceId, String name, MasterDataCommandContext context) {
+    var record =
+        new MasterDataRepository.NamedRecord(
+            MasterDataInput.requiredId(resourceId, "cadastro"),
+            MasterDataInput.requiredText(name, "nome", 200));
+    write(
+        () -> {
+          requireChange(repository.updateBranch(record));
+          audit(context, "CADASTRO.FILIAL.EDITAR", "FILIAL", record.id());
+          return Boolean.TRUE;
+        });
+  }
+
+  public void reactivateBranch(UUID resourceId, MasterDataCommandContext context) {
+    UUID id = MasterDataInput.requiredId(resourceId, "cadastro");
+    write(
+        () -> {
+          requireChange(repository.reactivateBranch(id));
+          audit(context, "CADASTRO.FILIAL.REATIVAR", "FILIAL", id);
+          return Boolean.TRUE;
+        });
+  }
+
   /** Exclui apenas cadastro inativo e sem uso; lotações e seus históricos nunca são removidos. */
   public void deleteInactiveUnusedBranch(UUID branchId, MasterDataCommandContext context) {
     UUID id = MasterDataInput.requiredId(branchId, "filial");

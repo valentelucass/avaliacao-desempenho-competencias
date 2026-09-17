@@ -131,6 +131,8 @@ export interface ApiClient {
   listQuestionnaireAssignmentOptions(): Promise<readonly QuestionnaireAssignmentOption[]>
   listApprovedQuestionnaireVersions(): Promise<readonly ApprovedQuestionnaireVersion[]>
   createBranch(input: NamedResourceInput): Promise<CreatedResource>
+  updateBranch(id: string, input: NamedResourceInput): Promise<void>
+  reactivateBranch(id: string): Promise<void>
   deactivateBranch(branchId: string): Promise<void>
   deleteInactiveUnusedBranch(branchId: string): Promise<void>
   createArea(input: NamedResourceInput): Promise<CreatedResource>
@@ -483,6 +485,21 @@ export class HttpApiClient implements ApiClient {
     return this.request<CreatedResource>('/master-data/branches', {
       method: 'POST',
       body: input,
+      requiresCsrf: true,
+    })
+  }
+
+  updateBranch(id: string, input: NamedResourceInput): Promise<void> {
+    return this.request('/master-data/branches/' + encodeURIComponent(id), {
+      method: 'PATCH',
+      body: input,
+      requiresCsrf: true,
+    })
+  }
+
+  reactivateBranch(id: string): Promise<void> {
+    return this.request('/master-data/branches/' + encodeURIComponent(id) + '/reactivate', {
+      method: 'PATCH',
       requiresCsrf: true,
     })
   }

@@ -193,71 +193,82 @@ export function SpreadsheetImportPanel({
       >
         <h4 id={`${id}-title`}>Importar {label}</h4>
         <p id={`${id}-description`} className="muted">
-          Selecione a planilha .xlsx, confira os dados e confirme a criação. Até 1 MB e 1.000
-          registros por arquivo, em uma única aba e sem fórmulas.
+          Selecione a planilha <code>.xlsx</code>, confira os dados e confirme a criação. Até
+          1&nbsp;MB e 1.000 registros por arquivo, em uma única aba e sem fórmulas.
         </p>
-        <p className="muted">{importInstructions[kind]}</p>
-        {kind === 'manager-assignments' && (
-          <div>
-            <a className="button" href="/templates/vinculos-gestor-colaborador.xlsx" download>
-              Baixar modelo de vínculos
-            </a>
-            <p className="muted">
-              Cada linha concede à conta avaliadora acesso ao colaborador indicado, conforme a
-              vigência. Confira os nomes antes de confirmar. Nomes ambíguos e períodos conflitantes
-              exigem revisão individual. Vínculos idênticos serão mantidos; a planilha não troca
-              gestores nem cria contas.
-            </p>
-          </div>
-        )}
-        {kind === 'allocations' && (
-          <p className="muted">
-            Colaborador e início são obrigatórios. Use uma data do Excel ou dd/mm/aaaa, sem horário.
-            Filial e área, quando informadas, devem existir e estar ativas. Gestor é uma informação
-            da lotação. Lotações idênticas serão mantidas; períodos conflitantes precisam de revisão
-            individual.
-          </p>
-        )}
-        {kind === 'assignments' && (
-          <div className="field">
-            <label htmlFor={`${id}-cycle`}>Ciclo para importar atribuições</label>
-            <select
-              id={`${id}-cycle`}
-              disabled={blocked}
-              value={cycleId}
-              onChange={(event) => {
-                invalidate()
-                setCycleId(event.target.value)
-              }}
-            >
-              <option value="">Selecione um ciclo em rascunho</option>
-              {cycles.map((cycle) => (
-                <option key={cycle.cycleId} value={cycle.cycleId}>
-                  {cycle.cycleCode} — {cycle.cycleName}
-                </option>
-              ))}
-            </select>
-            <span className="muted">
-              O ciclo e os títulos dos questionários da planilha devem corresponder a este cadastro.
-            </span>
-            {selectedCycle && (
-              <div className="spreadsheet-import__references">
-                <strong>Questionários aplicados neste ciclo</strong>
-                {selectedCycle.questionnaires.length ? (
-                  <ul>
-                    {selectedCycle.questionnaires.map((questionnaire) => (
-                      <li key={questionnaire.cycleQuestionnaireId}>{questionnaire.title}</li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p>
-                    Nenhum questionário aplicado. Confira o cadastro em Administração de ciclos.
-                  </p>
-                )}
+        <div className="spreadsheet-import__instructions">
+          <p className="muted">{importInstructions[kind]}</p>
+          {kind === 'manager-assignments' && (
+            <>
+              <div className="spreadsheet-import__template-row">
+                <a className="button" href="/templates/vinculos-gestor-colaborador.xlsx" download>
+                  Baixar modelo de vínculos
+                </a>
+                <span className="muted">
+                  Preencha conforme as colunas indicadas acima e importe aqui.
+                </span>
               </div>
-            )}
-          </div>
-        )}
+              <details className="spreadsheet-import__details">
+                <summary>Como funciona a importação</summary>
+                <p className="muted">
+                  Cada linha concede à conta avaliadora acesso ao colaborador indicado, conforme a
+                  vigência. Confira os nomes antes de confirmar. Nomes ambíguos e períodos
+                  conflitantes exigem revisão individual. Vínculos idênticos serão mantidos; a
+                  planilha não troca gestores nem cria contas.
+                </p>
+              </details>
+            </>
+          )}
+          {kind === 'allocations' && (
+            <p className="muted">
+              Colaborador e início são obrigatórios. Use uma data do Excel ou dd/mm/aaaa, sem
+              horário. Filial e área, quando informadas, devem existir e estar ativas. Gestor é uma
+              informação da lotação. Lotações idênticas serão mantidas; períodos conflitantes
+              precisam de revisão individual.
+            </p>
+          )}
+          {kind === 'assignments' && (
+            <div className="field">
+              <label htmlFor={`${id}-cycle`}>Ciclo para importar atribuições</label>
+              <select
+                id={`${id}-cycle`}
+                disabled={blocked}
+                value={cycleId}
+                onChange={(event) => {
+                  invalidate()
+                  setCycleId(event.target.value)
+                }}
+              >
+                <option value="">Selecione um ciclo em rascunho</option>
+                {cycles.map((cycle) => (
+                  <option key={cycle.cycleId} value={cycle.cycleId}>
+                    {cycle.cycleCode} — {cycle.cycleName}
+                  </option>
+                ))}
+              </select>
+              <span className="muted">
+                O ciclo e os títulos dos questionários da planilha devem corresponder a este
+                cadastro.
+              </span>
+              {selectedCycle && (
+                <div className="spreadsheet-import__references">
+                  <strong>Questionários aplicados neste ciclo</strong>
+                  {selectedCycle.questionnaires.length ? (
+                    <ul>
+                      {selectedCycle.questionnaires.map((questionnaire) => (
+                        <li key={questionnaire.cycleQuestionnaireId}>{questionnaire.title}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p>
+                      Nenhum questionário aplicado. Confira o cadastro em Administração de ciclos.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
         <div className="spreadsheet-import__file-row">
           <div className="field">
             <label htmlFor={`${id}-file`}>Planilha de {label}</label>

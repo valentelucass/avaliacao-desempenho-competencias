@@ -83,7 +83,7 @@ module.exports = async function checkMasterDataMaintenance({ send, frameId, css 
         true,
         'Ações de cadastros inativos devem ficar separadas e dentro da célula',
       )
-      if (width >= 769) {
+      if (await evaluate('matchMedia("(min-width: 48.0625rem)").matches')) {
         assert.equal(
           await evaluate(
             '[...document.querySelectorAll("td[data-label=Ação]")].every(c=>{const buttons=[...c.querySelectorAll("button")];return buttons.length<2||buttons.every(b=>Math.abs(b.getBoundingClientRect().top-buttons[0].getBoundingClientRect().top)<1)})',

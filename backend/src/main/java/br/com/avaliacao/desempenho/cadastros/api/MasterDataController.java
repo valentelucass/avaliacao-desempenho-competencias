@@ -66,6 +66,27 @@ public class MasterDataController {
     return ResponseEntity.noContent().build();
   }
 
+  @PatchMapping("/branches/{id}")
+  @PreAuthorize(MANAGE_MASTER_DATA)
+  public ResponseEntity<Void> updateBranch(
+      @PathVariable UUID id,
+      @Valid @RequestBody NamedResource request,
+      @AuthenticationPrincipal AuthenticatedPrincipal principal,
+      HttpServletRequest servletRequest) {
+    service.updateBranch(id, request.name(), context(principal, servletRequest));
+    return ResponseEntity.noContent().build();
+  }
+
+  @PatchMapping("/branches/{id}/reactivate")
+  @PreAuthorize(MANAGE_MASTER_DATA)
+  public ResponseEntity<Void> reactivateBranch(
+      @PathVariable UUID id,
+      @AuthenticationPrincipal AuthenticatedPrincipal principal,
+      HttpServletRequest servletRequest) {
+    service.reactivateBranch(id, context(principal, servletRequest));
+    return ResponseEntity.noContent().build();
+  }
+
   @DeleteMapping("/branches/{branchId}")
   @PreAuthorize(MANAGE_MASTER_DATA)
   public ResponseEntity<Void> deleteInactiveUnusedBranch(

@@ -6,6 +6,7 @@ Thumbs.db
 .vscode/*
 !.vscode/extensions.json
 !.vscode/settings.json
+/images
 
 # Java / Maven
 backend/target/

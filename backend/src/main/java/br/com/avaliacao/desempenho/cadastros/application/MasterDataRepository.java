@@ -10,6 +10,10 @@ public interface MasterDataRepository {
 
   boolean deactivateBranch(UUID branchId);
 
+  boolean updateBranch(NamedRecord record);
+
+  boolean reactivateBranch(UUID id);
+
   /**
    * Remove somente filial já inativa e sem qualquer lotação, preservando os registros históricos.
    */

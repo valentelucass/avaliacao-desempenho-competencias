@@ -854,7 +854,9 @@
     border: 1px solid var(--action-border);
     border-radius: 0.625rem;
     background: var(--action-bg);
-    box-shadow: none;
+    box-shadow:
+      0 1px 2px rgb(15 23 42 / 6%),
+      0 1px 3px rgb(15 23 42 / 4%);
     color: var(--action-text);
     font-family: var(--sans);
     font-size: 0.875rem;
@@ -866,8 +868,10 @@
     opacity: 1;
     transform: none;
     transition:
-      background-color 150ms ease,
-      border-color 150ms ease;
+      background-color 160ms ease,
+      border-color 160ms ease,
+      box-shadow 160ms ease,
+      color 160ms ease;
   }
 
   :root .button {
@@ -909,7 +913,9 @@
     ):hover {
     background: var(--action-hover);
     border-color: var(--action-border);
-    box-shadow: none;
+    box-shadow:
+      0 2px 4px rgb(15 23 42 / 8%),
+      0 2px 6px rgb(15 23 42 / 5%);
     color: var(--action-text);
     transform: none;
   }
@@ -919,7 +925,8 @@
       [aria-disabled='true']
     ):active {
     background: var(--action-hover);
-    box-shadow: inset 0 0 0 2px rgb(0 0 0 / 10%);
+    box-shadow: inset 0 1px 3px rgb(0 0 0 / 12%);
+    transform: translateY(0.5px);
   }
 
   :root .button.button--quiet {
@@ -932,23 +939,121 @@
   :root .button.button--primary {
     --action-bg: #2555a4;
     --action-hover: #1e478e;
-    --action-border: #2555a4;
+    --action-border: #1e478e;
     --action-text: #ffffff;
+    box-shadow:
+      0 1px 3px rgb(37 85 164 / 22%),
+      0 2px 6px rgb(37 85 164 / 12%);
+  }
+
+  :root .button.button--primary:not(:disabled):hover {
+    box-shadow:
+      0 2px 6px rgb(37 85 164 / 28%),
+      0 4px 10px rgb(37 85 164 / 16%);
   }
 
   :root .button.button--success {
     --action-bg: #007a58;
     --action-hover: #00694c;
-    --action-border: #007a58;
+    --action-border: #00694c;
     --action-text: #ffffff;
+    box-shadow:
+      0 1px 3px rgb(0 122 88 / 20%),
+      0 2px 6px rgb(0 122 88 / 10%);
+  }
+
+  :root .button.button--success:not(:disabled):hover {
+    box-shadow:
+      0 2px 6px rgb(0 122 88 / 26%),
+      0 4px 10px rgb(0 122 88 / 14%);
   }
 
   :root .button.button--danger,
   :root .button.button--danger.button--quiet {
     --action-bg: #dc3038;
     --action-hover: #c12630;
-    --action-border: #dc3038;
+    --action-border: #c12630;
     --action-text: #ffffff;
+    box-shadow:
+      0 1px 3px rgb(220 48 56 / 18%),
+      0 2px 6px rgb(220 48 56 / 10%);
+  }
+
+  :root .button.button--danger:not(:disabled):hover,
+  :root .button.button--danger.button--quiet:not(:disabled):hover {
+    box-shadow:
+      0 2px 6px rgb(220 48 56 / 24%),
+      0 4px 10px rgb(220 48 56 / 14%);
+  }
+
+  /* ── Botões de ação dentro de tabelas ─────────────────────────────────────
+     Nas tabelas administrativas, os botões de ação icon-only (editar,
+     desativar, reativar, excluir) e os botões com rótulo (Encerrar) adotam
+     um estilo ghost/outlined, mais discreto que um botão sólido, preenchendo
+     suavemente ao hover para indicar a intenção sem "gritar" na interface. */
+
+  /* Ação neutra da tabela (editar) — ghost sobre superfície */
+  :root .table-actions .button.button--quiet.master-data-action-button {
+    --action-bg: transparent;
+    --action-hover: var(--button-neutral-hover);
+    --action-border: color-mix(in srgb, var(--button-neutral-border) 58%, transparent);
+    --action-text: var(--button-neutral-text);
+    box-shadow: none;
+  }
+
+  :root .table-actions .button.button--quiet.master-data-action-button:not(:disabled):hover {
+    --action-border: var(--button-neutral-border);
+    box-shadow: 0 1px 3px rgb(15 23 42 / 6%);
+  }
+
+  /* Ação de sucesso na tabela (reativar) — ghost verde */
+  :root .table-actions .button.button--success.button--quiet.master-data-action-button {
+    --action-bg: transparent;
+    --action-hover: color-mix(in srgb, #007a58 12%, var(--surface));
+    --action-border: color-mix(in srgb, #007a58 42%, var(--border));
+    --action-text: #007a58;
+    box-shadow: none;
+  }
+
+  :root
+    .table-actions
+    .button.button--success.button--quiet.master-data-action-button:not(:disabled):hover {
+    --action-border: #007a58;
+    box-shadow: 0 1px 3px rgb(0 122 88 / 10%);
+  }
+
+  /* Ação perigosa na tabela (desativar / excluir) — ghost vermelho */
+  :root .table-actions .button.button--danger.master-data-action-button,
+  :root .table-actions .button.button--danger.button--quiet.master-data-action-button {
+    --action-bg: transparent;
+    --action-hover: color-mix(in srgb, #dc3038 10%, var(--surface));
+    --action-border: color-mix(in srgb, #dc3038 42%, var(--border));
+    --action-text: #dc3038;
+    box-shadow: none;
+  }
+
+  :root .table-actions .button.button--danger.master-data-action-button:not(:disabled):hover,
+  :root
+    .table-actions
+    .button.button--danger.button--quiet.master-data-action-button:not(:disabled):hover {
+    --action-border: #dc3038;
+    box-shadow: 0 1px 3px rgb(220 48 56 / 10%);
+  }
+
+  /* Encerrar / ações destrutivas com rótulo visível dentro de tabelas:
+     ghost outlined em vez de botão sólido vermelho chamativo. */
+  :root .table-actions .button.button--danger:not(.master-data-action-button) {
+    --action-bg: transparent;
+    --action-hover: color-mix(in srgb, #dc3038 8%, var(--surface));
+    --action-border: color-mix(in srgb, #dc3038 48%, var(--border));
+    --action-text: #dc3038;
+    box-shadow: none;
+  }
+
+  :root .table-actions .button.button--danger:not(.master-data-action-button):not(:disabled):hover {
+    --action-bg: color-mix(in srgb, #dc3038 10%, var(--surface));
+    --action-border: #dc3038;
+    box-shadow: 0 1px 3px rgb(220 48 56 / 10%);
   }
 
   /* A referência é de estilo, não de escala: manter ações compactas e rotuladas. */
@@ -1016,14 +1121,86 @@
     color: #071525;
   }
 
+  /* Dark theme: botões gerais recebem sombra escura e profundidade */
+  :root[data-theme='dark'] :is(.button, .icon-button, .account-actions__trigger) {
+    box-shadow:
+      0 1px 2px rgb(0 0 0 / 22%),
+      0 1px 3px rgb(0 0 0 / 16%);
+  }
+
+  :root[data-theme='dark']
+    :is(.button, .icon-button, .account-actions__trigger):not(:disabled):hover {
+    box-shadow:
+      0 2px 5px rgb(0 0 0 / 28%),
+      0 3px 8px rgb(0 0 0 / 18%);
+  }
+
+  /* Dark theme: botões ghost de tabela — bordas mais visíveis */
+  :root[data-theme='dark'] .table-actions .button.master-data-action-button,
+  :root[data-theme='dark'] .table-actions .button.button--danger:not(.master-data-action-button) {
+    box-shadow: none;
+    border-width: 1.5px;
+  }
+
+  :root[data-theme='dark']
+    .table-actions
+    .button.button--success.button--quiet.master-data-action-button {
+    --action-text: #87bda7;
+    --action-border: color-mix(in srgb, #87bda7 55%, var(--border));
+    --action-hover: color-mix(in srgb, #87bda7 14%, var(--surface));
+    --action-bg: color-mix(in srgb, #87bda7 6%, transparent);
+  }
+
+  :root[data-theme='dark'] .table-actions .button.button--danger.master-data-action-button,
+  :root[data-theme='dark']
+    .table-actions
+    .button.button--danger.button--quiet.master-data-action-button,
+  :root[data-theme='dark'] .table-actions .button.button--danger:not(.master-data-action-button) {
+    --action-text: #f87171;
+    --action-border: color-mix(in srgb, #f87171 52%, var(--border));
+    --action-hover: color-mix(in srgb, #f87171 10%, var(--surface));
+    --action-bg: color-mix(in srgb, #f87171 5%, transparent);
+  }
+
+  :root[data-theme='dark']
+    .table-actions
+    .button.button--quiet.master-data-action-button:not(.button--success):not(.button--danger) {
+    --action-border: color-mix(in srgb, var(--button-neutral-border) 72%, transparent);
+    --action-bg: color-mix(in srgb, var(--button-neutral-text) 5%, transparent);
+  }
+
   .feedback {
     border-color: color-mix(in srgb, currentColor 26%, var(--border));
     border-radius: var(--visual-radius-control);
   }
 
   .status-badge {
-    border: 0;
+    border: 1px solid transparent;
     border-radius: 999px;
+    font-size: 0.66rem;
+    letter-spacing: 0.04em;
+  }
+
+  .status-badge--active,
+  .status-badge--published,
+  .status-badge--publicada {
+    border-color: color-mix(in srgb, var(--success) 28%, transparent);
+  }
+
+  .status-badge--disabled,
+  .status-badge--blocked {
+    border-color: color-mix(in srgb, var(--error) 22%, transparent);
+  }
+
+  .status-badge--enviada,
+  .status-badge--aberto,
+  .status-badge--open {
+    border-color: color-mix(in srgb, var(--primary) 22%, transparent);
+  }
+
+  .status-badge--rascunho,
+  .status-badge--draft {
+    border-color: color-mix(in srgb, var(--warning) 22%, transparent);
   }
 
   .feedback {
@@ -1042,6 +1219,17 @@
     border-color: var(--visual-card-border);
     border-radius: var(--visual-radius-card);
     box-shadow: var(--visual-card-shadow);
+  }
+
+  /* Nunca empilhar cartão dentro de cartão: quando a tabela já está dentro de
+     um .card pai, o contêiner perde decoração para se integrar ao fundo. */
+  .card > .administration-users,
+  .card > .indicator-results,
+  .card > .cycle-questionnaire-table {
+    background: transparent;
+    border-color: var(--border);
+    border-radius: 0.75rem;
+    box-shadow: none;
   }
 
   .administration-users table,
@@ -1079,22 +1267,89 @@
     border-top-color: color-mix(in srgb, var(--primary) 24%, var(--border));
   }
 
-  .pagination__page[aria-current='page'] {
-    height: 2.25rem;
-    min-width: 2.25rem;
-    border-radius: 0.625rem;
-    background: #2555a4;
-    border-color: #2555a4;
+  /* ── Paginação limpa ──────────────────────────────────────────────────
+     Os controles ficam lado a lado sem contêiner decorado. Evita
+     empilhamento de bordas/fundos dentro de tabelas e cards. */
+
+  .pagination__controls {
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    display: inline-flex;
+    gap: 0.25rem;
+    overflow: visible;
+    padding: 0;
+  }
+
+  :root .pagination .icon-button {
+    background: transparent;
+    border: 1px solid color-mix(in srgb, var(--border) 68%, transparent);
+    border-radius: 0.5rem;
     box-shadow: none;
-    color: #ffffff;
+    color: var(--muted);
+    height: 2rem;
+    min-height: 2rem;
+    width: 2rem;
+    min-width: 2rem;
+    transition:
+      background-color 150ms ease,
+      border-color 150ms ease,
+      color 150ms ease;
+  }
+
+  :root .pagination .icon-button:not(:disabled):hover {
+    background: color-mix(in srgb, var(--primary) 8%, var(--surface));
+    border-color: color-mix(in srgb, var(--primary) 32%, var(--border));
+    box-shadow: none;
+    color: var(--primary);
+  }
+
+  :root .pagination .icon-button:not(:disabled):active {
+    background: color-mix(in srgb, var(--primary) 14%, var(--surface));
+  }
+
+  :root .pagination .icon-button:disabled {
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
+    color: color-mix(in srgb, var(--muted) 42%, transparent);
+    opacity: 1;
+  }
+
+  :root .pagination .icon-button:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 1px;
+  }
+
+  .pagination__page[aria-current='page'] {
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    color: var(--text-h);
     cursor: default;
+    font-size: 0.8rem;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    height: 2rem;
+    letter-spacing: 0.01em;
+    min-width: auto;
+    padding-inline: 0.35rem;
+  }
+
+  .pagination__page--with-total {
+    min-width: auto;
+    padding-inline: 0.35rem;
+  }
+
+  /* Dark theme */
+  :root[data-theme='dark'] .pagination .icon-button:not(:disabled):hover {
+    background: color-mix(in srgb, var(--primary) 12%, var(--surface));
+    color: var(--primary-strong);
   }
 
   :root[data-theme='dark'] .pagination__page[aria-current='page'] {
-    background: #2555a4;
-    border-color: #2555a4;
-    box-shadow: none;
-    color: #ffffff;
+    color: var(--text-h);
   }
 
   .account-dialog-backdrop::before,
@@ -1147,5 +1402,314 @@
       border-color: color-mix(in srgb, var(--primary) 20%, var(--border));
       box-shadow: var(--shadow-sm);
     }
+  }
+
+  /* ╔═════════════════════════════════════════════════════════════════════╗
+     ║  ESPAÇAMENTO COMPACTO E ELIMINAÇÃO DE CARD-IN-CARD               ║
+     ╚═════════════════════════════════════════════════════════════════════╝ */
+
+  /* ── Cards: padding menor ──────────────────────────────────────────── */
+  .card,
+  .competency-card,
+  .result-card {
+    padding: clamp(0.75rem, 1.5vw, 1rem);
+  }
+
+  .card-title-row {
+    padding-bottom: 0.65rem;
+  }
+
+  /* ── Stack forms / gap interno dos cards ──────────────────────────── */
+  .stack-form {
+    gap: 0.75rem;
+  }
+
+  .master-data-administration .card {
+    gap: 0.85rem;
+  }
+
+  .form-grid {
+    gap: 0.75rem 1rem;
+  }
+
+  /* ── Action row: reduzir separação com o formulário ──────────────── */
+  .action-row {
+    margin-top: 0;
+    padding-top: 0.65rem;
+  }
+
+  .master-data-administration .action-row {
+    padding-top: 0.65rem;
+  }
+
+  /* O wrapper do import desaparece como box, promovendo entry e panel
+     a filhos diretos do flex. O entry (botão) fica ao lado do verde;
+     o panel usa order alto + flex-basis 100% para SEMPRE descer a uma
+     nova linha sem mover os botões acima. */
+  .action-row > .spreadsheet-import {
+    display: contents;
+  }
+
+  .action-row .spreadsheet-import__entry {
+    order: 0;
+  }
+
+  .action-row .spreadsheet-import__panel:not([hidden]) {
+    order: 99;
+    flex-basis: 100%;
+    margin-top: 0.25rem;
+  }
+
+  /* ── Filter-fieldset sem aparência de card quando dentro de .card ── */
+  .card .filter-fieldset {
+    background: transparent;
+    border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+    box-shadow: none;
+    padding: 0.65rem;
+  }
+
+  .card .filter-fieldset legend {
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+  }
+
+  /* ── Escala de respostas: strip horizontal denso ─────────────────── */
+  .questionnaire-scale .questionnaire-response-scale {
+    gap: 0;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 0.6rem;
+    background: var(--surface-muted);
+  }
+
+  .questionnaire-scale .questionnaire-response-scale li {
+    align-items: center;
+    background: transparent;
+    border: 0;
+    border-left: 1px solid var(--border);
+    border-radius: 0;
+    gap: 0.35rem;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-rows: none;
+    min-height: 2.5rem;
+    padding: 0.4rem 0.55rem;
+  }
+
+  .questionnaire-scale .questionnaire-response-scale li:first-child {
+    border-left: 0;
+  }
+
+  .questionnaire-scale .questionnaire-answers-preview__points {
+    font-size: 0.78rem;
+    min-width: 2.4rem;
+  }
+
+  .questionnaire-scale .questionnaire-answers-preview__label {
+    font-size: 0.76rem;
+  }
+
+  /* Em celular, a escala vira 2 colunas mais compactas em vez de 3+2 */
+  @media (max-width: 48rem) {
+    .questionnaire-scale .questionnaire-response-scale {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      border: 1px solid var(--border);
+      border-radius: 0.5rem;
+      gap: 0;
+    }
+
+    .questionnaire-scale .questionnaire-response-scale li {
+      border-left: 1px solid var(--border);
+      border-top: 1px solid var(--border);
+      min-height: 2.25rem;
+    }
+
+    .questionnaire-scale .questionnaire-response-scale li:first-child,
+    .questionnaire-scale .questionnaire-response-scale li:nth-child(2) {
+      border-top: 0;
+    }
+
+    .questionnaire-scale .questionnaire-response-scale li:nth-child(odd) {
+      border-left: 0;
+    }
+  }
+
+  /* ── Relationship / link forms: formulários mais compactos ───────── */
+  .manager-assignment-form .form-grid,
+  .user-collaborator-link-form .form-grid {
+    gap: 0.65rem 0.85rem;
+  }
+
+  /* Campo / label mais compacto */
+  .field {
+    gap: 0.25rem;
+  }
+
+  .field label,
+  .field-hint {
+    font-size: 0.78rem;
+  }
+
+  /* ── Account dialog: espaçamento interno reduzido ──────────────── */
+  .account-dialog.selected-user-card {
+    gap: 0.65rem;
+    padding: clamp(0.75rem, 1.5vw, 1rem);
+  }
+
+  .account-dialog .selected-user-overview,
+  .account-dialog .access-summary {
+    gap: 0.5rem;
+  }
+
+  .account-dialog .selected-user-overview .definition-list div,
+  .account-dialog .access-summary .field {
+    padding: 0.5rem 0.65rem;
+  }
+
+  /* ── Spreadsheet import panel: mais compacto ───────────────────── */
+  .spreadsheet-import__panel:not([hidden]) {
+    gap: 0.75rem;
+    margin-top: 0.65rem;
+    padding: clamp(0.65rem, 1.5vw, 0.85rem);
+  }
+
+  /* ── Seção muted / descrição de card: texto menor ──────────────── */
+  .card-title-row .muted,
+  .section-heading .muted {
+    font-size: 0.8rem;
+    line-height: 1.4;
+  }
+
+  /* ── Containers de admin: gap entre cards reduzido ─────────────── */
+  .user-administration,
+  .master-data-administration,
+  .workspace__content,
+  .workspace__content > section {
+    gap: clamp(0.85rem, 1.5vw, 1.15rem);
+  }
+
+  .user-administration > .card {
+    gap: 0.75rem;
+  }
+
+  /* ── Section heading: menos padding ────────────────────────────── */
+  .section-heading {
+    gap: 0.65rem;
+    margin-bottom: 0;
+    padding-bottom: 0.65rem;
+  }
+
+  /* ── Context help heading inline ───────────────────────────────── */
+  .context-help__heading {
+    gap: 0.35rem;
+  }
+
+  /* ── Definition list / overview cells: compactas ───────────────── */
+  .selected-user-card,
+  .selected-user-overview,
+  .access-summary {
+    gap: 0.55rem;
+  }
+
+  .selected-user-overview .definition-list {
+    gap: 0.5rem;
+  }
+
+  .selected-user-overview .definition-list div,
+  .access-summary .field {
+    padding: 0.45rem 0.6rem;
+  }
+
+  .selected-user-overview .definition-list dt,
+  .access-summary .field-hint {
+    font-size: 0.72rem;
+  }
+
+  /* ── Filter panel: mais compacto ───────────────────────────────── */
+  .filter-panel {
+    gap: 0.75rem;
+    padding: clamp(0.75rem, 1.5vw, 1rem);
+  }
+
+  /* ── Assessment editor: gap menor ─────────────────────────────── */
+  .assessment-editor {
+    gap: 0.85rem;
+  }
+
+  /* ── Login / auth cards: manter padding confortável ────────────── */
+  .login-card {
+    padding: clamp(1.25rem, 2.5vw, 1.75rem);
+  }
+
+  /* ── Questionário admin: versões e criação compactas ────────────── */
+  .questionnaire-versions {
+    gap: 0.85rem;
+  }
+
+  /* ── Ciclos: formulário de configuração compacto ────────────────── */
+  .cycle-configuration-form__details-grid {
+    gap: 0.45rem 0.85rem;
+  }
+
+  .cycle-configuration-form__details-grid .checkbox-field {
+    margin-top: 0;
+  }
+
+  /* Desktop ≥ 64rem: 3 colunas com grid-template-areas
+     Linha 1: Código       | Nome        | Fuso
+     Linha 2: Abertura     | Encerramento | Checkbox          */
+  @media (min-width: 64rem) {
+    .cycle-configuration-form__details-grid {
+      grid-template-columns: minmax(11rem, 1fr) minmax(14rem, 1.2fr) minmax(11rem, 0.8fr);
+      grid-template-areas:
+        'code   name  tz'
+        'open   close check';
+      gap: 0.5rem 0.85rem;
+    }
+
+    .cycle-configuration-form__details-grid > :nth-child(1) {
+      grid-area: code;
+    }
+    .cycle-configuration-form__details-grid > :nth-child(2) {
+      grid-area: name;
+    }
+    .cycle-configuration-form__details-grid > :nth-child(3) {
+      grid-area: tz;
+    }
+    .cycle-configuration-form__details-grid > :nth-child(4) {
+      grid-area: open;
+    }
+    .cycle-configuration-form__details-grid > :nth-child(5) {
+      grid-area: close;
+    }
+    .cycle-configuration-form__details-grid > :nth-child(6) {
+      grid-area: check;
+      align-self: center;
+    }
+  }
+
+  /* Tablet 48–64rem: 2 colunas, checkbox na linha inteira */
+  @media (min-width: 48.0625rem) and (max-width: 63.99rem) {
+    .cycle-configuration-form__details-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.5rem 0.85rem;
+    }
+
+    .cycle-configuration-form__details-grid > .checkbox-field {
+      grid-column: 1 / -1;
+    }
+  }
+
+  /* Título do card-title-row não deve ficar colado ao conteúdo abaixo */
+  .card-title-row + .administration-users,
+  .card-title-row + .cycle-questionnaire-table,
+  .card-title-row + .indicator-results {
+    margin-top: 0.25rem;
+  }
+
+  /* ── Cycle admin: transição / encerramento compactos ────────────── */
+  .cycle-administration-detail {
+    gap: clamp(0.85rem, 1.5vw, 1.15rem);
   }
 }

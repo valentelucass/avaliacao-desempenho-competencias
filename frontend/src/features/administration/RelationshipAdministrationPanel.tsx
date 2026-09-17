@@ -436,14 +436,6 @@ export function RelationshipAdministrationPanel({
               </p>
             </div>
           </div>
-          <SpreadsheetImportPanel
-            kind="manager-assignments"
-            api={api}
-            disabled={isLoading || isSaving || !isAvailable('managerOptions')}
-            onBusyChange={setIsSaving}
-            onImported={loadRelationships}
-            onSessionExpired={onSessionExpired}
-          />
           <form
             className="stack-form manager-assignment-form"
             noValidate
@@ -503,6 +495,14 @@ export function RelationshipAdministrationPanel({
                 <Link2 aria-hidden="true" size={17} strokeWidth={2} />
                 Criar vínculo de gestão
               </button>
+              <SpreadsheetImportPanel
+                kind="manager-assignments"
+                api={api}
+                disabled={isLoading || isSaving || !isAvailable('managerOptions')}
+                onBusyChange={setIsSaving}
+                onImported={loadRelationships}
+                onSessionExpired={onSessionExpired}
+              />
             </div>
           </form>
 

@@ -81,6 +81,25 @@ public class SqlServerMasterDataRepository implements MasterDataRepository {
   }
 
   @Override
+  public boolean updateBranch(NamedRecord record) {
+    requireMigration(MIGRATION_CADASTROS);
+    return jdbcTemplate.update(
+            "UPDATE dbo.filial SET nome = ?, atualizado_em_utc = SYSUTCDATETIME() WHERE filial_id = ?",
+            record.name(),
+            record.id())
+        == 1;
+  }
+
+  @Override
+  public boolean reactivateBranch(UUID id) {
+    requireMigration(MIGRATION_CADASTROS);
+    return jdbcTemplate.update(
+            "UPDATE dbo.filial SET ativa = 1, atualizado_em_utc = SYSUTCDATETIME() WHERE filial_id = ? AND ativa = 0",
+            id)
+        == 1;
+  }
+
+  @Override
   public boolean deleteInactiveUnusedBranch(UUID branchId) {
     requireMigration(MIGRATION_CADASTROS);
     return jdbcTemplate.update(

@@ -1131,6 +1131,13 @@ dd {
   min-height: 2.3rem;
   padding: 0.4rem 0.65rem;
 }
+.table-actions .master-data-action-button {
+  height: 2.25rem;
+  min-height: 2.25rem;
+  min-width: 2.25rem;
+  padding: 0;
+  width: 2.25rem;
+}
 .allocations-table .table-actions,
 .questionnaire-assignments-table .table-actions {
   justify-content: flex-start;
@@ -3742,6 +3749,54 @@ thead th {
   min-width: 0;
 }
 
+.spreadsheet-import__instructions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.spreadsheet-import__template-row {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+}
+
+.spreadsheet-import__details {
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  padding: 0;
+}
+
+.spreadsheet-import__details > summary {
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  list-style: none;
+  padding: 0.5rem 0.75rem;
+  user-select: none;
+}
+
+.spreadsheet-import__details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.spreadsheet-import__details > summary::before {
+  content: '▸ ';
+}
+
+.spreadsheet-import__details[open] > summary::before {
+  content: '▾ ';
+}
+
+.spreadsheet-import__details[open] > summary {
+  border-bottom: 1px solid var(--border);
+}
+
+.spreadsheet-import__details > p {
+  padding: 0.75rem;
+}
+
 .spreadsheet-import__table td:last-child {
   text-align: left;
 }
@@ -3840,6 +3895,11 @@ thead th {
 
   .master-data-administration .administration-users .table-actions {
     justify-content: flex-end;
+    flex-wrap: nowrap;
+    min-width: max-content;
+  }
+
+  .collaborators-table .table-actions {
     flex-wrap: nowrap;
     min-width: max-content;
   }
@@ -4228,6 +4288,10 @@ thead th {
 
   .administration-users td:last-child .button {
     width: 100%;
+  }
+
+  .administration-users td:last-child .master-data-action-button {
+    width: 2.25rem;
   }
 
   .allocations-table td:last-child .button,

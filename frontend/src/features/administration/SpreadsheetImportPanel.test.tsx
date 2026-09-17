@@ -100,7 +100,8 @@ describe('SpreadsheetImportPanel', () => {
         ],
       },
     })
-    expect(screen.getByText(/Cada linha concede/)).toBeVisible()
+    expect(screen.getByText('Como funciona a importação')).toBeInTheDocument()
+    expect(screen.getByText(/Cada linha concede/)).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Conferir planilha' }))
     await waitFor(() => expect(screen.getByText('Gestora fictícia')).toBeVisible())
     expect(api.previewSpreadsheet).toHaveBeenCalledWith('manager-assignments', file, undefined)
