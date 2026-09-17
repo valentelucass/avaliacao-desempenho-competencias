@@ -143,6 +143,8 @@ export function AssessmentsPanel({
   const [selectedDirectorCollaboratorId, setSelectedDirectorCollaboratorId] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [isLoadingCycles, setIsLoadingCycles] = useState(false)
+  const [creationOptionsRevision, setCreationOptionsRevision] = useState(0)
+  const [creationCyclesError, setCreationCyclesError] = useState<string>()
   const [isCreating, setIsCreating] = useState(false)
   const [isLoadingManagerCollaborators, setIsLoadingManagerCollaborators] = useState(false)
   const [isCreatingManagerAssessment, setIsCreatingManagerAssessment] = useState(false)
@@ -316,14 +318,20 @@ export function AssessmentsPanel({
   }, [api, onSessionExpired, previewedAssessmentId])
 
   useEffect(() => {
-    if (!canCreateSelfAssessment && !canCreateManagerAssessment && !canCreateDirectorAssessment) {
+    if (
+      assessmentId ||
+      (!canCreateSelfAssessment && !canCreateManagerAssessment && !canCreateDirectorAssessment)
+    ) {
       return undefined
     }
 
     let isCurrent = true
     async function loadCreationCycles() {
       setIsLoadingCycles(true)
-      setCreationError(undefined)
+      setCreationCyclesError(undefined)
+      setSelfCreationCycles([])
+      setManagerCreationCycles([])
+      setDirectorCreationCycles([])
       try {
         const [selfCycles, managerCycles, directorCycles] = await Promise.all([
           canCreateSelfAssessment
@@ -340,6 +348,15 @@ export function AssessmentsPanel({
           setSelfCreationCycles(selfCycles)
           setManagerCreationCycles(managerCycles)
           setDirectorCreationCycles(directorCycles)
+          setSelectedCycleId((current) =>
+            selfCycles.some((cycle) => cycle.id === current) ? current : '',
+          )
+          setSelectedManagerCycleId((current) =>
+            managerCycles.some((cycle) => cycle.id === current) ? current : '',
+          )
+          setSelectedDirectorCycleId((current) =>
+            directorCycles.some((cycle) => cycle.id === current) ? current : '',
+          )
         }
       } catch (requestError) {
         if (isAuthenticationError(requestError)) {
@@ -347,7 +364,9 @@ export function AssessmentsPanel({
           return
         }
         if (isCurrent) {
-          setCreationError(safeErrorMessage(requestError))
+          setCreationCyclesError(
+            safeLoadErrorMessage(requestError, 'os ciclos para iniciar avaliações'),
+          )
         }
       } finally {
         if (isCurrent) {
@@ -363,21 +382,29 @@ export function AssessmentsPanel({
     }
   }, [
     api,
+    assessmentId,
     canCreateDirectorAssessment,
     canCreateManagerAssessment,
     canCreateSelfAssessment,
+    creationOptionsRevision,
     onSessionExpired,
   ])
 
   useEffect(() => {
-    if (!canCreateManagerAssessment || !selectedManagerCycleId) {
+    if (assessmentId || !canCreateManagerAssessment) {
       return undefined
     }
 
     let isCurrent = true
     async function loadManagerCollaborators() {
-      setIsLoadingManagerCollaborators(true)
       setManagerCreationError(undefined)
+      setManagerCollaborators([])
+      setSelectedManagerCollaboratorId('')
+      if (!selectedManagerCycleId) {
+        setIsLoadingManagerCollaborators(false)
+        return
+      }
+      setIsLoadingManagerCollaborators(true)
       try {
         const collaborators = await api.listManagerAssessmentCreationOptions(selectedManagerCycleId)
         if (isCurrent) {
@@ -405,17 +432,30 @@ export function AssessmentsPanel({
     return () => {
       isCurrent = false
     }
-  }, [api, canCreateManagerAssessment, onSessionExpired, selectedManagerCycleId])
+  }, [
+    api,
+    assessmentId,
+    canCreateManagerAssessment,
+    creationOptionsRevision,
+    onSessionExpired,
+    selectedManagerCycleId,
+  ])
 
   useEffect(() => {
-    if (!canCreateDirectorAssessment || !selectedDirectorCycleId) {
+    if (assessmentId || !canCreateDirectorAssessment) {
       return undefined
     }
 
     let isCurrent = true
     async function loadDirectorCollaborators() {
-      setIsLoadingDirectorCollaborators(true)
       setDirectorCreationError(undefined)
+      setDirectorCollaborators([])
+      setSelectedDirectorCollaboratorId('')
+      if (!selectedDirectorCycleId) {
+        setIsLoadingDirectorCollaborators(false)
+        return
+      }
+      setIsLoadingDirectorCollaborators(true)
       try {
         const collaborators =
           await api.listDirectorAssessmentCreationOptions(selectedDirectorCycleId)
@@ -443,7 +483,14 @@ export function AssessmentsPanel({
     return () => {
       isCurrent = false
     }
-  }, [api, canCreateDirectorAssessment, onSessionExpired, selectedDirectorCycleId])
+  }, [
+    api,
+    assessmentId,
+    canCreateDirectorAssessment,
+    creationOptionsRevision,
+    onSessionExpired,
+    selectedDirectorCycleId,
+  ])
 
   useEffect(() => {
     const destination =
@@ -460,6 +507,7 @@ export function AssessmentsPanel({
   }, [journey])
 
   function refreshAssessments() {
+    setCreationOptionsRevision((current) => current + 1)
     if (isPageNavigationPending.current) {
       return
     }
@@ -801,6 +849,12 @@ export function AssessmentsPanel({
         </section>
       ) : null}
 
+      {creationCyclesError ? (
+        <FeedbackMessage kind="error" onDismiss={() => setCreationCyclesError(undefined)}>
+          {creationCyclesError}
+        </FeedbackMessage>
+      ) : null}
+
       {canCreateManagerAssessment || canCreateDirectorAssessment || canCreateSelfAssessment ? (
         <div className="assessment-creation-grid">
           {canCreateManagerAssessment ? (
@@ -845,7 +899,7 @@ export function AssessmentsPanel({
                 {isLoadingCycles ? (
                   <p className="field-hint">Verificando ciclos elegíveis…</p>
                 ) : null}
-                {!isLoadingCycles && managerCreationCycles.length === 0 ? (
+                {!isLoadingCycles && !creationCyclesError && managerCreationCycles.length === 0 ? (
                   <FeedbackMessage kind="info">
                     Não há ciclos disponíveis para uma nova avaliação de gestor. Quando houver um
                     vínculo ativo, questionário atribuído e ciclo vigente, ele aparecerá aqui.
@@ -960,7 +1014,7 @@ export function AssessmentsPanel({
                 {isLoadingCycles ? (
                   <p className="field-hint">Verificando ciclos elegíveis…</p>
                 ) : null}
-                {!isLoadingCycles && directorCreationCycles.length === 0 ? (
+                {!isLoadingCycles && !creationCyclesError && directorCreationCycles.length === 0 ? (
                   <FeedbackMessage kind="info">
                     Não há ciclos disponíveis para uma nova avaliação de Diretoria. Quando houver
                     uma gerência vinculada, questionário atribuído e ciclo vigente, ele aparecerá
@@ -1075,7 +1129,7 @@ export function AssessmentsPanel({
                 {isLoadingCycles ? (
                   <p className="field-hint">Verificando ciclos elegíveis…</p>
                 ) : null}
-                {!isLoadingCycles && selfCreationCycles.length === 0 ? (
+                {!isLoadingCycles && !creationCyclesError && selfCreationCycles.length === 0 ? (
                   <FeedbackMessage kind="info">
                     Não há ciclos disponíveis para sua autoavaliação. Ela aparece quando sua conta
                     possui vínculo ativo, questionário atribuído e autoavaliação habilitada em um

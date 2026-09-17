@@ -115,6 +115,16 @@ Publicação e reabertura administrativa podem ocorrer também depois do encerra
 
 Há somente uma avaliação de Gestor, uma de Diretoria–Gerência e uma autoavaliação por combinação de ciclo e colaborador. Reabrir cria versão da mesma avaliação, não outro registro lógico.
 
+### Opções para iniciar avaliações — ADC-COR-023, 2026-09-17
+
+Origem: solicitação do RH encaminhada e autorizada pelo usuário, para todos os perfis e tipos já permitidos. Ao criar o primeiro rascunho, a pessoa deixa de aparecer no seletor de **nova avaliação daquele ciclo e tipo**, independentemente do autor ou da situação posterior. Avaliações enviadas, publicadas e reabertas também permanecem excluídas das opções de criação. A avaliação existente continua disponível na consulta autorizada, para retomar ou visualizar. A mera seleção da pessoa, sem criação confirmada pelo servidor, não a retira da lista.
+
+A regra de unicidade existente é preservada: por exemplo, iniciar uma avaliação de Gestor para uma pessoa no ciclo A não impede sua autoavaliação nem uma avaliação de Diretoria–Gerência permitida, e não a exclui de outro ciclo. Quando não restam pessoas elegíveis, o ciclo deixa de ser opção para aquele tipo. Na autoavaliação, é o ciclo já iniciado que sai do seletor.
+
+A SPA reconsulta as opções no servidor após criar, ao retornar do editor e em **Atualizar**; descarta respostas ultrapassadas e seleções que perderam elegibilidade. Não há atualização contínua entre abas: uma tela aberta pode precisar de Atualizar; o servidor mantém a proteção contra duplicação em todas as tentativas. Perfis sem autorização continuam sem poder criar avaliações.
+
+Responsável pela solicitação: RH, via usuário solicitante; aceite visual final pendente. Testes afetados: `AssessmentsPanel.creation.test.tsx`, `AssessmentCreationOptionsReadOnlySqlTests` e `check-assessment-creation-options.cjs`. Sem alteração de cálculo, estado, contrato de escrita, schema ou histórico.
+
 ## ADC-003 — indicadores, exportação e confidencialidade
 
 ### População e métricas

@@ -183,6 +183,8 @@ Essas rotas exigem `VINCULOS_DIRETORIA_GERENCIA.GERIR`, CSRF nas escritas e pres
 | `POST /assessments/{assessmentId}/feedback`                 | Requer `Idempotency-Key`; `{ feedbackDate: "YYYY-MM-DD", comment }`. Somente o autor original conclui feedback de sua avaliação publicada elegível. Repetição com a mesma chave é idempotente; não há edição/substituição. |
 | `POST /assessments/{assessmentId}/reopen`                   | Requer `Idempotency-Key` e `{ reason }` de até 80 caracteres; somente RH/Diretoria reabrem avaliação publicada. A versão e eventual feedback anteriores permanecem históricos.                                             |
 
+`ADC-COR-023`: as opções de criação já excluem no SQL qualquer avaliação existente para o mesmo ciclo, colaborador e tipo, inclusive rascunho e avaliação de outro autor. Os ciclos de criação exigem ao menos uma opção restante; na autoavaliação, somente o próprio vínculo é considerado. A SPA passa a reconsultar essas opções após criação, retorno do editor e atualização manual, sem mudar endpoints, DTOs, permissões ou a listagem de avaliações existentes. A criação continua revalidando autorização/unicidade, inclusive se outra sessão iniciar a avaliação entre a consulta e o envio.
+
 Filtros de listagem (aditivos em v1, ADC-UI-051):
 
 | Parâmetro                   | Semântica                                                                                                                                                                              |

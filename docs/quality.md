@@ -32,6 +32,10 @@ A regressão de `Encerrar` é verificada adicionalmente no `RelationshipAdminist
 
 Use o comando sem `-SkipDatabase` no banco local dedicado. O catálogo versionado atual contém `V0001`–`V0014`; a reconciliação somente leitura dos dois bancos foi registrada em 2026-09-08. Use `-SkipDatabase` somente quando o alvo SQL Server não estiver disponível para o gate; essa opção ainda valida os arquivos de migration, mas não substitui a execução completa contra SQL Server antes da liberação.
 
+## Opções para iniciar avaliações
+
+`ADC-COR-023`: `AssessmentsPanel.creation.test.tsx` cobre a retirada de opções após criação/retorno, atualização manual, ciclos esgotados, resposta tardia e recuperação de falhas. O gate inclui `check-assessment-creation-options.cjs`: React real com transporte fictício no Edge, criação e retorno em 375/1440 px, temas claro/escuro, Gestor/RH/Diretoria e autoavaliação. `AssessmentCreationOptionsReadOnlySqlTests`, opt-in `-Dadc.dev.sql.readonly=true`, executa os repositórios e bindings reais sobre CTEs fictícias em AVALIACAO_DEV, sem ler tabelas de negócio nem executar DDL/DML. Verifica os três estados, exclusão independente de autoria, ciclos esgotados e independência entre ciclos/tipos; usa a DLL JDBC local como os demais ensaios SQL.
+
 ## Restauração opcional de sessão
 
 `ADC-COR-021`: `SessionRestorationHttpTests` verifica a rota aditiva `/auth/sessions/restore` com a cadeia Spring, cookies e token CSRF mascarado reais, serviço/repositório de identidade fictícios e nenhum SQL. Cobre ausência de sessão, refresh recusado, acesso válido sem rotação, renovação com cookies seguros e invalidação de CSRF, negações por método/CSRF, preservação dos 401 existentes e propagação de falha não relacionada à autenticação. Testes de App com o cliente HTTP real verificam a abertura sem consultas protegidas; os testes do cliente cobrem concorrência entre restauração/refresh, descarte de CSRF, falhas e nova tentativa.

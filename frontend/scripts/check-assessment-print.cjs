@@ -290,6 +290,7 @@ async function mount(d, key) {
       'check-curtain-theme-toggle',
       'check-global-buttons',
       'check-assessment-filters',
+      'check-assessment-creation-options',
       'check-sidebar-cards',
       'check-cycle-recovery',
       'check-spreadsheet-import',

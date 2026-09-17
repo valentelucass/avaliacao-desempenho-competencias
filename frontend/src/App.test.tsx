@@ -18,6 +18,145 @@ import App from './App'
 const passwordChangeMethod = 'changePassword'
 
 describe('App', () => {
+  it.each([
+    ['GESTOR', 'GESTOR'],
+    ['GESTOR', 'AUTOAVALIACAO'],
+    ['GERENCIA_RH', 'GESTOR'],
+    ['GERENCIA_RH', 'AUTOAVALIACAO'],
+    ['DIRETORIA', 'DIRETORIA_GERENCIA'],
+    ['DIRETORIA', 'AUTOAVALIACAO'],
+  ] as const)(
+    '%s: remove a opção de %s após criar e voltar pela navegação real',
+    async (role, type) => {
+      const cycle = { id: 'cycle-2024', name: 'Ciclo fictício dos perfis' }
+      const person = { id: 'person-1', displayName: 'Pessoa fictícia vinculada' }
+      const teamType = role === 'DIRETORIA' ? 'DIRETORIA_GERENCIA' : 'GESTOR'
+      const teamCycleLabel = `Ciclo para avaliação de ${role === 'DIRETORIA' ? 'Diretoria' : 'gestor'}`
+      const cycleLabel = type === 'AUTOAVALIACAO' ? 'Ciclo para autoavaliação' : teamCycleLabel
+      const untouchedCycleLabel =
+        type === 'AUTOAVALIACAO' ? teamCycleLabel : 'Ciclo para autoavaliação'
+      const detail = {
+        ...sampleAssessment(),
+        type,
+        cycle,
+        evaluated: { displayName: person.displayName },
+      }
+      let created = false
+      const api = createApi({
+        currentUser: vi.fn().mockResolvedValue({
+          id: 'review-profile-1',
+          displayName: 'Conta fictícia de conferência',
+          roles: [role],
+          permissions: [
+            role === 'DIRETORIA'
+              ? 'AVALIACOES.AVALIAR_GERENCIAS_VINCULADAS'
+              : 'AVALIACOES.AVALIAR_VINCULADOS',
+            'AVALIACOES.VISUALIZAR_PROPRIAS_RESPOSTAS',
+            'AUTOAVALIACOES.PREENCHER_PROPRIA',
+            'AUTOAVALIACOES.ENVIAR_PROPRIA',
+            'AUTOAVALIACOES.VISUALIZAR_PROPRIA',
+            ...(role === 'GESTOR' ? [] : ['AVALIACOES.VISUALIZAR_TODAS', 'ACESSOS.NEGOCIO.GERIR']),
+          ],
+        }),
+        listAssessmentCreationCycleOptions: vi.fn(async (requested) =>
+          created && requested === type ? [] : [cycle],
+        ),
+        listManagerAssessmentCreationOptions: vi.fn(async () =>
+          created && type === 'GESTOR' ? [] : [person],
+        ),
+        listDirectorAssessmentCreationOptions: vi.fn(async () =>
+          created && type === 'DIRETORIA_GERENCIA' ? [] : [person],
+        ),
+        listAssessments: vi.fn(async () => ({
+          items: created ? [detail] : [],
+          page: { limit: 2, nextCursor: null },
+        })),
+        createAssessment: vi.fn(async () => {
+          created = true
+          return detail
+        }),
+        getAssessment: vi.fn().mockResolvedValue(detail),
+      })
+      renderWithExistingSession(api, '/avaliacoes')
+      const cycleSelect = await screen.findByLabelText(cycleLabel)
+      await waitFor(() => expect(cycleSelect).toBeEnabled())
+      expect(screen.getByLabelText(untouchedCycleLabel)).toBeInTheDocument()
+      expect(api.listAssessmentCreationCycleOptions).toHaveBeenCalledWith(teamType)
+      expect(api.listAssessmentCreationCycleOptions).toHaveBeenCalledWith('AUTOAVALIACAO')
+      expect(
+        screen.queryByLabelText(
+          role === 'DIRETORIA'
+            ? 'Ciclo para avaliação de gestor'
+            : 'Ciclo para avaliação de Diretoria',
+        ),
+      ).toBeNull()
+      fireEvent.change(cycleSelect, { target: { value: cycle.id } })
+      if (type !== 'AUTOAVALIACAO') {
+        const personSelect = screen.getByLabelText(
+          role === 'DIRETORIA' ? 'Gerência autorizada' : 'Colaborador autorizado',
+        )
+        await waitFor(() => expect(personSelect).toBeEnabled())
+        expect(
+          within(personSelect).getByRole('option', { name: person.displayName }),
+        ).toBeInTheDocument()
+        fireEvent.change(personSelect, { target: { value: person.id } })
+      }
+      fireEvent.click(
+        screen.getByRole('button', {
+          name:
+            type === 'AUTOAVALIACAO'
+              ? 'Criar autoavaliação'
+              : `Criar avaliação de ${role === 'DIRETORIA' ? 'Diretoria' : 'gestor'}`,
+        }),
+      )
+      const back = await screen.findByRole('button', { name: 'Voltar para a lista' })
+      expect(window.location.pathname).toBe(`/avaliacoes/${detail.id}`)
+      fireEvent.click(back)
+      await waitFor(() => expect(screen.getByLabelText(untouchedCycleLabel)).toBeEnabled())
+      expect(window.location.pathname).toBe('/avaliacoes')
+      expect(screen.queryByLabelText(cycleLabel)).toBeNull()
+      expect(screen.queryByRole('option', { name: person.displayName })).toBeNull()
+      expect(
+        within(screen.getByLabelText(untouchedCycleLabel)).getByRole('option', {
+          name: cycle.name,
+        }),
+      ).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Abrir avaliação' })).toBeInTheDocument()
+      expect(api.createAssessment).toHaveBeenCalledExactlyOnceWith({
+        type,
+        cycleId: cycle.id,
+        ...(type === 'AUTOAVALIACAO' ? {} : { collaboratorId: person.id }),
+      })
+    },
+  )
+
+  it.each([
+    ['Administrador técnico', 'ADMINISTRADOR_PLATAFORMA', false],
+    ['Administrador supremo', 'ADMINISTRADOR_PLATAFORMA', true],
+    ['Colaborador comum', 'COLABORADOR', false],
+  ] as const)(
+    '%s: não oferece criação nem consulta opções de avaliação',
+    async (_label, role, supremeAdministrator) => {
+      const api = createApi({
+        currentUser: vi.fn().mockResolvedValue({
+          id: 'review-restricted-1',
+          displayName: 'Conta fictícia sem avaliação',
+          roles: [role],
+          supremeAdministrator,
+          permissions: role === 'COLABORADOR' ? [] : ['USUARIOS.LER', 'CADASTROS.GERIR'],
+        }),
+      })
+      renderWithExistingSession(api, '/avaliacoes')
+      await screen.findByRole('button', { name: 'Abrir menu' })
+      expect(screen.queryByRole('heading', { name: /Criar (autoavaliação|avaliação)/ })).toBeNull()
+      expect(api.listAssessments).not.toHaveBeenCalled()
+      expect(api.listAssessmentCreationCycleOptions).not.toHaveBeenCalled()
+      expect(api.listManagerAssessmentCreationOptions).not.toHaveBeenCalled()
+      expect(api.listDirectorAssessmentCreationOptions).not.toHaveBeenCalled()
+      expect(api.createAssessment).not.toHaveBeenCalled()
+    },
+  )
+
   it('abre o login com o cliente HTTP real sem consultar rotas que exigem sessão', async () => {
     const fetchMock = vi.fn((url: string) => {
       const body = url.endsWith('/auth/csrf')
