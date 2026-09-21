@@ -103,6 +103,11 @@ export function AdministrationPanel({
       ) : null}
       {activeSection === 'cadastros' ? (
         <MasterDataAdministrationPanel
+          canHandlePasswordRecovery={
+            isSupremeAdministrator &&
+            permissions.includes('USUARIOS.LER') &&
+            permissions.includes('USUARIOS.ALTERAR')
+          }
           api={api}
           permissions={permissions}
           onSessionExpired={onSessionExpired}

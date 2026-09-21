@@ -22,3 +22,4 @@ Cada ADR registra uma decisão arquitetural relevante, seu contexto e as consequ
 - [ADR-0018 — RLS não aplicável à topologia inicial](0018-rls-nao-aplicavel-na-topologia-inicial.md)
 - [ADR-0019 — Tailwind como compilador visual sem migração de interface](0019-tailwind-como-compilador-visual-sem-migracao-de-interface.md)
 - [ADR-0020 — Importação XLSX restrita com conferência](0020-importacao-xlsx-restrita-com-conferencia.md)
+- [ADR-0021 — Recuperação local assistida de senha](0021-recuperacao-local-assistida-de-senha.md)

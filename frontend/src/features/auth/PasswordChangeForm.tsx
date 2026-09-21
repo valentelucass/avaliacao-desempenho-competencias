@@ -46,6 +46,16 @@ export function PasswordChangeForm({
       return
     }
 
+    if (newPassword.length < 12 || new TextEncoder().encode(newPassword).length > 72) {
+      setError(
+        'Use ao menos 12 caracteres e até 72 bytes (acentos e emojis ocupam mais de um byte).',
+      )
+      return
+    }
+    if (currentPassword === newPassword) {
+      setError('A nova senha deve ser diferente da senha temporária ou atual.')
+      return
+    }
     setIsSubmitting(true)
     try {
       await api.changePassword(currentPassword, newPassword)

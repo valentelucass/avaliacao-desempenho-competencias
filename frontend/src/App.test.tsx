@@ -1301,9 +1301,11 @@ describe('App', () => {
     expect(screen.queryByRole('button', { name: 'Administração' })).not.toBeInTheDocument()
 
     fireEvent.change(screen.getByLabelText('Senha atual'), { target: { value: 'initial' } })
-    fireEvent.change(screen.getByLabelText('Nova senha'), { target: { value: 'replacement' } })
+    fireEvent.change(screen.getByLabelText('Nova senha'), {
+      target: { value: 'replacement-for-fixture' },
+    })
     fireEvent.change(screen.getByLabelText('Confirmar nova senha'), {
-      target: { value: 'replacement' },
+      target: { value: 'replacement-for-fixture' },
     })
     fireEvent.click(screen.getByRole('button', { name: 'Alterar senha' }))
 
@@ -1311,12 +1313,14 @@ describe('App', () => {
     fireEvent.change(screen.getByLabelText('E-mail ou login'), {
       target: { value: 'administrador' },
     })
-    fireEvent.change(screen.getByLabelText('Senha'), { target: { value: 'replacement' } })
+    fireEvent.change(screen.getByLabelText('Senha'), {
+      target: { value: 'replacement-for-fixture' },
+    })
     fireEvent.click(screen.getByRole('button', { name: 'Acessar plataforma' }))
 
     expect(await screen.findByRole('heading', { name: 'Contas locais' })).toBeInTheDocument()
-    expect(api.changePassword).toHaveBeenCalledWith('initial', 'replacement')
-    expect(api.signIn).toHaveBeenCalledWith('administrador', 'replacement')
+    expect(api.changePassword).toHaveBeenCalledWith('initial', 'replacement-for-fixture')
+    expect(api.signIn).toHaveBeenCalledWith('administrador', 'replacement-for-fixture')
     await waitFor(() => expect(api.listAdministrationUsers).toHaveBeenCalledTimes(1))
   })
 
@@ -1341,14 +1345,16 @@ describe('App', () => {
     ).not.toBeInTheDocument()
 
     fireEvent.change(screen.getByLabelText('Senha atual'), { target: { value: 'current' } })
-    fireEvent.change(screen.getByLabelText('Nova senha'), { target: { value: 'replacement' } })
+    fireEvent.change(screen.getByLabelText('Nova senha'), {
+      target: { value: 'replacement-for-fixture' },
+    })
     fireEvent.change(screen.getByLabelText('Confirmar nova senha'), {
-      target: { value: 'replacement' },
+      target: { value: 'replacement-for-fixture' },
     })
     fireEvent.click(screen.getByRole('button', { name: 'Alterar senha' }))
 
     expect(await screen.findByLabelText('E-mail ou login')).toBeInTheDocument()
-    expect(api.changePassword).toHaveBeenCalledWith('current', 'replacement')
+    expect(api.changePassword).toHaveBeenCalledWith('current', 'replacement-for-fixture')
     expect(
       screen.getByText('Senha alterada. Entre novamente com a nova senha para continuar.'),
     ).toBeInTheDocument()

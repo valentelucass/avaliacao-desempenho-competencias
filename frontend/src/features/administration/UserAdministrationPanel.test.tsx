@@ -367,7 +367,8 @@ describe('UserAdministrationPanel', () => {
       expect(api.logicallyDeleteAdministrationUser).toHaveBeenCalledWith(ordinaryUser.id),
     )
     expect(confirmation).toHaveBeenCalled()
-    expect(screen.getAllByText('Excluída logicamente')).toHaveLength(2)
+    fireEvent.click(screen.getByRole('button', { name: 'Fechar detalhes da conta' }))
+    expect(screen.getByRole('cell', { name: 'Excluída logicamente' })).toBeInTheDocument()
   })
 
   it('não oferece alteração nem exclusão para a conta suprema protegida', async () => {
@@ -410,9 +411,11 @@ describe('UserAdministrationPanel', () => {
     const api = createApi({
       listAdministrationUsers: vi.fn().mockResolvedValue([ordinaryUser]),
       getAdministrationUser: vi.fn().mockResolvedValue(ordinaryUser),
-      resetAdministrationUserPassword: vi.fn().mockResolvedValue(resetUser),
+      generateTemporaryPassword: vi.fn().mockResolvedValue({
+        user: resetUser,
+        temporaryPassword: ['fixture', 'temporaria', 'descartavel'].join('-'),
+      }),
     })
-    const temporaryPassword = ['senha', 'temporaria', 'teste', '123'].join('-')
 
     render(
       <UserAdministrationPanel
@@ -426,18 +429,16 @@ describe('UserAdministrationPanel', () => {
 
     expect(await screen.findByRole('cell', { name: ordinaryUser.displayName })).toBeInTheDocument()
     await viewAccountDetails(ordinaryUser.displayName)
-    const passwordInput = await screen.findByLabelText('Senha temporária')
-    fireEvent.change(passwordInput, { target: { value: temporaryPassword } })
-    fireEvent.click(screen.getByRole('button', { name: 'Definir senha temporária' }))
-
-    await waitFor(() =>
-      expect(api.resetAdministrationUserPassword).toHaveBeenCalledWith(ordinaryUser.id, {
-        temporaryPassword,
-      }),
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Gerar senha temporária e redefinir' }),
     )
-    expect(passwordInput).toHaveValue('')
-    expect(screen.queryByDisplayValue(temporaryPassword)).not.toBeInTheDocument()
-    expect(screen.getByText(/senha temporária definida/i)).toBeInTheDocument()
+    await waitFor(() => expect(api.generateTemporaryPassword).toHaveBeenCalledWith(ordinaryUser.id))
+    expect(await screen.findByLabelText('Senha temporária gerada')).toHaveValue(
+      ['fixture', 'temporaria', 'descartavel'].join('-'),
+    )
+    expect(screen.getByText(/Senha redefinida/)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Fechar detalhes da conta' }))
+    expect(screen.queryByLabelText('Senha temporária gerada')).not.toBeInTheDocument()
   })
 
   it('não chama a API nem renderiza controles quando não há permissão administrativa', () => {

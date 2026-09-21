@@ -41,9 +41,18 @@ function setup(
     failure?: ApiError
   } = {},
 ) {
+  const preview = options.preview ?? sample
   const api = {
-    previewSpreadsheet: vi.fn().mockResolvedValue(options.preview ?? sample),
-    getSpreadsheetPreview: vi.fn().mockResolvedValue({ ...sample, page: 2 }),
+    previewSpreadsheet: vi.fn().mockResolvedValue(preview),
+    getSpreadsheetPreview: vi.fn().mockImplementation(async (_id, page: number) => ({
+      ...preview,
+      page,
+      rows: Array.from({ length: Math.min(25, preview.total - (page - 1) * 25) }, (_, index) => ({
+        ...sample.rows[0],
+        line: (page - 1) * 25 + index + 2,
+        name: 'Pessoa fictícia ' + ((page - 1) * 25 + index + 1),
+      })),
+    })),
     confirmSpreadsheet: options.failure
       ? vi.fn().mockRejectedValue(options.failure)
       : vi.fn().mockResolvedValue({ created: 1, existing: 1 }),
@@ -92,6 +101,8 @@ describe('SpreadsheetImportPanel', () => {
       managers: true,
       preview: {
         ...sample,
+        total: 1,
+        existing: 0,
         rows: [
           {
             ...sample.rows[0],
@@ -133,6 +144,7 @@ describe('SpreadsheetImportPanel', () => {
           errors,
           total: assignments ? 378 : 379,
           totalPages: 16,
+          rows: Array.from({ length: 25 }, (_, index) => ({ ...sample.rows[0], line: index + 2 })),
         },
       })
       if (assignments) {
@@ -199,6 +211,8 @@ describe('SpreadsheetImportPanel', () => {
   it('confere as cinco colunas de lotações sem exigir ciclo e grava somente após confirmar', async () => {
     const preview: SpreadsheetImportPreview = {
       ...sample,
+      total: 1,
+      existing: 0,
       rows: [
         {
           ...sample.rows[0],
@@ -339,9 +353,15 @@ describe('SpreadsheetImportPanel', () => {
     expect(screen.getByRole('button', { name: 'Conferir planilha' })).toBeDisabled()
   })
 
-  it('consulta a próxima página com o token da prévia e trata sessão expirada', async () => {
+  it('carrega toda a prévia para filtrar entre páginas e trata sessão expirada', async () => {
     const { api, expired } = setup({
-      preview: { ...sample, total: 26, totalPages: 2 },
+      preview: {
+        ...sample,
+        total: 26,
+        totalPages: 2,
+        creates: 25,
+        rows: Array.from({ length: 25 }, (_, index) => ({ ...sample.rows[0], line: index + 2 })),
+      },
       failure: new ApiError({ status: 401 }),
     })
     fireEvent.click(screen.getByRole('button', { name: 'Conferir planilha' }))

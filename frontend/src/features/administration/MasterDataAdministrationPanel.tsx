@@ -1,3 +1,4 @@
+import { PasswordResetRequestsPanel } from './PasswordResetRequestsPanel'
 import { administrativeRead, useAdministrativeLoad } from './useAdministrativeLoad'
 import { SpreadsheetImportPanel } from './SpreadsheetImportPanel'
 import { AdministrativeTable } from '@/components/ui/administrative-table'
@@ -29,9 +30,10 @@ import { ContextHelp } from '../../ui/ContextHelp'
 import { Pagination } from '../../ui/Pagination'
 import { safeErrorMessage } from '../../ui/safeErrorMessage'
 import { useAccessibleDialog } from '../../ui/useAccessibleDialog'
-import { useClientPagination } from '../../ui/useClientPagination'
+import { useTableQuery } from '../../ui/useTableQuery'
 
 type MasterDataAdministrationPanelProps = {
+  canHandlePasswordRecovery?: boolean
   api: ApiClient
   permissions: readonly Permission[]
   onSessionExpired: () => void
@@ -93,6 +95,7 @@ type PendingAction =
  * manual de identificadores e confirma operações de encerramento.
  */
 export function MasterDataAdministrationPanel({
+  canHandlePasswordRecovery = false,
   api,
   permissions,
   onSessionExpired,
@@ -690,6 +693,9 @@ export function MasterDataAdministrationPanel({
       </div>
 
       <section className="card" aria-labelledby="collaborators-title">
+        {canHandlePasswordRecovery ? (
+          <PasswordResetRequestsPanel api={api} onSessionExpired={onSessionExpired} />
+        ) : null}
         <div className="card-title-row">
           <div className="context-help__heading">
             <h3 id="collaborators-title">Colaboradores</h3>
@@ -1196,7 +1202,20 @@ function NamedResourcesTable({
   onEdit?: (resource: AdministrativeNamedResource) => void
   onReactivate?: (resource: AdministrativeNamedResource) => void
 }) {
-  const pagination = useClientPagination(resources, 5)
+  const pagination = useTableQuery(
+    resources,
+    [
+      { key: 'name', label: 'Nome', value: (item) => item.name },
+      {
+        key: 'status',
+        label: 'Situação',
+        value: (item) => (item.active ? 'Ativa' : 'Desativada'),
+        kind: 'choice',
+      },
+      { key: 'actions', label: 'Ação' },
+    ],
+    5,
+  )
   const emptyRowsCount = 5 - pagination.items.length
 
   if (resources.length === 0) {
@@ -1216,13 +1235,10 @@ function NamedResourcesTable({
       <AdministrativeTable>
         <caption className="visually-hidden">{caption}</caption>
         <AdministrativeTable.Head>
-          <AdministrativeTable.Row>
-            <AdministrativeTable.Heading scope="col">Nome</AdministrativeTable.Heading>
-            <AdministrativeTable.Heading scope="col">Situação</AdministrativeTable.Heading>
-            <AdministrativeTable.Heading scope="col">Ação</AdministrativeTable.Heading>
-          </AdministrativeTable.Row>
+          <AdministrativeTable.Row>{pagination.headings()}</AdministrativeTable.Row>
         </AdministrativeTable.Head>
         <AdministrativeTable.Body>
+          {pagination.emptyRow()}
           {pagination.items.map((resource) => (
             <AdministrativeTable.Row key={resource.id}>
               <AdministrativeTable.Cell data-label="Nome">{resource.name}</AdministrativeTable.Cell>
@@ -1333,7 +1349,20 @@ function CollaboratorsTable({
   onReactivate: (collaborator: AdministrativeCollaborator) => void
   onDeleteInactive: (collaborator: AdministrativeCollaborator) => void
 }) {
-  const pagination = useClientPagination(collaborators, 10)
+  const pagination = useTableQuery(
+    collaborators,
+    [
+      { key: 'name', label: 'Nome de exibição', value: (item) => item.displayName },
+      {
+        key: 'status',
+        label: 'Situação',
+        value: (item) => (item.active ? 'Ativo' : 'Desativado'),
+        kind: 'choice',
+      },
+      { key: 'actions', label: 'Ação' },
+    ],
+    10,
+  )
 
   if (collaborators.length === 0) {
     return (
@@ -1348,13 +1377,10 @@ function CollaboratorsTable({
       <AdministrativeTable>
         <caption className="visually-hidden">Colaboradores cadastrados</caption>
         <AdministrativeTable.Head>
-          <AdministrativeTable.Row>
-            <AdministrativeTable.Heading scope="col">Nome de exibição</AdministrativeTable.Heading>
-            <AdministrativeTable.Heading scope="col">Situação</AdministrativeTable.Heading>
-            <AdministrativeTable.Heading scope="col">Ação</AdministrativeTable.Heading>
-          </AdministrativeTable.Row>
+          <AdministrativeTable.Row>{pagination.headings()}</AdministrativeTable.Row>
         </AdministrativeTable.Head>
         <AdministrativeTable.Body>
+          {pagination.emptyRow()}
           {pagination.items.map((collaborator) => (
             <AdministrativeTable.Row key={collaborator.id}>
               <AdministrativeTable.Cell data-label="Nome">
@@ -1454,7 +1480,26 @@ function AllocationsTable({
   isBusy: boolean
   onClose: (allocation: ActiveAllocation) => void
 }) {
-  const pagination = useClientPagination(allocations, 5)
+  const pagination = useTableQuery(
+    allocations,
+    [
+      {
+        key: 'name',
+        label: 'Colaborador',
+        value: (item) => nameFor(collaboratorNames, item.collaboratorId, 'Não disponível'),
+      },
+      {
+        key: 'branch',
+        label: 'Filial',
+        value: (item) => optionalNameFor(branchNames, item.branchId),
+      },
+      { key: 'area', label: 'Área', value: (item) => optionalNameFor(areaNames, item.areaId) },
+      { key: 'manager', label: 'Gestor', value: (item) => item.managerText || 'Não informado' },
+      { key: 'start', label: 'Início', value: (item) => item.startsOn, kind: 'date' },
+      { key: 'actions', label: 'Ação' },
+    ],
+    5,
+  )
 
   if (allocations.length === 0) {
     return (
@@ -1470,16 +1515,10 @@ function AllocationsTable({
       <AdministrativeTable>
         <caption className="visually-hidden">Lotações ativas</caption>
         <AdministrativeTable.Head>
-          <AdministrativeTable.Row>
-            <AdministrativeTable.Heading scope="col">Colaborador</AdministrativeTable.Heading>
-            <AdministrativeTable.Heading scope="col">Filial</AdministrativeTable.Heading>
-            <AdministrativeTable.Heading scope="col">Área</AdministrativeTable.Heading>
-            <AdministrativeTable.Heading scope="col">Gestor</AdministrativeTable.Heading>
-            <AdministrativeTable.Heading scope="col">Início</AdministrativeTable.Heading>
-            <AdministrativeTable.Heading scope="col">Ação</AdministrativeTable.Heading>
-          </AdministrativeTable.Row>
+          <AdministrativeTable.Row>{pagination.headings()}</AdministrativeTable.Row>
         </AdministrativeTable.Head>
         <AdministrativeTable.Body>
+          {pagination.emptyRow()}
           {pagination.items.map((allocation) => {
             const collaborator = nameFor(
               collaboratorNames,
@@ -1548,7 +1587,23 @@ function QuestionnaireAssignmentsTable({
   isBusy: boolean
   onRevoke: (assignment: ActiveQuestionnaireAssignment) => void
 }) {
-  const pagination = useClientPagination(assignments, 5)
+  const pagination = useTableQuery(
+    assignments,
+    [
+      {
+        key: 'name',
+        label: 'Colaborador',
+        value: (item) => nameFor(collaboratorNames, item.collaboratorId, 'Não disponível'),
+      },
+      {
+        key: 'questionnaire',
+        label: 'Ciclo e questionário',
+        value: (item) => formatQuestionnaireAssignment(item),
+      },
+      { key: 'actions', label: 'Ação' },
+    ],
+    5,
+  )
 
   if (assignments.length === 0) {
     return (
@@ -1563,15 +1618,10 @@ function QuestionnaireAssignmentsTable({
       <AdministrativeTable>
         <caption className="visually-hidden">Atribuições de questionário ativas</caption>
         <AdministrativeTable.Head>
-          <AdministrativeTable.Row>
-            <AdministrativeTable.Heading scope="col">Colaborador</AdministrativeTable.Heading>
-            <AdministrativeTable.Heading scope="col">
-              Ciclo e questionário
-            </AdministrativeTable.Heading>
-            <AdministrativeTable.Heading scope="col">Ação</AdministrativeTable.Heading>
-          </AdministrativeTable.Row>
+          <AdministrativeTable.Row>{pagination.headings()}</AdministrativeTable.Row>
         </AdministrativeTable.Head>
         <AdministrativeTable.Body>
+          {pagination.emptyRow()}
           {pagination.items.map((assignment) => {
             const subject = questionnaireAssignmentSubject(assignment, collaboratorNames)
             return (

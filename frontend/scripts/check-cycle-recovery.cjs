@@ -246,7 +246,12 @@ module.exports = async function checkCycleRecovery({ send, frameId, css }) {
     )
     if (width === 375) {
       await ready("!document.querySelector('[role=alert]')", 11500)
-      assert.equal(await evaluate("document.querySelector('input').value"), '2026')
+      assert.equal(
+        await evaluate(
+          "document.getElementById([...document.querySelectorAll('label')].find(l=>l.textContent==='Código do ciclo').htmlFor).value",
+        ),
+        '2026',
+      )
       await click('Criar ciclo')
       await ready(
         "document.querySelector('[role=alert]')?.textContent.includes('Já existe um ciclo com esse código')",

@@ -264,3 +264,44 @@ describe('Filtros de avaliações autorizadas', () => {
     }
   })
 })
+
+describe('Totais globais enviados pelo servidor', () => {
+  it('mantém os mesmos totais entre páginas e usa os totais dos filtros aplicados', async () => {
+    const totals = { total: 37, drafts: 17, submitted: 12, published: 8 }
+    const list = vi
+      .fn()
+      .mockResolvedValueOnce({ ...page(['Página um'], 'next'), totals })
+      .mockResolvedValueOnce({ ...page(['Página dois']), totals })
+      .mockResolvedValueOnce({
+        ...page(['Resultado filtrado']),
+        totals: { total: 9, drafts: 0, submitted: 3, published: 6 },
+      })
+    setup(list)
+    await screen.findByText('Página um')
+    const values = () =>
+      Array.from(document.querySelectorAll('.kpi-grid--summary dd')).map((item) => item.textContent)
+    expect(values()).toEqual(['37', '17', '12', '8'])
+    fireEvent.click(screen.getByRole('button', { name: 'Próxima página' }))
+    await screen.findByText('Página dois')
+    expect(values()).toEqual(['37', '17', '12', '8'])
+    setName('Resultado')
+    apply()
+    await screen.findByText('Resultado filtrado')
+    expect(values()).toEqual(['9', '0', '3', '6'])
+  })
+  it('não transforma falta de totais ou supressão de privacidade em números da página', async () => {
+    setup(
+      vi.fn().mockResolvedValue({
+        ...page(['Registro']),
+        totals: { total: null, drafts: null, submitted: null, published: null },
+      }),
+    )
+    await screen.findByText('Registro')
+    expect(screen.getByText(/Não há dados suficientes para preservar/)).toBeVisible()
+    expect(
+      Array.from(document.querySelectorAll('.kpi-grid--summary dd')).map(
+        (item) => item.textContent,
+      ),
+    ).toEqual(['—', '—', '—', '—'])
+  })
+})

@@ -113,6 +113,7 @@ export default defineConfig({
     headers: publicPreviewHeaders,
   },
   test: {
+    maxWorkers: 2,
     exclude: [...configDefaults.exclude, '**/coverage/**'],
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],

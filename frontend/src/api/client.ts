@@ -1,4 +1,6 @@
 import type {
+  PasswordResetRequest,
+  GeneratedTemporaryPassword,
   SpreadsheetImportKind,
   SpreadsheetImportPreview,
   SpreadsheetImportResult,
@@ -83,6 +85,9 @@ export function isAuthenticationError(error: unknown): error is ApiError {
 }
 
 export interface ApiClient {
+  requestPasswordReset(login: string): Promise<void>
+  listPasswordResetRequests(): Promise<readonly PasswordResetRequest[]>
+  generateTemporaryPassword(userId: string): Promise<GeneratedTemporaryPassword>
   previewSpreadsheet(
     kind: SpreadsheetImportKind,
     file: File,
@@ -349,6 +354,47 @@ export class HttpApiClient implements ApiClient {
       requiresCsrf: true,
     })
     this.csrfToken = undefined
+  }
+
+  requestPasswordReset(login: string): Promise<void> {
+    return this.request<void>('/auth/password-reset-requests', {
+      method: 'POST',
+      body: { login },
+      requiresCsrf: true,
+    })
+  }
+
+  generateTemporaryPassword(userId: string): Promise<GeneratedTemporaryPassword> {
+    return this.request<GeneratedTemporaryPassword>(
+      `/administration/users/${encodeURIComponent(userId)}/temporary-password`,
+      { method: 'POST', requiresCsrf: true },
+    )
+  }
+
+  async listPasswordResetRequests(): Promise<readonly PasswordResetRequest[]> {
+    const items: PasswordResetRequest[] = []
+    let after = '0'
+    for (let pageNumber = 0; pageNumber < 1000; pageNumber++) {
+      const result = await this.request<Page<PasswordResetRequest>>(
+        `/administration/password-reset-requests?limit=100&after=${encodeURIComponent(after)}`,
+      )
+      const cursor = result?.page?.nextCursor
+      if (
+        !Array.isArray(result?.items) ||
+        !(
+          cursor === null ||
+          (typeof cursor === 'string' &&
+            /^[1-9][0-9]{0,18}$/.test(cursor) &&
+            BigInt(cursor) > BigInt(after))
+        )
+      ) {
+        throw new ApiError({ status: 502, code: 'INVALID_RECOVERY_PAGINATION' })
+      }
+      items.push(...result.items)
+      if (cursor === null) return items
+      after = cursor
+    }
+    throw new ApiError({ status: 502, code: 'INVALID_RECOVERY_PAGINATION' })
   }
 
   listAdministrationUsers(): Promise<readonly AdministrationUser[]> {

@@ -93,7 +93,14 @@ public class AssessmentController {
     return new AssessmentPageResponse(
         items,
         new AssessmentPageResponse.PageMetadata(
-            limit, page.nextCursor() == null ? null : encodeCursor(page.nextCursor())));
+            limit, page.nextCursor() == null ? null : encodeCursor(page.nextCursor())),
+        page.totals() == null
+            ? null
+            : new AssessmentPageResponse.Totals(
+                page.totals().total(),
+                page.totals().drafts(),
+                page.totals().submitted(),
+                page.totals().published()));
   }
 
   @GetMapping("/creation-options")

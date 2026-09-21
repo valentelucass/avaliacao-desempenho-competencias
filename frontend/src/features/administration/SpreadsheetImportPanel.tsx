@@ -1,3 +1,4 @@
+import { useTableQuery, type TableColumn } from '../../ui/useTableQuery'
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { ChevronDown, FileSpreadsheet } from 'lucide-react'
 import { ApiError, isAuthenticationError, type ApiClient } from '../../api/client'
@@ -66,6 +67,49 @@ export function SpreadsheetImportPanel({
   const blocked = busy || disabled
   const ready =
     file && (kind !== 'assignments' || cycles.some((cycle) => cycle.cycleId === cycleId))
+
+  type Row = SpreadsheetImportPreview['rows'][number]
+  const columns: TableColumn<Row>[] = [
+    { key: 'line', label: 'Linha', value: (row) => row.line, kind: 'number' },
+    { key: 'name', label: 'Colaborador', value: (row) => row.name },
+  ]
+  if (kind === 'manager-assignments')
+    columns.push(
+      { key: 'manager', label: 'Conta avaliadora', value: (row) => row.managerAssignment?.manager },
+      {
+        key: 'start',
+        label: 'Início',
+        value: (row) => row.managerAssignment?.startsOn,
+        sortValue: (row) => dateOrder(row.managerAssignment?.startsOn),
+      },
+    )
+  if (kind === 'allocations')
+    columns.push(
+      { key: 'branch', label: 'Filial', value: (row) => row.allocation?.branch || 'Não informada' },
+      { key: 'area', label: 'Área', value: (row) => row.allocation?.area || 'Não informada' },
+      {
+        key: 'manager',
+        label: 'Gestor',
+        value: (row) => row.allocation?.manager || 'Não informado',
+      },
+      {
+        key: 'start',
+        label: 'Início da Lotação',
+        value: (row) => row.allocation?.startsOn || 'Não informado',
+        sortValue: (row) => dateOrder(row.allocation?.startsOn),
+      },
+    )
+  if (kind === 'assignments')
+    columns.push({ key: 'questionnaire', label: 'Questionário', value: (row) => row.questionnaire })
+  columns.push({
+    key: 'status',
+    label: 'Conferência',
+    value: (row) =>
+      (row.status === 'ERROR' ? 'Pendência' : row.status === 'EXISTS' ? 'Já existe' : 'Novo') +
+      ' ' +
+      row.message,
+  })
+  const previewTable = useTableQuery(preview?.rows ?? [], columns, 25, 'line')
 
   const discard = useCallback(
     (previewId: string) =>
@@ -137,7 +181,28 @@ export function SpreadsheetImportPanel({
         kind === 'assignments' ? cycleId : undefined,
       )
       pendingPreview.current = result.id
-      if (mounted.current) setPreview(result)
+      if (!Number.isInteger(result.totalPages) || result.totalPages < 1 || result.totalPages > 40) {
+        throw new ApiError({ status: 502, code: 'INVALID_IMPORT_PAGINATION' })
+      }
+      const rows = [...result.rows]
+      for (let number = 2; number <= result.totalPages && mounted.current; number++) {
+        const next = await (kind === 'manager-assignments'
+          ? api.getSpreadsheetPreview(result.id, number, kind)
+          : api.getSpreadsheetPreview(result.id, number))
+        if (next.id !== result.id || next.page !== number || next.total !== result.total) {
+          throw new ApiError({ status: 502, code: 'INVALID_IMPORT_PAGINATION' })
+        }
+        rows.push(...next.rows)
+      }
+      if (mounted.current) {
+        if (
+          rows.length !== result.total ||
+          new Set(rows.map((row) => row.line)).size !== rows.length
+        ) {
+          throw new ApiError({ status: 502, code: 'INVALID_IMPORT_PAGINATION' })
+        }
+        setPreview({ ...result, rows })
+      }
     })
   }
 
@@ -154,16 +219,6 @@ export function SpreadsheetImportPanel({
       )
       await onImported()
     }, true)
-  }
-
-  function page(number: number) {
-    if (preview)
-      void run(async () => {
-        const result = await (kind === 'manager-assignments'
-          ? api.getSpreadsheetPreview(preview.id, number, kind)
-          : api.getSpreadsheetPreview(preview.id, number))
-        if (mounted.current) setPreview(result)
-      })
   }
 
   return (
@@ -342,29 +397,11 @@ export function SpreadsheetImportPanel({
               <AdministrativeTable>
                 <caption className="visually-hidden">Conferência de {label}</caption>
                 <thead>
-                  <tr>
-                    <th scope="col">Linha</th>
-                    <th scope="col">Colaborador</th>
-                    {kind === 'manager-assignments' && (
-                      <>
-                        <th scope="col">Conta avaliadora</th>
-                        <th scope="col">Início</th>
-                      </>
-                    )}
-                    {kind === 'allocations' && (
-                      <>
-                        <th scope="col">Filial</th>
-                        <th scope="col">Área</th>
-                        <th scope="col">Gestor</th>
-                        <th scope="col">Início da Lotação</th>
-                      </>
-                    )}
-                    {kind === 'assignments' && <th scope="col">Questionário</th>}
-                    <th scope="col">Conferência</th>
-                  </tr>
+                  <tr>{previewTable.headings()}</tr>
                 </thead>
                 <tbody>
-                  {preview.rows.map((row) => (
+                  {previewTable.emptyRow()}
+                  {previewTable.items.map((row) => (
                     <tr key={row.line}>
                       <td data-label="Linha">{row.line}</td>
                       <td data-label="Colaborador">{row.name}</td>
@@ -409,14 +446,14 @@ export function SpreadsheetImportPanel({
               </AdministrativeTable>
             </div>
             <Pagination
-              currentPage={preview.page}
-              totalPages={preview.totalPages}
-              hasNextPage={preview.page < preview.totalPages}
-              itemCountOnPage={preview.rows.length}
+              currentPage={previewTable.currentPage}
+              totalPages={previewTable.totalPages}
+              hasNextPage={previewTable.hasNextPage}
+              itemCountOnPage={previewTable.items.length}
               itemLabel="linhas da planilha"
               isLoading={blocked}
-              onNextPage={() => page(preview.page + 1)}
-              onPreviousPage={() => page(preview.page - 1)}
+              onNextPage={previewTable.onNextPage}
+              onPreviousPage={previewTable.onPreviousPage}
             />
             <div className="spreadsheet-import__actions">
               <button
@@ -452,4 +489,9 @@ export function SpreadsheetImportPanel({
       </div>
     </div>
   )
+}
+
+function dateOrder(value?: string) {
+  const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(value ?? '')
+  return match ? [match[3], match[2], match[1]].join('-') : (value ?? '')
 }

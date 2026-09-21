@@ -287,7 +287,8 @@ public class UserAdministrationService {
   }
 
   private void requirePassword(String password) {
-    if (password == null || password.length() < 12 || password.length() > 200) {
+    if (!br.com.avaliacao.desempenho.identidadeacesso.domain.model.LocalPasswordPolicy.accepts(
+        password)) {
       throw new UserAdministrationException(
           Reason.INVALID_INPUT, "A senha inicial não atende aos requisitos mínimos.");
     }

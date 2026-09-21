@@ -1,7 +1,8 @@
+import { TemporaryPasswordReset } from './TemporaryPasswordReset'
 import { AdministrativeTable } from '@/components/ui/administrative-table'
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
-import { Ellipsis, KeyRound, Plus, RefreshCw, Save, ShieldCheck, Trash2, X } from 'lucide-react'
+import { Ellipsis, Plus, RefreshCw, Save, ShieldCheck, Trash2, X } from 'lucide-react'
 import { isAuthenticationError } from '../../api/client'
 import type { ApiClient } from '../../api/client'
 import type {
@@ -16,7 +17,7 @@ import { EmptyState } from '../../ui/EmptyState'
 import { Pagination } from '../../ui/Pagination'
 import { safeErrorMessage, safeLoadErrorMessage } from '../../ui/safeErrorMessage'
 import { useAccessibleDialog } from '../../ui/useAccessibleDialog'
-import { useClientPagination } from '../../ui/useClientPagination'
+import { useTableQuery } from '../../ui/useTableQuery'
 
 type UserAdministrationPanelProps = {
   api: ApiClient
@@ -72,8 +73,6 @@ const accountProfileCatalog: readonly InitialAccountProfileOption[] = [
     roles: ['COLABORADOR'],
   },
 ]
-
-const passwordResetField = ['temporary', 'Password'].join('')
 
 const roleCatalog: readonly AccessCatalogItem[] = [
   {
@@ -155,7 +154,6 @@ export function UserAdministrationPanel({
   const accessProfileId = useId()
   const editDisplayNameId = useId()
   const editStatusId = useId()
-  const temporaryPasswordId = useId()
   const detailRequest = useRef(0)
   const selectedUserDialogRef = useRef<HTMLElement | null>(null)
   const [users, setUsers] = useState<readonly AdministrationUser[]>([])
@@ -167,7 +165,6 @@ export function UserAdministrationPanel({
   const [newAccountProfile, setNewAccountProfile] = useState<InitialAccountProfile>('USER')
   const [editDisplayName, setEditDisplayName] = useState('')
   const [editStatus, setEditStatus] = useState<AccountStatus>('ACTIVE')
-  const [temporaryPassword, setTemporaryPassword] = useState('')
   const [isLoadingUsers, setIsLoadingUsers] = useState(false)
   const [isLoadingDetail, setIsLoadingDetail] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
@@ -180,7 +177,6 @@ export function UserAdministrationPanel({
   const [createError, setCreateError] = useState<string>()
   const [updateError, setUpdateError] = useState<string>()
   const [accessError, setAccessError] = useState<string>()
-  const [passwordResetError, setPasswordResetError] = useState<string>()
   const [notice, setNotice] = useState<string>()
 
   const canReadUsers = permissions.includes('USUARIOS.LER')
@@ -189,7 +185,21 @@ export function UserAdministrationPanel({
   const canManageTechnicalAccess = permissions.includes('ACESSOS.GERIR')
   const canManageBusinessAccess = permissions.includes('ACESSOS.NEGOCIO.GERIR')
   const canManageAccess = canManageTechnicalAccess || canManageBusinessAccess
-  const usersPagination = useClientPagination(users, 10)
+  const usersPagination = useTableQuery(
+    users,
+    [
+      { key: 'name', label: 'Nome', value: (item) => item.displayName },
+      { key: 'login', label: 'Login', value: (item) => item.login },
+      {
+        key: 'status',
+        label: 'Situação',
+        value: (item) => formatAccountStatus(item),
+        kind: 'choice',
+      },
+      { key: 'actions', label: 'Ação' },
+    ],
+    10,
+  )
 
   const accountProfiles = useMemo<ReadonlyArray<InitialAccountProfileOption>>(() => {
     return accountProfileCatalog.filter(
@@ -256,7 +266,7 @@ export function UserAdministrationPanel({
       setDetailError(undefined)
       setUpdateError(undefined)
       setAccessError(undefined)
-      setPasswordResetError(undefined)
+
       setNotice(undefined)
 
       try {
@@ -297,8 +307,10 @@ export function UserAdministrationPanel({
       setCreateError('Informe login, nome e senha inicial para criar a conta.')
       return
     }
-    if (initialPassword.length < 12) {
-      setCreateError('A senha inicial deve ter ao menos 12 caracteres.')
+    if (initialPassword.length < 12 || new TextEncoder().encode(initialPassword).length > 72) {
+      setCreateError(
+        'A senha inicial deve ter ao menos 12 caracteres e respeitar o limite de 72 bytes.',
+      )
       return
     }
 
@@ -400,46 +412,6 @@ export function UserAdministrationPanel({
     }
   }
 
-  async function resetSelectedUserPassword(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    if (
-      !selectedUser ||
-      !isSupremeAdministrator ||
-      selectedUser.id === currentUserId ||
-      !selectedUserIsMutable
-    ) {
-      return
-    }
-
-    const resetPassword = temporaryPassword
-    setTemporaryPassword('')
-    setPasswordResetError(undefined)
-    setNotice(undefined)
-    if (resetPassword.length < 12) {
-      setPasswordResetError('A senha temporária deve ter ao menos 12 caracteres.')
-      return
-    }
-
-    setIsResettingPassword(true)
-    try {
-      const resetInput = { [passwordResetField]: resetPassword } as { temporaryPassword: string }
-      const updatedUser = await api.resetAdministrationUserPassword(selectedUser.id, resetInput)
-      updateKnownUser(updatedUser)
-      hydrateSelectedUser(updatedUser)
-      setNotice(
-        'Senha temporária definida. As sessões anteriores foram revogadas e a troca será obrigatória no próximo acesso.',
-      )
-    } catch (requestError) {
-      if (isAuthenticationError(requestError)) {
-        onSessionExpired()
-        return
-      }
-      setPasswordResetError(safeErrorMessage(requestError))
-    } finally {
-      setIsResettingPassword(false)
-    }
-  }
-
   async function saveAccess(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!selectedUser || selectedUser.id === currentUserId || !canManageAccess) {
@@ -489,6 +461,7 @@ export function UserAdministrationPanel({
     dialogRef: selectedUserDialogRef,
     isOpen: Boolean(selectedUser && !isLoadingDetail),
     onRequestClose: () => setSelectedUser(undefined),
+    canDismiss: !isResettingPassword,
   })
 
   return (
@@ -689,14 +662,10 @@ export function UserAdministrationPanel({
                   Contas locais disponíveis para administração
                 </caption>
                 <AdministrativeTable.Head>
-                  <AdministrativeTable.Row>
-                    <AdministrativeTable.Heading scope="col">Nome</AdministrativeTable.Heading>
-                    <AdministrativeTable.Heading scope="col">Login</AdministrativeTable.Heading>
-                    <AdministrativeTable.Heading scope="col">Situação</AdministrativeTable.Heading>
-                    <AdministrativeTable.Heading scope="col">Ação</AdministrativeTable.Heading>
-                  </AdministrativeTable.Row>
+                  <AdministrativeTable.Row>{usersPagination.headings()}</AdministrativeTable.Row>
                 </AdministrativeTable.Head>
                 <AdministrativeTable.Body>
+                  {usersPagination.emptyRow()}
                   {usersPagination.items.map((user) => (
                     <AdministrativeTable.Row key={user.id}>
                       <AdministrativeTable.Cell data-label="Nome">
@@ -746,7 +715,12 @@ export function UserAdministrationPanel({
       ) : null}
 
       {selectedUser && !isLoadingDetail ? (
-        <div className="account-dialog-backdrop" onMouseDown={() => setSelectedUser(undefined)}>
+        <div
+          className="account-dialog-backdrop"
+          onMouseDown={() => {
+            if (!isResettingPassword) setSelectedUser(undefined)
+          }}
+        >
           <section
             aria-labelledby="selected-user-title"
             aria-modal="true"
@@ -771,6 +745,7 @@ export function UserAdministrationPanel({
                 </span>
                 <button
                   aria-label="Fechar detalhes da conta"
+                  disabled={isResettingPassword}
                   className="icon-button"
                   data-dialog-initial-focus
                   type="button"
@@ -802,57 +777,24 @@ export function UserAdministrationPanel({
               <AccessSummary user={selectedUser} />
             </div>
 
-            {isSupremeAdministrator && !selectedUserIsCurrent && selectedUserIsMutable ? (
-              <details className="account-password-reset">
-                <summary>Redefinir senha</summary>
-                <form
-                  className="stack-form user-password-reset-form"
-                  onSubmit={resetSelectedUserPassword}
-                  noValidate
-                  aria-busy={isResettingPassword}
-                >
-                  <p className="muted">
-                    Defina uma senha temporária para recuperação. A conta será obrigada a trocá-la
-                    no próximo acesso e todas as sessões atuais serão encerradas.
-                  </p>
-                  {passwordResetError ? (
-                    <FeedbackMessage
-                      kind="error"
-                      onDismiss={() => setPasswordResetError(undefined)}
-                    >
-                      {passwordResetError}
-                    </FeedbackMessage>
-                  ) : null}
-                  <div className="field">
-                    <label htmlFor={temporaryPasswordId}>Senha temporária</label>
-                    <div className="account-password-reset__input-row">
-                      <input
-                        id={temporaryPasswordId}
-                        name="temporaryPassword"
-                        type="password"
-                        value={temporaryPassword}
-                        onChange={(event) => setTemporaryPassword(event.target.value)}
-                        autoComplete="new-password"
-                        disabled={isResettingPassword}
-                        minLength={12}
-                        maxLength={200}
-                        required
-                      />
-                      <button
-                        className="button button--success"
-                        type="submit"
-                        disabled={isResettingPassword}
-                      >
-                        <KeyRound aria-hidden="true" size={17} strokeWidth={2} />
-                        {isResettingPassword ? 'Redefinindo…' : 'Definir senha temporária'}
-                      </button>
-                    </div>
-                    <p className="field-hint">
-                      Mínimo de 12 caracteres. Ela não será exibida novamente após a redefinição.
-                    </p>
-                  </div>
-                </form>
-              </details>
+            {isSupremeAdministrator &&
+            canReadUsers &&
+            canUpdateUsers &&
+            selectedUser.status === 'ACTIVE' &&
+            !selectedUserIsCurrent &&
+            selectedUserIsMutable ? (
+              <TemporaryPasswordReset
+                key={selectedUser.id}
+                api={api}
+                userId={selectedUser.id}
+                disabled={isUpdating || isDeleting || isSavingAccess}
+                onSessionExpired={onSessionExpired}
+                onBusyChange={setIsResettingPassword}
+                onReset={(user) => {
+                  updateKnownUser(user)
+                  hydrateSelectedUser(user)
+                }}
+              />
             ) : null}
 
             <div className="account-dialog__management">
@@ -876,7 +818,7 @@ export function UserAdministrationPanel({
                       name="editDisplayName"
                       value={editDisplayName}
                       onChange={(event) => setEditDisplayName(event.target.value)}
-                      disabled={isUpdating}
+                      disabled={isUpdating || isResettingPassword}
                       maxLength={200}
                       required
                     />
@@ -888,7 +830,7 @@ export function UserAdministrationPanel({
                       name="editStatus"
                       value={editStatus}
                       onChange={(event) => setEditStatus(event.target.value as AccountStatus)}
-                      disabled={isUpdating}
+                      disabled={isUpdating || isResettingPassword}
                     >
                       <option value="ACTIVE">Ativa</option>
                       <option value="BLOCKED">Bloqueada</option>
@@ -896,7 +838,11 @@ export function UserAdministrationPanel({
                     </select>
                   </div>
                   <div className="action-row">
-                    <button className="button button--success" type="submit" disabled={isUpdating}>
+                    <button
+                      className="button button--success"
+                      type="submit"
+                      disabled={isUpdating || isResettingPassword}
+                    >
                       <Save aria-hidden="true" size={17} strokeWidth={2} />
                       {isUpdating ? 'Salvando…' : 'Salvar dados da conta'}
                     </button>
@@ -907,7 +853,7 @@ export function UserAdministrationPanel({
                         className="button button--danger"
                         type="button"
                         onClick={() => void logicallyDeleteUser(selectedUser)}
-                        disabled={isUpdating || isDeleting}
+                        disabled={isUpdating || isDeleting || isResettingPassword}
                       >
                         <Trash2 aria-hidden="true" size={17} strokeWidth={2} />
                         {isDeleting ? 'Excluindo…' : 'Excluir logicamente'}
@@ -953,7 +899,7 @@ export function UserAdministrationPanel({
                     </FeedbackMessage>
                   ) : null}
 
-                  <fieldset disabled={isSavingAccess}>
+                  <fieldset disabled={isSavingAccess || isResettingPassword}>
                     <legend className="visually-hidden">Perfil de acesso</legend>
                     <label htmlFor={accessProfileId}>Perfil de acesso</label>
                     <select
@@ -977,7 +923,7 @@ export function UserAdministrationPanel({
                     <button
                       className="button button--success"
                       type="submit"
-                      disabled={isSavingAccess}
+                      disabled={isSavingAccess || isResettingPassword}
                     >
                       <ShieldCheck aria-hidden="true" size={17} strokeWidth={2} />
                       {isSavingAccess ? 'Salvando acessos…' : 'Salvar acessos'}

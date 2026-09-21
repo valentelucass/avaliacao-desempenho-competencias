@@ -112,6 +112,14 @@ public class ApiSecurityConfiguration {
                     .permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/v1/auth/csrf")
                     .permitAll()
+                    .requestMatchers(HttpMethod.POST, "/api/v1/auth/password-reset-requests")
+                    .permitAll()
+                    .requestMatchers(
+                        HttpMethod.GET, "/api/v1/administration/password-reset-requests")
+                    .hasAuthority("PERMISSION:USUARIOS.LER")
+                    .requestMatchers(
+                        HttpMethod.POST, "/api/v1/administration/users/*/temporary-password")
+                    .hasAuthority("PERMISSION:USUARIOS.ALTERAR")
                     .requestMatchers(HttpMethod.POST, "/api/v1/auth/sessions")
                     .permitAll()
                     .requestMatchers(HttpMethod.POST, "/api/v1/auth/sessions/refresh")

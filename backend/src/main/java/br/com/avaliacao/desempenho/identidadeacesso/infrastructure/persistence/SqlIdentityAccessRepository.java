@@ -121,15 +121,23 @@ public class SqlIdentityAccessRepository implements IdentityAccessRepository {
   }
 
   @Override
-  public void registerSuccessfulLogin(UUID userId) {
-    jdbcTemplate.update(
-        """
+  public boolean registerSuccessfulLogin(UUID userId, String expectedPasswordHash) {
+    // A emissão da sessão compartilha a trava usada pela redefinição/troca de senha.
+    jdbcTemplate.queryForList(
+        "SELECT usuario_id FROM dbo.usuario WITH (UPDLOCK, HOLDLOCK) WHERE usuario_id = ?", userId);
+    return jdbcTemplate.update(
+            """
         UPDATE dbo.credencial_local
         SET tentativas_falhas = 0,
             bloqueada_ate_utc = NULL
-        WHERE usuario_id = ?
-        """,
-        userId);
+          WHERE usuario_id = ? AND senha_hash COLLATE Latin1_General_100_BIN2 = ?
+            AND (bloqueada_ate_utc IS NULL OR bloqueada_ate_utc <= SYSUTCDATETIME())
+            AND EXISTS (SELECT 1 FROM dbo.usuario u WHERE u.usuario_id = credencial_local.usuario_id
+                        AND u.situacao = 'ATIVO' AND u.excluido_logicamente = 0)
+          """,
+            userId,
+            expectedPasswordHash)
+        == 1;
   }
 
   @Override
@@ -305,20 +313,26 @@ public class SqlIdentityAccessRepository implements IdentityAccessRepository {
   }
 
   @Override
-  public void changePassword(
-      UUID userId, String passwordHash, String algorithm, String parameters) {
-    jdbcTemplate.update(
-        """
+  public boolean changePassword(
+      UUID userId, String expectedHash, String passwordHash, String algorithm, String parameters) {
+    jdbcTemplate.queryForList(
+        "SELECT usuario_id FROM dbo.usuario WITH (UPDLOCK, HOLDLOCK) WHERE usuario_id = ?", userId);
+    return jdbcTemplate.update(
+            """
         UPDATE dbo.credencial_local
         SET senha_hash = ?, algoritmo = ?, parametros = ?,
             senha_alterada_em_utc = SYSUTCDATETIME(), senha_deve_ser_trocada = 0,
             tentativas_falhas = 0, bloqueada_ate_utc = NULL
-        WHERE usuario_id = ?
-        """,
-        passwordHash,
-        algorithm,
-        parameters,
-        userId);
+        WHERE usuario_id = ? AND senha_hash COLLATE Latin1_General_100_BIN2 = ?
+          AND EXISTS (SELECT 1 FROM dbo.usuario u WHERE u.usuario_id = credencial_local.usuario_id
+                      AND u.situacao = 'ATIVO' AND u.excluido_logicamente = 0)
+          """,
+            passwordHash,
+            algorithm,
+            parameters,
+            userId,
+            expectedHash)
+        == 1;
   }
 
   @Override

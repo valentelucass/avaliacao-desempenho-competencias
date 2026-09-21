@@ -1,6 +1,6 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import type { ApiClient } from '../../api/client'
+import { ApiError, type ApiClient } from '../../api/client'
 import type {
   ActiveManagerAssignment,
   ActiveUserCollaboratorLink,
@@ -10,6 +10,75 @@ import type {
 import { RelationshipAdministrationPanel } from './RelationshipAdministrationPanel'
 
 describe('RelationshipAdministrationPanel', () => {
+  it('encerra em popup acessível, preserva o contexto em erro e permite vincular a outro avaliador', async () => {
+    const options = sampleManagerOptions({
+      managers: [
+        { id: 'manager-user-1', displayName: 'Gestora Joana' },
+        { id: 'manager-user-2', displayName: 'Gestor substituto' },
+      ],
+    })
+    const api = createApi({
+      getManagerAssignmentOptions: vi.fn().mockResolvedValue(options),
+      listActiveManagerAssignments: vi
+        .fn()
+        .mockResolvedValueOnce([sampleManagerAssignment()])
+        .mockResolvedValue([]),
+      closeManagerAssignment: vi
+        .fn()
+        .mockRejectedValueOnce(new ApiError({ status: 409, code: 'CONFLICT' }))
+        .mockResolvedValue(undefined),
+    })
+    render(
+      <RelationshipAdministrationPanel
+        api={api}
+        permissions={['VINCULOS_GESTOR_COLABORADOR.GERIR']}
+        onSessionExpired={vi.fn()}
+      />,
+    )
+    const trigger = await screen.findByRole('button', { name: 'Encerrar' })
+    trigger.focus()
+    fireEvent.click(trigger)
+    let dialog = screen.getByRole('dialog', { name: 'Confirmar encerramento de vínculo' })
+    expect(within(dialog).getByLabelText('Data de encerramento')).toHaveFocus()
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(trigger).toHaveFocus()
+    fireEvent.click(trigger)
+    dialog = screen.getByRole('dialog')
+    fireEvent.change(within(dialog).getByLabelText('Data de encerramento'), {
+      target: { value: '2025-12-31' },
+    })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Confirmar encerramento' }))
+    expect(within(dialog).getByRole('alert')).toHaveTextContent('não pode ser anterior')
+    expect(api.closeManagerAssignment).not.toHaveBeenCalled()
+    fireEvent.change(within(dialog).getByLabelText('Data de encerramento'), {
+      target: { value: '2026-09-21' },
+    })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Confirmar encerramento' }))
+    await waitFor(() =>
+      expect(within(dialog).getByRole('alert')).not.toHaveTextContent('não pode ser anterior'),
+    )
+    expect(within(dialog).getByLabelText('Data de encerramento')).toHaveValue('2026-09-21')
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Confirmar encerramento' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    await waitFor(() =>
+      expect(screen.getByLabelText('Conta avaliadora (Gestor ou RH)')).toBeEnabled(),
+    )
+    fireEvent.change(screen.getByLabelText('Conta avaliadora (Gestor ou RH)'), {
+      target: { value: 'manager-user-2' },
+    })
+    fireEvent.change(screen.getByLabelText('Colaborador'), { target: { value: 'collaborator-1' } })
+    fireEvent.change(screen.getByLabelText('Início'), { target: { value: '2026-09-22' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Criar vínculo de gestão' }))
+    await waitFor(() =>
+      expect(api.createManagerAssignment).toHaveBeenCalledWith({
+        managerUserId: 'manager-user-2',
+        collaboratorId: 'collaborator-1',
+        startsOn: '2026-09-22',
+      }),
+    )
+  })
+
   it('carrega opções minimizadas por tipo de vínculo, sem consultar listas amplas de pessoas', async () => {
     const api = createApi()
 

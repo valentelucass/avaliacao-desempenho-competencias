@@ -17,7 +17,7 @@ import { FeedbackMessage } from '../../ui/Feedback'
 import { ContextHelp } from '../../ui/ContextHelp'
 import { Pagination } from '../../ui/Pagination'
 import { safeErrorMessage, safeLoadErrorMessage } from '../../ui/safeErrorMessage'
-import { useClientPagination } from '../../ui/useClientPagination'
+import { useTableQuery } from '../../ui/useTableQuery'
 
 type IndicatorsPanelProps = {
   api: ApiClient
@@ -544,7 +544,16 @@ function ClassificationDistribution({
 }: {
   distribution: NonNullable<AvailableIndicatorResponse['classificationDistribution']>
 }) {
-  const pagination = useClientPagination(distribution, 5)
+  const pagination = useTableQuery(
+    distribution,
+    [
+      { key: 'classification', label: 'Classificação', value: (item) => item.classification },
+      { key: 'percentage', label: 'Percentual', value: (item) => item.percentage, kind: 'number' },
+    ],
+    5,
+    'percentage',
+    'desc',
+  )
 
   return (
     <section className="card indicator-results" aria-labelledby="indicator-results-title">
@@ -563,12 +572,10 @@ function ClassificationDistribution({
       <h4>Distribuição por classificação</h4>
       <table>
         <thead>
-          <tr>
-            <th scope="col">Classificação</th>
-            <th scope="col">Percentual</th>
-          </tr>
+          <tr>{pagination.headings()}</tr>
         </thead>
         <tbody>
+          {pagination.emptyRow()}
           {pagination.items.map((item) => (
             <tr key={item.classification}>
               <th data-label="Classificação" scope="row">

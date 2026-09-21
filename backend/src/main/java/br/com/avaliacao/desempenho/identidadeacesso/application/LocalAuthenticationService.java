@@ -10,7 +10,6 @@ import br.com.avaliacao.desempenho.identidadeacesso.infrastructure.security.Acce
 import br.com.avaliacao.desempenho.identidadeacesso.infrastructure.security.AuthenticationSecurityProperties;
 import java.time.Clock;
 import java.time.Instant;
-import java.util.Objects;
 import java.util.UUID;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -85,10 +84,12 @@ public class LocalAuthenticationService {
       throw new AuthenticationFailureException();
     }
 
-    return Objects.requireNonNull(
+    SessionCredentials credentials =
         transactionTemplate.execute(
             status -> {
-              repository.registerSuccessfulLogin(account.userId());
+              if (!repository.registerSuccessfulLogin(account.userId(), account.passwordHash())) {
+                return null;
+              }
               AuthenticationSession session = newSession(account.userId(), now);
               String refreshToken = opaqueTokenService.generate();
               repository.createSession(
@@ -99,7 +100,13 @@ public class LocalAuthenticationService {
                   loginAudit(account.userId(), AuditEvent.AuditResult.SUCCESS, requestId));
               return credentialsFor(
                   session, account.displayName(), account.passwordChangeRequired(), refreshToken);
-            }));
+            });
+    if (credentials == null) {
+      repository.writeAudit(
+          loginAudit(account.userId(), AuditEvent.AuditResult.FAILURE, requestId));
+      throw new AuthenticationFailureException();
+    }
+    return credentials;
   }
 
   public SessionCredentials refresh(String rawRefreshToken, String requestId) {
@@ -171,10 +178,16 @@ public class LocalAuthenticationService {
       throw new AuthenticationFailureException();
     }
 
+    if (credentialVerifier.matches(newPassword, account.passwordHash())) {
+      throw new InvalidPasswordException();
+    }
     String newHash = credentialVerifier.encode(newPassword);
     transactionTemplate.executeWithoutResult(
         status -> {
-          repository.changePassword(actorUserId, newHash, "BCRYPT", "strength=12");
+          if (!repository.changePassword(
+              actorUserId, account.passwordHash(), newHash, "BCRYPT", "strength=12")) {
+            throw new AuthenticationFailureException();
+          }
           repository.revokeAllUserSessions(actorUserId, "SENHA_ALTERADA");
           repository.writeAudit(
               new AuditEvent(
@@ -221,7 +234,8 @@ public class LocalAuthenticationService {
   }
 
   private static boolean isAcceptableNewPassword(String password) {
-    return password != null && password.length() >= 12 && password.length() <= 200;
+    return br.com.avaliacao.desempenho.identidadeacesso.domain.model.LocalPasswordPolicy.accepts(
+        password);
   }
 
   public record SessionCredentials(

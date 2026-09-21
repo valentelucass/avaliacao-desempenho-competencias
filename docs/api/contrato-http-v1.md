@@ -65,7 +65,7 @@ Falhas HTTP tratadas são registradas com método, rota-modelo (ou família perm
 | `POST /auth/sessions/restore`   | → `200 { "authenticated": boolean }`                                             | Restauração opcional com CSRF; preserva acesso válido ou tenta o refresh. `false` não autentica nem retorna identidade. |
 | `DELETE /auth/sessions/current` | → `204`                                                                          | Revoga a sessão autenticada e limpa cookies.                                                                            |
 | `GET /auth/me`                  | `{ id, displayName, permissions, passwordChangeRequired, supremeAdministrator }` | Permissões servem à interface; a autorização sempre é revalidada no servidor.                                           |
-| `PUT /auth/password`            | `{ "currentPassword", "newPassword" }` → `204`                                   | Exige nova senha de 12 a 200 caracteres, revoga todas as sessões do usuário e limpa os cookies.                         |
+| `PUT /auth/password`            | `{ "currentPassword", "newPassword" }` → `204`                                   | Exige nova senha com mínimo de 12 caracteres e máximo de 72 bytes UTF-8, revoga todas as sessões do usuário e limpa os cookies.                         |
 
 Os cookies de credencial são host-only, `HttpOnly`, `Secure`, `SameSite=Strict`; o JWT curto HS256 contém somente `iss`, `aud`, `sub`, `exp`, `nbf`, `jti` e `sid`. Em cada requisição o servidor revalida assinatura, claims, sessão, situação da conta e permissões efetivas. O limiter usa o endereço remoto visto pela aplicação até haver proxy confiável formalmente configurado.
 
@@ -80,7 +80,7 @@ Todas as rotas abaixo exigem autenticação e a permissão correspondente. A API
 | `POST /administration/users`                            | `USUARIOS.CRIAR`                           | `{ login, displayName, initialPassword, initialRoles: ["GESTOR"] }` → `201`; exige exatamente um perfil suportado e troca de senha inicial.                                              |
 | `PATCH /administration/users/{userId}`                  | `USUARIOS.ALTERAR`                         | `{ displayName, status: ACTIVE\|BLOCKED\|DISABLED }`; bloqueio/desativação revoga sessões.                                                                                               |
 | `PATCH /administration/users/{userId}/logical-deletion` | `USUARIOS.ALTERAR`                         | `{ deleted: true }` marca somente uma conta comum como excluída logicamente, desativa-a e revoga sessões.                                                                                |
-| `PUT /administration/users/{userId}/password-reset`     | `USUARIOS.ALTERAR` + administrador supremo | `{ temporaryPassword }` de 12 a 200 caracteres; somente para conta comum ativa, força troca e revoga sessões.                                                                            |
+| `PUT /administration/users/{userId}/password-reset`     | `USUARIOS.ALTERAR` + administrador supremo | `{ temporaryPassword }` com mínimo de 12 caracteres e máximo de 72 bytes UTF-8; somente para conta comum ativa, força troca e revoga sessões.                                                                            |
 | `PUT /administration/users/{userId}/access-grants`      | `ACESSOS.GERIR` ou `ACESSOS.NEGOCIO.GERIR` | `{ roles: ["GERENCIA_RH"], permissions: [] }`; substitui o perfil por exatamente um papel suportado. O campo `permissions` é obrigatório por compatibilidade, mas só aceita lista vazia. |
 
 `UserResponse` contém `id`, `login`, `displayName`, `status`, `protectedFromNormalFlow`, `logicallyDeleted`, `passwordChangeRequired`, `roles`, `individualPermissions` e `updatedAt`. `roles` contém exatamente um dos papéis suportados. `individualPermissions` é somente leitura para visualizar concessões legadas ainda registradas; a API rejeita qualquer item não vazio em `permissions`, e uma substituição de perfil as revoga de forma auditável. A substituição também revoga as sessões do alvo.
@@ -91,7 +91,7 @@ O Administrador não é autoridade de publicação, reabertura, indicadores ou e
 
 Além dessas decisões administrativas, `ADMINISTRADOR_PLATAFORMA` não cria, consulta, edita, envia ou conclui avaliações nem autoavaliações. Essa restrição é aplicada por `V0013`, pelas permissões efetivas e pela autorização individual no servidor.
 
-A recuperação administrativa de senha é uma exceção controlada: somente o ator marcado no banco como administrador supremo pode redefinir a senha de outra conta comum, nunca a própria conta, uma conta suprema, protegida, excluída logicamente ou inativa. A senha temporária é recebida uma única vez, convertida imediatamente em hash BCrypt, não é retornada nem registrada na auditoria. A operação força troca no próximo login, limpa bloqueio de tentativas, revoga todas as sessões do alvo e registra `USUARIO.SENHA_REDEFINIR`.
+A recuperação administrativa de senha é uma exceção controlada: somente o ator marcado no banco como administrador supremo pode redefinir a senha de outra conta comum, nunca a própria conta, uma conta suprema, protegida, excluída logicamente ou inativa. Na rota PUT legada, a senha temporária é recebida uma única vez e não é retornada. Na nova rota de geração, é criada no servidor e retornada somente nessa resposta, com Cache-Control: no-store. Em ambos os casos, somente o hash BCrypt é persistido e nenhuma senha é registrada na auditoria. A operação força troca no próximo login, limpa bloqueio de tentativas, revoga todas as sessões do alvo e registra `USUARIO.SENHA_REDEFINIR`.
 
 ## Cadastros e vínculos
 
@@ -285,3 +285,17 @@ Prefixo `/administration/manager-assignment-imports`, permissão `VINCULOS_GESTO
 A linha da prévia acrescenta `managerAssignment: { manager, startsOn }`: nome fornecido da conta e data normalizada, sem login, IDs resolvidos, papel ou histórico. Campos existentes dos outros importadores permanecem compatíveis. Mesmos códigos `IMPORT_*`, prazo e limites de memória/taxa. Endpoints de cadastros não acessam tokens de vínculo e vice-versa; a proteção vale também para o mesmo ator com ambas as permissões. Confirmação com permissão revogada é negada antes do serviço, incluindo reenvios. Nomes duplicados/ambíguos, conta inelegível e sobreposição bloqueiam sem criação parcial ou concessão implícita.
 
 Detalhes operacionais: [manutenção e vínculos](../operations/manutencao-cadastros-e-importacao-vinculos.md).
+
+## Recuperação assistida e totalizadores — 2026-09-21 (ADC-COR-024)
+
+Extensões aditivas de v1, implementadas localmente. Publicar API compatível antes da SPA; sem migration nova. Detalhes e limites na [ADR-0021](../adr/0021-recuperacao-local-assistida-de-senha.md).
+
+| Operação | Entrada e autorização | Resposta |
+| --- | --- | --- |
+| POST /auth/password-reset-requests | JSON contendo somente login, não vazio, máximo 128 caracteres. Anônimo com CSRF; limitação de taxa. | 202 sem corpo e no-store, independentemente de conta elegível. 422 para validação, 400 para JSON/campos desconhecidos, 429 para limite. |
+| GET /administration/password-reset-requests | Sessão, USUARIOS.LER + USUARIOS.ALTERAR e marcador de administrador supremo verificado no banco. after inteiro não negativo (padrão 0), limit 1–100 (padrão 100). | items: userId, displayName, login, requestedAt UTC. page: limit, nextCursor string ou null. Cursor é a sequência do último evento incluído; enviar como after. Nenhuma senha, hash ou token. |
+| POST /administration/users/{userId}/temporary-password | Mesmo escopo supremo, CSRF, sem corpo. Alvo comum ativo, não protegido, não excluído e diferente do ator. | 200 com user (UserResponse) e temporaryPassword; no-store. Credencial individual aleatória, troca obrigatória e revogação de todas as sessões. |
+
+A solicitação não altera credenciais. Pedidos repetidos para a mesma conta permanecem como uma pendência; redefinição ou troca de senha posterior resolve a pendência preservando auditoria. Reinícios não apagam a fila. Não se envia e-mail. As rotas de listagem e geração negam sem sessão/permissão/escopo; conta indisponível não gera senha. A rota PUT de redefinição existente continua compatível, sujeita ao novo limite explícito do BCrypt (72 bytes).
+
+GET /assessments acrescenta totals: total, drafts, submitted, published, cada um inteiro de 64 bits ou null. Os quatro campos abrangem todas as páginas que correspondem aos filtros e ao escopo autorizado, sem cursor/limite. Com menos de cinco colaboradores distintos, todos ficam nulos por confidencialidade; a SPA não substitui por contagens da página. items e page mantêm o contrato anterior. Dados concorrentes podem mudar entre consultas/atualizações; a API não promete snapshot entre páginas. Sem totals em API antiga, o cliente omite números até ativação compatível.

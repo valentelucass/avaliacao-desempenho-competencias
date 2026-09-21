@@ -108,7 +108,9 @@ describe('Opções para iniciar avaliações', () => {
         expect(test.props.onSelectAssessment).toHaveBeenCalledWith('assessment-1'),
       )
       await waitFor(() => expect(screen.getByLabelText(test.personLabel)).toBeEnabled())
-      expect(screen.queryByRole('option', { name: people[0].displayName })).toBeNull()
+      await waitFor(() =>
+        expect(screen.queryByRole('option', { name: people[0].displayName })).toBeNull(),
+      )
       test.rerender(<AssessmentsPanel {...test.props} assessmentId="assessment-1" />)
       await screen.findByRole('button', { name: 'Voltar para a lista' })
       test.rerender(<AssessmentsPanel {...test.props} />)

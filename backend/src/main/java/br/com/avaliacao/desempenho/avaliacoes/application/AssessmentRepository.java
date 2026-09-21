@@ -96,7 +96,14 @@ public interface AssessmentRepository {
       String revision,
       Instant updatedAt) {}
 
-  record AssessmentPageView(List<AssessmentSummaryView> items, AssessmentCursor nextCursor) {}
+  record AssessmentPageView(
+      List<AssessmentSummaryView> items, AssessmentCursor nextCursor, AssessmentTotals totals) {
+    public AssessmentPageView(List<AssessmentSummaryView> items, AssessmentCursor nextCursor) {
+      this(items, nextCursor, null);
+    }
+  }
+
+  record AssessmentTotals(Long total, Long drafts, Long submitted, Long published) {}
 
   /** Filtros opcionais; o repositório sempre reaplica o escopo do ator. */
   record AssessmentListFilter(

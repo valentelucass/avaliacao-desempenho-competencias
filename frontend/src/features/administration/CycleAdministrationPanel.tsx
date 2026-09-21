@@ -17,7 +17,7 @@ import { EmptyState } from '../../ui/EmptyState'
 import { ContextHelp } from '../../ui/ContextHelp'
 import { Pagination } from '../../ui/Pagination'
 import { safeErrorMessage } from '../../ui/safeErrorMessage'
-import { useClientPagination } from '../../ui/useClientPagination'
+import { useTableQuery } from '../../ui/useTableQuery'
 import { useInlinePanelFocus } from '../../ui/useInlinePanelFocus'
 import { administrativeRead, useAdministrativeLoad } from './useAdministrativeLoad'
 
@@ -125,8 +125,38 @@ export function CycleAdministrationPanel({
         .filter((option): option is CycleQuestionnaireInput => option !== undefined),
     [optionIndex, selectedOptionKeys],
   )
-  const cyclesPagination = useClientPagination(cycles, 10)
-  const versionsPagination = useClientPagination(versions, 5)
+  const cyclesPagination = useTableQuery(
+    cycles,
+    [
+      { key: 'name', label: 'Ciclo', value: (item) => item.name },
+      {
+        key: 'status',
+        label: 'Situação',
+        value: (item) => formatCycleStatus(item.status),
+        kind: 'choice',
+      },
+      { key: 'actions', label: 'Ação' },
+    ],
+    10,
+  )
+  const versionsPagination = useTableQuery(
+    versions,
+    [
+      {
+        key: 'name',
+        label: 'Questionário',
+        value: (item) => item.questionnaireName + ' ' + item.title,
+      },
+      { key: 'version', label: 'Versão', value: (item) => item.versionNumber, kind: 'number' },
+      {
+        key: 'configuration',
+        label: 'Configuração',
+        value: (item) => item.configurationOptions.map(formatConfigurationOption).join(' '),
+      },
+      { key: 'actions', label: 'Aplicar' },
+    ],
+    5,
+  )
 
   const loadData = useCallback(async () => {
     if (!canManageCycles) {
@@ -509,13 +539,10 @@ export function CycleAdministrationPanel({
             <AdministrativeTable>
               <caption className="visually-hidden">Ciclos disponíveis</caption>
               <AdministrativeTable.Head>
-                <AdministrativeTable.Row>
-                  <AdministrativeTable.Heading scope="col">Ciclo</AdministrativeTable.Heading>
-                  <AdministrativeTable.Heading scope="col">Situação</AdministrativeTable.Heading>
-                  <AdministrativeTable.Heading scope="col">Ação</AdministrativeTable.Heading>
-                </AdministrativeTable.Row>
+                <AdministrativeTable.Row>{cyclesPagination.headings()}</AdministrativeTable.Row>
               </AdministrativeTable.Head>
               <AdministrativeTable.Body>
+                {cyclesPagination.emptyRow()}
                 {cyclesPagination.items.map((cycle) => (
                   <AdministrativeTable.Row key={cycle.id}>
                     <AdministrativeTable.Cell data-label="Ciclo">
@@ -684,7 +711,6 @@ export function CycleAdministrationPanel({
                 }`
               : ''
           }`}
-          disabled={selectedCycle?.status !== undefined && selectedCycle.status !== 'RASCUNHO'}
           id={questionnairesFieldsetId}
         >
           <legend>Questionários aplicados</legend>
@@ -700,18 +726,10 @@ export function CycleAdministrationPanel({
                   Questionários e configurações disponíveis para o ciclo
                 </caption>
                 <AdministrativeTable.Head>
-                  <AdministrativeTable.Row>
-                    <AdministrativeTable.Heading scope="col">
-                      Questionário
-                    </AdministrativeTable.Heading>
-                    <AdministrativeTable.Heading scope="col">Versão</AdministrativeTable.Heading>
-                    <AdministrativeTable.Heading scope="col">
-                      Configuração
-                    </AdministrativeTable.Heading>
-                    <AdministrativeTable.Heading scope="col">Aplicar</AdministrativeTable.Heading>
-                  </AdministrativeTable.Row>
+                  <AdministrativeTable.Row>{versionsPagination.headings()}</AdministrativeTable.Row>
                 </AdministrativeTable.Head>
                 <AdministrativeTable.Body>
+                  {versionsPagination.emptyRow()}
                   {versionsPagination.items.map((version) => {
                     const isSelected = version.configurationOptions.some((option) =>
                       selectedOptionKeys.includes(
@@ -755,6 +773,10 @@ export function CycleAdministrationPanel({
                                   aria-label={configurationLabel}
                                   id={key}
                                   type="checkbox"
+                                  disabled={
+                                    selectedCycle?.status !== undefined &&
+                                    selectedCycle.status !== 'RASCUNHO'
+                                  }
                                   checked={selectedOptionKeys.includes(key)}
                                   onChange={(event) =>
                                     toggleQuestionnaireOption(key, event.target.checked)

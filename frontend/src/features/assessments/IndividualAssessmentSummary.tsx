@@ -1,14 +1,12 @@
 import type { AssessmentDetail } from '../../api/contracts'
 import { ContextHelp } from '../../ui/ContextHelp'
 import { Pagination } from '../../ui/Pagination'
-import { useClientPagination } from '../../ui/useClientPagination'
+import { useTableQuery } from '../../ui/useTableQuery'
 
 type IndividualAssessmentSummaryProps = {
   assessment: AssessmentDetail
   displayMode?: 'complete' | 'chart'
 }
-
-type CompetencyScore = NonNullable<AssessmentDetail['competencyScores']>[number]
 
 const minimumScore = 80
 const maximumScore = 120
@@ -23,8 +21,20 @@ export function IndividualAssessmentSummary({
   displayMode = 'complete',
 }: IndividualAssessmentSummaryProps) {
   const competencyScores = assessment.competencyScores ?? []
-  const competencyScorePairs = pairCompetencyScores(competencyScores)
-  const pagination = useClientPagination(competencyScorePairs, 5)
+  const pagination = useTableQuery(
+    competencyScores,
+    [
+      { key: 'name', label: 'Competência', value: (item) => item.name },
+      {
+        key: 'score',
+        label: 'Pontuação',
+        value: (item) => formatScore(item.score),
+        sortValue: (item) => item.score,
+        kind: 'number',
+      },
+    ],
+    10,
+  )
 
   if (
     !assessment.result ||
@@ -230,36 +240,34 @@ export function IndividualAssessmentSummary({
         <table className="individual-assessment-summary__table">
           <caption>Resultado por competência</caption>
           <thead>
-            <tr>
-              <th scope="col">Competência</th>
-              <th scope="col">Pontuação</th>
-              <th scope="col">Competência</th>
-              <th scope="col">Pontuação</th>
-            </tr>
+            <tr>{pagination.headings()}</tr>
           </thead>
-          <tbody>
-            {pagination.items.map(([first, second]) => (
-              <tr key={first.id}>
-                <td data-label="Competência">{first.name}</td>
-                <td data-label="Pontuação">{formatScore(first.score)}</td>
-                {second ? (
-                  <>
-                    <td data-label="Competência">{second.name}</td>
-                    <td data-label="Pontuação">{formatScore(second.score)}</td>
-                  </>
-                ) : (
-                  <td aria-hidden="true" colSpan={2} />
-                )}
+          <tbody className="table-query-screen-body">
+            {pagination.emptyRow()}
+            {pagination.items.map((competency) => (
+              <tr key={competency.id}>
+                <td data-label="Competência">{competency.name}</td>
+                <td data-label="Pontuação">{formatScore(competency.score)}</td>
               </tr>
             ))}
           </tbody>
+          {displayMode === 'complete' ? (
+            <tbody className="table-query-print-body" aria-hidden="true">
+              {competencyScores.map((competency) => (
+                <tr key={competency.id}>
+                  <td>{competency.name}</td>
+                  <td>{formatScore(competency.score)}</td>
+                </tr>
+              ))}
+            </tbody>
+          ) : null}
         </table>
       </div>
       <Pagination
         currentPage={pagination.currentPage}
         hasNextPage={pagination.hasNextPage}
         itemCountOnPage={pagination.items.length}
-        itemLabel="pares de competências"
+        itemLabel="competências"
         onNextPage={pagination.onNextPage}
         onPreviousPage={pagination.onPreviousPage}
         totalPages={pagination.totalPages}
@@ -326,20 +334,6 @@ function splitLabel(label: string, total: number): readonly string[] {
     lines.push(line)
   }
   return lines.slice(0, 3)
-}
-
-function pairCompetencyScores(
-  competencyScores: readonly CompetencyScore[],
-): ReadonlyArray<readonly [CompetencyScore, CompetencyScore?]> {
-  return competencyScores.reduce<Array<readonly [CompetencyScore, CompetencyScore?]>>(
-    (pairs, competency, index) => {
-      if (index % 2 === 0) {
-        pairs.push([competency, competencyScores[index + 1]])
-      }
-      return pairs
-    },
-    [],
-  )
 }
 
 function formatScore(score: number): string {

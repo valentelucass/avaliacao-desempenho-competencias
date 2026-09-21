@@ -163,7 +163,7 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
       WHERE assessment.avaliacao_id = ?
       """;
 
-  private static final String LIST_ACCESSIBLE_SQL =
+  private static final String LIST_ACCESSIBLE_SELECT =
       """
       SELECT TOP (?)
              assessment.avaliacao_id,
@@ -175,6 +175,10 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
              feedback_state.situation AS feedback_situation,
              version.row_version AS version_row_version,
              assessment.atualizada_em_utc
+      """;
+
+  private static final String LIST_ACCESSIBLE_SCOPE_SQL =
+      """
       FROM dbo.avaliacao AS assessment
       INNER JOIN dbo.ciclo_avaliacao AS cycle
           ON cycle.ciclo_avaliacao_id = assessment.ciclo_avaliacao_id
@@ -245,6 +249,22 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
       AND (? IS NULL OR assessment.situacao = ?)
       AND (? IS NULL OR feedback_state.situation = ?)
       """;
+
+  private static final String LIST_ACCESSIBLE_SQL =
+      LIST_ACCESSIBLE_SELECT + LIST_ACCESSIBLE_SCOPE_SQL;
+
+  private static final String LIST_TOTALS_SQL =
+      """
+      SELECT
+          CASE WHEN COUNT(DISTINCT assessment.colaborador_id) >= 5 THEN COUNT_BIG(*) END AS total,
+          CASE WHEN COUNT(DISTINCT assessment.colaborador_id) >= 5 THEN
+              COALESCE(SUM(CASE WHEN assessment.situacao = 'RASCUNHO' THEN CAST(1 AS bigint) ELSE 0 END), 0) END AS drafts,
+          CASE WHEN COUNT(DISTINCT assessment.colaborador_id) >= 5 THEN
+              COALESCE(SUM(CASE WHEN assessment.situacao = 'ENVIADA' THEN CAST(1 AS bigint) ELSE 0 END), 0) END AS submitted,
+          CASE WHEN COUNT(DISTINCT assessment.colaborador_id) >= 5 THEN
+              COALESCE(SUM(CASE WHEN assessment.situacao = 'PUBLICADA' THEN CAST(1 AS bigint) ELSE 0 END), 0) END AS published
+      """
+          + LIST_ACCESSIBLE_SCOPE_SQL;
 
   private static final String LIST_ACCESSIBLE_AFTER_CURSOR_SQL =
       LIST_ACCESSIBLE_SQL
@@ -505,6 +525,16 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
       parameters.add(value);
       parameters.add(value);
     }
+    AssessmentTotals totals =
+        jdbcTemplate.queryForObject(
+            LIST_TOTALS_SQL,
+            (resultSet, rowNumber) ->
+                new AssessmentTotals(
+                    resultSet.getObject("total", Long.class),
+                        resultSet.getObject("drafts", Long.class),
+                    resultSet.getObject("submitted", Long.class),
+                        resultSet.getObject("published", Long.class)),
+            parameters.subList(1, parameters.size()).toArray());
     if (cursor != null) {
       parameters.add(SqlServerUtcDateTime.forBinding(cursor.updatedAt()));
       parameters.add(SqlServerUtcDateTime.forBinding(cursor.updatedAt()));
@@ -522,7 +552,7 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
       AssessmentSummaryView last = items.get(items.size() - 1);
       nextCursor = new AssessmentCursor(last.updatedAt(), last.id());
     }
-    return new AssessmentPageView(List.copyOf(items), nextCursor);
+    return new AssessmentPageView(List.copyOf(items), nextCursor, totals);
   }
 
   @Override

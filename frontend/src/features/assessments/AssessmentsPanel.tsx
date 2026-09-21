@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { CheckCircle2, ClipboardList, Plus, RefreshCw, Send } from 'lucide-react'
 import type { FormEvent, ReactNode } from 'react'
 import { isAuthenticationError } from '../../api/client'
@@ -158,17 +158,7 @@ export function AssessmentsPanel({
   const managerCreationCardRef = useRef<HTMLElement>(null)
   const selfCreationCardRef = useRef<HTMLElement>(null)
 
-  const assessmentMetrics = useMemo(
-    () => ({
-      total: assessmentPage.items.length,
-      drafts: assessmentPage.items.filter((assessment) => assessment.status === 'RASCUNHO').length,
-      submitted: assessmentPage.items.filter((assessment) => assessment.status === 'ENVIADA')
-        .length,
-      published: assessmentPage.items.filter((assessment) => assessment.status === 'PUBLICADA')
-        .length,
-    }),
-    [assessmentPage.items],
-  )
+  const assessmentMetrics = assessmentPage.totals
 
   const loadAssessments = useCallback(
     async (cursor?: string, reset = false) => {
@@ -725,31 +715,36 @@ export function AssessmentsPanel({
         <dl className="kpi-grid kpi-grid--summary" aria-label="Resumo de avaliações">
           <Metric
             label="Total"
-            value={assessmentMetrics.total}
+            value={assessmentMetrics?.total ?? '—'}
             icon={<ClipboardList />}
-            help="Mostra as avaliações exibidas nesta página da lista, já respeitando o seu escopo."
+            help="Total em todas as páginas, respeitando os filtros e o seu escopo."
           />
           <Metric
             label="Rascunhos"
-            value={assessmentMetrics.drafts}
+            value={assessmentMetrics?.drafts ?? '—'}
             icon={<Plus />}
             help="Ainda estão em preenchimento e não possuem resultado final nem classificação."
           />
           <Metric
             label="Enviadas"
-            value={assessmentMetrics.submitted}
+            value={assessmentMetrics?.submitted ?? '—'}
             icon={<Send />}
             help="Foram enviadas pelo responsável e aguardam a publicação dentro do escopo de RH ou Diretoria autorizado."
           />
           <Metric
             label="Publicadas"
-            value={assessmentMetrics.published}
+            value={assessmentMetrics?.published ?? '—'}
             icon={<CheckCircle2 />}
             help="O resultado está concluído para consulta no escopo permitido. Uma reabertura preserva o histórico."
           />
         </dl>
       ) : null}
 
+      {!isLoading && !error && assessmentMetrics?.total === null ? (
+        <p className="muted" role="status">
+          Não há dados suficientes para preservar a confidencialidade dos totais.
+        </p>
+      ) : null}
       {canUseAdministrativeFilters ? (
         <section
           className="card assessment-creation-card"
@@ -1271,7 +1266,7 @@ function Metric({
   help,
 }: {
   label: string
-  value: number
+  value: number | string
   icon: ReactNode
   help: string
 }) {

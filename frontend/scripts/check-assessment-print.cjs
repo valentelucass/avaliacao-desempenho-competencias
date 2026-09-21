@@ -20,6 +20,8 @@ for (const ext of ['.ts', '.tsx'])
       }).outputText,
       file,
     )
+// Registrar CSS depois de TS/TSX evita resolver um componente homônimo como folha de estilo.
+Module._extensions['.css'] = () => {}
 require.cache[require.resolve('../src/api/client.ts')] = {
   exports: { isAuthenticationError: () => false },
 }
@@ -285,7 +287,7 @@ async function mount(d, key) {
         after: hover.result.value,
       }),
     )
-    for (const phase of [
+    const phases = [
       'check-administrative-tables',
       'check-curtain-theme-toggle',
       'check-global-buttons',
@@ -295,7 +297,17 @@ async function mount(d, key) {
       'check-cycle-recovery',
       'check-spreadsheet-import',
       'check-master-data-maintenance',
-    ]) {
+      'check-password-recovery',
+    ]
+    const selectedPhases = process.argv.slice(2).map((argument) => {
+      if (!argument.startsWith('--phase=') || !phases.includes(argument.slice(8))) {
+        throw new Error('Fase de regressão inválida: ' + argument)
+      }
+      return argument.slice(8)
+    })
+    for (const phase of phases.filter(
+      (phase) => !selectedPhases.length || selectedPhases.includes(phase),
+    )) {
       browserPhase = phase
       // Cada suíte tem o mesmo limite; as anteriores não consomem o tempo da próxima.
       timer.refresh()

@@ -139,6 +139,9 @@ public class SqlUserAdministrationRepository implements UserAdministrationReposi
   @Override
   public Optional<UserView> resetOrdinaryUserPassword(
       UUID userId, String passwordHash, String algorithm, String parameters) {
+    // Serializa solicitações e atendimento da mesma conta sem alterar a trilha anterior.
+    jdbcTemplate.queryForList(
+        "SELECT usuario_id FROM dbo.usuario WITH (UPDLOCK, HOLDLOCK) WHERE usuario_id = ?", userId);
     int updated =
         jdbcTemplate.update(
             """

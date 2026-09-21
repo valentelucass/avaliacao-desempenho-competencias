@@ -527,7 +527,15 @@ export interface IndicatorExport {
   content: Blob
 }
 
+export interface AssessmentTotals {
+  total: number | null
+  drafts: number | null
+  submitted: number | null
+  published: number | null
+}
+
 export interface Page<T> {
+  totals?: AssessmentTotals | null
   items: readonly T[]
   page: {
     limit: number
@@ -575,3 +583,14 @@ export type SpreadsheetImportPreview = {
   }[]
 }
 export type SpreadsheetImportResult = { created: number; existing: number }
+
+export interface PasswordResetRequest {
+  userId: string
+  displayName: string
+  login: string
+  requestedAt: string
+}
+export interface GeneratedTemporaryPassword {
+  user: AdministrationUser
+  temporaryPassword: string
+}

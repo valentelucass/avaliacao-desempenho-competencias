@@ -10,8 +10,14 @@ type ClientPagination<T> = {
 }
 
 /** Mantém a paginação visual local para listas já autorizadas pela API. */
-export function useClientPagination<T>(items: readonly T[], pageSize: number): ClientPagination<T> {
-  const [requestedPage, setRequestedPage] = useState(1)
+export function useClientPagination<T>(
+  items: readonly T[],
+  pageSize: number,
+  resetKey = '',
+): ClientPagination<T> {
+  const [requested, setRequested] = useState({ page: 1, key: resetKey })
+  const requestedPage = requested.key === resetKey ? requested.page : 1
+  if (requested.key !== resetKey) setRequested({ page: 1, key: resetKey })
   const totalPages = Math.max(1, Math.ceil(items.length / pageSize))
   const currentPage = Math.min(requestedPage, totalPages)
   const firstItemIndex = (currentPage - 1) * pageSize
@@ -20,8 +26,8 @@ export function useClientPagination<T>(items: readonly T[], pageSize: number): C
     currentPage,
     hasNextPage: currentPage < totalPages,
     items: items.slice(firstItemIndex, firstItemIndex + pageSize),
-    onNextPage: () => setRequestedPage((page) => Math.min(page + 1, totalPages)),
-    onPreviousPage: () => setRequestedPage((page) => Math.max(page - 1, 1)),
+    onNextPage: () => setRequested({ page: Math.min(currentPage + 1, totalPages), key: resetKey }),
+    onPreviousPage: () => setRequested({ page: Math.max(currentPage - 1, 1), key: resetKey }),
     totalPages,
   }
 }

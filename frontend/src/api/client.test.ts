@@ -2,6 +2,53 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { HttpApiClient } from './client'
 
 describe('HttpApiClient', () => {
+  it('protege solicitação e geração com CSRF e reúne a fila completa antes de retornar', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ token: 'csrf-synthetic' }))
+      .mockResolvedValueOnce(new Response(null, { status: 202 }))
+      .mockResolvedValueOnce(
+        jsonResponse({
+          user: { id: 'user-1' },
+          temporaryPassword: ['fixture', 'generated'].join('-'),
+        }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({ items: [{ userId: 'user-1' }], page: { limit: 100, nextCursor: '15' } }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({ items: [{ userId: 'user-2' }], page: { limit: 100, nextCursor: null } }),
+      )
+    vi.stubGlobal('fetch', fetchMock)
+    const api = new HttpApiClient()
+    await api.requestPasswordReset('ficticio@example.invalid')
+    await api.generateTemporaryPassword('user / 1')
+    expect(await api.listPasswordResetRequests()).toEqual([
+      { userId: 'user-1' },
+      { userId: 'user-2' },
+    ])
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+      '/api/v1/auth/csrf',
+      '/api/v1/auth/password-reset-requests',
+      '/api/v1/administration/users/user%20%2F%201/temporary-password',
+      '/api/v1/administration/password-reset-requests?limit=100&after=0',
+      '/api/v1/administration/password-reset-requests?limit=100&after=15',
+    ])
+    for (const index of [1, 2]) {
+      expect(fetchMock.mock.calls[index][1].method).toBe('POST')
+      expect(fetchMock.mock.calls[index][1].headers.get('X-CSRF-TOKEN')).toBe('csrf-synthetic')
+      expect(fetchMock.mock.calls[index][1].credentials).toBe('include')
+    }
+  })
+
+  it('recusa cursor repetido sem apresentar uma fila parcial como completa', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(jsonResponse({ items: [], page: { nextCursor: '0' } })),
+    )
+    await expect(new HttpApiClient().listPasswordResetRequests()).rejects.toThrow()
+  })
+
   it('mantém todas as operações de importação de vínculo na rota autorizada e protege as escritas', async () => {
     const fetchMock = vi
       .fn()

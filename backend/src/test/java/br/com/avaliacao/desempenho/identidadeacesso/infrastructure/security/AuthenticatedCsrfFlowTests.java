@@ -41,6 +41,33 @@ class AuthenticatedCsrfFlowTests {
   @Autowired ObjectMapper json;
 
   @Test
+  void temporaryPasswordSessionCanChangePasswordButCannotUseBusinessPermissions() throws Exception {
+    var mvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
+    Cookie access = new Cookie("ADC-ACCESS", "synthetic-change-required");
+    var issued =
+        mvc.perform(get("/api/v1/auth/csrf").cookie(access))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse();
+    Cookie csrf = issued.getCookie("ADC-XSRF-TOKEN");
+    String token = json.readTree(issued.getContentAsString()).get("token").asString();
+    mvc.perform(get("/api/v1/auth/me").cookie(access, csrf))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.passwordChangeRequired").value(true));
+    mvc.perform(get("/api/v1/master-data/areas").cookie(access, csrf))
+        .andExpect(status().isForbidden())
+        .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
+    mvc.perform(
+            put("/api/v1/auth/password")
+                .cookie(access, csrf)
+                .header("X-CSRF-TOKEN", token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    "{\"currentPassword\":\"synthetic-temporary\",\"newPassword\":\"synthetic-personal\"}"))
+        .andExpect(status().isNoContent());
+  }
+
+  @Test
   void reusesIssuedCsrfAcrossAuthenticatedReadsAndRepeatedImportWrites() throws Exception {
     var mvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
     Cookie access = new Cookie("ADC-ACCESS", "synthetic-access");
@@ -171,6 +198,16 @@ class AuthenticatedCsrfFlowTests {
           .thenReturn(
               Optional.of(
                   new AuthorizedUser(userId, "Pessoa fictícia", false, Set.of("CADASTROS.GERIR"))));
+      when(jwt.decode("synthetic-change-required"))
+          .thenReturn(
+              Optional.of(
+                  new AccessTokenService.DecodedAccessToken(
+                      userId, sessionId, "change-required-jti")));
+      when(repository.findAuthorizedUserForActiveSession(
+              eq(sessionId), eq(userId), eq("change-required-jti"), any()))
+          .thenReturn(
+              Optional.of(
+                  new AuthorizedUser(userId, "Pessoa fictícia", true, Set.of("CADASTROS.GERIR"))));
       return new AccessTokenAuthenticationFilter(jwt, repository, Clock.systemUTC());
     }
   }

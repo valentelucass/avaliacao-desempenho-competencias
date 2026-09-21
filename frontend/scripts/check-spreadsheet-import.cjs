@@ -191,7 +191,14 @@ module.exports = async function checkSpreadsheetImport({ send, frameId, css }) {
             `(()=>{const p=document.querySelectorAll('.spreadsheet-import__panel')[${index}];const r=p.getBoundingClientRect();return p.scrollWidth<=p.clientWidth+1&&[...p.querySelectorAll('input,select,button,table')].every(e=>{const c=e.getBoundingClientRect();return c.left>=r.left&&c.right<=r.right+1})})()`,
           ),
           true,
-          'Conferência ou controles cortados dentro do painel',
+          JSON.stringify({
+            width,
+            theme,
+            index,
+            bounds: await evaluate(
+              `(()=>{const p=document.querySelectorAll('.spreadsheet-import__panel')[${index}],r=p.getBoundingClientRect();return {panel:{left:r.left,right:r.right,scroll:p.scrollWidth,client:p.clientWidth},bad:[...p.querySelectorAll('input,select,button,table')].map(e=>{const c=e.getBoundingClientRect();return {tag:e.tagName,label:e.getAttribute('aria-label'),left:c.left,right:c.right,width:c.width}}).filter(c=>c.left<r.left||c.right>r.right+1)}})()`,
+            ),
+          }),
         )
         if (index === 1) {
           assert.equal(

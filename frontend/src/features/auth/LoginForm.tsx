@@ -35,6 +35,33 @@ export function LoginForm({
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string>()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [recoveryOpen, setRecoveryOpen] = useState(false)
+  const [recoveryLogin, setRecoveryLogin] = useState('')
+  const [recoveryNotice, setRecoveryNotice] = useState<string>()
+  const recoveryId = useId()
+
+  async function requestReset(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (isSubmitting) return
+    setError(undefined)
+    setRecoveryNotice(undefined)
+    if (!recoveryLogin.trim()) {
+      setError('Informe o e-mail ou login usado para entrar.')
+      return
+    }
+    setIsSubmitting(true)
+    try {
+      await api.requestPasswordReset(recoveryLogin.trim())
+      setRecoveryNotice(
+        'Se a conta estiver disponível para recuperação, a solicitação será encaminhada à administração. Aguarde o contato do responsável.',
+      )
+      setRecoveryLogin('')
+    } catch (failure) {
+      setError(safeErrorMessage(failure))
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -129,6 +156,49 @@ export function LoginForm({
             {isRestoringSession ? 'Retomando sessão…' : 'Retomar sessão existente'}
           </button>
         </form>
+        <button
+          className="button"
+          type="button"
+          disabled={isSubmitting || isRestoringSession}
+          aria-expanded={recoveryOpen}
+          aria-controls={recoveryId}
+          onClick={() => {
+            setRecoveryOpen(!recoveryOpen)
+            setError(undefined)
+            setPassword('')
+          }}
+        >
+          Solicitar redefinição de senha
+        </button>
+        {recoveryOpen ? (
+          <form
+            id={recoveryId}
+            className="stack-form"
+            onSubmit={requestReset}
+            noValidate
+            aria-busy={isSubmitting}
+          >
+            <p className="muted">
+              Informe o e-mail ou login da sua conta. O responsável receberá a solicitação na
+              administração do sistema.
+            </p>
+            <div className="field">
+              <label htmlFor={`${recoveryId}-login`}>E-mail ou login para recuperação</label>
+              <input
+                id={`${recoveryId}-login`}
+                value={recoveryLogin}
+                autoComplete="username"
+                maxLength={128}
+                disabled={isSubmitting}
+                onChange={(event) => setRecoveryLogin(event.currentTarget.value)}
+              />
+            </div>
+            <button className="button button--primary" type="submit" disabled={isSubmitting}>
+              {isSubmitting ? 'Solicitando…' : 'Enviar solicitação'}
+            </button>
+            {recoveryNotice ? <p role="status">{recoveryNotice}</p> : null}
+          </form>
+        ) : null}
       </section>
 
       <aside className="auth-about-panel" aria-label="Sobre esta página">

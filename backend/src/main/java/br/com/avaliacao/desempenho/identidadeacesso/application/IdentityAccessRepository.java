@@ -21,7 +21,7 @@ public interface IdentityAccessRepository {
   void registerFailedLogin(
       UUID userId, Instant now, int failureThreshold, Instant blockUntilWhenThresholdReached);
 
-  void registerSuccessfulLogin(UUID userId);
+  boolean registerSuccessfulLogin(UUID userId, String expectedPasswordHash);
 
   void createSession(
       AuthenticationSession session, String refreshTokenHash, Instant refreshTokenExpiresAt);
@@ -38,7 +38,8 @@ public interface IdentityAccessRepository {
 
   void revokeAllUserSessions(UUID userId, String reason);
 
-  void changePassword(UUID userId, String passwordHash, String algorithm, String parameters);
+  boolean changePassword(
+      UUID userId, String expectedHash, String passwordHash, String algorithm, String parameters);
 
   void writeAudit(AuditEvent event);
 

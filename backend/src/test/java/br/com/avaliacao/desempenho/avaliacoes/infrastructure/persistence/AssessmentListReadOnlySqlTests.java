@@ -69,6 +69,10 @@ class AssessmentListReadOnlySqlTests {
       """;
 
   private static SqlServerAssessmentRepository repository() {
+    return repository(false);
+  }
+
+  private static SqlServerAssessmentRepository repository(boolean distinctPeople) {
     var source = new DriverManagerDataSource();
     source.setDriverClassName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
     source.setUrl(
@@ -80,17 +84,65 @@ class AssessmentListReadOnlySqlTests {
             JdbcTemplate.class,
             call -> {
               Object[] args = call.getRawArguments();
-              assertThat(call.getMethod().getName()).isEqualTo("query");
+              assertThat(call.getMethod().getName()).isIn("query", "queryForObject");
               String sql = (String) args[0];
               assertThat(sql.stripLeading()).startsWith("SELECT");
               // Substituição restrita a identificadores internos fixos. Nenhuma tabela real é
               // consultada.
-              sql = FIXTURE + sql.replace("dbo.", "fixture_");
+              String fixture = FIXTURE;
+              if (distinctPeople) {
+                int start = fixture.indexOf("fixture_colaborador AS (");
+                int end = fixture.indexOf("), fixture_avaliacao AS (", start);
+                fixture =
+                    fixture.substring(0, start)
+                        + "fixture_colaborador AS ( SELECT CONVERT(uniqueidentifier, '00000000-0000-0000-0000-' + RIGHT('000000000000' + CONVERT(varchar(12), n+300), 12)) AS colaborador_id, CONCAT(N'Pessoa ', n) AS nome_exibicao FROM ids "
+                        + fixture.substring(end);
+                fixture =
+                    fixture.replace(
+                        "CASE WHEN n=2 THEN '00000000-0000-0000-0000-000000000302' ELSE '00000000-0000-0000-0000-000000000301' END",
+                        "'00000000-0000-0000-0000-' + RIGHT('000000000000' + CONVERT(varchar(12), n+300), 12)");
+              }
+              sql = fixture + sql.replace("dbo.", "fixture_");
+              if (call.getMethod().getName().equals("queryForObject"))
+                return reader.queryForObject(sql, (RowMapper<?>) args[1], (Object[]) args[2]);
               if (args[1] instanceof RowMapper<?> mapper)
                 return reader.query(sql, mapper, (Object[]) args[2]);
               return reader.query(sql, (ResultSetExtractor<?>) args[1], (Object[]) args[2]);
             });
     return new SqlServerAssessmentRepository(fixtureJdbc, mock(TransactionTemplate.class));
+  }
+
+  @Test
+  void totalsCoverEveryPageRespectFiltersAndSuppressSmallPopulations() {
+    var repository = repository(true);
+    var rh = new AssessmentAccessContext(id(101), Set.of("AVALIACOES.VISUALIZAR_TODAS"));
+    var first = repository.listAccessible(rh, AssessmentListFilter.none(), 2, null);
+    var next = repository.listAccessible(rh, AssessmentListFilter.none(), 2, first.nextCursor());
+    assertThat(first.totals().total()).isEqualTo(7L);
+    assertThat(first.totals().drafts()).isEqualTo(1L);
+    assertThat(first.totals().submitted()).isEqualTo(1L);
+    assertThat(first.totals().published()).isEqualTo(5L);
+    assertThat(next.totals()).isEqualTo(first.totals());
+    var published =
+        repository.listAccessible(
+            rh,
+            new AssessmentListFilter(null, null, null, null, AssessmentStatus.PUBLICADA, null),
+            1,
+            null);
+    assertThat(published.totals().total()).isEqualTo(5L);
+    assertThat(published.totals().published()).isEqualTo(5L);
+    var small =
+        repository.listAccessible(
+            rh, new AssessmentListFilter(null, null, "Pessoa 1", null, null, null), 2, null);
+    assertThat(small.totals().total()).isNull();
+    assertThat(small.totals().drafts()).isNull();
+    assertThat(small.totals().submitted()).isNull();
+    assertThat(small.totals().published()).isNull();
+    var denied =
+        repository.listAccessible(
+            new AssessmentAccessContext(id(101), Set.of()), AssessmentListFilter.none(), 1, null);
+    assertThat(denied.items()).isEmpty();
+    assertThat(denied.totals().total()).isNull();
   }
 
   @Test

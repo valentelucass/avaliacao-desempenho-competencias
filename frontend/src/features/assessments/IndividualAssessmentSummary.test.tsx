@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import type { AssessmentDetail } from '../../api/contracts'
 import { IndividualAssessmentSummary } from './IndividualAssessmentSummary'
@@ -9,12 +9,20 @@ describe('IndividualAssessmentSummary', () => {
 
     expect(screen.getByRole('img', { name: /Pontuação por competência/ })).toBeInTheDocument()
     expect(screen.getByRole('table', { name: 'Resultado por competência' })).toBeInTheDocument()
-    expect(screen.getAllByRole('columnheader', { name: 'Competência' })).toHaveLength(2)
-    expect(screen.getAllByRole('columnheader', { name: 'Pontuação' })).toHaveLength(2)
-    expect(screen.getAllByText('Preza pela segurança')).toHaveLength(2)
-    expect(screen.getAllByText('Qualidade do trabalho')).toHaveLength(2)
+    expect(screen.getByLabelText('Filtrar Competência')).toBeInTheDocument()
+    expect(screen.getByLabelText('Filtrar Pontuação')).toBeInTheDocument()
+    expect(screen.getByRole('cell', { name: 'Preza pela segurança' })).toBeInTheDocument()
+    expect(screen.getByRole('cell', { name: 'Qualidade do trabalho' })).toBeInTheDocument()
     expect(screen.getByText('Comentário seguro')).toBeInTheDocument()
     expect(screen.getByText('Plano de desenvolvimento')).toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('Filtrar Competência'), {
+      target: { value: 'seguranca' },
+    })
+    expect(screen.getByRole('cell', { name: 'Preza pela segurança' })).toBeInTheDocument()
+    expect(screen.queryByRole('cell', { name: 'Qualidade do trabalho' })).not.toBeInTheDocument()
+    expect(document.querySelector('.table-query-print-body')).toHaveTextContent(
+      'Qualidade do trabalho',
+    )
   })
 
   it('não expõe resumo individual em rascunho', () => {

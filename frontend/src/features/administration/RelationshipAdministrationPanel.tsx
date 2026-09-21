@@ -1,7 +1,7 @@
 import { administrativeRead, useAdministrativeLoad } from './useAdministrativeLoad'
 import { SpreadsheetImportPanel } from './SpreadsheetImportPanel'
 import { AdministrativeTable } from '@/components/ui/administrative-table'
-import { useCallback, useEffect, useId, useMemo, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link2, RefreshCw, Unlink } from 'lucide-react'
 import { isAuthenticationError } from '../../api/client'
@@ -21,7 +21,8 @@ import { EmptyState } from '../../ui/EmptyState'
 import { ContextHelp } from '../../ui/ContextHelp'
 import { Pagination } from '../../ui/Pagination'
 import { safeErrorMessage } from '../../ui/safeErrorMessage'
-import { useClientPagination } from '../../ui/useClientPagination'
+import { useAccessibleDialog } from '../../ui/useAccessibleDialog'
+import { useTableQuery } from '../../ui/useTableQuery'
 
 type RelationshipAdministrationPanelProps = {
   api: ApiClient
@@ -30,9 +31,9 @@ type RelationshipAdministrationPanelProps = {
 }
 
 type CloseTarget =
-  | { kind: 'MANAGER'; id: string; label: string }
-  | { kind: 'DIRECTOR'; id: string; label: string }
-  | { kind: 'USER'; id: string; label: string }
+  | { kind: 'MANAGER'; id: string; label: string; startsOn: string | null }
+  | { kind: 'DIRECTOR'; id: string; label: string; startsOn: string | null }
+  | { kind: 'USER'; id: string; label: string; startsOn: string | null }
 
 /** Vínculos ativos entre contas, gestores e colaboradores, sempre encerrados por data. */
 export function RelationshipAdministrationPanel({
@@ -81,6 +82,7 @@ export function RelationshipAdministrationPanel({
   const [linkedStartsOn, setLinkedStartsOn] = useState('')
   const [closeTarget, setCloseTarget] = useState<CloseTarget>()
   const [endsOn, setEndsOn] = useState('')
+  const closeDialogRef = useRef<HTMLElement>(null)
   const {
     load,
     isLoading,
@@ -90,6 +92,25 @@ export function RelationshipAdministrationPanel({
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string>()
   const [notice, setNotice] = useState<string>()
+
+  useAccessibleDialog({
+    dialogRef: closeDialogRef,
+    isOpen: Boolean(closeTarget),
+    canDismiss: !isSaving,
+    onRequestClose: dismissClosing,
+  })
+
+  function dismissClosing() {
+    setCloseTarget(undefined)
+    setEndsOn('')
+    setError(undefined)
+  }
+
+  function openClosing(target: CloseTarget) {
+    setEndsOn('')
+    setError(undefined)
+    setCloseTarget(target)
+  }
 
   const canManageManagerAssignments = permissions.includes('VINCULOS_GESTOR_COLABORADOR.GERIR')
   const canManageDirectorManagerAssignments = permissions.includes(
@@ -310,6 +331,11 @@ export function RelationshipAdministrationPanel({
       return
     }
 
+    if (closeTarget.startsOn && endsOn < closeTarget.startsOn) {
+      setError('A data de encerramento não pode ser anterior ao início do vínculo.')
+      return
+    }
+    if (isSaving) return
     setIsSaving(true)
     try {
       if (closeTarget.kind === 'MANAGER') {
@@ -389,7 +415,7 @@ export function RelationshipAdministrationPanel({
         </button>
       </div>
 
-      {error ? (
+      {error && !closeTarget ? (
         <FeedbackMessage kind="error" onDismiss={() => setError(undefined)}>
           {error}
         </FeedbackMessage>
@@ -515,9 +541,10 @@ export function RelationshipAdministrationPanel({
               }
               accountColumn="Avaliador"
               onClose={(entry) =>
-                setCloseTarget({
+                openClosing({
                   kind: 'MANAGER',
                   id: entry.id,
+                  startsOn: entry.startsOn,
                   label: `${accountLabel(managerNamesById, entry.managerUserId)} · ${collaboratorLabel(
                     collaboratorNamesById,
                     entry.collaboratorId,
@@ -619,9 +646,10 @@ export function RelationshipAdministrationPanel({
               accountColumn="Diretoria"
               collaboratorColumn="Gerência"
               onClose={(entry) =>
-                setCloseTarget({
+                openClosing({
                   kind: 'DIRECTOR',
                   id: entry.id,
+                  startsOn: entry.startsOn,
                   label: `${accountLabel(directorNamesById, entry.directorUserId)} · ${collaboratorLabel(
                     collaboratorNamesById,
                     entry.managerCollaboratorId,
@@ -720,9 +748,10 @@ export function RelationshipAdministrationPanel({
               }
               accountColumn="Conta"
               onClose={(entry) =>
-                setCloseTarget({
+                openClosing({
                   kind: 'USER',
                   id: entry.id,
+                  startsOn: entry.startsOn,
                   label: `${accountLabel(userNamesById, entry.userId)} · ${collaboratorLabel(
                     collaboratorNamesById,
                     entry.collaboratorId,
@@ -735,47 +764,68 @@ export function RelationshipAdministrationPanel({
       ) : null}
 
       {closeTarget ? (
-        <section className="card stack-form" aria-labelledby="close-relationship-title">
-          <div className="context-help__heading">
-            <h3 id="close-relationship-title">Confirmar encerramento de vínculo</h3>
-            <ContextHelp title="O que é preservado ao encerrar">
-              <p>
-                O vínculo deixa de valer para novas operações, mas avaliações e decisões feitas no
-                período anterior permanecem registradas no histórico.
-              </p>
-            </ContextHelp>
-          </div>
-          <p className="muted">
-            {closeTarget.label}. O encerramento conserva o histórico; não exclui avaliações nem
-            registros anteriores.
-          </p>
-          <form className="stack-form" noValidate onSubmit={closeRelationship} aria-busy={isSaving}>
-            <div className="field">
-              <label htmlFor={endsOnId}>Data de encerramento</label>
-              <input
-                id={endsOnId}
-                type="date"
-                value={endsOn}
-                disabled={isSaving}
-                onChange={(event) => setEndsOn(event.target.value)}
-              />
+        <div className="account-dialog-backdrop">
+          <section
+            className="card stack-form account-dialog"
+            aria-labelledby="close-relationship-title"
+            ref={closeDialogRef}
+            role="dialog"
+            aria-modal="true"
+            tabIndex={-1}
+          >
+            {error ? (
+              <FeedbackMessage kind="error" onDismiss={() => setError(undefined)}>
+                {error}
+              </FeedbackMessage>
+            ) : null}
+            <div className="context-help__heading">
+              <h3 id="close-relationship-title">Confirmar encerramento de vínculo</h3>
+              <ContextHelp title="O que é preservado ao encerrar">
+                <p>
+                  O vínculo deixa de valer para novas operações, mas avaliações e decisões feitas no
+                  período anterior permanecem registradas no histórico.
+                </p>
+              </ContextHelp>
             </div>
-            <div className="action-row">
-              <button
-                className="button"
-                type="button"
-                disabled={isSaving}
-                onClick={() => setCloseTarget(undefined)}
-              >
-                Cancelar
-              </button>
-              <button className="button button--danger" type="submit" disabled={isSaving}>
-                <Unlink aria-hidden="true" size={17} strokeWidth={2} />
-                Confirmar encerramento
-              </button>
-            </div>
-          </form>
-        </section>
+            <p className="muted">
+              {closeTarget.label}. O encerramento conserva o histórico; não exclui avaliações nem
+              registros anteriores.
+            </p>
+            <form
+              className="stack-form"
+              noValidate
+              onSubmit={closeRelationship}
+              aria-busy={isSaving}
+            >
+              <div className="field">
+                <label htmlFor={endsOnId}>Data de encerramento</label>
+                <input
+                  id={endsOnId}
+                  data-dialog-initial-focus
+                  min={closeTarget.startsOn ?? undefined}
+                  type="date"
+                  value={endsOn}
+                  disabled={isSaving}
+                  onChange={(event) => setEndsOn(event.target.value)}
+                />
+              </div>
+              <div className="action-row">
+                <button
+                  className="button"
+                  type="button"
+                  disabled={isSaving}
+                  onClick={dismissClosing}
+                >
+                  Cancelar
+                </button>
+                <button className="button button--danger" type="submit" disabled={isSaving}>
+                  <Unlink aria-hidden="true" size={17} strokeWidth={2} />
+                  Confirmar encerramento
+                </button>
+              </div>
+            </form>
+          </section>
+        </div>
       ) : null}
     </section>
   )
@@ -796,7 +846,16 @@ function RelationshipTable<Entry extends { id: string; startsOn: string | null }
   collaboratorColumn?: string
   onClose: (entry: Entry) => void
 }) {
-  const pagination = useClientPagination(entries, 5)
+  const pagination = useTableQuery(
+    entries,
+    [
+      { key: 'account', label: accountColumn, value: getAccountName },
+      { key: 'collaborator', label: collaboratorColumn, value: getCollaboratorName },
+      { key: 'start', label: 'Início', value: (item) => item.startsOn, kind: 'date' },
+      { key: 'actions', label: 'Ação' },
+    ],
+    5,
+  )
 
   if (entries.length === 0) {
     return (
@@ -812,16 +871,10 @@ function RelationshipTable<Entry extends { id: string; startsOn: string | null }
       <AdministrativeTable>
         <caption className="visually-hidden">Vínculos ativos</caption>
         <AdministrativeTable.Head>
-          <AdministrativeTable.Row>
-            <AdministrativeTable.Heading scope="col">{accountColumn}</AdministrativeTable.Heading>
-            <AdministrativeTable.Heading scope="col">
-              {collaboratorColumn}
-            </AdministrativeTable.Heading>
-            <AdministrativeTable.Heading scope="col">Início</AdministrativeTable.Heading>
-            <AdministrativeTable.Heading scope="col">Ação</AdministrativeTable.Heading>
-          </AdministrativeTable.Row>
+          <AdministrativeTable.Row>{pagination.headings()}</AdministrativeTable.Row>
         </AdministrativeTable.Head>
         <AdministrativeTable.Body>
+          {pagination.emptyRow()}
           {pagination.items.map((entry) => (
             <AdministrativeTable.Row key={entry.id}>
               <AdministrativeTable.Cell data-label={accountColumn}>

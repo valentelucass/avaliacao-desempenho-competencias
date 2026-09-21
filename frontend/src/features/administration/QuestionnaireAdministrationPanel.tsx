@@ -15,7 +15,7 @@ import { EmptyState } from '../../ui/EmptyState'
 import { ContextHelp } from '../../ui/ContextHelp'
 import { Pagination } from '../../ui/Pagination'
 import { safeErrorMessage, safeLoadErrorMessage } from '../../ui/safeErrorMessage'
-import { useClientPagination } from '../../ui/useClientPagination'
+import { useTableQuery } from '../../ui/useTableQuery'
 import {
   assessmentScale,
   questionnaireTemplates,
@@ -68,7 +68,24 @@ export function QuestionnaireAdministrationPanel({
   const [submitError, setSubmitError] = useState<string>()
   const [notice, setNotice] = useState<string>()
   const canManageQuestionnaires = permissions.includes('QUESTIONARIOS.GERIR')
-  const versionsPagination = useClientPagination(versions, 5)
+  const versionsPagination = useTableQuery(
+    versions,
+    [
+      {
+        key: 'name',
+        label: 'Questionário',
+        value: (item) => item.questionnaireName + ' ' + item.questionnaireCode,
+      },
+      { key: 'version', label: 'Versão', value: (item) => item.versionNumber, kind: 'number' },
+      { key: 'title', label: 'Título', value: (item) => item.title },
+      {
+        key: 'configuration',
+        label: 'Configuração aprovada',
+        value: (item) => formatConfigurationOptions(item),
+      },
+    ],
+    5,
+  )
 
   const loadApprovedVersions = useCallback(async () => {
     if (!canManageQuestionnaires) {
@@ -297,17 +314,11 @@ export function QuestionnaireAdministrationPanel({
                   </caption>
                   <AdministrativeTable.Head>
                     <AdministrativeTable.Row>
-                      <AdministrativeTable.Heading scope="col">
-                        Questionário
-                      </AdministrativeTable.Heading>
-                      <AdministrativeTable.Heading scope="col">Versão</AdministrativeTable.Heading>
-                      <AdministrativeTable.Heading scope="col">Título</AdministrativeTable.Heading>
-                      <AdministrativeTable.Heading scope="col">
-                        Configuração aprovada
-                      </AdministrativeTable.Heading>
+                      {versionsPagination.headings()}
                     </AdministrativeTable.Row>
                   </AdministrativeTable.Head>
                   <AdministrativeTable.Body>
+                    {versionsPagination.emptyRow()}
                     {versionsPagination.items.map((version) => (
                       <AdministrativeTable.Row key={version.questionnaireVersionId}>
                         <AdministrativeTable.Cell data-label="Questionário">
