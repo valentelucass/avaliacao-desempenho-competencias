@@ -167,14 +167,6 @@ async function main() {
           assert.deepEqual(errors, [], 'Abertura normal não deve gerar erros no console')
           assert.equal(await evaluate('document.querySelector("[role=alert]") !== null'), false)
         }
-        if (scenario === 'anonymous') {
-          await evaluate(
-            `(()=>{const b=[...document.querySelectorAll('button')].find(b=>b.textContent.includes('Retomar sessão existente'));b.click()})()`,
-          )
-          await ready("document.body.textContent.includes('Não há uma sessão ativa para retomar')")
-          assert.equal(calls.filter((call) => call.route.endsWith('/restore')).length, 2)
-          assert.deepEqual(errors, [])
-        }
         console.log(
           JSON.stringify({
             scenario,

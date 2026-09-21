@@ -925,8 +925,7 @@ export function UserAdministrationPanel({
                   <div>
                     <h5>Capacidades delegadas</h5>
                     <p className="field-hint">
-                      Esta concessão é individual. Ela não acompanha automaticamente o perfil de RH,
-                      Diretoria ou Gestor.
+                      A concessão é individual; não acompanha o perfil de RH, Diretoria ou Gestor.
                     </p>
                   </div>
                   {passwordDelegationError ? (
@@ -1070,10 +1069,8 @@ export function UserAdministrationPanel({
                 >
                   <h4>Perfil de acesso</h4>
                   <p className="muted">
-                    Escolha exatamente um perfil. Ao salvar, os papéis anteriores e as exceções
-                    individuais comuns desta conta serão removidos; capacidades de senha delegadas
-                    permanecem sob controle da seção de segurança. O servidor revalida o operador, o
-                    alvo e todas as regras.
+                    O perfil substitui papéis e exceções comuns. As capacidades de senha permanecem
+                    na seção Segurança; o servidor revalida a operação.
                   </p>
                   {accessError ? (
                     <FeedbackMessage kind="error" onDismiss={() => setAccessError(undefined)}>

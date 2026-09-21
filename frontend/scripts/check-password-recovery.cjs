@@ -67,9 +67,10 @@ module.exports = async function checkPasswordRecovery({ send, frameId, css }) {
   }
   for (const theme of ['light', 'dark'])
     for (const width of [320, 768, 1440]) {
+      const height = width === 1440 ? 768 : 1000
       await send('Emulation.setDeviceMetricsOverride', {
         width,
-        height: 1000,
+        height,
         deviceScaleFactor: 1,
         mobile: false,
       })
@@ -118,6 +119,21 @@ module.exports = async function checkPasswordRecovery({ send, frameId, css }) {
         true,
         'Detalhes devem separar dados, acessos e redefinição de senha',
       )
+      if (width === 1440) {
+        const passwordLayout = await evaluate(
+          `(()=>{const dialog=document.querySelector('[role=dialog]'),security=dialog.querySelector('.account-dialog__security'),reset=security.querySelector('.account-password-reset'),delegation=security.querySelector('.account-dialog__password-delegation'),r=reset.getBoundingClientRect(),d=delegation.getBoundingClientRect(),bounds=dialog.getBoundingClientRect();return {fits:dialog.scrollHeight<=dialog.clientHeight+1,sideBySide:Math.abs(r.top-d.top)<1,overflow:getComputedStyle(dialog).overflowY,dialog:{top:bounds.top,bottom:bounds.bottom,height:bounds.height,client:dialog.clientHeight,scroll:dialog.scrollHeight},reset:{top:r.top,height:r.height},delegation:{top:d.top,height:d.height},viewport:innerHeight}})()`,
+        )
+        assert.equal(
+          passwordLayout.fits && passwordLayout.sideBySide && passwordLayout.overflow !== 'auto',
+          true,
+          `O diálogo amplo deve usar a largura disponível, manter ações de senha lado a lado e não criar rolagem interna: ${JSON.stringify(passwordLayout)}`,
+        )
+        const screenshot = await send('Page.captureScreenshot', { format: 'png' })
+        fs.writeFileSync(
+          `dist/cor024-account-popup-${theme}.png`,
+          Buffer.from(screenshot.data, 'base64'),
+        )
+      }
       await evaluate(`document.querySelector('[aria-label="Fechar detalhes da conta"]').click()`)
       await ready("!document.querySelector('[role=dialog]')")
       await click('Encerrar')

@@ -188,7 +188,7 @@ module.exports = async function checkSpreadsheetImport({ send, frameId, css }) {
         assert.equal(await evaluate('document.documentElement.scrollWidth<=innerWidth+1'), true)
         assert.equal(
           await evaluate(
-            `(()=>{const p=document.querySelectorAll('.spreadsheet-import__panel')[${index}];const r=p.getBoundingClientRect();return p.scrollWidth<=p.clientWidth+1&&[...p.querySelectorAll('input,select,button,table')].every(e=>{const c=e.getBoundingClientRect();return c.left>=r.left&&c.right<=r.right+1})})()`,
+            `(()=>{const p=document.querySelectorAll('.spreadsheet-import__panel')[${index}];const r=p.getBoundingClientRect();return p.scrollWidth<=p.clientWidth+1&&[...p.querySelectorAll('input,select,button,table')].every(e=>{if(e.getClientRects().length===0)return true;const c=e.getBoundingClientRect();return c.left>=r.left&&c.right<=r.right+1})})()`,
           ),
           true,
           JSON.stringify({
@@ -196,7 +196,7 @@ module.exports = async function checkSpreadsheetImport({ send, frameId, css }) {
             theme,
             index,
             bounds: await evaluate(
-              `(()=>{const p=document.querySelectorAll('.spreadsheet-import__panel')[${index}],r=p.getBoundingClientRect();return {panel:{left:r.left,right:r.right,scroll:p.scrollWidth,client:p.clientWidth},bad:[...p.querySelectorAll('input,select,button,table')].map(e=>{const c=e.getBoundingClientRect();return {tag:e.tagName,label:e.getAttribute('aria-label'),left:c.left,right:c.right,width:c.width}}).filter(c=>c.left<r.left||c.right>r.right+1)}})()`,
+              `(()=>{const p=document.querySelectorAll('.spreadsheet-import__panel')[${index}],r=p.getBoundingClientRect();return {panel:{left:r.left,right:r.right,scroll:p.scrollWidth,client:p.clientWidth},bad:[...p.querySelectorAll('input,select,button,table')].filter(e=>e.getClientRects().length>0).map(e=>{const c=e.getBoundingClientRect();return {tag:e.tagName,label:e.getAttribute('aria-label'),left:c.left,right:c.right,width:c.width}}).filter(c=>c.left<r.left||c.right>r.right+1)}})()`,
             ),
           }),
         )
