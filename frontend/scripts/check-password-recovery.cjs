@@ -112,6 +112,22 @@ module.exports = async function checkPasswordRecovery({ send, frameId, css }) {
       await ready("!document.querySelector('[role=dialog]')")
       await evaluate('window.recoveryFixture.show(true)')
       await ready(`!!(${button('Solicitar redefinição de senha')})`)
+      assert.equal(
+        await evaluate(
+          `(()=>{const title=document.querySelector('.auth-page__product-name');return title?.textContent.trim()==='Avaliação de desempenho'&&getComputedStyle(title).borderLeftWidth==='1px'})()`,
+        ),
+        true,
+        'Cabeçalho deve identificar o produto com divisor vertical',
+      )
+      await click('Solicitar redefinição de senha')
+      await ready(`!!(${button('Voltar ao acesso')})`)
+      assert.equal(
+        await evaluate("!document.querySelector('input[name=password]')"),
+        true,
+        'Recuperação deve substituir os campos de login',
+      )
+      await click('Voltar ao acesso')
+      await ready("!!document.querySelector('input[name=password]')")
       await click('Solicitar redefinição de senha')
       await fill('form[aria-busy] input', 'pessoa@example.invalid')
       await click('Enviar solicitação')

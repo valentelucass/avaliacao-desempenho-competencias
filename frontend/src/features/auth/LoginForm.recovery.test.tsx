@@ -5,6 +5,35 @@ import { ApiError, type ApiClient } from '../../api/client'
 import { LoginForm } from './LoginForm'
 
 describe('Solicitação de recuperação no login', () => {
+  it('mantém os campos e as ações secundárias no único cartão de acesso', () => {
+    render(
+      <LoginForm
+        api={{} as ApiClient}
+        isRestoringSession={false}
+        onAuthenticated={vi.fn()}
+        onToggleTheme={vi.fn()}
+        theme="light"
+      />,
+    )
+
+    const password = screen.getByLabelText('Senha')
+    expect(password).toHaveAttribute('type', 'password')
+    fireEvent.click(screen.getByRole('button', { name: 'Mostrar senha' }))
+    expect(password).toHaveAttribute('type', 'text')
+    expect(screen.getByRole('button', { name: 'Ocultar senha' })).toBeInTheDocument()
+    expect(screen.getByText('Acesso restrito à plataforma.')).toBeInTheDocument()
+    expect(screen.getByRole('complementary', { name: 'Sobre esta página' })).toHaveTextContent(
+      'Avaliações de desempenho',
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Solicitar redefinição de senha' }))
+    expect(screen.getByRole('heading', { level: 1, name: 'Solicitar redefinição' })).toBeVisible()
+    expect(screen.queryByLabelText('E-mail ou login')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('E-mail ou login para recuperação')).toBeVisible()
+    fireEvent.click(screen.getByRole('button', { name: 'Voltar ao acesso' }))
+    expect(screen.getByRole('heading', { level: 1, name: 'Acesso à plataforma' })).toBeVisible()
+  })
+
   it('aceita o login, evita envios simultâneos e responde sem revelar se a conta existe', async () => {
     let complete!: () => void
     const request = vi.fn().mockImplementation(
@@ -18,7 +47,6 @@ describe('Solicitação de recuperação no login', () => {
         api={{ requestPasswordReset: request } as unknown as ApiClient}
         isRestoringSession={false}
         onAuthenticated={vi.fn()}
-        onResumeSession={vi.fn()}
         onToggleTheme={vi.fn()}
         theme="light"
       />,

@@ -173,37 +173,6 @@ function App({ api = defaultApiClient }: AppProps) {
     }
   }, [theme])
 
-  const resumeSession = useCallback(
-    async (showUnavailableNotice = true, showProgress = true) => {
-      if (showProgress) {
-        setIsRestoringSession(true)
-      }
-      setStartupError(undefined)
-      setNotice(undefined)
-
-      try {
-        // Os cookies de credencial são HttpOnly; a API é a única autoridade para
-        // confirmar se ainda há uma sessão que possa ser retomada.
-        const restoredUser = await api.restoreSession()
-        if (restoredUser) {
-          setUser(restoredUser)
-          return
-        }
-
-        if (showUnavailableNotice) {
-          setNotice('Não há uma sessão ativa para retomar. Entre com seu login e senha.')
-        }
-      } catch (requestError) {
-        setStartupError(safeErrorMessage(requestError))
-      } finally {
-        if (showProgress) {
-          setIsRestoringSession(false)
-        }
-      }
-    },
-    [api],
-  )
-
   useEffect(() => {
     // O servidor preserva o acesso válido e só renova quando necessário.
     // Ausência de sessão é um resultado normal desta restauração opcional.
@@ -314,7 +283,6 @@ function App({ api = defaultApiClient }: AppProps) {
         isRestoringSession={isRestoringSession}
         notice={notice}
         onAuthenticated={handleAuthenticated}
-        onResumeSession={resumeSession}
         onToggleTheme={() => setTheme((current) => (current === 'light' ? 'dark' : 'light'))}
         startupError={startupError}
         theme={theme}

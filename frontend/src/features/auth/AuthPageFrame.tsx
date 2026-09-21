@@ -26,7 +26,10 @@ export function AuthPageFrame({
       aria-labelledby={labelledBy}
     >
       <header className="auth-page__header">
-        <BrandLogo className="brand-logo auth-page__logo" />
+        <div className="auth-page__identity">
+          <BrandLogo className="brand-logo auth-page__logo" />
+          <span className="auth-page__product-name">Avaliação de desempenho</span>
+        </div>
         <ThemeToggle
           variant="icon"
           theme={theme}

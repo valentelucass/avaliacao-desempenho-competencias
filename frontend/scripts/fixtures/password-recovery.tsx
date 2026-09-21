@@ -62,7 +62,6 @@ function show(login: boolean) {
         api={api}
         isRestoringSession={false}
         onAuthenticated={() => {}}
-        onResumeSession={async () => {}}
         onToggleTheme={() => {}}
         theme="light"
       />

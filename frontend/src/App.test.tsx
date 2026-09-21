@@ -272,6 +272,7 @@ describe('App', () => {
     expect(screen.getByLabelText('E-mail ou login')).toBeInTheDocument()
     expect(screen.getByLabelText('Senha')).toHaveAttribute('type', 'password')
     expect(screen.getByRole('img', { name: 'Rodogarcia' })).toBeInTheDocument()
+    expect(screen.getByText('Avaliação de desempenho')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Ativar modo escuro' })).toBeInTheDocument()
     expect(screen.getByRole('contentinfo')).toHaveTextContent(
       'Todos os direitos reservados à Rodogarcia.',
@@ -280,7 +281,6 @@ describe('App', () => {
     expect(screen.getByRole('complementary', { name: 'Sobre esta página' })).toHaveTextContent(
       'Avaliações de desempenho',
     )
-    expect(screen.getByRole('button', { name: 'Retomar sessão existente' })).toBeInTheDocument()
     expect(api.refreshSession).toHaveBeenCalledTimes(1)
     expect(api.currentUser).toHaveBeenCalledTimes(2)
   })
@@ -433,20 +433,6 @@ describe('App', () => {
     ).toBeInTheDocument()
     expect(api.listAdministrationUsers).not.toHaveBeenCalled()
     expect(screen.queryByLabelText('E-mail ou login')).not.toBeInTheDocument()
-  })
-
-  it('informa quando não há sessão disponível para retomar', async () => {
-    const api = createApi({ refreshSession: vi.fn().mockResolvedValue(null) })
-    render(<App api={api} />)
-
-    await waitFor(() => expect(api.refreshSession).toHaveBeenCalledTimes(1))
-    fireEvent.click(screen.getByRole('button', { name: 'Retomar sessão existente' }))
-
-    await waitFor(() => expect(api.refreshSession).toHaveBeenCalledTimes(2))
-    expect(screen.getByLabelText('E-mail ou login')).toBeInTheDocument()
-    expect(
-      screen.getByText('Não há uma sessão ativa para retomar. Entre com seu login e senha.'),
-    ).toBeInTheDocument()
   })
 
   it('explica falha de credenciais sem revelar o estado da conta', async () => {
