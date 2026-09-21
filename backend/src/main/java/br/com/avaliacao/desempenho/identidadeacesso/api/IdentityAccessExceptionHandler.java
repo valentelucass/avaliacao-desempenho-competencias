@@ -23,6 +23,17 @@ public class IdentityAccessExceptionHandler {
 
   private static final String PROBLEM_BASE = "https://api-formulario.rodogarcia.com.br/problems/";
 
+  @ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
+  ResponseEntity<ProblemDetail> invalidJson(HttpServletRequest request) {
+    return problem(
+        request,
+        HttpStatus.BAD_REQUEST,
+        "INVALID_REQUEST",
+        "Solicitação inválida",
+        "Revise os campos informados.",
+        null);
+  }
+
   @ExceptionHandler(AuthenticationFailureException.class)
   ResponseEntity<ProblemDetail> authenticationFailed(HttpServletRequest request) {
     return problem(

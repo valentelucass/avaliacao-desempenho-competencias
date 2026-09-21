@@ -80,6 +80,7 @@ const profileLabels: Readonly<Record<string, string>> = {
 function App({ api = defaultApiClient }: AppProps) {
   const [user, setUser] = useState<CurrentUser | null>(null)
   const [passwordChangeUsername, setPasswordChangeUsername] = useState<string>()
+  const [voluntaryPasswordChange, setVoluntaryPasswordChange] = useState(false)
   const [startupError, setStartupError] = useState<string>()
   const [notice, setNotice] = useState<string>()
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
@@ -238,6 +239,7 @@ function App({ api = defaultApiClient }: AppProps) {
   }, [api, passwordChangeUsername])
 
   function handleAuthenticated(authenticatedUser: CurrentUser, username: string) {
+    setVoluntaryPasswordChange(false)
     setStartupError(undefined)
     setNotice(undefined)
     setPasswordChangeUsername(authenticatedUser.passwordChangeRequired ? username : undefined)
@@ -245,6 +247,7 @@ function App({ api = defaultApiClient }: AppProps) {
   }
 
   const handlePasswordChanged = useCallback(() => {
+    setVoluntaryPasswordChange(false)
     setStartupError(undefined)
     setUser(null)
     setPasswordChangeUsername(undefined)
@@ -292,7 +295,7 @@ function App({ api = defaultApiClient }: AppProps) {
     )
   }
 
-  if (user.passwordChangeRequired) {
+  if (user.passwordChangeRequired || voluntaryPasswordChange) {
     return (
       <PasswordChangeForm
         api={api}
@@ -301,6 +304,14 @@ function App({ api = defaultApiClient }: AppProps) {
         onToggleTheme={() => setTheme((current) => (current === 'light' ? 'dark' : 'light'))}
         theme={theme}
         username={passwordChangeUsername}
+        onCancel={
+          user.passwordChangeRequired
+            ? undefined
+            : () => {
+                setVoluntaryPasswordChange(false)
+                requestAnimationFrame(() => menuButtonRef.current?.focus())
+              }
+        }
       />
     )
   }
@@ -562,6 +573,17 @@ function App({ api = defaultApiClient }: AppProps) {
           ) : null}
         </SidebarNavigation>
         <div className="workspace-sidebar__footer">
+          <button
+            className="button"
+            type="button"
+            disabled={isSigningOut}
+            onClick={() => {
+              closeSidebar()
+              setVoluntaryPasswordChange(true)
+            }}
+          >
+            Alterar minha senha
+          </button>
           <button
             className="button workspace-sidebar__sign-out"
             disabled={isSigningOut}

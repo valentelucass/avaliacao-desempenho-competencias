@@ -8,7 +8,8 @@ public final class LocalPasswordPolicy {
 
   public static boolean accepts(String password) {
     return password != null
-        && password.length() >= 12
+        && !password.isBlank()
+        && password.codePointCount(0, password.length()) >= 12
         && password.getBytes(StandardCharsets.UTF_8).length <= 72;
   }
 }

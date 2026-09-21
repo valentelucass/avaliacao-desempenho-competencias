@@ -53,35 +53,43 @@ public class PasswordRecoveryService {
 
   public List<PasswordRecoveryRepository.PendingRequest> list(
       UUID actor, Set<String> permissions, long after, int limit) {
-    requirePasswordResetOperator(actor, permissions);
     if (after < 0 || limit < 1 || limit > 100) {
       throw new UserAdministrationException(
           UserAdministrationException.Reason.INVALID_INPUT, "Paginação inválida.");
     }
-    return repository.listPending(after, limit + 1);
+    return transaction.execute(
+        ignored -> {
+          var operator = requirePasswordResetOperator(actor);
+          return repository.listPending(actor, operator.isSupreme(), after, limit + 1);
+        });
   }
 
   public GeneratedPassword generate(
       UUID userId, UUID actor, Set<String> permissions, String requestId) {
-    requirePasswordResetOperator(actor, permissions);
+    transaction.execute(ignored -> requirePasswordResetOperator(actor));
     byte[] bytes = new byte[24];
     random.nextBytes(bytes);
     String temporary = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+    java.util.Arrays.fill(bytes, (byte) 0);
     UserAdministrationRepository.UserView user =
         administration.resetOrdinaryUserPassword(userId, temporary, actor, permissions, requestId);
     return new GeneratedPassword(user, temporary);
   }
 
-  private void requirePasswordResetOperator(UUID actor, Set<String> permissions) {
-    Set<String> safePermissions = Set.copyOf(permissions);
-    PasswordResetAuthorizationPolicy.Actor operator =
-        new PasswordResetAuthorizationPolicy.Actor(
-            actor, users.isSupremeAdministrator(actor), safePermissions);
+  private PasswordResetAuthorizationPolicy.Actor requirePasswordResetOperator(UUID actor) {
+    var operator =
+        users
+            .lockPasswordResetActor(actor)
+            .orElseThrow(
+                () ->
+                    new UserAdministrationException(
+                        UserAdministrationException.Reason.FORBIDDEN,
+                        "Não foi possível realizar esta operação."));
     if (!authorizationPolicy.mayListPendingRequests(operator)) {
       throw new UserAdministrationException(
-          UserAdministrationException.Reason.FORBIDDEN,
-          "A recuperação exige delegação individual ou administração suprema autorizada.");
+          UserAdministrationException.Reason.FORBIDDEN, "Não foi possível realizar esta operação.");
     }
+    return operator;
   }
 
   public record GeneratedPassword(

@@ -32,7 +32,7 @@ public class SqlIdentityAccessRepository implements IdentityAccessRepository {
              c.senha_deve_ser_trocada, c.tentativas_falhas, c.bloqueada_ate_utc
       FROM dbo.usuario AS u
       INNER JOIN dbo.credencial_local AS c ON c.usuario_id = u.usuario_id
-      WHERE u.login_normalizado = ?
+      WHERE u.login_normalizado = ? AND u.excluido_logicamente = 0
       """;
 
   private final JdbcTemplate jdbcTemplate;
@@ -73,7 +73,8 @@ public class SqlIdentityAccessRepository implements IdentityAccessRepository {
               AND s.jti_acesso = ?
               AND s.revogada_em_utc IS NULL
               AND s.expira_em_utc > ?
-              AND u.situacao = 'ATIVO'
+              AND u.situacao = 'ATIVO' AND u.excluido_logicamente = 0
+              AND (c.bloqueada_ate_utc IS NULL OR c.bloqueada_ate_utc <= ?)
             """,
             resultSet -> {
               if (!resultSet.next()) {
@@ -92,6 +93,7 @@ public class SqlIdentityAccessRepository implements IdentityAccessRepository {
             sessionId,
             userId,
             accessTokenId,
+            timestamp(now),
             timestamp(now));
     return user;
   }
@@ -99,6 +101,8 @@ public class SqlIdentityAccessRepository implements IdentityAccessRepository {
   @Override
   public void registerFailedLogin(
       UUID userId, Instant now, int failureThreshold, Instant blockUntilWhenThresholdReached) {
+    jdbcTemplate.queryForList(
+        "SELECT usuario_id FROM dbo.usuario WITH (UPDLOCK, HOLDLOCK) WHERE usuario_id = ?", userId);
     jdbcTemplate.update(
         """
         UPDATE dbo.credencial_local
@@ -118,6 +122,18 @@ public class SqlIdentityAccessRepository implements IdentityAccessRepository {
         timestamp(blockUntilWhenThresholdReached),
         userId,
         timestamp(now));
+    Boolean blocked =
+        jdbcTemplate.query(
+            """
+        SELECT usuario_id FROM dbo.credencial_local
+        WHERE usuario_id = ? AND bloqueada_ate_utc > ?
+        """,
+            rs -> {
+              return rs.next();
+            },
+            userId,
+            timestamp(now));
+    if (Boolean.TRUE.equals(blocked)) revokeAllUserSessions(userId, "BLOQUEIO_TEMPORARIO");
   }
 
   @Override
@@ -181,7 +197,10 @@ public class SqlIdentityAccessRepository implements IdentityAccessRepository {
             """
             SELECT t.token_renovacao_id, t.sessao_id, t.emitido_em_utc, t.expira_em_utc,
                    t.revogado_em_utc, s.usuario_id, s.familia_id, s.revogada_em_utc AS sessao_revogada_em_utc,
-                   u.nome_exibicao, u.situacao, c.senha_deve_ser_trocada
+                   u.nome_exibicao, u.situacao, c.senha_deve_ser_trocada,
+                   CASE WHEN u.situacao = 'ATIVO' AND u.excluido_logicamente = 0
+                     AND (c.bloqueada_ate_utc IS NULL OR c.bloqueada_ate_utc <= SYSUTCDATETIME())
+                     THEN 1 ELSE 0 END AS usuario_habilitado
             FROM dbo.token_renovacao AS t WITH (UPDLOCK, HOLDLOCK)
             INNER JOIN dbo.sessao_autenticacao AS s ON s.sessao_id = t.sessao_id
             INNER JOIN dbo.usuario AS u ON u.usuario_id = s.usuario_id
@@ -324,6 +343,7 @@ public class SqlIdentityAccessRepository implements IdentityAccessRepository {
             senha_alterada_em_utc = SYSUTCDATETIME(), senha_deve_ser_trocada = 0,
             tentativas_falhas = 0, bloqueada_ate_utc = NULL
         WHERE usuario_id = ? AND senha_hash COLLATE Latin1_General_100_BIN2 = ?
+          AND (bloqueada_ate_utc IS NULL OR bloqueada_ate_utc <= SYSUTCDATETIME())
           AND EXISTS (SELECT 1 FROM dbo.usuario u WHERE u.usuario_id = credencial_local.usuario_id
                       AND u.situacao = 'ATIVO' AND u.excluido_logicamente = 0)
           """,
@@ -451,7 +471,7 @@ public class SqlIdentityAccessRepository implements IdentityAccessRepository {
         instant(resultSet, "expira_em_utc"),
         instant(resultSet, "revogado_em_utc"),
         instant(resultSet, "sessao_revogada_em_utc") == null,
-        accountStatus(resultSet.getString("situacao")).canAuthenticate());
+        resultSet.getBoolean("usuario_habilitado"));
   }
 
   private static AccountStatus accountStatus(String databaseValue) {

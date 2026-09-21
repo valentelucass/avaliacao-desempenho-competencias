@@ -8,7 +8,7 @@ import java.util.UUID;
 public interface PasswordRecoveryRepository {
   void request(String normalizedLogin, String requestId);
 
-  List<PendingRequest> listPending(long after, int limit);
+  List<PendingRequest> listPending(UUID actor, boolean supreme, long after, int limit);
 
   record PendingRequest(
       long sequence, UUID userId, String displayName, String login, Instant requestedAt) {}

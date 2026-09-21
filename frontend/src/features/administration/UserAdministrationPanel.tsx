@@ -322,7 +322,11 @@ export function UserAdministrationPanel({
       setCreateError('Informe login, nome e senha inicial para criar a conta.')
       return
     }
-    if (initialPassword.length < 12 || new TextEncoder().encode(initialPassword).length > 72) {
+    if (
+      !initialPassword.trim() ||
+      Array.from(initialPassword).length < 12 ||
+      new TextEncoder().encode(initialPassword).length > 72
+    ) {
       setCreateError(
         'A senha inicial deve ter ao menos 12 caracteres e respeitar o limite de 72 bytes.',
       )
@@ -514,6 +518,7 @@ export function UserAdministrationPanel({
       hasAllowedPermission(selectedUser, 'SENHAS.DELEGAR_REDEFINICAO'))
   const canResetSelectedUserPassword =
     Boolean(selectedUser) &&
+    !selectedUser?.roles.includes('ADMINISTRADOR_PLATAFORMA') &&
     canResetPasswords &&
     selectedUser?.status === 'ACTIVE' &&
     !selectedUserIsCurrent &&
@@ -521,23 +526,13 @@ export function UserAdministrationPanel({
     (isSupremeAdministrator || !selectedUserIsPrivilegedForDelegates)
   const canConfigureSelectedUserPasswordDelegation =
     Boolean(selectedUser) &&
+    selectedUser?.status === 'ACTIVE' &&
+    !selectedUser?.roles.includes('ADMINISTRADOR_PLATAFORMA') &&
     canDelegatePasswordResets &&
     !selectedUserIsCurrent &&
     selectedUserIsMutable &&
     (isSupremeAdministrator || !selectedUserIsPrivilegedForDelegates)
-  const passwordResetRestriction = !canResetPasswords
-    ? 'Sua conta não possui uma delegação autorizada para redefinir senhas.'
-    : !isSupremeAdministrator && selectedUserIsPrivilegedForDelegates
-      ? 'Contas técnicas e contas que delegam redefinições de senha exigem administrador supremo.'
-      : selectedUserIsCurrent
-        ? 'A própria conta não pode redefinir a senha por este fluxo administrativo.'
-        : !canReadUsers
-          ? 'Sua conta não possui as permissões necessárias para consultar esta conta.'
-          : selectedUser?.status !== 'ACTIVE'
-            ? 'Reative a conta antes de gerar uma senha temporária.'
-            : !selectedUserIsMutable
-              ? 'Esta conta é protegida ou foi excluída logicamente e não pode receber uma senha temporária.'
-              : undefined
+  const passwordResetRestriction = 'Redefinição indisponível para esta operação.'
   const hasAnyAdministrationPermission =
     canReadUsers || canCreateUsers || canUpdateUsers || canManageAccess || canResetPasswords
   const hasVisibleUserOperation = canReadUsers || (canCreateUsers && accountProfiles.length > 0)
@@ -576,8 +571,11 @@ export function UserAdministrationPanel({
           <button
             className="button"
             type="button"
-            onClick={() => void loadUsers()}
-            disabled={isLoadingUsers}
+            onClick={() => {
+              setSelectedUser(undefined)
+              void loadUsers()
+            }}
+            disabled={isLoadingUsers || isResettingPassword || isSavingPasswordDelegation}
           >
             <RefreshCw aria-hidden="true" size={17} strokeWidth={2} />
             {isLoadingUsers ? 'Atualizando…' : 'Atualizar contas'}
@@ -904,7 +902,9 @@ export function UserAdministrationPanel({
                   key={selectedUser.id}
                   api={api}
                   userId={selectedUser.id}
-                  disabled={isUpdating || isDeleting || isSavingAccess}
+                  disabled={
+                    isUpdating || isDeleting || isSavingAccess || isSavingPasswordDelegation
+                  }
                   onSessionExpired={onSessionExpired}
                   onBusyChange={setIsResettingPassword}
                   onReset={(user) => {

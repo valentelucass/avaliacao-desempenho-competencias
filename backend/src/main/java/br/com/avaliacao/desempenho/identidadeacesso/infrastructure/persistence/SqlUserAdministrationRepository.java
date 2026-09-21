@@ -2,6 +2,7 @@ package br.com.avaliacao.desempenho.identidadeacesso.infrastructure.persistence;
 
 import br.com.avaliacao.desempenho.identidadeacesso.application.UserAdministrationRepository;
 import br.com.avaliacao.desempenho.identidadeacesso.domain.model.AccountStatus;
+import br.com.avaliacao.desempenho.identidadeacesso.domain.model.PasswordResetAuthorizationPolicy;
 import br.com.avaliacao.desempenho.identidadeacesso.domain.model.PermissionEffect;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -61,6 +62,93 @@ public class SqlUserAdministrationRepository implements UserAdministrationReposi
         """,
         resultSet ->
             resultSet.next() ? Optional.of(hydrate(baseUser(resultSet))) : Optional.empty(),
+        userId);
+  }
+
+  @Override
+  public Optional<PasswordResetAuthorizationPolicy.Actor> lockPasswordResetActor(UUID actorUserId) {
+    return jdbcTemplate.query(
+        """
+        SELECT usuario.administrador_supremo
+        FROM dbo.usuario usuario WITH (UPDLOCK, HOLDLOCK)
+        JOIN dbo.credencial_local credencial WITH (UPDLOCK, HOLDLOCK)
+          ON credencial.usuario_id = usuario.usuario_id
+        WHERE usuario.usuario_id = ? AND usuario.situacao = 'ATIVO'
+          AND usuario.excluido_logicamente = 0 AND credencial.senha_deve_ser_trocada = 0
+          AND (credencial.bloqueada_ate_utc IS NULL OR credencial.bloqueada_ate_utc <= SYSUTCDATETIME())
+          AND (usuario.administrador_supremo = 1 OR (usuario.protegido_fluxo_normal = 0
+            AND NOT EXISTS (SELECT 1 FROM dbo.atribuicao_papel atribuicao
+              JOIN dbo.papel papel ON papel.papel_id = atribuicao.papel_id
+              WHERE atribuicao.usuario_id = usuario.usuario_id AND atribuicao.revogado_em_utc IS NULL
+                AND papel.codigo = 'ADMINISTRADOR_PLATAFORMA')))
+        """,
+        rs -> {
+          if (!rs.next()) return Optional.empty();
+          Set<String> permissions =
+              new LinkedHashSet<>(
+                  jdbcTemplate.queryForList(
+                      """
+              SELECT permissao.codigo FROM dbo.concessao_permissao_usuario concessao
+              JOIN dbo.permissao permissao ON permissao.permissao_id = concessao.permissao_id
+              WHERE concessao.usuario_id = ? AND concessao.revogado_em_utc IS NULL
+                AND concessao.efeito = 'PERMITIR' AND permissao.ativo = 1
+                AND permissao.codigo IN ('SENHAS.REDEFINIR', 'SENHAS.DELEGAR_REDEFINICAO')
+              """,
+                      String.class,
+                      actorUserId));
+          return Optional.of(
+              new PasswordResetAuthorizationPolicy.Actor(
+                  actorUserId, rs.getBoolean(1), permissions));
+        },
+        actorUserId);
+  }
+
+  @Override
+  public Optional<UserView> lockPasswordResetTarget(UUID userId) {
+    Boolean eligible =
+        jdbcTemplate.query(
+            """
+        SELECT usuario.usuario_id FROM dbo.usuario usuario WITH (UPDLOCK, HOLDLOCK)
+        JOIN dbo.credencial_local credencial WITH (UPDLOCK, HOLDLOCK)
+          ON credencial.usuario_id = usuario.usuario_id
+        WHERE usuario.usuario_id = ? AND
+        """
+                + PasswordResetSqlEligibility.TARGET,
+            rs -> {
+              return rs.next();
+            },
+            userId);
+    return Boolean.TRUE.equals(eligible) ? findUser(userId) : Optional.empty();
+  }
+
+  @Override
+  public List<UserView> listPasswordResetTargets(UUID actorUserId, boolean supreme) {
+    return jdbcTemplate
+        .query(
+            """
+        SELECT usuario.usuario_id, usuario.login_normalizado, usuario.nome_exibicao, usuario.situacao,
+          usuario.protegido_fluxo_normal, usuario.excluido_logicamente,
+          credencial.senha_deve_ser_trocada, usuario.atualizado_em_utc
+        FROM dbo.usuario usuario JOIN dbo.credencial_local credencial
+          ON credencial.usuario_id = usuario.usuario_id
+        WHERE
+        """
+                + PasswordResetSqlEligibility.TARGET
+                + PasswordResetSqlEligibility.OPERATOR_SCOPE
+                + " ORDER BY usuario.nome_exibicao, usuario.usuario_id",
+            (rs, row) -> baseUser(rs),
+            actorUserId,
+            supreme ? 1 : 0)
+        .stream()
+        .map(this::hydrate)
+        .toList();
+  }
+
+  @Override
+  public Optional<String> passwordHashForReset(UUID userId) {
+    return jdbcTemplate.query(
+        "SELECT senha_hash FROM dbo.credencial_local WHERE usuario_id = ?",
+        rs -> rs.next() ? Optional.of(rs.getString(1)) : Optional.empty(),
         userId);
   }
 
@@ -128,67 +216,31 @@ public class SqlUserAdministrationRepository implements UserAdministrationReposi
   }
 
   @Override
-  public boolean isSupremeAdministrator(UUID userId) {
-    Boolean supremeAdministrator =
-        jdbcTemplate.query(
-            """
-            SELECT CAST(administrador_supremo AS bit)
-            FROM dbo.usuario
-            WHERE usuario_id = ? AND situacao = 'ATIVO' AND excluido_logicamente = 0
-            """,
-            resultSet -> resultSet.next() ? resultSet.getBoolean(1) : null,
-            userId);
-    return Boolean.TRUE.equals(supremeAdministrator);
-  }
-
-  @Override
   public Optional<UserView> resetOrdinaryUserPassword(
       UUID userId,
       String passwordHash,
       String algorithm,
       String parameters,
       boolean actorIsSupremeAdministrator) {
-    // Serializa solicitações e atendimento da mesma conta sem alterar a trilha anterior.
-    jdbcTemplate.queryForList(
-        "SELECT usuario_id FROM dbo.usuario WITH (UPDLOCK, HOLDLOCK) WHERE usuario_id = ?", userId);
+    if (lockPasswordResetTarget(userId).isEmpty()) return Optional.empty();
     int updated =
         jdbcTemplate.update(
             """
-            UPDATE credencial
-            SET senha_hash = ?, algoritmo = ?, parametros = ?,
-                senha_alterada_em_utc = SYSUTCDATETIME(), senha_deve_ser_trocada = 1,
-                tentativas_falhas = 0, bloqueada_ate_utc = NULL
-            FROM dbo.credencial_local AS credencial
-            INNER JOIN dbo.usuario AS usuario ON usuario.usuario_id = credencial.usuario_id
-            WHERE usuario.usuario_id = ?
-              AND usuario.situacao = 'ATIVO'
-              AND usuario.administrador_supremo = 0
-              AND usuario.protegido_fluxo_normal = 0
-              AND usuario.excluido_logicamente = 0
-              AND (
-                    ? = 1
-                    OR (
-                        NOT EXISTS (
-                            SELECT 1
-                            FROM dbo.atribuicao_papel AS atribuicao
-                            INNER JOIN dbo.papel AS papel ON papel.papel_id = atribuicao.papel_id
-                            WHERE atribuicao.usuario_id = usuario.usuario_id
-                              AND atribuicao.revogado_em_utc IS NULL
-                              AND papel.codigo = 'ADMINISTRADOR_PLATAFORMA'
-                        )
-                        AND NOT EXISTS (
-                            SELECT 1
-                            FROM dbo.concessao_permissao_usuario AS concessao
-                            INNER JOIN dbo.permissao AS permissao
-                                ON permissao.permissao_id = concessao.permissao_id
-                            WHERE concessao.usuario_id = usuario.usuario_id
-                              AND concessao.revogado_em_utc IS NULL
-                              AND concessao.efeito = 'PERMITIR'
-                              AND permissao.codigo = 'SENHAS.DELEGAR_REDEFINICAO'
-                        )
-                    )
-              )
-            """,
+        UPDATE credencial SET senha_hash = ?, algoritmo = ?, parametros = ?,
+          senha_alterada_em_utc = SYSUTCDATETIME(), senha_deve_ser_trocada = 1,
+          tentativas_falhas = 0, bloqueada_ate_utc = NULL
+        FROM dbo.credencial_local credencial
+        JOIN dbo.usuario usuario ON usuario.usuario_id = credencial.usuario_id
+        WHERE usuario.usuario_id = ? AND
+        """
+                + PasswordResetSqlEligibility.TARGET
+                + """
+        AND (? = 1 OR NOT EXISTS (
+          SELECT 1 FROM dbo.concessao_permissao_usuario concessao
+          JOIN dbo.permissao permissao ON permissao.permissao_id = concessao.permissao_id
+          WHERE concessao.usuario_id = usuario.usuario_id AND concessao.revogado_em_utc IS NULL
+            AND concessao.efeito = 'PERMITIR' AND permissao.codigo = 'SENHAS.DELEGAR_REDEFINICAO'))
+        """,
             passwordHash,
             algorithm,
             parameters,
@@ -203,47 +255,17 @@ public class SqlUserAdministrationRepository implements UserAdministrationReposi
       PasswordResetDelegation delegation,
       UUID actorUserId,
       boolean actorIsSupremeAdministrator) {
-    Boolean eligibleTarget =
-        jdbcTemplate.query(
-            """
-            SELECT CASE WHEN u.situacao = 'ATIVO'
-                              AND u.administrador_supremo = 0
-                              AND u.protegido_fluxo_normal = 0
-                              AND u.excluido_logicamente = 0
-                              AND (
-                                  ? = 1
-                                  OR (
-                                      NOT EXISTS (
-                                          SELECT 1
-                                          FROM dbo.atribuicao_papel AS atribuicao
-                                          INNER JOIN dbo.papel AS papel
-                                              ON papel.papel_id = atribuicao.papel_id
-                                          WHERE atribuicao.usuario_id = u.usuario_id
-                                            AND atribuicao.revogado_em_utc IS NULL
-                                            AND papel.codigo = 'ADMINISTRADOR_PLATAFORMA'
-                                      )
-                                      AND NOT EXISTS (
-                                          SELECT 1
-                                          FROM dbo.concessao_permissao_usuario AS concessao
-                                          INNER JOIN dbo.permissao AS permissao
-                                              ON permissao.permissao_id = concessao.permissao_id
-                                          WHERE concessao.usuario_id = u.usuario_id
-                                            AND concessao.revogado_em_utc IS NULL
-                                            AND concessao.efeito = 'PERMITIR'
-                                            AND permissao.codigo = 'SENHAS.DELEGAR_REDEFINICAO'
-                                      )
-                                  )
-                              )
-                         THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END
-            FROM dbo.usuario AS u WITH (UPDLOCK, HOLDLOCK)
-            WHERE u.usuario_id = ?
-            """,
-            resultSet -> resultSet.next() ? resultSet.getBoolean(1) : null,
-            actorIsSupremeAdministrator ? 1 : 0,
-            userId);
-    if (!Boolean.TRUE.equals(eligibleTarget) || !passwordDelegationPermissionsAreActive()) {
-      return false;
-    }
+    Optional<UserView> target = lockPasswordResetTarget(userId);
+    if (target.isEmpty()
+        || userId.equals(actorUserId)
+        || (!actorIsSupremeAdministrator
+            && (delegation.canDelegatePasswordReset()
+                || target.get().individualPermissions().stream()
+                    .anyMatch(
+                        permission ->
+                            permission.permissionCode().equals(DELEGATE_PASSWORD_RESET_PERMISSION)
+                                && permission.effect() == PermissionEffect.ALLOW)))
+        || !passwordDelegationPermissionsAreActive()) return false;
 
     List<IndividualPermission> currentPermissions = activeIndividualPermissions(userId);
     for (IndividualPermission current : currentPermissions) {

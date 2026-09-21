@@ -58,11 +58,20 @@ public class AccessTokenService {
     this.encoder = new NimbusJwtEncoder(new ImmutableSecret<SecurityContext>(key));
     NimbusJwtDecoder configuredDecoder =
         NimbusJwtDecoder.withSecretKey(key).macAlgorithm(MacAlgorithm.HS256).build();
-    JwtTimestampValidator timestampValidator = new JwtTimestampValidator();
+    JwtTimestampValidator timestampValidator = new JwtTimestampValidator(java.time.Duration.ZERO);
     timestampValidator.setClock(clock);
     configuredDecoder.setJwtValidator(
         new DelegatingOAuth2TokenValidator<>(
             timestampValidator,
+            token ->
+                token.getExpiresAt() != null
+                        && token.getNotBefore() != null
+                        && token.getSubject() != null
+                        && token.getClaimAsString(SESSION_ID_CLAIM) != null
+                        && token.getExpiresAt().isAfter(token.getNotBefore())
+                        && token.getExpiresAt().isAfter(clock.instant())
+                    ? OAuth2TokenValidatorResult.success()
+                    : OAuth2TokenValidatorResult.failure(new OAuth2Error("invalid_token")),
             new JwtClaimValidator<String>(JwtClaimNames.ISS, properties.issuer()::equals),
             audienceValidator(properties.audience())));
     this.decoder = configuredDecoder;
@@ -91,6 +100,7 @@ public class AccessTokenService {
   }
 
   public Optional<DecodedAccessToken> decode(String token) {
+    if (token == null || token.isBlank()) return Optional.empty();
     try {
       Jwt jwt = decoder.decode(token);
       return Optional.of(
@@ -127,12 +137,17 @@ public class AccessTokenService {
 
   private static OAuth2TokenValidator<Jwt> audienceValidator(String expectedAudience) {
     return token ->
-        token.getAudience().contains(expectedAudience)
+        token.getAudience() != null && token.getAudience().contains(expectedAudience)
             ? OAuth2TokenValidatorResult.success()
             : OAuth2TokenValidatorResult.failure(new OAuth2Error("invalid_token"));
   }
 
-  public record IssuedAccessToken(String value, Instant expiresAt) {}
+  public record IssuedAccessToken(String value, Instant expiresAt) {
+    @Override
+    public String toString() {
+      return "IssuedAccessToken[redacted]";
+    }
+  }
 
   public record DecodedAccessToken(UUID userId, UUID sessionId, String accessTokenId) {
     public DecodedAccessToken {

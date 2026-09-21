@@ -5,6 +5,7 @@ import { PasswordResetRequestsPanel } from '../../src/features/administration/Pa
 import { RelationshipAdministrationPanel } from '../../src/features/administration/RelationshipAdministrationPanel'
 import { UserAdministrationPanel } from '../../src/features/administration/UserAdministrationPanel'
 import { LoginForm } from '../../src/features/auth/LoginForm'
+import { PasswordChangeForm } from '../../src/features/auth/PasswordChangeForm'
 
 const calls: string[] = []
 const users: AdministrationUser[] = Array.from({ length: 7 }, (_, index) => ({
@@ -21,6 +22,9 @@ const users: AdministrationUser[] = Array.from({ length: 7 }, (_, index) => ({
 }))
 let pending = [...users]
 const api = {
+  changePassword: async () => {
+    calls.push('change')
+  },
   requestPasswordReset: async () => {
     calls.push('request')
   },
@@ -90,5 +94,16 @@ function show(login: boolean) {
     ),
   )
 }
-Object.assign(window, { recoveryFixture: { calls, show } })
+function showChange() {
+  root.render(
+    <PasswordChangeForm
+      api={api}
+      onChanged={() => show(true)}
+      onSessionExpired={() => {}}
+      onToggleTheme={() => {}}
+      theme="light"
+    />,
+  )
+}
+Object.assign(window, { recoveryFixture: { calls, show, showChange } })
 show(false)

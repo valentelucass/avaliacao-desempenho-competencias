@@ -46,11 +46,55 @@ public class UserAdministrationService {
     this.transactionTemplate = transactionTemplate;
   }
 
-  public List<UserAdministrationRepository.UserView> listUsers() {
-    return repository.listUsers();
+  public List<UserAdministrationRepository.UserView> listUsers(
+      UUID actor, Set<String> permissions) {
+    if (permissions.contains("USUARIOS.LER")) return repository.listUsers();
+    return Objects.requireNonNull(
+        transactionTemplate.execute(
+            ignored -> {
+              var operator = requirePasswordResetActor(actor);
+              return repository.listPasswordResetTargets(actor, operator.isSupreme());
+            }));
   }
 
-  public UserAdministrationRepository.UserView getUser(UUID userId) {
+  public UserAdministrationRepository.UserView getUser(
+      UUID userId, UUID actor, Set<String> permissions) {
+    if (permissions.contains("USUARIOS.LER")) return getUser(userId);
+    return Objects.requireNonNull(
+        transactionTemplate.execute(
+            ignored -> {
+              var operator = requirePasswordResetActor(actor);
+              var target = requirePasswordResetTarget(userId);
+              if (!passwordResetAuthorizationPolicy.mayResetPassword(
+                  operator, passwordResetTarget(target))) {
+                throw passwordOperationDenied();
+              }
+              return target;
+            }));
+  }
+
+  PasswordResetAuthorizationPolicy.Actor requirePasswordResetActor(UUID actor) {
+    var operator =
+        repository
+            .lockPasswordResetActor(actor)
+            .orElseThrow(UserAdministrationService::passwordOperationDenied);
+    if (!passwordResetAuthorizationPolicy.mayListPendingRequests(operator))
+      throw passwordOperationDenied();
+    return operator;
+  }
+
+  private UserAdministrationRepository.UserView requirePasswordResetTarget(UUID target) {
+    return repository
+        .lockPasswordResetTarget(target)
+        .orElseThrow(UserAdministrationService::passwordOperationDenied);
+  }
+
+  private static UserAdministrationException passwordOperationDenied() {
+    return new UserAdministrationException(
+        Reason.FORBIDDEN, "Não foi possível realizar esta operação.");
+  }
+
+  private UserAdministrationRepository.UserView getUser(UUID userId) {
     return repository
         .findUser(Objects.requireNonNull(userId, "userId"))
         .orElseThrow(
@@ -150,23 +194,25 @@ public class UserAdministrationService {
     UUID targetUserId = Objects.requireNonNull(userId, "userId");
     UUID actorId = Objects.requireNonNull(actorUserId, "actorUserId");
     requirePassword(temporaryPassword);
-    boolean actorIsSupremeAdministrator = repository.isSupremeAdministrator(actorId);
-    PasswordResetAuthorizationPolicy.Actor actor =
-        new PasswordResetAuthorizationPolicy.Actor(
-            actorId,
-            actorIsSupremeAdministrator,
-            Set.copyOf(Objects.requireNonNull(actorPermissionCodes, "permissões do ator")));
-    UserAdministrationRepository.UserView target = getUser(targetUserId);
-    if (!passwordResetAuthorizationPolicy.mayResetPassword(actor, passwordResetTarget(target))) {
-      throw new UserAdministrationException(
-          Reason.FORBIDDEN,
-          "A conta não está disponível para redefinição de senha por esta sessão.");
-    }
-
-    String passwordHash = credentialEncoder.encode(temporaryPassword);
     return Objects.requireNonNull(
         transactionTemplate.execute(
             ignored -> {
+              var actor = requirePasswordResetActor(actorId);
+              var target = requirePasswordResetTarget(targetUserId);
+              if (!passwordResetAuthorizationPolicy.mayResetPassword(
+                  actor, passwordResetTarget(target))) {
+                throw passwordOperationDenied();
+              }
+              String currentHash =
+                  repository
+                      .passwordHashForReset(targetUserId)
+                      .orElseThrow(UserAdministrationService::passwordOperationDenied);
+              if (credentialEncoder.matches(temporaryPassword, currentHash)) {
+                throw new UserAdministrationException(
+                    Reason.INVALID_INPUT, "A nova senha não atende aos requisitos mínimos.");
+              }
+              String passwordHash = credentialEncoder.encode(temporaryPassword);
+              boolean actorIsSupremeAdministrator = actor.isSupreme();
               UserAdministrationRepository.UserView resetUser =
                   repository
                       .resetOrdinaryUserPassword(
@@ -178,8 +224,7 @@ public class UserAdministrationService {
                       .orElseThrow(
                           () ->
                               new UserAdministrationException(
-                                  Reason.USER_NOT_FOUND,
-                                  "Usuário não encontrado ou indisponível para recuperação."));
+                                  Reason.FORBIDDEN, "Não foi possível realizar esta operação."));
               repository.revokeAllSessions(
                   targetUserId,
                   actorIsSupremeAdministrator
@@ -208,21 +253,16 @@ public class UserAdministrationService {
     } catch (IllegalArgumentException exception) {
       throw new UserAdministrationException(Reason.INVALID_INPUT, exception.getMessage());
     }
-    boolean actorIsSupremeAdministrator = repository.isSupremeAdministrator(actorId);
-    PasswordResetAuthorizationPolicy.Actor actor =
-        new PasswordResetAuthorizationPolicy.Actor(
-            actorId,
-            actorIsSupremeAdministrator,
-            Set.copyOf(Objects.requireNonNull(actorPermissionCodes, "permissões do ator")));
-    UserAdministrationRepository.UserView target = getUser(targetUserId);
-    if (!passwordResetAuthorizationPolicy.mayReplaceDelegation(
-        actor, passwordResetTarget(target), desired)) {
-      throw new UserAdministrationException(
-          Reason.FORBIDDEN, "A sessão não pode alterar a delegação de redefinição desta conta.");
-    }
     return Objects.requireNonNull(
         transactionTemplate.execute(
             ignored -> {
+              var actor = requirePasswordResetActor(actorId);
+              var target = requirePasswordResetTarget(targetUserId);
+              if (!passwordResetAuthorizationPolicy.mayReplaceDelegation(
+                  actor, passwordResetTarget(target), desired)) {
+                throw passwordOperationDenied();
+              }
+              boolean actorIsSupremeAdministrator = actor.isSupreme();
               if (!repository.replacePasswordResetDelegation(
                   targetUserId,
                   new UserAdministrationRepository.PasswordResetDelegation(
@@ -230,8 +270,7 @@ public class UserAdministrationService {
                   actorId,
                   actorIsSupremeAdministrator)) {
                 throw new UserAdministrationException(
-                    Reason.USER_NOT_FOUND,
-                    "Usuário não encontrado ou indisponível para esta delegação.");
+                    Reason.FORBIDDEN, "Não foi possível realizar esta operação.");
               }
               repository.revokeAllSessions(targetUserId, "DELEGACAO_REDEFINICAO_SENHA_ALTERADA");
               repository.writeAdministrativeAudit(

@@ -29,9 +29,12 @@ describe('Solicitação de recuperação no login', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Solicitar redefinição de senha' }))
     expect(screen.getByRole('heading', { level: 1, name: 'Solicitar redefinição' })).toBeVisible()
     expect(screen.queryByLabelText('E-mail ou login')).not.toBeInTheDocument()
-    expect(screen.getByLabelText('E-mail ou login para recuperação')).toBeVisible()
+    expect(screen.getByLabelText('E-mail ou login para recuperação')).toHaveFocus()
     fireEvent.click(screen.getByRole('button', { name: 'Voltar ao acesso' }))
     expect(screen.getByRole('heading', { level: 1, name: 'Acesso à plataforma' })).toBeVisible()
+    expect(screen.getByLabelText('E-mail ou login')).toHaveFocus()
+    expect(screen.getByLabelText('Senha')).toHaveAttribute('type', 'password')
+    expect(screen.getByLabelText('Senha')).toHaveValue('')
   })
 
   it('aceita o login, evita envios simultâneos e responde sem revelar se a conta existe', async () => {

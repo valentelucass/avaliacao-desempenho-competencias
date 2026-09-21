@@ -48,6 +48,11 @@ public record AuthenticationSecurityProperties(
     }
   }
 
+  @Override
+  public String toString() {
+    return "AuthenticationSecurityProperties[redacted]";
+  }
+
   private static boolean isBlank(String value) {
     return value == null || value.isBlank();
   }

@@ -1,4 +1,4 @@
-import { useId, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Eye, EyeOff, ShieldCheck } from 'lucide-react'
 import { isAuthenticationError } from '../../api/client'
@@ -38,6 +38,21 @@ export function LoginForm({
   const [recoveryLogin, setRecoveryLogin] = useState('')
   const [recoveryNotice, setRecoveryNotice] = useState<string>()
   const recoveryId = useId()
+  const errorId = useId()
+  const loginInput = useRef<HTMLInputElement>(null)
+  const recoveryInput = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (recoveryOpen) recoveryInput.current?.focus()
+    else loginInput.current?.focus()
+  }, [recoveryOpen])
+
+  function closeRecovery() {
+    setRecoveryOpen(false)
+    setRecoveryLogin('')
+    setError(undefined)
+    setRecoveryNotice(undefined)
+  }
 
   async function requestReset(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -64,6 +79,7 @@ export function LoginForm({
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (isSubmitting || isRestoringSession) return
     setError(undefined)
 
     if (!login.trim() || !password) {
@@ -88,6 +104,7 @@ export function LoginForm({
       )
     } finally {
       setPassword('')
+      setIsPasswordVisible(false)
       setIsSubmitting(false)
     }
   }
@@ -101,16 +118,21 @@ export function LoginForm({
     >
       <section className="card login-card">
         {recoveryOpen ? (
-          <div id={recoveryId} className="login-card__recovery">
+          <div
+            id={recoveryId}
+            className="login-card__recovery"
+            onKeyDown={(event) => {
+              if (event.key === 'Escape' && !isSubmitting) {
+                event.preventDefault()
+                closeRecovery()
+              }
+            }}
+          >
             <button
               className="login-card__back"
               type="button"
               disabled={isSubmitting}
-              onClick={() => {
-                setRecoveryOpen(false)
-                setError(undefined)
-                setRecoveryNotice(undefined)
-              }}
+              onClick={closeRecovery}
             >
               Voltar ao acesso
             </button>
@@ -126,7 +148,7 @@ export function LoginForm({
               aria-busy={isSubmitting}
             >
               {error ? (
-                <FeedbackMessage kind="error" onDismiss={() => setError(undefined)}>
+                <FeedbackMessage id={errorId} kind="error" onDismiss={() => setError(undefined)}>
                   {error}
                 </FeedbackMessage>
               ) : null}
@@ -134,6 +156,9 @@ export function LoginForm({
                 <label htmlFor={`${recoveryId}-login`}>E-mail ou login para recuperação</label>
                 <input
                   id={`${recoveryId}-login`}
+                  ref={recoveryInput}
+                  aria-describedby={error ? errorId : undefined}
+                  aria-invalid={Boolean(error)}
                   value={recoveryLogin}
                   autoComplete="username"
                   maxLength={128}
@@ -158,7 +183,7 @@ export function LoginForm({
               {notice ? <FeedbackMessage kind="status">{notice}</FeedbackMessage> : null}
               {startupError ? <FeedbackMessage kind="error">{startupError}</FeedbackMessage> : null}
               {error ? (
-                <FeedbackMessage kind="error" onDismiss={() => setError(undefined)}>
+                <FeedbackMessage id={errorId} kind="error" onDismiss={() => setError(undefined)}>
                   {error}
                 </FeedbackMessage>
               ) : null}
@@ -167,6 +192,8 @@ export function LoginForm({
                 <label htmlFor={loginId}>E-mail ou login</label>
                 <input
                   id={loginId}
+                  ref={loginInput}
+                  aria-describedby={error ? errorId : undefined}
                   name="login"
                   autoComplete="username"
                   value={login}
@@ -181,6 +208,7 @@ export function LoginForm({
                 <div className="password-input">
                   <input
                     id={passwordId}
+                    aria-describedby={error ? errorId : undefined}
                     name="password"
                     type={isPasswordVisible ? 'text' : 'password'}
                     autoComplete="current-password"
@@ -223,6 +251,7 @@ export function LoginForm({
                 setRecoveryOpen(true)
                 setError(undefined)
                 setPassword('')
+                setIsPasswordVisible(false)
               }}
             >
               Solicitar redefinição de senha

@@ -94,12 +94,19 @@ module.exports = async function checkPasswordRecovery({ send, frameId, css }) {
       )
       await fill('input[aria-label="Filtrar Login"]', 'pessoa0@')
       await ready("document.querySelector('tbody').textContent.includes('Pessoa fictícia 0')")
-      await click('Editar e redefinir senha')
+      await click('Redefinir senha')
       await ready("document.querySelector('[role=dialog]')")
       await assertDialog()
       await click('Gerar senha temporária e redefinir')
       await ready("document.querySelector('[role=dialog] input[readonly]')")
-      await click('Fechar')
+      // Escape deve fechar com foco restaurado e descartar a credencial.
+      await send('Input.dispatchKeyEvent', {
+        type: 'keyDown',
+        key: 'Escape',
+        code: 'Escape',
+        windowsVirtualKeyCode: 27,
+      })
+      await ready("!document.querySelector('[role=dialog]')")
       assert.equal(await evaluate("!!document.querySelector('input[readonly]')"), false)
       assert.equal(await evaluate("window.recoveryFixture.calls.filter(c=>c==='reset').length"), 1)
       await evaluate(
@@ -162,8 +169,21 @@ module.exports = async function checkPasswordRecovery({ send, frameId, css }) {
         true,
         'Recuperação deve substituir os campos de login',
       )
-      await click('Voltar ao acesso')
+      assert.equal(
+        await evaluate("document.activeElement===document.querySelector('form[aria-busy] input')"),
+        true,
+      )
+      await send('Input.dispatchKeyEvent', {
+        type: 'keyDown',
+        key: 'Escape',
+        code: 'Escape',
+        windowsVirtualKeyCode: 27,
+      })
       await ready("!!document.querySelector('input[name=password]')")
+      assert.equal(
+        await evaluate("document.activeElement===document.querySelector('input[name=login]')"),
+        true,
+      )
       await click('Solicitar redefinição de senha')
       await fill('form[aria-busy] input', 'pessoa@example.invalid')
       await click('Enviar solicitação')
@@ -171,6 +191,22 @@ module.exports = async function checkPasswordRecovery({ send, frameId, css }) {
         "document.body.textContent.includes('Se a conta estiver disponível para recuperação')",
       )
       assert.equal(await evaluate('document.documentElement.scrollWidth > innerWidth+1'), false)
+      await evaluate('window.recoveryFixture.showChange()')
+      await ready("document.querySelector('#password-change-title')")
+      assert.equal(await evaluate("document.activeElement.id==='password-change-title'"), true)
+      assert.equal(
+        await evaluate(
+          "[...document.querySelectorAll('button')].some(b=>b.textContent==='Cancelar')",
+        ),
+        false,
+      )
+      await fill('input[name="current-password"]', ['fixture', 'current', 'discard'].join('-'))
+      await fill('input[name="new-password"]', ['fixture', 'new', 'discard'].join('-'))
+      await fill('input[name="confirm-new-password"]', ['fixture', 'new', 'discard'].join('-'))
+      assert.equal(await evaluate('document.documentElement.scrollWidth > innerWidth+1'), false)
+      await click('Alterar senha')
+      await ready("document.body.textContent.includes('Acesso à plataforma')")
+      assert.equal(await evaluate("window.recoveryFixture.calls.filter(c=>c==='change').length"), 1)
     }
   console.log(
     JSON.stringify({

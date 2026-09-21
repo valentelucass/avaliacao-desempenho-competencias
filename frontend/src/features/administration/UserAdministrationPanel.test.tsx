@@ -483,6 +483,65 @@ describe('UserAdministrationPanel', () => {
     )
   })
 
+  it.each([
+    { roles: ['ADMINISTRADOR_PLATAFORMA'] },
+    { protectedFromNormalFlow: true },
+    { logicallyDeleted: true },
+    { status: 'DISABLED' as const },
+    { status: 'BLOCKED' as const },
+    { id: 'supreme-admin' },
+  ])('nega ações de senha ao supremo para alvo inelegível %j', async (override) => {
+    const target = sampleUser({ id: 'fixture-target', displayName: 'Alvo fictício', ...override })
+    const api = createApi({
+      listAdministrationUsers: vi.fn().mockResolvedValue([target]),
+      getAdministrationUser: vi.fn().mockResolvedValue(target),
+    })
+    render(
+      <UserAdministrationPanel
+        api={api}
+        currentUserId="supreme-admin"
+        isSupremeAdministrator
+        permissions={['USUARIOS.LER', 'USUARIOS.ALTERAR']}
+        onSessionExpired={vi.fn()}
+      />,
+    )
+    await screen.findByRole('cell', { name: target.displayName })
+    await viewAccountDetails(target.displayName)
+    expect(
+      screen.queryByRole('button', { name: 'Gerar senha temporária e redefinir' }),
+    ).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Salvar capacidades' })).not.toBeInTheDocument()
+    expect(api.generateTemporaryPassword).not.toHaveBeenCalled()
+  })
+
+  it('limpa a senha ao fechar com Escape e não a recupera ao reabrir', async () => {
+    const target = sampleUser({ id: 'fixture-target', displayName: 'Alvo fictício' })
+    const api = createApi({
+      listAdministrationUsers: vi.fn().mockResolvedValue([target]),
+      getAdministrationUser: vi.fn().mockResolvedValue(target),
+      generateTemporaryPassword: vi
+        .fn()
+        .mockResolvedValue({ user: target, temporaryPassword: crypto.randomUUID() }),
+    })
+    render(
+      <UserAdministrationPanel
+        api={api}
+        currentUserId="supreme-admin"
+        isSupremeAdministrator
+        permissions={['USUARIOS.LER']}
+        onSessionExpired={vi.fn()}
+      />,
+    )
+    await screen.findByRole('cell', { name: target.displayName })
+    await viewAccountDetails(target.displayName)
+    fireEvent.click(screen.getByRole('button', { name: 'Gerar senha temporária e redefinir' }))
+    await screen.findByLabelText('Senha temporária gerada')
+    fireEvent.keyDown(document, { key: 'Escape' })
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    await viewAccountDetails(target.displayName)
+    expect(screen.queryByLabelText('Senha temporária gerada')).not.toBeInTheDocument()
+  })
+
   it('não chama a API nem renderiza controles quando não há permissão administrativa', () => {
     const api = createApi()
 

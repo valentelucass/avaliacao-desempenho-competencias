@@ -188,11 +188,31 @@ public class AuthenticationController {
   }
 
   public record LoginRequest(
-      @NotBlank @Size(max = 128) String login, @NotBlank @Size(max = 200) String password) {}
+      @NotBlank @Size(max = 128) String login, @NotBlank @Size(max = 200) String password) {
+    @com.fasterxml.jackson.annotation.JsonAnySetter
+    public void rejectUnknown(String field, Object value) {
+      throw new IllegalArgumentException("Campo não permitido.");
+    }
+
+    @Override
+    public String toString() {
+      return "LoginRequest[redacted]";
+    }
+  }
 
   public record ChangePasswordRequest(
       @NotBlank @Size(max = 200) String currentPassword,
-      @NotBlank @Size(max = 200) String newPassword) {}
+      @NotBlank @Size(max = 200) String newPassword) {
+    @com.fasterxml.jackson.annotation.JsonAnySetter
+    public void rejectUnknown(String field, Object value) {
+      throw new IllegalArgumentException("Campo não permitido.");
+    }
+
+    @Override
+    public String toString() {
+      return "ChangePasswordRequest[redacted]";
+    }
+  }
 
   public record CurrentUserResponse(
       String id,

@@ -44,7 +44,8 @@ class PasswordRecoveryDevSqlTests {
             identity,
             encoder,
             mock(AccessTokenService.class),
-            mock(AuthenticationSecurityProperties.class),
+            new AuthenticationSecurityProperties(
+                false, null, null, null, null, null, null, null, null, null),
             transaction,
             Clock.systemUTC());
     String prefix = "qa.recovery." + UUID.randomUUID();
@@ -59,6 +60,10 @@ class PasswordRecoveryDevSqlTests {
                 "INSERT INTO dbo.usuario (usuario_id,login_normalizado,nome_exibicao,administrador_supremo,protegido_fluxo_normal) VALUES (?,?,N'Administrador fictício',1,1)",
                 actor,
                 prefix + ".admin");
+            jdbc.update(
+                "INSERT INTO dbo.credencial_local (usuario_id, senha_hash, algoritmo, parametros, senha_deve_ser_trocada) VALUES (?, ?, 'BCRYPT', 'test-only', 0)",
+                actor,
+                encoder.encode(UUID.randomUUID().toString()));
             String initial = UUID.randomUUID().toString();
             users.createLocalUser(
                 new UserAdministrationRepository.NewLocalUser(
@@ -84,7 +89,7 @@ class PasswordRecoveryDevSqlTests {
             service.request(prefix + ".user", "test", prefix);
             var pending =
                 new SqlPasswordRecoveryRepository(jdbc)
-                    .listPending(0, 10000).stream()
+                    .listPending(actor, true, 0, 10000).stream()
                         .filter(item -> item.userId().equals(target))
                         .toList();
             assertThat(pending).hasSize(1);
@@ -111,7 +116,7 @@ class PasswordRecoveryDevSqlTests {
                         session.sessionId(), target, session.accessTokenId(), Instant.now()))
                 .isEmpty();
             assertThat(
-                    recovery.listPending(0, 10000).stream()
+                    recovery.listPending(actor, true, 0, 10000).stream()
                         .filter(item -> item.userId().equals(target))
                         .count())
                 .isZero();
@@ -141,7 +146,8 @@ class PasswordRecoveryDevSqlTests {
                     staleIdentity,
                     encoder,
                     unusedJwt,
-                    mock(AuthenticationSecurityProperties.class),
+                    new AuthenticationSecurityProperties(
+                        false, null, null, null, null, null, null, null, null, null),
                     transaction,
                     Clock.systemUTC());
             assertThatThrownBy(
@@ -154,7 +160,7 @@ class PasswordRecoveryDevSqlTests {
             // Novo pedido, depois do atendimento, volta a aparecer sem alterar a credencial atual.
             service.request(prefix + ".user", "test", prefix);
             assertThat(
-                    recovery.listPending(0, 10000).stream()
+                    recovery.listPending(actor, true, 0, 10000).stream()
                         .filter(item -> item.userId().equals(target))
                         .count())
                 .isEqualTo(1);

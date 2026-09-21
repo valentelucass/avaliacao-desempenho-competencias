@@ -1,6 +1,7 @@
 package br.com.avaliacao.desempenho.identidadeacesso.application;
 
 import br.com.avaliacao.desempenho.identidadeacesso.domain.model.AccountStatus;
+import br.com.avaliacao.desempenho.identidadeacesso.domain.model.PasswordResetAuthorizationPolicy;
 import br.com.avaliacao.desempenho.identidadeacesso.domain.model.PermissionEffect;
 import java.time.Instant;
 import java.util.List;
@@ -8,20 +9,28 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
-/** Porta de administração de identidades locais; não expõe hash, token ou senha. */
+/** Porta interna de administração; as projeções de usuário não contêm credenciais. */
 public interface UserAdministrationRepository {
 
   List<UserView> listUsers();
 
   Optional<UserView> findUser(UUID userId);
 
+  /** Revalida conta e concessões individuais; deve ser usado dentro de transação. */
+  Optional<PasswordResetAuthorizationPolicy.Actor> lockPasswordResetActor(UUID actorUserId);
+
+  Optional<UserView> lockPasswordResetTarget(UUID userId);
+
+  /** Uso exclusivo do caso de uso, após bloquear e autorizar o alvo; nunca retornar pela API. */
+  Optional<String> passwordHashForReset(UUID userId);
+
+  List<UserView> listPasswordResetTargets(UUID actorUserId, boolean supreme);
+
   UserView createLocalUser(NewLocalUser user, UUID actorUserId);
 
   Optional<UserView> updateUser(UUID userId, UpdateUser update, UUID actorUserId);
 
   Optional<UserView> logicallyDeleteUser(UUID userId, UUID actorUserId);
-
-  boolean isSupremeAdministrator(UUID userId);
 
   Optional<UserView> resetOrdinaryUserPassword(
       UUID userId,
@@ -49,7 +58,12 @@ public interface UserAdministrationRepository {
       String displayName,
       String passwordHash,
       String passwordAlgorithm,
-      String passwordParameters) {}
+      String passwordParameters) {
+    @Override
+    public String toString() {
+      return "NewLocalUser[redacted]";
+    }
+  }
 
   record UpdateUser(String displayName, AccountStatus status) {}
 

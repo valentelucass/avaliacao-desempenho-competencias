@@ -42,13 +42,17 @@ public class UserAdministrationController {
   }
 
   @GetMapping
-  public List<UserResponse> list() {
-    return service.listUsers().stream().map(UserResponse::from).toList();
+  public List<UserResponse> list(Authentication authentication) {
+    var actor = principal(authentication);
+    return service.listUsers(actor.userId(), actor.user().permissions()).stream()
+        .map(UserResponse::from)
+        .toList();
   }
 
   @GetMapping("/{userId}")
-  public UserResponse get(@PathVariable UUID userId) {
-    return UserResponse.from(service.getUser(userId));
+  public UserResponse get(@PathVariable UUID userId, Authentication authentication) {
+    var actor = principal(authentication);
+    return UserResponse.from(service.getUser(userId, actor.userId(), actor.user().permissions()));
   }
 
   @PostMapping
@@ -171,23 +175,63 @@ public class UserAdministrationController {
       @NotBlank @Size(max = 128) String login,
       @NotBlank @Size(max = 200) String displayName,
       @NotBlank @Size(min = 12, max = 200) String initialPassword,
-      Set<@Pattern(regexp = "[A-Z0-9_.]{1,150}") String> initialRoles) {}
+      Set<@Pattern(regexp = "[A-Z0-9_.]{1,150}") String> initialRoles) {
+    @com.fasterxml.jackson.annotation.JsonAnySetter
+    public void rejectUnknown(String field, Object value) {
+      throw new IllegalArgumentException("Campo não permitido.");
+    }
+
+    @Override
+    public String toString() {
+      return "CreateUserRequest[redacted]";
+    }
+  }
 
   public record UpdateUserRequest(
-      @NotBlank @Size(max = 200) String displayName, @NotNull AccountStatus status) {}
+      @NotBlank @Size(max = 200) String displayName, @NotNull AccountStatus status) {
+    @com.fasterxml.jackson.annotation.JsonAnySetter
+    public void rejectUnknown(String field, Object value) {
+      throw new IllegalArgumentException("Campo não permitido.");
+    }
 
-  public record LogicalDeletionRequest(
-      @jakarta.validation.constraints.AssertTrue boolean deleted) {}
+    @Override
+    public String toString() {
+      return "UpdateUserRequest[redacted]";
+    }
+  }
+
+  public record LogicalDeletionRequest(@jakarta.validation.constraints.AssertTrue boolean deleted) {
+    @com.fasterxml.jackson.annotation.JsonAnySetter
+    public void rejectUnknown(String field, Object value) {
+      throw new IllegalArgumentException("Campo não permitido.");
+    }
+
+    @Override
+    public String toString() {
+      return "LogicalDeletionRequest[redacted]";
+    }
+  }
 
   public record PasswordResetRequest(
-      @NotBlank @Size(min = 12, max = 200) String temporaryPassword) {}
+      @NotBlank @Size(min = 12, max = 200) String temporaryPassword) {
+    @com.fasterxml.jackson.annotation.JsonAnySetter
+    public void rejectUnknown(String field, Object value) {
+      throw new IllegalArgumentException("Campo não permitido.");
+    }
+
+    @Override
+    public String toString() {
+      return "PasswordResetRequest[redacted]";
+    }
+  }
 
   public record PasswordResetDelegationRequest(
-      boolean canResetPassword, boolean canDelegatePasswordReset) {
+      @NotNull Boolean canResetPassword, @NotNull Boolean canDelegatePasswordReset) {
     @jakarta.validation.constraints.AssertTrue(
         message = "A capacidade de delegar exige a capacidade de redefinir senha.")
     public boolean isConsistent() {
-      return !canDelegatePasswordReset || canResetPassword;
+      return !Boolean.TRUE.equals(canDelegatePasswordReset)
+          || Boolean.TRUE.equals(canResetPassword);
     }
 
     @com.fasterxml.jackson.annotation.JsonAnySetter
@@ -198,11 +242,31 @@ public class UserAdministrationController {
 
   public record ReplaceAccessRequest(
       @NotNull Set<@Pattern(regexp = "[A-Z0-9_.]{1,150}") String> roles,
-      @NotNull List<@Valid PermissionGrantRequest> permissions) {}
+      @NotNull List<@Valid PermissionGrantRequest> permissions) {
+    @com.fasterxml.jackson.annotation.JsonAnySetter
+    public void rejectUnknown(String field, Object value) {
+      throw new IllegalArgumentException("Campo não permitido.");
+    }
+
+    @Override
+    public String toString() {
+      return "ReplaceAccessRequest[redacted]";
+    }
+  }
 
   public record PermissionGrantRequest(
       @NotBlank @Pattern(regexp = "[A-Z0-9_.]{1,150}") String code,
-      @NotNull PermissionEffect effect) {}
+      @NotNull PermissionEffect effect) {
+    @com.fasterxml.jackson.annotation.JsonAnySetter
+    public void rejectUnknown(String field, Object value) {
+      throw new IllegalArgumentException("Campo não permitido.");
+    }
+
+    @Override
+    public String toString() {
+      return "PermissionGrantRequest[redacted]";
+    }
+  }
 
   public record UserResponse(
       String id,

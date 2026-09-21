@@ -60,7 +60,15 @@ class SqlUserAdministrationRepositoryTests {
   void passwordResetExcludesProtectedSupremeInactiveOrLogicallyDeletedAccounts() {
     JdbcTemplate jdbcTemplate = org.mockito.Mockito.mock(JdbcTemplate.class);
     when(jdbcTemplate.update(anyString(), any(Object[].class))).thenReturn(0);
-    SqlUserAdministrationRepository repository = new SqlUserAdministrationRepository(jdbcTemplate);
+    SqlUserAdministrationRepository repository =
+        org.mockito.Mockito.spy(new SqlUserAdministrationRepository(jdbcTemplate));
+    org.mockito.Mockito.doReturn(
+            java.util.Optional.of(
+                org.mockito.Mockito.mock(
+                    br.com.avaliacao.desempenho.identidadeacesso.application
+                        .UserAdministrationRepository.UserView.class)))
+        .when(repository)
+        .lockPasswordResetTarget(any());
 
     assertThat(
             repository.resetOrdinaryUserPassword(
@@ -85,7 +93,15 @@ class SqlUserAdministrationRepositoryTests {
   void delegatedPasswordResetAlsoExcludesTechnicalAndDelegationManagerAccounts() {
     JdbcTemplate jdbcTemplate = org.mockito.Mockito.mock(JdbcTemplate.class);
     when(jdbcTemplate.update(anyString(), any(Object[].class))).thenReturn(0);
-    SqlUserAdministrationRepository repository = new SqlUserAdministrationRepository(jdbcTemplate);
+    SqlUserAdministrationRepository repository =
+        org.mockito.Mockito.spy(new SqlUserAdministrationRepository(jdbcTemplate));
+    org.mockito.Mockito.doReturn(
+            java.util.Optional.of(
+                org.mockito.Mockito.mock(
+                    br.com.avaliacao.desempenho.identidadeacesso.application
+                        .UserAdministrationRepository.UserView.class)))
+        .when(repository)
+        .lockPasswordResetTarget(any());
 
     assertThat(
             repository.resetOrdinaryUserPassword(

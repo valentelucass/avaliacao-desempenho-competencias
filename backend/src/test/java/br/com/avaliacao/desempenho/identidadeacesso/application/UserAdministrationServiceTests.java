@@ -266,7 +266,14 @@ class UserAdministrationServiceTests {
             List.of(),
             Instant.EPOCH);
     when(transactionTemplate.execute(any())).thenAnswer(this::runTransaction);
-    when(repository.isSupremeAdministrator(actor)).thenReturn(true);
+    when(repository.lockPasswordResetActor(actor))
+        .thenReturn(
+            Optional.of(
+                new br.com.avaliacao.desempenho.identidadeacesso.domain.model
+                    .PasswordResetAuthorizationPolicy.Actor(actor, true, Set.of())));
+    when(repository.lockPasswordResetTarget(target)).thenReturn(Optional.of(resetUser));
+    when(repository.passwordHashForReset(target))
+        .thenReturn(Optional.of(new BCryptPasswordEncoder(4).encode(UUID.randomUUID().toString())));
     when(repository.findUser(target)).thenReturn(Optional.of(resetUser));
     when(repository.resetOrdinaryUserPassword(any(), any(), any(), any(), anyBoolean()))
         .thenReturn(Optional.of(resetUser));
@@ -294,6 +301,7 @@ class UserAdministrationServiceTests {
 
   @Test
   void rejectsPasswordResetWhenActorIsNotTheSupremeAdministrator() {
+    when(transactionTemplate.execute(any())).thenAnswer(this::runTransaction);
     UUID actor = UUID.randomUUID();
     UUID target = UUID.randomUUID();
     when(repository.findUser(target))
@@ -319,8 +327,7 @@ class UserAdministrationServiceTests {
         .extracting(exception -> ((UserAdministrationException) exception).reason())
         .isEqualTo(Reason.FORBIDDEN);
 
-    verify(repository).isSupremeAdministrator(actor);
-    verifyNoInteractions(transactionTemplate);
+    verify(repository).lockPasswordResetActor(actor);
   }
 
   @Test
@@ -340,6 +347,13 @@ class UserAdministrationServiceTests {
             List.of(),
             Instant.EPOCH);
     when(repository.findUser(target)).thenReturn(Optional.of(targetUser));
+    when(repository.lockPasswordResetTarget(target)).thenReturn(Optional.of(targetUser));
+    when(repository.lockPasswordResetActor(actor))
+        .thenReturn(
+            Optional.of(
+                new br.com.avaliacao.desempenho.identidadeacesso.domain.model
+                    .PasswordResetAuthorizationPolicy.Actor(
+                    actor, false, Set.of("SENHAS.REDEFINIR", "SENHAS.DELEGAR_REDEFINICAO"))));
     when(repository.replacePasswordResetDelegation(any(), any(), any(), anyBoolean()))
         .thenReturn(true);
     when(transactionTemplate.execute(any())).thenAnswer(this::runTransaction);

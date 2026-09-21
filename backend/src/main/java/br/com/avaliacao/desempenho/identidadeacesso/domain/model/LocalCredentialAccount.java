@@ -24,6 +24,11 @@ public record LocalCredentialAccount(
     }
   }
 
+  @Override
+  public String toString() {
+    return "LocalCredentialAccount[redacted]";
+  }
+
   public boolean isTemporarilyBlockedAt(Instant instant) {
     return blockedUntil != null && blockedUntil.isAfter(instant);
   }

@@ -16,6 +16,8 @@ public final class EffectivePermissionPolicy {
   public static Set<String> resolve(
       Collection<String> rolePermissions, Map<String, PermissionEffect> individualGrants) {
     Set<String> effective = new LinkedHashSet<>(rolePermissions);
+    effective.remove(PasswordResetAuthorizationPolicy.RESET_PASSWORD);
+    effective.remove(PasswordResetAuthorizationPolicy.DELEGATE_PASSWORD_RESET);
     individualGrants.forEach(
         (permission, effect) -> {
           if (effect == PermissionEffect.ALLOW) {

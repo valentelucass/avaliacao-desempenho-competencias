@@ -32,11 +32,12 @@ public class SqlPasswordRecoveryRepository implements PasswordRecoveryRepository
     List<UUID> eligible =
         jdbc.query(
             """
-        SELECT usuario_id FROM dbo.usuario WITH (UPDLOCK, HOLDLOCK)
-        WHERE login_normalizado = ? AND situacao = 'ATIVO' AND excluido_logicamente = 0
-          AND protegido_fluxo_normal = 0 AND administrador_supremo = 0
-          AND EXISTS (SELECT 1 FROM dbo.credencial_local c WHERE c.usuario_id = usuario.usuario_id)
-        """,
+        SELECT usuario.usuario_id FROM dbo.usuario usuario WITH (UPDLOCK, HOLDLOCK)
+        JOIN dbo.credencial_local credencial WITH (UPDLOCK, HOLDLOCK)
+          ON credencial.usuario_id = usuario.usuario_id
+        WHERE usuario.login_normalizado = ? AND
+        """
+                + PasswordResetSqlEligibility.TARGET,
             (rs, row) -> rs.getObject(1, UUID.class),
             normalizedLogin);
     if (eligible.isEmpty()) return;
@@ -59,19 +60,23 @@ public class SqlPasswordRecoveryRepository implements PasswordRecoveryRepository
   }
 
   @Override
-  public List<PendingRequest> listPending(long after, int limit) {
+  public List<PendingRequest> listPending(UUID actor, boolean supreme, long after, int limit) {
     return jdbc.query(
         """
         SELECT TOP (?) usuario.usuario_id, usuario.nome_exibicao, usuario.login_normalizado,
             ultimo.evento_auditoria_id, ultimo.ocorrido_em_utc
         FROM dbo.usuario AS usuario
+        JOIN dbo.credencial_local credencial ON credencial.usuario_id = usuario.usuario_id
         CROSS APPLY (
         """
             + LAST_RECOVERY_EVENT
             + """
         ) AS ultimo
-        WHERE usuario.situacao = 'ATIVO' AND usuario.excluido_logicamente = 0
-          AND usuario.protegido_fluxo_normal = 0 AND usuario.administrador_supremo = 0
+        WHERE
+        """
+            + PasswordResetSqlEligibility.TARGET
+            + PasswordResetSqlEligibility.OPERATOR_SCOPE
+            + """
           AND ultimo.acao = 'AUTENTICACAO.REDEFINICAO_SOLICITAR'
           AND ultimo.evento_auditoria_id > ?
         ORDER BY ultimo.evento_auditoria_id
@@ -84,6 +89,8 @@ public class SqlPasswordRecoveryRepository implements PasswordRecoveryRepository
                 rs.getString("login_normalizado"),
                 SqlServerUtcDateTime.read(rs, "ocorrido_em_utc")),
         limit,
+        actor,
+        supreme ? 1 : 0,
         after);
   }
 }

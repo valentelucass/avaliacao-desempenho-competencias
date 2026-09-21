@@ -69,7 +69,10 @@ public final class PasswordResetAuthorizationPolicy {
     }
 
     boolean isEligible() {
-      return status == AccountStatus.ACTIVE && !protectedFromNormalFlow && !logicallyDeleted;
+      return status == AccountStatus.ACTIVE
+          && !protectedFromNormalFlow
+          && !logicallyDeleted
+          && !roles.contains(TECHNICAL_ADMINISTRATOR);
     }
 
     boolean isPrivilegedForDelegates() {

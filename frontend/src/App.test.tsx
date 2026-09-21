@@ -18,6 +18,40 @@ import App from './App'
 const passwordChangeMethod = 'changePassword'
 
 describe('App', () => {
+  it.each(['ADMINISTRADOR_PLATAFORMA', 'GERENCIA_RH', 'DIRETORIA', 'GESTOR', 'COLABORADOR'])(
+    'permite troca pessoal voluntária para %s sem capacidade administrativa',
+    async (role) => {
+      const api = createApi({
+        currentUser: vi.fn().mockResolvedValue({
+          id: 'fixture',
+          displayName: 'Conta fictícia',
+          roles: [role],
+          permissions: [],
+          passwordChangeRequired: false,
+        }),
+      })
+      renderWithExistingSession(api)
+      fireEvent.click(await screen.findByRole('button', { name: 'Abrir menu' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Alterar minha senha' }))
+      expect(await screen.findByRole('heading', { name: 'Alterar minha senha' })).toHaveFocus()
+      fireEvent.change(screen.getByLabelText('Senha atual'), {
+        target: { value: crypto.randomUUID() },
+      })
+      fireEvent.keyDown(screen.getByLabelText('Senha atual'), { key: 'Escape' })
+      fireEvent.click(await screen.findByRole('button', { name: 'Abrir menu' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Alterar minha senha' }))
+      expect(screen.getByLabelText('Senha atual')).toHaveValue('')
+      const current = crypto.randomUUID(),
+        next = crypto.randomUUID()
+      fireEvent.change(screen.getByLabelText('Senha atual'), { target: { value: current } })
+      fireEvent.change(screen.getByLabelText('Nova senha'), { target: { value: next } })
+      fireEvent.change(screen.getByLabelText('Confirmar nova senha'), { target: { value: next } })
+      fireEvent.click(screen.getByRole('button', { name: 'Alterar senha' }))
+      await screen.findByRole('heading', { name: 'Acesso à plataforma' })
+      expect(api.changePassword).toHaveBeenCalledExactlyOnceWith(current, next)
+    },
+  )
+
   it.each([
     ['GESTOR', 'GESTOR'],
     ['GESTOR', 'AUTOAVALIACAO'],

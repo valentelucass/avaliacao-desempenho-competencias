@@ -21,6 +21,7 @@ export function PasswordResetRequestsPanel({
   const id = useId()
   const dialog = useRef<HTMLElement>(null)
   const revision = useRef(0)
+  const detailRevision = useRef(0)
   const [requests, setRequests] = useState<readonly PasswordResetRequest[]>([])
   const [loaded, setLoaded] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -75,6 +76,8 @@ export function PasswordResetRequestsPanel({
       setLoaded(true)
     } catch (failure) {
       if (current !== revision.current) return
+      setRequests([])
+      setUser(undefined)
       setLoaded(false)
       if (isAuthenticationError(failure)) onSessionExpired()
       else setError(safeErrorMessage(failure))
@@ -86,28 +89,33 @@ export function PasswordResetRequestsPanel({
   useEffect(() => {
     let active = true
     const requestRevision = revision
+    const pendingDetail = detailRevision
     queueMicrotask(() => {
       if (active) void load()
     })
     return () => {
       active = false
       requestRevision.current++
+      pendingDetail.current++
     }
   }, [load])
 
   async function open(userId: string) {
+    const current = ++detailRevision.current
     setError(undefined)
     setNotice(undefined)
     setBusy(true)
     try {
       const found = await api.getAdministrationUser(userId)
+      if (current !== detailRevision.current) return
       setName(found.displayName)
       setUser(found)
     } catch (failure) {
+      if (current !== detailRevision.current) return
       if (isAuthenticationError(failure)) onSessionExpired()
       else setError(safeErrorMessage(failure))
     } finally {
-      setBusy(false)
+      if (current === detailRevision.current) setBusy(false)
     }
   }
 
@@ -142,7 +150,11 @@ export function PasswordResetRequestsPanel({
           type="button"
           className="button"
           disabled={loading || busy}
-          onClick={() => void load()}
+          onClick={() => {
+            setUser(undefined)
+            setNotice(undefined)
+            void load()
+          }}
         >
           Atualizar solicitações
         </button>
@@ -181,7 +193,7 @@ export function PasswordResetRequestsPanel({
                       disabled={busy}
                       onClick={() => void open(item.userId)}
                     >
-                      Editar e redefinir senha
+                      {canEditAccount ? 'Editar e redefinir senha' : 'Redefinir senha'}
                     </button>
                   </td>
                 </tr>

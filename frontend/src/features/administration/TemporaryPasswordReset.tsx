@@ -1,11 +1,15 @@
-import { useId, useRef, useState } from 'react'
+import { useEffect, useEffectEvent, useId, useRef, useState } from 'react'
 import type { ApiClient } from '../../api/client'
 import { isAuthenticationError } from '../../api/client'
 import type { AdministrationUser } from '../../api/contracts'
 import { FeedbackMessage } from '../../ui/Feedback'
 import { safeErrorMessage } from '../../ui/safeErrorMessage'
 
-export function TemporaryPasswordReset({
+export function TemporaryPasswordReset(props: Parameters<typeof TemporaryPasswordResetSession>[0]) {
+  return <TemporaryPasswordResetSession key={props.userId} {...props} />
+}
+
+function TemporaryPasswordResetSession({
   api,
   userId,
   onReset,
@@ -22,9 +26,27 @@ export function TemporaryPasswordReset({
 }) {
   const id = useId()
   const pending = useRef(false)
+  const generation = useRef(0)
+  const notifyIdle = useEffectEvent(() => onBusyChange?.(false))
   const [busy, setBusy] = useState(false)
   const [temporary, setTemporary] = useState('')
   const [error, setError] = useState<string>()
+
+  useEffect(() => {
+    const currentGeneration = generation
+    const clear = () => {
+      generation.current++
+      setTemporary('')
+      setBusy(false)
+      pending.current = false
+      notifyIdle()
+    }
+    window.addEventListener('pagehide', clear)
+    return () => {
+      currentGeneration.current++
+      window.removeEventListener('pagehide', clear)
+    }
+  }, [userId])
 
   async function reset() {
     if (pending.current || disabled) return
@@ -33,17 +55,22 @@ export function TemporaryPasswordReset({
     onBusyChange?.(true)
     setTemporary('')
     setError(undefined)
+    const current = ++generation.current
     try {
       const result = await api.generateTemporaryPassword(userId)
+      if (current !== generation.current) return
       setTemporary(result.temporaryPassword)
       onReset(result.user)
     } catch (failure) {
+      if (current !== generation.current) return
       if (isAuthenticationError(failure)) onSessionExpired()
       else setError(safeErrorMessage(failure))
     } finally {
-      pending.current = false
-      setBusy(false)
-      onBusyChange?.(false)
+      if (current === generation.current) {
+        pending.current = false
+        setBusy(false)
+        onBusyChange?.(false)
+      }
     }
   }
 

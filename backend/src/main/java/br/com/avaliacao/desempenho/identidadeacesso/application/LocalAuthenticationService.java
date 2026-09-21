@@ -33,6 +33,7 @@ public class LocalAuthenticationService {
   private final Clock clock;
   private final OpaqueTokenService opaqueTokenService = new OpaqueTokenService();
   private final String timingEqualizerHash;
+  private final LoginRateLimiter passwordChanges;
 
   public LocalAuthenticationService(
       IdentityAccessRepository repository,
@@ -47,6 +48,8 @@ public class LocalAuthenticationService {
     this.properties = properties;
     this.transactionTemplate = transactionTemplate;
     this.clock = clock;
+    this.passwordChanges =
+        new LoginRateLimiter(clock, properties.loginMaximumAttempts(), properties.loginWindow());
     this.timingEqualizerHash = encoder.encode("not-a-real-credential");
   }
 
@@ -58,19 +61,19 @@ public class LocalAuthenticationService {
         repository.findLocalCredentialByNormalizedLogin(normalizedLogin).orElse(null);
 
     if (account == null) {
-      credentialVerifier.matches(suppliedPassword, timingEqualizerHash);
+      matchesCredential(suppliedPassword, timingEqualizerHash);
       repository.writeAudit(loginAudit(null, AuditEvent.AuditResult.FAILURE, requestId));
       throw new AuthenticationFailureException();
     }
 
     if (!account.status().canAuthenticate() || account.isTemporarilyBlockedAt(now)) {
-      credentialVerifier.matches(suppliedPassword, account.passwordHash());
+      matchesCredential(suppliedPassword, account.passwordHash());
       repository.writeAudit(
           loginAudit(account.userId(), AuditEvent.AuditResult.FAILURE, requestId));
       throw new AuthenticationFailureException();
     }
 
-    if (!credentialVerifier.matches(suppliedPassword, account.passwordHash())) {
+    if (!matchesCredential(suppliedPassword, account.passwordHash())) {
       transactionTemplate.executeWithoutResult(
           status -> {
             repository.registerFailedLogin(
@@ -127,19 +130,23 @@ public class LocalAuthenticationService {
                         jwtService.accessTokenExpiresAt(now),
                         jwtService.refreshTokenExpiresAt(now),
                         now)
+                    .map(
+                        rotated -> {
+                          repository.writeAudit(
+                              new AuditEvent(
+                                  rotated.session().userId(),
+                                  "AUTENTICACAO.RENOVAR",
+                                  "SESSAO",
+                                  rotated.session().sessionId(),
+                                  AuditEvent.AuditResult.SUCCESS,
+                                  requestId,
+                                  null));
+                          return rotated;
+                        })
                     .orElse(null));
     if (refreshed == null) {
       throw new AuthenticationFailureException();
     }
-    repository.writeAudit(
-        new AuditEvent(
-            refreshed.session().userId(),
-            "AUTENTICACAO.RENOVAR",
-            "SESSAO",
-            refreshed.session().sessionId(),
-            AuditEvent.AuditResult.SUCCESS,
-            requestId,
-            null));
     return credentialsFor(
         refreshed.session(),
         refreshed.displayName(),
@@ -165,6 +172,7 @@ public class LocalAuthenticationService {
 
   public void changePassword(
       UUID actorUserId, String currentPassword, String newPassword, String requestId) {
+    passwordChanges.checkAndRecord(actorUserId.toString());
     if (!isAcceptableNewPassword(newPassword)) {
       throw new InvalidPasswordException();
     }
@@ -173,7 +181,8 @@ public class LocalAuthenticationService {
             .findLocalCredentialByUserId(actorUserId)
             .orElseThrow(AuthenticationFailureException::new);
     if (account.status() != AccountStatus.ACTIVE
-        || !credentialVerifier.matches(currentPassword, account.passwordHash())) {
+        || account.isTemporarilyBlockedAt(clock.instant())
+        || !matchesCredential(currentPassword, account.passwordHash())) {
       repository.writeAudit(loginAudit(actorUserId, AuditEvent.AuditResult.FAILURE, requestId));
       throw new AuthenticationFailureException();
     }
@@ -199,6 +208,15 @@ public class LocalAuthenticationService {
                   requestId,
                   null));
         });
+  }
+
+  private boolean matchesCredential(String supplied, String hash) {
+    boolean validLength =
+        supplied != null
+            && !supplied.isEmpty()
+            && supplied.getBytes(java.nio.charset.StandardCharsets.UTF_8).length <= 72;
+    boolean matches = credentialVerifier.matches(validLength ? supplied : "invalid-length", hash);
+    return validLength && matches;
   }
 
   private AuthenticationSession newSession(UUID userId, Instant now) {
@@ -246,5 +264,10 @@ public class LocalAuthenticationService {
       String accessToken,
       Instant accessTokenExpiresAt,
       String refreshToken,
-      Instant refreshTokenExpiresAt) {}
+      Instant refreshTokenExpiresAt) {
+    @Override
+    public String toString() {
+      return "SessionCredentials[redacted]";
+    }
+  }
 }
