@@ -261,7 +261,7 @@ class PasswordAdministrationHttpTests {
       doAnswer(
               call -> {
                 java.util.function.Consumer<TransactionStatus> action = call.getArgument(0);
-              action.accept(mock(TransactionStatus.class));
+                action.accept(mock(TransactionStatus.class));
                 return null;
               })
           .when(template)
