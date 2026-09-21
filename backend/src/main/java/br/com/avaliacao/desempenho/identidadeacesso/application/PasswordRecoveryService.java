@@ -1,6 +1,7 @@
 package br.com.avaliacao.desempenho.identidadeacesso.application;
 
 import br.com.avaliacao.desempenho.identidadeacesso.domain.model.LoginNormalizer;
+import br.com.avaliacao.desempenho.identidadeacesso.domain.model.PasswordResetAuthorizationPolicy;
 import br.com.avaliacao.desempenho.identidadeacesso.infrastructure.persistence.ConditionalOnSqlServerPersistence;
 import java.security.SecureRandom;
 import java.time.Clock;
@@ -24,6 +25,8 @@ public class PasswordRecoveryService {
   private final LoginRateLimiter global;
   private final OpaqueTokenService hasher = new OpaqueTokenService();
   private final SecureRandom random = new SecureRandom();
+  private final PasswordResetAuthorizationPolicy authorizationPolicy =
+      new PasswordResetAuthorizationPolicy();
 
   public PasswordRecoveryService(
       PasswordRecoveryRepository repository,
@@ -50,7 +53,7 @@ public class PasswordRecoveryService {
 
   public List<PasswordRecoveryRepository.PendingRequest> list(
       UUID actor, Set<String> permissions, long after, int limit) {
-    requireAdministrator(actor, permissions);
+    requirePasswordResetOperator(actor, permissions);
     if (after < 0 || limit < 1 || limit > 100) {
       throw new UserAdministrationException(
           UserAdministrationException.Reason.INVALID_INPUT, "Paginação inválida.");
@@ -60,21 +63,24 @@ public class PasswordRecoveryService {
 
   public GeneratedPassword generate(
       UUID userId, UUID actor, Set<String> permissions, String requestId) {
-    requireAdministrator(actor, permissions);
+    requirePasswordResetOperator(actor, permissions);
     byte[] bytes = new byte[24];
     random.nextBytes(bytes);
     String temporary = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
     UserAdministrationRepository.UserView user =
-        administration.resetOrdinaryUserPassword(userId, temporary, actor, requestId);
+        administration.resetOrdinaryUserPassword(userId, temporary, actor, permissions, requestId);
     return new GeneratedPassword(user, temporary);
   }
 
-  private void requireAdministrator(UUID actor, Set<String> permissions) {
-    if (!permissions.containsAll(Set.of("USUARIOS.LER", "USUARIOS.ALTERAR"))
-        || !users.isSupremeAdministrator(actor)) {
+  private void requirePasswordResetOperator(UUID actor, Set<String> permissions) {
+    Set<String> safePermissions = Set.copyOf(permissions);
+    PasswordResetAuthorizationPolicy.Actor operator =
+        new PasswordResetAuthorizationPolicy.Actor(
+            actor, users.isSupremeAdministrator(actor), safePermissions);
+    if (!authorizationPolicy.mayListPendingRequests(operator)) {
       throw new UserAdministrationException(
           UserAdministrationException.Reason.FORBIDDEN,
-          "A recuperação exige administração autorizada de contas.");
+          "A recuperação exige delegação individual ou administração suprema autorizada.");
     }
   }
 

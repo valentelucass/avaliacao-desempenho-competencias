@@ -19,13 +19,12 @@ class PasswordRecoveryServiceTests {
       new PasswordRecoveryService(
           repository, users, administration, transaction, Clock.systemUTC());
   final UUID actor = UUID.randomUUID();
-  final Set<String> permissions = Set.of("USUARIOS.LER", "USUARIOS.ALTERAR");
+  final Set<String> permissions = Set.of("SENHAS.REDEFINIR");
 
   @Test
-  void deniesNonSupremeAndInsufficientPermissionsBeforeListingOrResetting() {
-    assertThatThrownBy(() -> service.list(actor, permissions, 0, 100))
+  void deniesAnAccountWithoutSupremeOrIndividualDelegation() {
+    assertThatThrownBy(() -> service.list(actor, Set.of(), 0, 100))
         .isInstanceOf(UserAdministrationException.class);
-    when(users.isSupremeAdministrator(actor)).thenReturn(true);
     assertThatThrownBy(
             () -> service.generate(UUID.randomUUID(), actor, Set.of("USUARIOS.LER"), "test"))
         .isInstanceOf(UserAdministrationException.class);
@@ -42,17 +41,19 @@ class PasswordRecoveryServiceTests {
     assertThat(LocalPasswordPolicy.accepts(first.temporaryPassword())).isTrue();
     assertThat(first.toString()).doesNotContain(first.temporaryPassword());
     verify(administration)
-        .resetOrdinaryUserPassword(target, first.temporaryPassword(), actor, "test");
+        .resetOrdinaryUserPassword(target, first.temporaryPassword(), actor, permissions, "test");
   }
 
   @Test
   void enforcesLimitsByLoginIndependentlyOfAddressAndByAddressIndependentlyOfLogin() {
     for (int n = 0; n < 3; n++) service.request("pessoa@example.invalid", "address-" + n, "test");
     assertThatThrownBy(() -> service.request(" PESSOA@example.invalid ", "address-new", "test"))
-        .isInstanceOf(RateLimitedException.class);
+        .isInstanceOf(
+            br.com.avaliacao.desempenho.identidadeacesso.application.RateLimitedException.class);
     for (int n = 0; n < 10; n++) service.request("fictional-" + n, "same-address", "test");
     assertThatThrownBy(() -> service.request("other", "same-address", "test"))
-        .isInstanceOf(RateLimitedException.class);
+        .isInstanceOf(
+            br.com.avaliacao.desempenho.identidadeacesso.application.RateLimitedException.class);
   }
 
   @Test

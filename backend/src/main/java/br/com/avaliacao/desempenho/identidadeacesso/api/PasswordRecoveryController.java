@@ -36,8 +36,7 @@ public class PasswordRecoveryController {
   }
 
   @GetMapping("/administration/password-reset-requests")
-  @PreAuthorize(
-      "hasAuthority('PERMISSION:USUARIOS.LER') and hasAuthority('PERMISSION:USUARIOS.ALTERAR')")
+  @PreAuthorize("hasAnyAuthority('PERMISSION:USUARIOS.LER', 'PERMISSION:SENHAS.REDEFINIR')")
   public RequestPage list(
       @RequestParam(defaultValue = "0") long after,
       @RequestParam(defaultValue = "100") int limit,
@@ -56,8 +55,7 @@ public class PasswordRecoveryController {
   }
 
   @PostMapping("/administration/users/{userId}/temporary-password")
-  @PreAuthorize(
-      "hasAuthority('PERMISSION:USUARIOS.LER') and hasAuthority('PERMISSION:USUARIOS.ALTERAR')")
+  @PreAuthorize("hasAnyAuthority('PERMISSION:USUARIOS.ALTERAR', 'PERMISSION:SENHAS.REDEFINIR')")
   public ResponseEntity<GeneratedPassword> generate(
       @PathVariable UUID userId,
       @AuthenticationPrincipal AuthenticatedPrincipal actor,

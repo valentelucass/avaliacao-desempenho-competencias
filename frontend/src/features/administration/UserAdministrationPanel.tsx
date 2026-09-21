@@ -1,4 +1,5 @@
 import { TemporaryPasswordReset } from './TemporaryPasswordReset'
+import { PasswordResetRequestsPanel } from './PasswordResetRequestsPanel'
 import { AdministrativeTable } from '@/components/ui/administrative-table'
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
@@ -10,6 +11,7 @@ import type {
   AdministrationUser,
   Permission,
   PermissionGrantEffect,
+  ReplacePasswordResetDelegationInput,
 } from '../../api/contracts'
 import { FeedbackMessage } from '../../ui/Feedback'
 import { ContextHelp } from '../../ui/ContextHelp'
@@ -89,6 +91,8 @@ const permissionCatalog: readonly AccessCatalogItem[] = [
   { code: 'USUARIOS.LER', label: 'Consultar contas' },
   { code: 'USUARIOS.CRIAR', label: 'Criar contas' },
   { code: 'USUARIOS.ALTERAR', label: 'Alterar contas' },
+  { code: 'SENHAS.REDEFINIR', label: 'Redefinir senhas' },
+  { code: 'SENHAS.DELEGAR_REDEFINICAO', label: 'Delegar redefinição de senha' },
   { code: 'ACESSOS.GERIR', label: 'Gerir acesso técnico' },
   {
     code: 'AVALIACOES.AVALIAR_VINCULADOS',
@@ -172,14 +176,22 @@ export function UserAdministrationPanel({
   const [isDeleting, setIsDeleting] = useState(false)
   const [isSavingAccess, setIsSavingAccess] = useState(false)
   const [isResettingPassword, setIsResettingPassword] = useState(false)
+  const [isSavingPasswordDelegation, setIsSavingPasswordDelegation] = useState(false)
+  const [delegatedCanResetPassword, setDelegatedCanResetPassword] = useState(false)
+  const [delegatedCanDelegatePasswordReset, setDelegatedCanDelegatePasswordReset] = useState(false)
   const [listError, setListError] = useState<string>()
   const [detailError, setDetailError] = useState<string>()
   const [createError, setCreateError] = useState<string>()
   const [updateError, setUpdateError] = useState<string>()
   const [accessError, setAccessError] = useState<string>()
+  const [passwordDelegationError, setPasswordDelegationError] = useState<string>()
   const [notice, setNotice] = useState<string>()
 
-  const canReadUsers = permissions.includes('USUARIOS.LER')
+  const canResetPasswords = isSupremeAdministrator || permissions.includes('SENHAS.REDEFINIR')
+  const canDelegatePasswordResets =
+    isSupremeAdministrator ||
+    (canResetPasswords && permissions.includes('SENHAS.DELEGAR_REDEFINICAO'))
+  const canReadUsers = permissions.includes('USUARIOS.LER') || canResetPasswords
   const canCreateUsers = permissions.includes('USUARIOS.CRIAR')
   const canUpdateUsers = permissions.includes('USUARIOS.ALTERAR')
   const canManageTechnicalAccess = permissions.includes('ACESSOS.GERIR')
@@ -228,6 +240,8 @@ export function UserAdministrationPanel({
     setEditStatus(user.status)
     const profile = profileForRoles(user.roles)
     setDraftRoles(profile.roles)
+    setDelegatedCanResetPassword(hasAllowedPermission(user, 'SENHAS.REDEFINIR'))
+    setDelegatedCanDelegatePasswordReset(hasAllowedPermission(user, 'SENHAS.DELEGAR_REDEFINICAO'))
   }, [])
 
   const loadUsers = useCallback(async () => {
@@ -266,6 +280,7 @@ export function UserAdministrationPanel({
       setDetailError(undefined)
       setUpdateError(undefined)
       setAccessError(undefined)
+      setPasswordDelegationError(undefined)
 
       setNotice(undefined)
 
@@ -440,6 +455,46 @@ export function UserAdministrationPanel({
     }
   }
 
+  async function savePasswordResetDelegation(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (
+      !selectedUser ||
+      selectedUserIsCurrent ||
+      !selectedUserIsMutable ||
+      !canDelegatePasswordResets
+    ) {
+      return
+    }
+
+    setPasswordDelegationError(undefined)
+    setNotice(undefined)
+    setIsSavingPasswordDelegation(true)
+    try {
+      const delegation: ReplacePasswordResetDelegationInput = {
+        canResetPassword: false,
+        canDelegatePasswordReset: false,
+      }
+      if (delegatedCanResetPassword) {
+        delegation.canResetPassword = true
+      }
+      if (isSupremeAdministrator && delegatedCanDelegatePasswordReset) {
+        delegation.canDelegatePasswordReset = true
+      }
+      const updatedUser = await api.replacePasswordResetDelegation(selectedUser.id, delegation)
+      updateKnownUser(updatedUser)
+      hydrateSelectedUser(updatedUser)
+      setNotice('Delegação de redefinição de senha atualizada e sessões revogadas.')
+    } catch (requestError) {
+      if (isAuthenticationError(requestError)) {
+        onSessionExpired()
+        return
+      }
+      setPasswordDelegationError(safeErrorMessage(requestError))
+    } finally {
+      setIsSavingPasswordDelegation(false)
+    }
+  }
+
   function selectAccessProfile(profileValue: InitialAccountProfile) {
     const profile = accountProfiles.find((item) => item.value === profileValue)
     if (!profile) {
@@ -453,34 +508,45 @@ export function UserAdministrationPanel({
     Boolean(selectedUser) &&
     !selectedUser?.protectedFromNormalFlow &&
     !selectedUser?.logicallyDeleted
+  const selectedUserIsPrivilegedForDelegates =
+    selectedUser !== undefined &&
+    (selectedUser.roles.includes('ADMINISTRADOR_PLATAFORMA') ||
+      hasAllowedPermission(selectedUser, 'SENHAS.DELEGAR_REDEFINICAO'))
   const canResetSelectedUserPassword =
     Boolean(selectedUser) &&
-    isSupremeAdministrator &&
-    canReadUsers &&
-    canUpdateUsers &&
+    canResetPasswords &&
     selectedUser?.status === 'ACTIVE' &&
     !selectedUserIsCurrent &&
-    selectedUserIsMutable
-  const passwordResetRestriction = !isSupremeAdministrator
-    ? 'A redefinição só pode ser concluída por um administrador supremo autorizado.'
-    : !canReadUsers || !canUpdateUsers
-      ? 'Sua conta não possui as permissões necessárias para redefinir senhas.'
+    selectedUserIsMutable &&
+    (isSupremeAdministrator || !selectedUserIsPrivilegedForDelegates)
+  const canConfigureSelectedUserPasswordDelegation =
+    Boolean(selectedUser) &&
+    canDelegatePasswordResets &&
+    !selectedUserIsCurrent &&
+    selectedUserIsMutable &&
+    (isSupremeAdministrator || !selectedUserIsPrivilegedForDelegates)
+  const passwordResetRestriction = !canResetPasswords
+    ? 'Sua conta não possui uma delegação autorizada para redefinir senhas.'
+    : !isSupremeAdministrator && selectedUserIsPrivilegedForDelegates
+      ? 'Contas técnicas e contas que delegam redefinições de senha exigem administrador supremo.'
       : selectedUserIsCurrent
         ? 'A própria conta não pode redefinir a senha por este fluxo administrativo.'
-        : selectedUser?.status !== 'ACTIVE'
-          ? 'Reative a conta antes de gerar uma senha temporária.'
-          : !selectedUserIsMutable
-            ? 'Esta conta é protegida ou foi excluída logicamente e não pode receber uma senha temporária.'
-            : undefined
+        : !canReadUsers
+          ? 'Sua conta não possui as permissões necessárias para consultar esta conta.'
+          : selectedUser?.status !== 'ACTIVE'
+            ? 'Reative a conta antes de gerar uma senha temporária.'
+            : !selectedUserIsMutable
+              ? 'Esta conta é protegida ou foi excluída logicamente e não pode receber uma senha temporária.'
+              : undefined
   const hasAnyAdministrationPermission =
-    canReadUsers || canCreateUsers || canUpdateUsers || canManageAccess
+    canReadUsers || canCreateUsers || canUpdateUsers || canManageAccess || canResetPasswords
   const hasVisibleUserOperation = canReadUsers || (canCreateUsers && accountProfiles.length > 0)
 
   useAccessibleDialog({
     dialogRef: selectedUserDialogRef,
     isOpen: Boolean(selectedUser && !isLoadingDetail),
     onRequestClose: () => setSelectedUser(undefined),
-    canDismiss: !isResettingPassword,
+    canDismiss: !isResettingPassword && !isSavingPasswordDelegation,
   })
 
   return (
@@ -642,6 +708,19 @@ export function UserAdministrationPanel({
         </section>
       ) : null}
 
+      {canResetPasswords ? (
+        <section
+          className="card password-recovery-requests-card"
+          aria-label="Solicitações de senha"
+        >
+          <PasswordResetRequestsPanel
+            api={api}
+            canEditAccount={canUpdateUsers}
+            onSessionExpired={onSessionExpired}
+          />
+        </section>
+      ) : null}
+
       {canReadUsers ? (
         <section className="card" aria-labelledby="local-users-title">
           <div className="section-heading">
@@ -657,7 +736,7 @@ export function UserAdministrationPanel({
               </div>
               <p className="muted">
                 Abra os três pontos de uma conta para editar seus dados, conferir os acessos e, para
-                administradores supremos autorizados, redefinir a senha na área Segurança da senha.
+                contas autorizadas, redefinir a senha na área Segurança da senha.
               </p>
             </div>
           </div>
@@ -745,7 +824,7 @@ export function UserAdministrationPanel({
         <div
           className="account-dialog-backdrop"
           onMouseDown={() => {
-            if (!isResettingPassword) setSelectedUser(undefined)
+            if (!isResettingPassword && !isSavingPasswordDelegation) setSelectedUser(undefined)
           }}
         >
           <section
@@ -772,7 +851,7 @@ export function UserAdministrationPanel({
                 </span>
                 <button
                   aria-label="Fechar detalhes da conta"
-                  disabled={isResettingPassword}
+                  disabled={isResettingPassword || isSavingPasswordDelegation}
                   className="icon-button"
                   data-dialog-initial-focus
                   type="button"
@@ -836,6 +915,67 @@ export function UserAdministrationPanel({
               ) : (
                 <p className="account-dialog__restricted-action">{passwordResetRestriction}</p>
               )}
+              {canConfigureSelectedUserPasswordDelegation ? (
+                <form
+                  className="stack-form account-dialog__password-delegation"
+                  onSubmit={savePasswordResetDelegation}
+                  noValidate
+                  aria-busy={isSavingPasswordDelegation}
+                >
+                  <div>
+                    <h5>Capacidades delegadas</h5>
+                    <p className="field-hint">
+                      Esta concessão é individual. Ela não acompanha automaticamente o perfil de RH,
+                      Diretoria ou Gestor.
+                    </p>
+                  </div>
+                  {passwordDelegationError ? (
+                    <FeedbackMessage
+                      kind="error"
+                      onDismiss={() => setPasswordDelegationError(undefined)}
+                    >
+                      {passwordDelegationError}
+                    </FeedbackMessage>
+                  ) : null}
+                  <fieldset disabled={isSavingPasswordDelegation || isResettingPassword}>
+                    <legend className="visually-hidden">Capacidades delegadas de senha</legend>
+                    <label className="checkbox-field">
+                      <input
+                        type="checkbox"
+                        checked={delegatedCanResetPassword}
+                        onChange={(event) => {
+                          setDelegatedCanResetPassword(event.target.checked)
+                          if (!event.target.checked) setDelegatedCanDelegatePasswordReset(false)
+                        }}
+                      />
+                      Pode redefinir senhas de contas elegíveis
+                    </label>
+                    {isSupremeAdministrator ? (
+                      <label className="checkbox-field">
+                        <input
+                          type="checkbox"
+                          checked={delegatedCanDelegatePasswordReset}
+                          onChange={(event) => {
+                            setDelegatedCanDelegatePasswordReset(event.target.checked)
+                            if (event.target.checked) setDelegatedCanResetPassword(true)
+                          }}
+                        />
+                        Pode conceder a outras contas a redefinição de senha
+                      </label>
+                    ) : null}
+                  </fieldset>
+                  <div className="action-row">
+                    <button
+                      className="button button--success"
+                      type="submit"
+                      disabled={isSavingPasswordDelegation || isResettingPassword}
+                    >
+                      <ShieldCheck aria-hidden="true" size={17} strokeWidth={2} />
+                      {isSavingPasswordDelegation ? 'Salvando delegação…' : 'Salvar capacidades'}
+                    </button>
+                  </div>
+                </form>
+              ) : null}
             </section>
 
             <div className="account-dialog__management">
@@ -930,9 +1070,10 @@ export function UserAdministrationPanel({
                 >
                   <h4>Perfil de acesso</h4>
                   <p className="muted">
-                    Escolha exatamente um perfil. Ao salvar, os papéis anteriores e exceções
-                    individuais desta conta serão removidos; o servidor revalida o operador, o alvo
-                    e todas as regras.
+                    Escolha exatamente um perfil. Ao salvar, os papéis anteriores e as exceções
+                    individuais comuns desta conta serão removidos; capacidades de senha delegadas
+                    permanecem sob controle da seção de segurança. O servidor revalida o operador, o
+                    alvo e todas as regras.
                   </p>
                   {accessError ? (
                     <FeedbackMessage kind="error" onDismiss={() => setAccessError(undefined)}>
@@ -1051,6 +1192,12 @@ function AccessSummary({ user }: { user: AdministrationUser }) {
         )}
       </div>
     </section>
+  )
+}
+
+function hasAllowedPermission(user: AdministrationUser, code: string): boolean {
+  return user.individualPermissions.some(
+    (permission) => permission.code === code && permission.effect === 'ALLOW',
   )
 }
 

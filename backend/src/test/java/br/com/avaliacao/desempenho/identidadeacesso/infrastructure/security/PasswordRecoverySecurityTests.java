@@ -88,15 +88,13 @@ class PasswordRecoverySecurityTests {
     String queue = "/api/v1/administration/password-reset-requests";
     String generation = "/api/v1/administration/users/" + UUID.randomUUID() + "/temporary-password";
     mvc.perform(get(queue)).andExpect(status().isUnauthorized());
-    mvc.perform(get(queue).with(actor("USUARIOS.LER"))).andExpect(status().isForbidden());
+    mvc.perform(get(queue).with(actor("INDICADORES.VISUALIZAR"))).andExpect(status().isForbidden());
     mvc.perform(post(generation).with(csrf())).andExpect(status().isUnauthorized());
-    mvc.perform(post(generation).with(actor("USUARIOS.LER", "USUARIOS.ALTERAR")))
-        .andExpect(status().isForbidden());
-    mvc.perform(post(generation).with(csrf()).with(actor("USUARIOS.ALTERAR")))
-        .andExpect(status().isForbidden());
+    mvc.perform(post(generation).with(actor("USUARIOS.LER"))).andExpect(status().isForbidden());
+    mvc.perform(post(generation).with(actor("SENHAS.REDEFINIR"))).andExpect(status().isForbidden());
     verifyNoInteractions(service);
     when(service.list(any(), anySet(), eq(0L), eq(100))).thenReturn(List.of());
-    mvc.perform(get(queue).with(actor("USUARIOS.LER", "USUARIOS.ALTERAR")))
+    mvc.perform(get(queue).with(actor("SENHAS.REDEFINIR")))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.items").isEmpty())
         .andExpect(jsonPath("$.page.limit").value(100));

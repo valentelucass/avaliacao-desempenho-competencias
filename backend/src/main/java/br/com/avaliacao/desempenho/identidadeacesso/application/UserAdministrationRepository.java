@@ -24,7 +24,17 @@ public interface UserAdministrationRepository {
   boolean isSupremeAdministrator(UUID userId);
 
   Optional<UserView> resetOrdinaryUserPassword(
-      UUID userId, String passwordHash, String algorithm, String parameters);
+      UUID userId,
+      String passwordHash,
+      String algorithm,
+      String parameters,
+      boolean actorIsSupremeAdministrator);
+
+  boolean replacePasswordResetDelegation(
+      UUID userId,
+      PasswordResetDelegation delegation,
+      UUID actorUserId,
+      boolean actorIsSupremeAdministrator);
 
   boolean replaceAccess(UUID userId, AccessConfiguration access, UUID actorUserId);
 
@@ -46,6 +56,8 @@ public interface UserAdministrationRepository {
   record AccessConfiguration(Set<String> roleCodes, List<IndividualPermission> permissions) {}
 
   record IndividualPermission(String permissionCode, PermissionEffect effect) {}
+
+  record PasswordResetDelegation(boolean canResetPassword, boolean canDelegatePasswordReset) {}
 
   record UserView(
       UUID id,

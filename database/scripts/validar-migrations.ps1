@@ -234,6 +234,27 @@ try {
     }
   }
 
+  $v0015 = $files | Where-Object {
+    $_.Name -eq 'V0015__delegacao_individual_de_redefinicao_de_senha.sql'
+  }
+  if ($null -ne $v0015) {
+    $passwordDelegationValidation = Join-Path $PSScriptRoot 'testar-v0015-delegacao-redefinicao-senha.ps1'
+    $sqlValidation = Join-Path $resolvedDirectory '..\validation\015_validar_delegacao_individual_redefinicao_senha.sql'
+
+    if (-not (Test-Path -LiteralPath $passwordDelegationValidation)) {
+      throw 'Teste estatico da V0015 nao encontrado.'
+    }
+    if (-not (Test-Path -LiteralPath $sqlValidation)) {
+      throw 'Validacao SQL da V0015 nao encontrada.'
+    }
+
+    $global:LASTEXITCODE = 0
+    & $passwordDelegationValidation -MigrationPath $v0015.FullName -SqlValidationPath $sqlValidation
+    if ($LASTEXITCODE -ne 0) {
+      throw 'Teste estatico da V0015 falhou.'
+    }
+  }
+
   Write-Output "Migrations validas: $($files.Count)"
   Write-Output 'Conteudo de migrations compativel com o runner.'
 } catch {

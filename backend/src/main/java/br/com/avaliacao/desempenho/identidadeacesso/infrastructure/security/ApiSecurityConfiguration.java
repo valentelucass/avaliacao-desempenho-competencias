@@ -116,10 +116,10 @@ public class ApiSecurityConfiguration {
                     .permitAll()
                     .requestMatchers(
                         HttpMethod.GET, "/api/v1/administration/password-reset-requests")
-                    .hasAuthority("PERMISSION:USUARIOS.LER")
+                    .hasAnyAuthority("PERMISSION:USUARIOS.LER", "PERMISSION:SENHAS.REDEFINIR")
                     .requestMatchers(
                         HttpMethod.POST, "/api/v1/administration/users/*/temporary-password")
-                    .hasAuthority("PERMISSION:USUARIOS.ALTERAR")
+                    .hasAnyAuthority("PERMISSION:USUARIOS.ALTERAR", "PERMISSION:SENHAS.REDEFINIR")
                     .requestMatchers(HttpMethod.POST, "/api/v1/auth/sessions")
                     .permitAll()
                     .requestMatchers(HttpMethod.POST, "/api/v1/auth/sessions/refresh")
@@ -127,14 +127,18 @@ public class ApiSecurityConfiguration {
                     .requestMatchers(HttpMethod.POST, "/api/v1/auth/sessions/restore")
                     .permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/v1/administration/users/**")
-                    .hasAuthority("PERMISSION:USUARIOS.LER")
+                    .hasAnyAuthority("PERMISSION:USUARIOS.LER", "PERMISSION:SENHAS.REDEFINIR")
                     .requestMatchers(HttpMethod.POST, "/api/v1/administration/users")
                     .hasAuthority("PERMISSION:USUARIOS.CRIAR")
                     .requestMatchers(HttpMethod.PATCH, "/api/v1/administration/users/**")
                     .hasAuthority("PERMISSION:USUARIOS.ALTERAR")
                     .requestMatchers(
                         HttpMethod.PUT, "/api/v1/administration/users/*/password-reset")
-                    .hasAuthority("PERMISSION:USUARIOS.ALTERAR")
+                    .hasAnyAuthority("PERMISSION:USUARIOS.ALTERAR", "PERMISSION:SENHAS.REDEFINIR")
+                    .requestMatchers(
+                        HttpMethod.PUT, "/api/v1/administration/users/*/password-reset-delegation")
+                    .hasAnyAuthority(
+                        "PERMISSION:USUARIOS.ALTERAR", "PERMISSION:SENHAS.DELEGAR_REDEFINICAO")
                     .requestMatchers(HttpMethod.PUT, "/api/v1/administration/users/*/access-grants")
                     .hasAnyAuthority("PERMISSION:ACESSOS.GERIR", "PERMISSION:ACESSOS.NEGOCIO.GERIR")
                     .requestMatchers("/api/v1/administration/access-grants/**")

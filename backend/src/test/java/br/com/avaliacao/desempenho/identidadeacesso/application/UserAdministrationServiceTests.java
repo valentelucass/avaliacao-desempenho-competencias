@@ -3,6 +3,7 @@ package br.com.avaliacao.desempenho.identidadeacesso.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -266,10 +267,13 @@ class UserAdministrationServiceTests {
             Instant.EPOCH);
     when(transactionTemplate.execute(any())).thenAnswer(this::runTransaction);
     when(repository.isSupremeAdministrator(actor)).thenReturn(true);
-    when(repository.resetOrdinaryUserPassword(any(), any(), any(), any()))
+    when(repository.findUser(target)).thenReturn(Optional.of(resetUser));
+    when(repository.resetOrdinaryUserPassword(any(), any(), any(), any(), anyBoolean()))
         .thenReturn(Optional.of(resetUser));
 
-    assertThat(service.resetOrdinaryUserPassword(target, "senha-temporaria-123", actor, "request"))
+    assertThat(
+            service.resetOrdinaryUserPassword(
+                target, "senha-temporaria-123", actor, Set.of(), "request"))
         .isEqualTo(resetUser);
 
     ArgumentCaptor<String> hash = ArgumentCaptor.forClass(String.class);
@@ -278,7 +282,8 @@ class UserAdministrationServiceTests {
             org.mockito.ArgumentMatchers.eq(target),
             hash.capture(),
             org.mockito.ArgumentMatchers.eq("BCRYPT"),
-            org.mockito.ArgumentMatchers.eq("strength=12"));
+            org.mockito.ArgumentMatchers.eq("strength=12"),
+            org.mockito.ArgumentMatchers.eq(true));
     assertThat(hash.getValue()).isNotEqualTo("senha-temporaria-123");
     assertThat(new BCryptPasswordEncoder(4).matches("senha-temporaria-123", hash.getValue()))
         .isTrue();
@@ -290,17 +295,77 @@ class UserAdministrationServiceTests {
   @Test
   void rejectsPasswordResetWhenActorIsNotTheSupremeAdministrator() {
     UUID actor = UUID.randomUUID();
+    UUID target = UUID.randomUUID();
+    when(repository.findUser(target))
+        .thenReturn(
+            Optional.of(
+                new UserView(
+                    target,
+                    "conta.comum",
+                    "Conta comum",
+                    AccountStatus.ACTIVE,
+                    false,
+                    false,
+                    false,
+                    Set.of("COLABORADOR"),
+                    List.of(),
+                    Instant.EPOCH)));
 
     assertThatThrownBy(
             () ->
                 service.resetOrdinaryUserPassword(
-                    UUID.randomUUID(), "senha-temporaria-123", actor, "request"))
+                    target, "senha-temporaria-123", actor, Set.of(), "request"))
         .isInstanceOf(UserAdministrationException.class)
         .extracting(exception -> ((UserAdministrationException) exception).reason())
         .isEqualTo(Reason.FORBIDDEN);
 
     verify(repository).isSupremeAdministrator(actor);
     verifyNoInteractions(transactionTemplate);
+  }
+
+  @Test
+  void delegationManagerMayGrantOnlyTheOrdinaryPasswordResetCapability() {
+    UUID actor = UUID.randomUUID();
+    UUID target = UUID.randomUUID();
+    UserView targetUser =
+        new UserView(
+            target,
+            "conta.rh",
+            "Conta RH",
+            AccountStatus.ACTIVE,
+            false,
+            false,
+            false,
+            Set.of("GERENCIA_RH"),
+            List.of(),
+            Instant.EPOCH);
+    when(repository.findUser(target)).thenReturn(Optional.of(targetUser));
+    when(repository.replacePasswordResetDelegation(any(), any(), any(), anyBoolean()))
+        .thenReturn(true);
+    when(transactionTemplate.execute(any())).thenAnswer(this::runTransaction);
+
+    assertThat(
+            service.replacePasswordResetDelegation(
+                target,
+                true,
+                false,
+                actor,
+                Set.of("SENHAS.REDEFINIR", "SENHAS.DELEGAR_REDEFINICAO"),
+                "request"))
+        .isEqualTo(targetUser);
+
+    verify(repository)
+        .replacePasswordResetDelegation(
+            org.mockito.ArgumentMatchers.eq(target),
+            org.mockito.ArgumentMatchers.argThat(
+                delegation ->
+                    delegation.canResetPassword() && !delegation.canDelegatePasswordReset()),
+            org.mockito.ArgumentMatchers.eq(actor),
+            org.mockito.ArgumentMatchers.eq(false));
+    verify(repository).revokeAllSessions(target, "DELEGACAO_REDEFINICAO_SENHA_ALTERADA");
+    verify(repository)
+        .writeAdministrativeAudit(
+            actor, "USUARIO.SENHA.DELEGACAO_ALTERAR", "USUARIO", target, "request");
   }
 
   @Test

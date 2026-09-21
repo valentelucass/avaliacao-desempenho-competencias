@@ -4,6 +4,8 @@ import br.com.avaliacao.desempenho.identidadeacesso.application.UserAdministrati
 import br.com.avaliacao.desempenho.identidadeacesso.domain.model.AccountStatus;
 import br.com.avaliacao.desempenho.identidadeacesso.domain.model.AdministrativeAccessSegregationPolicy;
 import br.com.avaliacao.desempenho.identidadeacesso.domain.model.LoginNormalizer;
+import br.com.avaliacao.desempenho.identidadeacesso.domain.model.PasswordResetAuthorizationPolicy;
+import br.com.avaliacao.desempenho.identidadeacesso.domain.model.PermissionEffect;
 import br.com.avaliacao.desempenho.identidadeacesso.domain.model.PlatformRole;
 import br.com.avaliacao.desempenho.identidadeacesso.infrastructure.persistence.ConditionalOnSqlServerPersistence;
 import java.util.List;
@@ -32,6 +34,8 @@ public class UserAdministrationService {
   private final TransactionTemplate transactionTemplate;
   private final AdministrativeAccessSegregationPolicy accessSegregationPolicy =
       new AdministrativeAccessSegregationPolicy();
+  private final PasswordResetAuthorizationPolicy passwordResetAuthorizationPolicy =
+      new PasswordResetAuthorizationPolicy();
 
   public UserAdministrationService(
       UserAdministrationRepository repository,
@@ -136,22 +140,27 @@ public class UserAdministrationService {
             }));
   }
 
-  /**
-   * Recuperação excepcional: somente o administrador supremo pode definir uma senha temporária para
-   * uma conta comum. A credencial nunca é retornada e as sessões anteriores são revogadas.
-   */
+  /** A credencial nunca é retornada e as sessões anteriores são revogadas. */
   public UserAdministrationRepository.UserView resetOrdinaryUserPassword(
-      UUID userId, String temporaryPassword, UUID actorUserId, String requestId) {
+      UUID userId,
+      String temporaryPassword,
+      UUID actorUserId,
+      Set<String> actorPermissionCodes,
+      String requestId) {
     UUID targetUserId = Objects.requireNonNull(userId, "userId");
     UUID actorId = Objects.requireNonNull(actorUserId, "actorUserId");
     requirePassword(temporaryPassword);
-    if (actorId.equals(targetUserId)) {
+    boolean actorIsSupremeAdministrator = repository.isSupremeAdministrator(actorId);
+    PasswordResetAuthorizationPolicy.Actor actor =
+        new PasswordResetAuthorizationPolicy.Actor(
+            actorId,
+            actorIsSupremeAdministrator,
+            Set.copyOf(Objects.requireNonNull(actorPermissionCodes, "permissões do ator")));
+    UserAdministrationRepository.UserView target = getUser(targetUserId);
+    if (!passwordResetAuthorizationPolicy.mayResetPassword(actor, passwordResetTarget(target))) {
       throw new UserAdministrationException(
-          Reason.FORBIDDEN, "Use a troca de senha da própria conta para alterar sua credencial.");
-    }
-    if (!repository.isSupremeAdministrator(actorId)) {
-      throw new UserAdministrationException(
-          Reason.FORBIDDEN, "A redefinição de senha é reservada ao administrador supremo.");
+          Reason.FORBIDDEN,
+          "A conta não está disponível para redefinição de senha por esta sessão.");
     }
 
     String passwordHash = credentialEncoder.encode(temporaryPassword);
@@ -161,16 +170,73 @@ public class UserAdministrationService {
               UserAdministrationRepository.UserView resetUser =
                   repository
                       .resetOrdinaryUserPassword(
-                          targetUserId, passwordHash, "BCRYPT", "strength=12")
+                          targetUserId,
+                          passwordHash,
+                          "BCRYPT",
+                          "strength=12",
+                          actorIsSupremeAdministrator)
                       .orElseThrow(
                           () ->
                               new UserAdministrationException(
                                   Reason.USER_NOT_FOUND,
                                   "Usuário não encontrado ou indisponível para recuperação."));
-              repository.revokeAllSessions(targetUserId, "SENHA_REDEFINIDA_ADMINISTRADOR_SUPREMO");
+              repository.revokeAllSessions(
+                  targetUserId,
+                  actorIsSupremeAdministrator
+                      ? "SENHA_REDEFINIDA_ADMINISTRADOR_SUPREMO"
+                      : "SENHA_REDEFINIDA_POR_DELEGACAO");
               repository.writeAdministrativeAudit(
                   actorId, "USUARIO.SENHA_REDEFINIR", "USUARIO", targetUserId, requestId);
               return resetUser;
+            }));
+  }
+
+  public UserAdministrationRepository.UserView replacePasswordResetDelegation(
+      UUID userId,
+      boolean canResetPassword,
+      boolean canDelegatePasswordReset,
+      UUID actorUserId,
+      Set<String> actorPermissionCodes,
+      String requestId) {
+    UUID targetUserId = Objects.requireNonNull(userId, "userId");
+    UUID actorId = Objects.requireNonNull(actorUserId, "actorUserId");
+    PasswordResetAuthorizationPolicy.Delegation desired;
+    try {
+      desired =
+          new PasswordResetAuthorizationPolicy.Delegation(
+              canResetPassword, canDelegatePasswordReset);
+    } catch (IllegalArgumentException exception) {
+      throw new UserAdministrationException(Reason.INVALID_INPUT, exception.getMessage());
+    }
+    boolean actorIsSupremeAdministrator = repository.isSupremeAdministrator(actorId);
+    PasswordResetAuthorizationPolicy.Actor actor =
+        new PasswordResetAuthorizationPolicy.Actor(
+            actorId,
+            actorIsSupremeAdministrator,
+            Set.copyOf(Objects.requireNonNull(actorPermissionCodes, "permissões do ator")));
+    UserAdministrationRepository.UserView target = getUser(targetUserId);
+    if (!passwordResetAuthorizationPolicy.mayReplaceDelegation(
+        actor, passwordResetTarget(target), desired)) {
+      throw new UserAdministrationException(
+          Reason.FORBIDDEN, "A sessão não pode alterar a delegação de redefinição desta conta.");
+    }
+    return Objects.requireNonNull(
+        transactionTemplate.execute(
+            ignored -> {
+              if (!repository.replacePasswordResetDelegation(
+                  targetUserId,
+                  new UserAdministrationRepository.PasswordResetDelegation(
+                      desired.canResetPassword(), desired.canDelegatePasswordReset()),
+                  actorId,
+                  actorIsSupremeAdministrator)) {
+                throw new UserAdministrationException(
+                    Reason.USER_NOT_FOUND,
+                    "Usuário não encontrado ou indisponível para esta delegação.");
+              }
+              repository.revokeAllSessions(targetUserId, "DELEGACAO_REDEFINICAO_SENHA_ALTERADA");
+              repository.writeAdministrativeAudit(
+                  actorId, "USUARIO.SENHA.DELEGACAO_ALTERAR", "USUARIO", targetUserId, requestId);
+              return getUser(targetUserId);
             }));
   }
 
@@ -284,6 +350,22 @@ public class UserAdministrationService {
           Reason.INVALID_INPUT, "Campo administrativo inválido: " + field + '.');
     }
     return value.strip();
+  }
+
+  private PasswordResetAuthorizationPolicy.Target passwordResetTarget(
+      UserAdministrationRepository.UserView user) {
+    Set<String> individualAllowedPermissions =
+        user.individualPermissions().stream()
+            .filter(permission -> permission.effect() == PermissionEffect.ALLOW)
+            .map(UserAdministrationRepository.IndividualPermission::permissionCode)
+            .collect(java.util.stream.Collectors.toUnmodifiableSet());
+    return new PasswordResetAuthorizationPolicy.Target(
+        user.id(),
+        user.status(),
+        user.protectedFromNormalFlow(),
+        user.logicallyDeleted(),
+        user.roles(),
+        individualAllowedPermissions);
   }
 
   private void requirePassword(String password) {

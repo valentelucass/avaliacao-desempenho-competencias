@@ -18,7 +18,7 @@ Mantida a regra do `AGENTS.md`: menos de cinco colaboradores distintos após fil
 
 ## Recuperação
 
-No login, **Solicitar redefinição de senha** recebe e-mail/login e confirma genericamente. Em **Administração → Cadastros → Colaboradores**, o administrador supremo autorizado vê a quantidade total de solicitações pendentes e uma tabela com nome, login e data. **Editar e redefinir senha** abre o atendimento. O mesmo gerador aparece ao abrir os três pontos de uma conta local elegível.
+No login, **Solicitar redefinição de senha** recebe e-mail/login e confirma genericamente. Em **Administração → Contas e acessos**, o administrador supremo ou a conta com delegação individual vê as solicitações pendentes, com nome, login e data. **Atender solicitação de senha** abre o atendimento. O mesmo gerador aparece ao abrir os três pontos de uma conta local elegível.
 
 **Gerar senha temporária e redefinir** troca a credencial e apresenta o valor para entrega manual. Ao fechar, o valor deixa de ser exibido. O pedido atendido sai da fila, as sessões anteriores são revogadas e o usuário precisa cadastrar uma senha pessoal e entrar novamente. O administrador confirma a identidade antes de redefinir. Não há envio automático de e-mail nem senha compartilhada. Decisão, controles e limitações na [ADR-0021](../adr/0021-recuperacao-local-assistida-de-senha.md).
 
@@ -34,6 +34,6 @@ As listas administrativas existentes já chegam completas/autorizadas; ciclos e 
 
 ## Ativação e recuperação operacional
 
-Publicação não executada. Usar o processo autorizado vigente para publicar primeiro a API e depois a SPA; validar CSRF, cookies, permissões, fila e fluxo real com conta de teste autorizada. Nenhuma migration nova é necessária. Preservar pendências operacionais anteriores, inclusive grants de outras tarefas, sem tratá-las como resolvidas aqui.
+Publicação não executada. Aplicar V0015 e publicar primeiro a API, depois a SPA; validar CSRF, cookies, permissões, fila e fluxo real com conta de teste autorizada. A migration não concede capacidades a nenhuma conta: o administrador supremo define os delegados depois da ativação. Preservar pendências operacionais anteriores, inclusive grants de outras tarefas, sem tratá-las como resolvidas aqui.
 
 Reversão de código/artefatos restaura a interface anterior; não deve apagar auditoria, avaliações ou recriar senhas antigas. O atendimento já executado continua válido; a API anterior já reconhece a marca de troca obrigatória. Qualquer redefinição adicional exige a mesma autorização administrativa. Configuração de proxy/rate limit, certificado, TLS SQL e aceite visual no alvo permanecem controles próprios da liberação.

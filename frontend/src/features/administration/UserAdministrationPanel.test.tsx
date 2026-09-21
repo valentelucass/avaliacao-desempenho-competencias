@@ -441,6 +441,48 @@ describe('UserAdministrationPanel', () => {
     expect(screen.queryByLabelText('Senha temporária gerada')).not.toBeInTheDocument()
   })
 
+  it('permite a uma conta delegadora conceder somente a redefinição simples', async () => {
+    const ordinaryUser = sampleUser({ id: 'ordinary-user', displayName: 'Conta comum' })
+    const delegatedUser = sampleUser({
+      ...ordinaryUser,
+      individualPermissions: [{ code: 'SENHAS.REDEFINIR', effect: 'ALLOW' }],
+    })
+    const api = createApi({
+      listAdministrationUsers: vi.fn().mockResolvedValue([ordinaryUser]),
+      getAdministrationUser: vi.fn().mockResolvedValue(ordinaryUser),
+      replacePasswordResetDelegation: vi.fn().mockResolvedValue(delegatedUser),
+    })
+
+    render(
+      <UserAdministrationPanel
+        api={api}
+        currentUserId="delegator-user"
+        isSupremeAdministrator={false}
+        permissions={['SENHAS.REDEFINIR', 'SENHAS.DELEGAR_REDEFINICAO']}
+        onSessionExpired={vi.fn()}
+      />,
+    )
+
+    expect(await screen.findByRole('cell', { name: ordinaryUser.displayName })).toBeInTheDocument()
+    await viewAccountDetails(ordinaryUser.displayName)
+    fireEvent.click(
+      screen.getByRole('checkbox', { name: 'Pode redefinir senhas de contas elegíveis' }),
+    )
+    expect(
+      screen.queryByRole('checkbox', {
+        name: 'Pode conceder a outras contas a redefinição de senha',
+      }),
+    ).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar capacidades' }))
+
+    await waitFor(() =>
+      expect(api.replacePasswordResetDelegation).toHaveBeenCalledWith(ordinaryUser.id, {
+        canResetPassword: true,
+        canDelegatePasswordReset: false,
+      }),
+    )
+  })
+
   it('não chama a API nem renderiza controles quando não há permissão administrativa', () => {
     const api = createApi()
 
@@ -465,12 +507,15 @@ describe('UserAdministrationPanel', () => {
 
 function createApi(overrides: Partial<ApiClient> = {}): ApiClient {
   return {
+    listPasswordResetRequests: vi.fn().mockResolvedValue([]),
+    generateTemporaryPassword: vi.fn(),
     listAdministrationUsers: vi.fn().mockResolvedValue([]),
     getAdministrationUser: vi.fn(),
     createAdministrationUser: vi.fn(),
     logicallyDeleteAdministrationUser: vi.fn(),
     updateAdministrationUser: vi.fn(),
     replaceAdministrationUserAccessGrants: vi.fn(),
+    replacePasswordResetDelegation: vi.fn(),
     ...overrides,
   } as ApiClient
 }

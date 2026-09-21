@@ -50,6 +50,7 @@ import type {
   Page,
   QuestionnaireAssignmentOption,
   ReplaceAdministrationUserAccessGrantsInput,
+  ReplacePasswordResetDelegationInput,
   ResetAdministrationUserPasswordInput,
   ReplaceEvaluationCycleInput,
   RevokeQuestionnaireAssignmentInput,
@@ -113,6 +114,10 @@ export interface ApiClient {
   resetAdministrationUserPassword(
     userId: string,
     input: ResetAdministrationUserPasswordInput,
+  ): Promise<AdministrationUser>
+  replacePasswordResetDelegation(
+    userId: string,
+    input: ReplacePasswordResetDelegationInput,
   ): Promise<AdministrationUser>
   updateAdministrationUser(
     userId: string,
@@ -430,6 +435,20 @@ export class HttpApiClient implements ApiClient {
   ): Promise<AdministrationUser> {
     return this.request<AdministrationUser>(
       `/administration/users/${encodeURIComponent(userId)}/password-reset`,
+      {
+        method: 'PUT',
+        body: input,
+        requiresCsrf: true,
+      },
+    )
+  }
+
+  replacePasswordResetDelegation(
+    userId: string,
+    input: ReplacePasswordResetDelegationInput,
+  ): Promise<AdministrationUser> {
+    return this.request<AdministrationUser>(
+      `/administration/users/${encodeURIComponent(userId)}/password-reset-delegation`,
       {
         method: 'PUT',
         body: input,

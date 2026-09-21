@@ -6,7 +6,7 @@
 
 ## Decisão
 
-Reutilizar a identidade local, as sessões revogáveis e a auditoria existentes. A recuperação não envia e-mail nem cria integração, tabela, migration ou concessão SQL. O administrador supremo com `USUARIOS.LER` e `USUARIOS.ALTERAR` atende pedidos de contas comuns ativas; não pode redefinir a própria senha ou a de uma conta suprema, protegida, inativa ou excluída. A restrição anterior de administrador supremo foi preservada.
+Reutilizar a identidade local, as sessões revogáveis e a auditoria existentes. A recuperação não envia e-mail nem cria integração ou tabela. A decisão de autoridade descrita originalmente nesta ADR foi substituída pela [ADR-0022](0022-delegacao-individual-de-redefinicao-de-senha.md): a V0015 cria permissões individuais de redefinição e de delegação, sem concessão automática por perfil. Permanecem proibidos a redefinição da própria conta e o atendimento de conta suprema, protegida, inativa ou excluída.
 
 O login oferece uma solicitação anônima protegida por CSRF, com resposta `202` vazia igual para contas elegíveis, ausentes ou indisponíveis. O login é normalizado; entrada vazia, excessiva ou com campos extras é recusada. Limites em memória por instância: três pedidos por login/hora, dez por endereço remoto/hora e mil globalmente/hora. As chaves individuais são hashes; não se confia em headers encaminhados. O endereço visto pelo processo pode representar várias pessoas atrás do proxy: validar proxy confiável e capacidade antes da publicação, sem configurar infraestrutura nesta tarefa.
 

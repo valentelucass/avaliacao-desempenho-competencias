@@ -86,6 +86,8 @@ Refinamento posterior do rodapé de avaliações concluído localmente: a contag
 
 Refinamento posterior dos filtros concluído localmente: removido o botão customizado de limpar (`X`) de `useTableQuery`, que duplicava o controle nativo de campos de busca. A limpeza continua pelo próprio campo; filtros de escolha mantêm a opção `Todas`. `useTableQuery.test.tsx` aprovou 3 casos, inclusive a ausência do botão extra; TypeScript/Vite, Oxlint, Prettier e `npm audit` passaram. Sem API, banco, migration, reinício ou publicação.
 
+Refinamento posterior das ajudas contextuais concluído localmente: receber foco ao avançar com teclado não abre mais o popover; ele abre por hover ou clique intencional, preservando fechamento por Escape. `ContextHelp.test.tsx` cobriu a navegação sem abertura e o hover; a suíte completa aprovou 253 testes. TypeScript/Vite, Oxlint, Prettier e `npm audit` passaram. Sem API, banco, migration, reinício ou publicação.
+
 ## Opções para iniciar avaliações — ADC-COR-023
 
 Reverificação por perfil solicitada em 17/09/2026: conferidos catálogo RBAC vigente (restrições de V0012/V0013 e concessão ao RH em V0014), permissões em `App.tsx` e os três caminhos de criação no painel compartilhado. O marcador de Administrador supremo não concede autorização para avaliações. Matriz confirmada:

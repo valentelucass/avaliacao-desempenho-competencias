@@ -107,11 +107,30 @@ public class UserAdministrationController {
       @Valid @RequestBody PasswordResetRequest request,
       Authentication authentication,
       HttpServletRequest servletRequest) {
+    AuthenticatedPrincipal authenticated = principal(authentication);
     return UserResponse.from(
         service.resetOrdinaryUserPassword(
             userId,
             request.temporaryPassword(),
-            principal(authentication).userId(),
+            authenticated.userId(),
+            authenticated.user().permissions(),
+            RequestCorrelationFilter.getRequestId(servletRequest)));
+  }
+
+  @PutMapping("/{userId}/password-reset-delegation")
+  public UserResponse replacePasswordResetDelegation(
+      @PathVariable UUID userId,
+      @Valid @RequestBody PasswordResetDelegationRequest request,
+      Authentication authentication,
+      HttpServletRequest servletRequest) {
+    AuthenticatedPrincipal authenticated = principal(authentication);
+    return UserResponse.from(
+        service.replacePasswordResetDelegation(
+            userId,
+            request.canResetPassword(),
+            request.canDelegatePasswordReset(),
+            authenticated.userId(),
+            authenticated.user().permissions(),
             RequestCorrelationFilter.getRequestId(servletRequest)));
   }
 
@@ -162,6 +181,20 @@ public class UserAdministrationController {
 
   public record PasswordResetRequest(
       @NotBlank @Size(min = 12, max = 200) String temporaryPassword) {}
+
+  public record PasswordResetDelegationRequest(
+      boolean canResetPassword, boolean canDelegatePasswordReset) {
+    @jakarta.validation.constraints.AssertTrue(
+        message = "A capacidade de delegar exige a capacidade de redefinir senha.")
+    public boolean isConsistent() {
+      return !canDelegatePasswordReset || canResetPassword;
+    }
+
+    @com.fasterxml.jackson.annotation.JsonAnySetter
+    public void rejectUnknown(String field, Object value) {
+      throw new IllegalArgumentException("Campo não permitido na delegação de senha.");
+    }
+  }
 
   public record ReplaceAccessRequest(
       @NotNull Set<@Pattern(regexp = "[A-Z0-9_.]{1,150}") String> roles,

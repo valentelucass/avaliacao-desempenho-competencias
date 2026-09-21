@@ -19,6 +19,11 @@ import org.springframework.stereotype.Repository;
 @ConditionalOnSqlServerPersistence
 public class SqlUserAdministrationRepository implements UserAdministrationRepository {
 
+  private static final String RESET_PASSWORD_PERMISSION = "SENHAS.REDEFINIR";
+  private static final String DELEGATE_PASSWORD_RESET_PERMISSION = "SENHAS.DELEGAR_REDEFINICAO";
+  private static final Set<String> PASSWORD_RESET_DELEGATION_PERMISSIONS =
+      Set.of(RESET_PASSWORD_PERMISSION, DELEGATE_PASSWORD_RESET_PERMISSION);
+
   private final JdbcTemplate jdbcTemplate;
 
   public SqlUserAdministrationRepository(JdbcTemplate jdbcTemplate) {
@@ -138,7 +143,11 @@ public class SqlUserAdministrationRepository implements UserAdministrationReposi
 
   @Override
   public Optional<UserView> resetOrdinaryUserPassword(
-      UUID userId, String passwordHash, String algorithm, String parameters) {
+      UUID userId,
+      String passwordHash,
+      String algorithm,
+      String parameters,
+      boolean actorIsSupremeAdministrator) {
     // Serializa solicitações e atendimento da mesma conta sem alterar a trilha anterior.
     jdbcTemplate.queryForList(
         "SELECT usuario_id FROM dbo.usuario WITH (UPDLOCK, HOLDLOCK) WHERE usuario_id = ?", userId);
@@ -156,12 +165,112 @@ public class SqlUserAdministrationRepository implements UserAdministrationReposi
               AND usuario.administrador_supremo = 0
               AND usuario.protegido_fluxo_normal = 0
               AND usuario.excluido_logicamente = 0
+              AND (
+                    ? = 1
+                    OR (
+                        NOT EXISTS (
+                            SELECT 1
+                            FROM dbo.atribuicao_papel AS atribuicao
+                            INNER JOIN dbo.papel AS papel ON papel.papel_id = atribuicao.papel_id
+                            WHERE atribuicao.usuario_id = usuario.usuario_id
+                              AND atribuicao.revogado_em_utc IS NULL
+                              AND papel.codigo = 'ADMINISTRADOR_PLATAFORMA'
+                        )
+                        AND NOT EXISTS (
+                            SELECT 1
+                            FROM dbo.concessao_permissao_usuario AS concessao
+                            INNER JOIN dbo.permissao AS permissao
+                                ON permissao.permissao_id = concessao.permissao_id
+                            WHERE concessao.usuario_id = usuario.usuario_id
+                              AND concessao.revogado_em_utc IS NULL
+                              AND concessao.efeito = 'PERMITIR'
+                              AND permissao.codigo = 'SENHAS.DELEGAR_REDEFINICAO'
+                        )
+                    )
+              )
             """,
             passwordHash,
             algorithm,
             parameters,
-            userId);
+            userId,
+            actorIsSupremeAdministrator ? 1 : 0);
     return updated == 0 ? Optional.empty() : findUser(userId);
+  }
+
+  @Override
+  public boolean replacePasswordResetDelegation(
+      UUID userId,
+      PasswordResetDelegation delegation,
+      UUID actorUserId,
+      boolean actorIsSupremeAdministrator) {
+    Boolean eligibleTarget =
+        jdbcTemplate.query(
+            """
+            SELECT CASE WHEN u.situacao = 'ATIVO'
+                              AND u.administrador_supremo = 0
+                              AND u.protegido_fluxo_normal = 0
+                              AND u.excluido_logicamente = 0
+                              AND (
+                                  ? = 1
+                                  OR (
+                                      NOT EXISTS (
+                                          SELECT 1
+                                          FROM dbo.atribuicao_papel AS atribuicao
+                                          INNER JOIN dbo.papel AS papel
+                                              ON papel.papel_id = atribuicao.papel_id
+                                          WHERE atribuicao.usuario_id = u.usuario_id
+                                            AND atribuicao.revogado_em_utc IS NULL
+                                            AND papel.codigo = 'ADMINISTRADOR_PLATAFORMA'
+                                      )
+                                      AND NOT EXISTS (
+                                          SELECT 1
+                                          FROM dbo.concessao_permissao_usuario AS concessao
+                                          INNER JOIN dbo.permissao AS permissao
+                                              ON permissao.permissao_id = concessao.permissao_id
+                                          WHERE concessao.usuario_id = u.usuario_id
+                                            AND concessao.revogado_em_utc IS NULL
+                                            AND concessao.efeito = 'PERMITIR'
+                                            AND permissao.codigo = 'SENHAS.DELEGAR_REDEFINICAO'
+                                      )
+                                  )
+                              )
+                         THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END
+            FROM dbo.usuario AS u WITH (UPDLOCK, HOLDLOCK)
+            WHERE u.usuario_id = ?
+            """,
+            resultSet -> resultSet.next() ? resultSet.getBoolean(1) : null,
+            actorIsSupremeAdministrator ? 1 : 0,
+            userId);
+    if (!Boolean.TRUE.equals(eligibleTarget) || !passwordDelegationPermissionsAreActive()) {
+      return false;
+    }
+
+    List<IndividualPermission> currentPermissions = activeIndividualPermissions(userId);
+    for (IndividualPermission current : currentPermissions) {
+      if (PASSWORD_RESET_DELEGATION_PERMISSIONS.contains(current.permissionCode())) {
+        jdbcTemplate.update(
+            """
+            UPDATE concessao
+            SET revogado_por_usuario_id = ?, revogado_em_utc = SYSUTCDATETIME()
+            FROM dbo.concessao_permissao_usuario AS concessao
+            INNER JOIN dbo.permissao AS permissao ON permissao.permissao_id = concessao.permissao_id
+            WHERE concessao.usuario_id = ?
+              AND permissao.codigo = ?
+              AND concessao.revogado_em_utc IS NULL
+            """,
+            actorUserId,
+            userId,
+            current.permissionCode());
+      }
+    }
+    insertPasswordDelegationPermission(
+        userId, actorUserId, RESET_PASSWORD_PERMISSION, delegation.canResetPassword());
+    insertPasswordDelegationPermission(
+        userId,
+        actorUserId,
+        DELEGATE_PASSWORD_RESET_PERMISSION,
+        delegation.canDelegatePasswordReset());
+    return true;
   }
 
   @Override
@@ -211,6 +320,9 @@ public class SqlUserAdministrationRepository implements UserAdministrationReposi
 
     List<IndividualPermission> currentPermissions = activeIndividualPermissions(userId);
     for (IndividualPermission current : currentPermissions) {
+      if (PASSWORD_RESET_DELEGATION_PERMISSIONS.contains(current.permissionCode())) {
+        continue;
+      }
       IndividualPermission desired =
           access.permissions().stream()
               .filter(item -> item.permissionCode().equals(current.permissionCode()))
@@ -373,6 +485,39 @@ public class SqlUserAdministrationRepository implements UserAdministrationReposi
             Integer.class,
             permissions.stream().map(IndividualPermission::permissionCode).toArray());
     return count != null && count == permissions.size();
+  }
+
+  private boolean passwordDelegationPermissionsAreActive() {
+    Integer count =
+        jdbcTemplate.queryForObject(
+            """
+            SELECT COUNT(*)
+            FROM dbo.permissao
+            WHERE ativo = 1 AND codigo IN (?, ?)
+            """,
+            Integer.class,
+            RESET_PASSWORD_PERMISSION,
+            DELEGATE_PASSWORD_RESET_PERMISSION);
+    return count != null && count == PASSWORD_RESET_DELEGATION_PERMISSIONS.size();
+  }
+
+  private void insertPasswordDelegationPermission(
+      UUID userId, UUID actorUserId, String permissionCode, boolean allowed) {
+    if (!allowed) {
+      return;
+    }
+    jdbcTemplate.update(
+        """
+        INSERT INTO dbo.concessao_permissao_usuario (
+            usuario_id, permissao_id, efeito, concedido_por_usuario_id
+        )
+        SELECT ?, permissao_id, 'PERMITIR', ?
+        FROM dbo.permissao
+        WHERE codigo = ? AND ativo = 1
+        """,
+        userId,
+        actorUserId,
+        permissionCode);
   }
 
   private static String placeholders(int size) {

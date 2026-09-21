@@ -43,7 +43,7 @@ describe('Atendimento de solicitações de senha', () => {
       }),
     } as unknown as ApiClient
     const { container } = render(
-      <PasswordResetRequestsPanel api={api} onSessionExpired={vi.fn()} />,
+      <PasswordResetRequestsPanel api={api} canEditAccount onSessionExpired={vi.fn()} />,
     )
     expect(
       await screen.findByRole('heading', { name: 'Solicitações de redefinição de senha (6)' }),
@@ -54,7 +54,7 @@ describe('Atendimento de solicitações de senha', () => {
     const open = screen.getByRole('button', { name: 'Editar e redefinir senha' })
     open.focus()
     fireEvent.click(open)
-    const dialog = await screen.findByRole('dialog', { name: 'Editar conta e redefinir senha' })
+    const dialog = await screen.findByRole('dialog', { name: 'Atender solicitação de senha' })
     fireEvent.change(within(dialog).getByLabelText('Nome da conta'), {
       target: { value: 'Nome corrigido' },
     })

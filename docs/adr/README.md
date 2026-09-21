@@ -23,3 +23,4 @@ Cada ADR registra uma decisão arquitetural relevante, seu contexto e as consequ
 - [ADR-0019 — Tailwind como compilador visual sem migração de interface](0019-tailwind-como-compilador-visual-sem-migracao-de-interface.md)
 - [ADR-0020 — Importação XLSX restrita com conferência](0020-importacao-xlsx-restrita-com-conferencia.md)
 - [ADR-0021 — Recuperação local assistida de senha](0021-recuperacao-local-assistida-de-senha.md)
+- [ADR-0022 — Delegação individual para redefinir senhas](0022-delegacao-individual-de-redefinicao-de-senha.md)

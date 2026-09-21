@@ -155,7 +155,9 @@ O evento de consulta ou exportação registra ator, data/hora, ação, resultado
 
 ### Recuperação administrativa de senha
 
-O administrador supremo pode recuperar o acesso de outra conta comum ativa definindo uma senha temporária de 12 a 200 caracteres. A senha é usada somente para formar o hash no servidor, não é devolvida pela API nem incluída em auditoria ou logs. A recuperação revoga as sessões existentes, limpa bloqueio de tentativas e obriga a troca no próximo login. O administrador supremo não redefine a própria senha por esse fluxo, nem a senha de conta suprema, protegida, desativada ou excluída logicamente; esses casos exigem o fluxo de troca da própria conta ou procedimento operacional segregado.
+O administrador supremo pode conceder individualmente `SENHAS.REDEFINIR` a uma conta específica, inclusive de RH ou Diretoria, sem que o perfil por si só forneça esse acesso. A conta com `SENHAS.REDEFINIR` recupera o acesso de outra conta elegível com senha temporária; o administrador supremo também pode conceder `SENHAS.DELEGAR_REDEFINICAO`. Quem possui ambas pode conceder apenas a redefinição simples a outras contas, nunca a capacidade de delegar.
+
+A senha temporária atende à política de senha, é usada somente para formar o hash no servidor e só aparece uma vez na resposta de geração. Ela não entra em auditoria ou logs. A recuperação revoga as sessões existentes, limpa bloqueio de tentativas e obriga a troca no próximo login. Uma conta delegada não atua sobre a própria conta, conta suprema, protegida, desativada, excluída logicamente, técnica ou que também possa delegar; esses casos exigem administrador supremo ou procedimento operacional segregado.
 
 ### Impressão individual auditada
 

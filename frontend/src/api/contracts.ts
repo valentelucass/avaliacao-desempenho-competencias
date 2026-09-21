@@ -51,6 +51,11 @@ export interface ResetAdministrationUserPasswordInput {
   temporaryPassword: string
 }
 
+export interface ReplacePasswordResetDelegationInput {
+  canResetPassword: boolean
+  canDelegatePasswordReset: boolean
+}
+
 export interface UpdateAdministrationUserInput {
   displayName: string
   status: AccountStatus

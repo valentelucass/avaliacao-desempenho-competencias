@@ -1,4 +1,3 @@
-import { PasswordResetRequestsPanel } from './PasswordResetRequestsPanel'
 import { administrativeRead, useAdministrativeLoad } from './useAdministrativeLoad'
 import { SpreadsheetImportPanel } from './SpreadsheetImportPanel'
 import { AdministrativeTable } from '@/components/ui/administrative-table'
@@ -33,7 +32,6 @@ import { useAccessibleDialog } from '../../ui/useAccessibleDialog'
 import { useTableQuery } from '../../ui/useTableQuery'
 
 type MasterDataAdministrationPanelProps = {
-  canHandlePasswordRecovery?: boolean
   api: ApiClient
   permissions: readonly Permission[]
   onSessionExpired: () => void
@@ -95,7 +93,6 @@ type PendingAction =
  * manual de identificadores e confirma operações de encerramento.
  */
 export function MasterDataAdministrationPanel({
-  canHandlePasswordRecovery = false,
   api,
   permissions,
   onSessionExpired,
@@ -691,15 +688,6 @@ export function MasterDataAdministrationPanel({
           ) : null}
         </section>
       </div>
-
-      {canHandlePasswordRecovery ? (
-        <section
-          className="card password-recovery-requests-card"
-          aria-label="Solicitações de redefinição de senha"
-        >
-          <PasswordResetRequestsPanel api={api} onSessionExpired={onSessionExpired} />
-        </section>
-      ) : null}
 
       <section className="card" aria-labelledby="collaborators-title">
         <div className="card-title-row">

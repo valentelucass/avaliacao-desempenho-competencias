@@ -11,9 +11,11 @@ import { TemporaryPasswordReset } from './TemporaryPasswordReset'
 
 export function PasswordResetRequestsPanel({
   api,
+  canEditAccount = false,
   onSessionExpired,
 }: {
   api: ApiClient
+  canEditAccount?: boolean
   onSessionExpired: () => void
 }) {
   const id = useId()
@@ -110,7 +112,7 @@ export function PasswordResetRequestsPanel({
   }
 
   async function edit() {
-    if (!user || busy || !name.trim()) return
+    if (!canEditAccount || !user || busy || !name.trim()) return
     setBusy(true)
     setError(undefined)
     try {
@@ -200,7 +202,7 @@ export function PasswordResetRequestsPanel({
             tabIndex={-1}
           >
             <div className="section-heading">
-              <h3 id={`${id}-dialog-title`}>Editar conta e redefinir senha</h3>
+              <h3 id={`${id}-dialog-title`}>Atender solicitação de senha</h3>
               <button
                 className="button"
                 type="button"
@@ -224,24 +226,28 @@ export function PasswordResetRequestsPanel({
                 {notice}
               </FeedbackMessage>
             ) : null}
-            <div className="field">
-              <label htmlFor={`${id}-name`}>Nome da conta</label>
-              <input
-                id={`${id}-name`}
-                value={name}
-                maxLength={200}
-                disabled={busy}
-                onChange={(event) => setName(event.currentTarget.value)}
-              />
-            </div>
-            <button
-              className="button"
-              type="button"
-              disabled={busy || !name.trim()}
-              onClick={() => void edit()}
-            >
-              Salvar nome
-            </button>
+            {canEditAccount ? (
+              <>
+                <div className="field">
+                  <label htmlFor={`${id}-name`}>Nome da conta</label>
+                  <input
+                    id={`${id}-name`}
+                    value={name}
+                    maxLength={200}
+                    disabled={busy}
+                    onChange={(event) => setName(event.currentTarget.value)}
+                  />
+                </div>
+                <button
+                  className="button"
+                  type="button"
+                  disabled={busy || !name.trim()}
+                  onClick={() => void edit()}
+                >
+                  Salvar nome
+                </button>
+              </>
+            ) : null}
             <TemporaryPasswordReset
               key={user.id}
               api={api}

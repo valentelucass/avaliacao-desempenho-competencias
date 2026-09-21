@@ -64,7 +64,7 @@ class SqlUserAdministrationRepositoryTests {
 
     assertThat(
             repository.resetOrdinaryUserPassword(
-                UUID.randomUUID(), "hash", "BCRYPT", "strength=12"))
+                UUID.randomUUID(), "hash", "BCRYPT", "strength=12", true))
         .isEmpty();
 
     String sql =
@@ -79,6 +79,29 @@ class SqlUserAdministrationRepositoryTests {
         .contains("usuario.administrador_supremo = 0")
         .contains("usuario.protegido_fluxo_normal = 0")
         .contains("usuario.excluido_logicamente = 0");
+  }
+
+  @Test
+  void delegatedPasswordResetAlsoExcludesTechnicalAndDelegationManagerAccounts() {
+    JdbcTemplate jdbcTemplate = org.mockito.Mockito.mock(JdbcTemplate.class);
+    when(jdbcTemplate.update(anyString(), any(Object[].class))).thenReturn(0);
+    SqlUserAdministrationRepository repository = new SqlUserAdministrationRepository(jdbcTemplate);
+
+    assertThat(
+            repository.resetOrdinaryUserPassword(
+                UUID.randomUUID(), "hash", "BCRYPT", "strength=12", false))
+        .isEmpty();
+
+    String sql =
+        org.mockito.Mockito.mockingDetails(jdbcTemplate).getInvocations().stream()
+            .filter(invocation -> invocation.getMethod().getName().equals("update"))
+            .findFirst()
+            .orElseThrow()
+            .getArgument(0);
+    assertThat(sql)
+        .contains("papel.codigo = 'ADMINISTRADOR_PLATAFORMA'")
+        .contains("permissao.codigo = 'SENHAS.DELEGAR_REDEFINICAO'")
+        .contains("concessao.efeito = 'PERMITIR'");
   }
 
   @Test
