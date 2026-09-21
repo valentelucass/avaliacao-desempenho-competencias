@@ -1,5 +1,5 @@
 table th.table-query-heading {
-  vertical-align: top;
+  vertical-align: middle;
   min-width: 0;
   white-space: normal;
 }
@@ -15,6 +15,10 @@ table > tbody.table-query-print-body {
   .individual-assessment-summary__table:has(.table-query-heading) :is(th, td):nth-child(2) {
     width: 25%;
   }
+}
+
+.table-query-title-row .table-query-heading {
+  padding-bottom: 0.45rem;
 }
 
 .table-query-heading .table-query-sort {
@@ -39,11 +43,22 @@ table > tbody.table-query-print-body {
   min-width: 0;
   overflow-wrap: anywhere;
 }
+.table-query-filter-row > .table-query-filter-cell {
+  background: color-mix(in srgb, var(--surface-muted) 72%, var(--surface));
+  border-top: 1px solid color-mix(in srgb, var(--border) 78%, transparent);
+  padding-bottom: 0.65rem;
+  padding-top: 0.55rem;
+}
+
+.table-query-filter-cell--empty {
+  background: color-mix(in srgb, var(--surface-muted) 72%, var(--surface));
+  border-top: 1px solid color-mix(in srgb, var(--border) 78%, transparent);
+}
+
 .table-query-filter {
   position: relative;
-  margin-top: 0.35rem;
 }
-.table-query-heading .table-query-filter :is(input, select) {
+.table-query-filter-row .table-query-filter :is(input, select) {
   box-sizing: border-box;
   width: 100%;
   min-width: 0;
@@ -55,24 +70,10 @@ table > tbody.table-query-print-body {
   color: var(--text);
   font-size: 0.75rem;
 }
-.table-query-filter:has(.table-query-clear) input,
-.table-query-heading .table-query-filter select {
+.table-query-filter-row .table-query-filter select {
   padding-right: 1.7rem;
 }
-.table-query-heading .table-query-clear {
-  position: absolute;
-  right: 0.15rem;
-  top: 0.2rem;
-  display: grid;
-  place-items: center;
-  width: 1.6rem;
-  height: 1.6rem;
-  border: 0;
-  background: var(--surface);
-  color: var(--text);
-  cursor: pointer;
-}
-.table-query-heading :is(button, input, select):focus-visible {
+table:has(.table-query-heading) :is(button, input, select):focus-visible {
   outline: 2px solid var(--focus, #3b82f6);
   outline-offset: 2px;
 }
@@ -88,21 +89,37 @@ table > tbody.table-query-print-body {
     clip-path: none;
     white-space: normal;
   }
-  table:has(.table-query-heading) > thead > tr {
+  table:has(.table-query-heading) > thead > .table-query-title-row {
+    display: none;
+  }
+  table:has(.table-query-heading) > thead > .table-query-filter-row {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(9rem, 100%), 1fr));
     gap: 0.5rem;
     padding: 0.75rem;
   }
-  table:has(.table-query-heading) > thead > tr > th {
+  table:has(.table-query-heading) > thead > .table-query-filter-row > td {
     display: block;
     width: auto;
     min-width: 0;
     padding: 0;
     border: 0;
   }
-  table:has(.table-query-heading) > thead > tr > th:not(.table-query-heading) {
+  table:has(.table-query-heading)
+    > thead
+    > .table-query-filter-row
+    > .table-query-filter-cell--empty {
     display: none;
+  }
+  .administration-users table:has(.table-query-heading) > thead {
+    position: static;
+    display: block;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip: auto;
+    clip-path: none;
+    white-space: normal;
   }
   table:has(.table-query-heading) tbody td[role='status'] {
     display: block;
@@ -117,7 +134,7 @@ table > tbody.table-query-print-body {
   table > tbody.table-query-print-body {
     display: table-row-group;
   }
-  .table-query-filter {
+  .table-query-filter-row {
     display: none;
   }
   .table-query-sort svg {

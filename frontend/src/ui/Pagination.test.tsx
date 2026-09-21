@@ -24,8 +24,8 @@ describe('Pagination', () => {
 
     expect(screen.getByText('Página 1 · 12 registros exibidos')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Próxima página' }))
-    expect(screen.getByText('Página 2 · 2 registros exibidos')).toBeInTheDocument()
-    expect(screen.getByText('2')).toHaveAttribute('aria-current', 'page')
+    expect(screen.getByText('Página 2 de 2 · 2 registros exibidos')).toBeInTheDocument()
+    expect(screen.getByText('2 / 2')).toHaveAttribute('aria-current', 'page')
     expect(screen.getByRole('navigation', { name: 'Paginação de registros' })).toHaveAttribute(
       'aria-busy',
       'true',
@@ -58,5 +58,23 @@ describe('Pagination', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Próxima página' }))
     expect(screen.getByText('Registro 3')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Próxima página' })).toBeDisabled()
+  })
+
+  it('prioriza o total de páginas quando a quantidade de itens da página não é relevante', () => {
+    render(
+      <Pagination
+        currentPage={11}
+        hasNextPage={false}
+        itemCountOnPage={6}
+        itemLabel="avaliações"
+        onNextPage={() => undefined}
+        onPreviousPage={() => undefined}
+        showItemCount={false}
+      />,
+    )
+
+    expect(screen.getByText('Página 11 de 11')).toBeInTheDocument()
+    expect(screen.getByText('11 / 11')).toHaveAttribute('aria-current', 'page')
+    expect(screen.queryByText(/6 avaliações exibidos/)).not.toBeInTheDocument()
   })
 })

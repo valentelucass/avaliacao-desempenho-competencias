@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { ContextHelp } from './ContextHelp'
 
 describe('ContextHelp', () => {
-  it('abre uma explicação pelo teclado e permite fechá-la com Escape', () => {
+  it('não abre durante a navegação pelo teclado e fecha a ajuda aberta por hover com Escape', () => {
     render(
       <ContextHelp title="Situação do ciclo">
         <p>Um ciclo aberto aceita avaliações dentro da sua vigência.</p>
@@ -12,6 +12,10 @@ describe('ContextHelp', () => {
 
     const trigger = screen.getByRole('button', { name: 'Ajuda sobre Situação do ciclo' })
     fireEvent.focus(trigger)
+
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
+
+    fireEvent.mouseEnter(trigger)
 
     const popover = screen.getByRole('tooltip')
     expect(popover).toHaveTextContent('Um ciclo aberto aceita avaliações dentro da sua vigência.')

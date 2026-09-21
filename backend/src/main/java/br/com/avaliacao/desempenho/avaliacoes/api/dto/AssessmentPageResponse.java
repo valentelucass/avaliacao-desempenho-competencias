@@ -8,5 +8,5 @@ public record AssessmentPageResponse(
 
   public record Totals(Long total, Long drafts, Long submitted, Long published) {}
 
-  public record PageMetadata(int limit, String nextCursor) {}
+  public record PageMetadata(int limit, String nextCursor, long totalPages) {}
 }

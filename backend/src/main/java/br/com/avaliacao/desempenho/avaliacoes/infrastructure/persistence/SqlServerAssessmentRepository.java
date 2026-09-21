@@ -266,6 +266,12 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
       """
           + LIST_ACCESSIBLE_SCOPE_SQL;
 
+  private static final String LIST_TOTAL_ITEMS_SQL =
+      """
+      SELECT COUNT_BIG(*) AS total_items
+      """
+          + LIST_ACCESSIBLE_SCOPE_SQL;
+
   private static final String LIST_ACCESSIBLE_AFTER_CURSOR_SQL =
       LIST_ACCESSIBLE_SQL
           + """
@@ -535,6 +541,11 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
                     resultSet.getObject("submitted", Long.class),
                         resultSet.getObject("published", Long.class)),
             parameters.subList(1, parameters.size()).toArray());
+    Long totalItems =
+        jdbcTemplate.queryForObject(
+            LIST_TOTAL_ITEMS_SQL,
+            (resultSet, rowNumber) -> resultSet.getLong("total_items"),
+            parameters.subList(1, parameters.size()).toArray());
     if (cursor != null) {
       parameters.add(SqlServerUtcDateTime.forBinding(cursor.updatedAt()));
       parameters.add(SqlServerUtcDateTime.forBinding(cursor.updatedAt()));
@@ -552,7 +563,15 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
       AssessmentSummaryView last = items.get(items.size() - 1);
       nextCursor = new AssessmentCursor(last.updatedAt(), last.id());
     }
-    return new AssessmentPageView(List.copyOf(items), nextCursor, totals);
+    return new AssessmentPageView(
+        List.copyOf(items),
+        nextCursor,
+        totals,
+        totalPages(totalItems == null ? 0 : totalItems, limit));
+  }
+
+  private static long totalPages(long totalItems, int limit) {
+    return totalItems / limit + (totalItems % limit == 0 ? 0 : 1);
   }
 
   @Override

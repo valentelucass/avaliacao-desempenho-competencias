@@ -26,7 +26,8 @@ function Fixture() {
       <table>
         <caption>Cadastros</caption>
         <thead>
-          <tr>{table.headings()}</tr>
+          <tr className="table-query-title-row">{table.headings()}</tr>
+          <tr className="table-query-filter-row">{table.filterCells()}</tr>
         </thead>
         <tbody>
           {table.emptyRow()}
@@ -57,8 +58,9 @@ describe('filtros e ordenação por coluna', () => {
     ).not.toBeInTheDocument()
     fireEvent.change(screen.getByLabelText('Filtrar Situação'), { target: { value: 'Inativo' } })
     expect(screen.getByRole('status')).toHaveTextContent('Nenhum registro corresponde')
-    fireEvent.click(screen.getByRole('button', { name: 'Limpar filtro Nome' }))
+    fireEvent.change(screen.getByLabelText('Filtrar Nome'), { target: { value: '' } })
     expect(screen.getByRole('cell', { name: 'Bruna' })).toBeVisible()
+    expect(screen.queryByRole('button', { name: /Limpar filtro/ })).not.toBeInTheDocument()
   })
 
   it('ordena números e datas, alterna a direção e volta à primeira página', () => {
@@ -76,6 +78,11 @@ describe('filtros e ordenação por coluna', () => {
   it('mantém cabeçalhos, controles rotulados e sem violações axe', async () => {
     const { container } = render(<Fixture />)
     expect(container.querySelector('th[aria-sort="ascending"]')).toHaveTextContent('Nome')
+    expect(container.querySelectorAll('thead tr')).toHaveLength(2)
+    expect(container.querySelector('.table-query-filter-row input')).toHaveAttribute(
+      'aria-label',
+      'Filtrar Nome',
+    )
     expect(
       (await axe(container, { rules: { 'color-contrast': { enabled: false } } })).violations,
     ).toEqual([])

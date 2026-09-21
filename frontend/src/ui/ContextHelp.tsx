@@ -122,7 +122,6 @@ export function ContextHelp({
         className="context-help__button"
         onBlur={scheduleClose}
         onClick={openHelp}
-        onFocus={openHelp}
         onKeyDown={(event) => {
           if (event.key === 'Escape') {
             closeHelp()

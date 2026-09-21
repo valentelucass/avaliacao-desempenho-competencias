@@ -93,7 +93,9 @@ public class AssessmentController {
     return new AssessmentPageResponse(
         items,
         new AssessmentPageResponse.PageMetadata(
-            limit, page.nextCursor() == null ? null : encodeCursor(page.nextCursor())),
+            limit,
+            page.nextCursor() == null ? null : encodeCursor(page.nextCursor()),
+            page.totalPages()),
         page.totals() == null
             ? null
             : new AssessmentPageResponse.Totals(

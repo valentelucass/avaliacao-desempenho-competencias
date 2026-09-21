@@ -6047,3 +6047,110 @@ textarea:hover:not(:disabled) {
     width: min(100%, 50.5rem);
   }
 }
+
+/* ADC-UI-060: leitura de conta em blocos claros; a operação sensível deixa de ficar implícita. */
+.account-dialog.selected-user-card {
+  gap: 1rem;
+  max-height: min(90dvh, 46rem);
+  overflow: auto;
+  padding: clamp(1rem, 2.5vw, 1.5rem);
+  width: min(calc(100vw - 2rem), 67rem);
+}
+
+.account-dialog__overview {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.account-dialog__identity,
+.account-dialog .access-summary,
+.account-dialog__security,
+.account-dialog__management > form {
+  background: color-mix(in srgb, var(--surface-muted) 58%, var(--surface));
+  border: 1px solid var(--border);
+  border-radius: 0.8rem;
+  padding: 1rem;
+}
+
+.account-dialog__identity > h4,
+.account-dialog__security h4,
+.account-dialog .access-summary h4 {
+  color: var(--text-h);
+  font-size: 0.94rem;
+  margin: 0;
+}
+
+.account-dialog__identity .definition-list {
+  gap: 0;
+  margin-top: 0.8rem;
+}
+
+.account-dialog .account-dialog__identity .definition-list div {
+  min-height: 4.25rem;
+  padding: 0.4rem 0.8rem;
+}
+
+.account-dialog .access-summary {
+  gap: 0.7rem;
+}
+
+.account-dialog .access-summary .field {
+  background: transparent;
+  border: 0;
+  border-top: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
+  border-radius: 0;
+  padding: 0.7rem 0 0;
+}
+
+.account-dialog__security {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.account-dialog__security > div > .muted {
+  line-height: 1.45;
+  margin: 0.3rem 0 0;
+}
+
+.account-dialog__security .account-password-reset {
+  border: 0;
+  padding: 0;
+}
+
+.account-dialog__restricted-action {
+  background: color-mix(in srgb, var(--warning-bg) 72%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--warning) 28%, var(--border));
+  border-radius: 0.6rem;
+  color: var(--text);
+  font-size: 0.84rem;
+  line-height: 1.45;
+  margin: 0;
+  padding: 0.75rem;
+}
+
+.account-dialog__management {
+  gap: 0.9rem;
+}
+
+.account-dialog__management > form {
+  gap: 0.7rem;
+}
+
+.password-recovery-requests-card {
+  padding: clamp(1rem, 2vw, 1.35rem);
+}
+
+@media (min-width: 48.0625rem) {
+  .account-dialog__overview {
+    grid-template-columns: minmax(0, 1.2fr) minmax(17rem, 0.8fr);
+  }
+
+  .account-dialog__security {
+    align-items: start;
+    grid-template-columns: minmax(14rem, 0.7fr) minmax(0, 1.3fr);
+  }
+
+  .account-dialog__management > form {
+    min-width: 0;
+  }
+}

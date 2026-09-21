@@ -160,7 +160,8 @@ export function PasswordResetRequestsPanel({
           <AdministrativeTable>
             <caption className="visually-hidden">Solicitações de redefinição de senha</caption>
             <thead>
-              <tr>{table.headings()}</tr>
+              <tr className="table-query-title-row">{table.headings()}</tr>
+              <tr className="table-query-filter-row">{table.filterCells()}</tr>
             </thead>
             <tbody>
               {table.emptyRow()}

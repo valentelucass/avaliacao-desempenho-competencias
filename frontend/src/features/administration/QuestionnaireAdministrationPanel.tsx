@@ -313,8 +313,11 @@ export function QuestionnaireAdministrationPanel({
                     Versões de questionário aprovadas e suas configurações disponíveis
                   </caption>
                   <AdministrativeTable.Head>
-                    <AdministrativeTable.Row>
+                    <AdministrativeTable.Row className="table-query-title-row">
                       {versionsPagination.headings()}
+                    </AdministrativeTable.Row>
+                    <AdministrativeTable.Row className="table-query-filter-row">
+                      {versionsPagination.filterCells()}
                     </AdministrativeTable.Row>
                   </AdministrativeTable.Head>
                   <AdministrativeTable.Body>

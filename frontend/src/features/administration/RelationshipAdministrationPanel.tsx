@@ -871,7 +871,12 @@ function RelationshipTable<Entry extends { id: string; startsOn: string | null }
       <AdministrativeTable>
         <caption className="visually-hidden">Vínculos ativos</caption>
         <AdministrativeTable.Head>
-          <AdministrativeTable.Row>{pagination.headings()}</AdministrativeTable.Row>
+          <AdministrativeTable.Row className="table-query-title-row">
+            {pagination.headings()}
+          </AdministrativeTable.Row>
+          <AdministrativeTable.Row className="table-query-filter-row">
+            {pagination.filterCells()}
+          </AdministrativeTable.Row>
         </AdministrativeTable.Head>
         <AdministrativeTable.Body>
           {pagination.emptyRow()}

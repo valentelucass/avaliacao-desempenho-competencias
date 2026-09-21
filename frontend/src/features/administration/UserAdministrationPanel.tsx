@@ -453,6 +453,25 @@ export function UserAdministrationPanel({
     Boolean(selectedUser) &&
     !selectedUser?.protectedFromNormalFlow &&
     !selectedUser?.logicallyDeleted
+  const canResetSelectedUserPassword =
+    Boolean(selectedUser) &&
+    isSupremeAdministrator &&
+    canReadUsers &&
+    canUpdateUsers &&
+    selectedUser?.status === 'ACTIVE' &&
+    !selectedUserIsCurrent &&
+    selectedUserIsMutable
+  const passwordResetRestriction = !isSupremeAdministrator
+    ? 'A redefinição só pode ser concluída por um administrador supremo autorizado.'
+    : !canReadUsers || !canUpdateUsers
+      ? 'Sua conta não possui as permissões necessárias para redefinir senhas.'
+      : selectedUserIsCurrent
+        ? 'A própria conta não pode redefinir a senha por este fluxo administrativo.'
+        : selectedUser?.status !== 'ACTIVE'
+          ? 'Reative a conta antes de gerar uma senha temporária.'
+          : !selectedUserIsMutable
+            ? 'Esta conta é protegida ou foi excluída logicamente e não pode receber uma senha temporária.'
+            : undefined
   const hasAnyAdministrationPermission =
     canReadUsers || canCreateUsers || canUpdateUsers || canManageAccess
   const hasVisibleUserOperation = canReadUsers || (canCreateUsers && accountProfiles.length > 0)
@@ -636,7 +655,10 @@ export function UserAdministrationPanel({
                   </p>
                 </ContextHelp>
               </div>
-              <p className="muted">Selecione uma conta para consultar dados e concessões atuais.</p>
+              <p className="muted">
+                Abra os três pontos de uma conta para editar seus dados, conferir os acessos e, para
+                administradores supremos autorizados, redefinir a senha na área Segurança da senha.
+              </p>
             </div>
           </div>
 
@@ -662,7 +684,12 @@ export function UserAdministrationPanel({
                   Contas locais disponíveis para administração
                 </caption>
                 <AdministrativeTable.Head>
-                  <AdministrativeTable.Row>{usersPagination.headings()}</AdministrativeTable.Row>
+                  <AdministrativeTable.Row className="table-query-title-row">
+                    {usersPagination.headings()}
+                  </AdministrativeTable.Row>
+                  <AdministrativeTable.Row className="table-query-filter-row">
+                    {usersPagination.filterCells()}
+                  </AdministrativeTable.Row>
                 </AdministrativeTable.Head>
                 <AdministrativeTable.Body>
                   {usersPagination.emptyRow()}
@@ -756,46 +783,60 @@ export function UserAdministrationPanel({
               </div>
             </div>
 
-            <div className="selected-user-overview">
-              <dl className="definition-list">
-                <div>
-                  <dt>Login</dt>
-                  <dd>{selectedUser.login}</dd>
-                </div>
-                <div>
-                  <dt>Situação da senha</dt>
-                  <dd>
-                    {selectedUser.passwordChangeRequired ? 'Troca obrigatória' : 'Atualizada'}
-                  </dd>
-                </div>
-                <div>
-                  <dt>Última atualização</dt>
-                  <dd>{formatUpdatedAt(selectedUser.updatedAt)}</dd>
-                </div>
-              </dl>
+            <div className="selected-user-overview account-dialog__overview">
+              <section
+                className="account-dialog__identity"
+                aria-labelledby="account-identity-title"
+              >
+                <h4 id="account-identity-title">Dados da conta</h4>
+                <dl className="definition-list">
+                  <div>
+                    <dt>Login</dt>
+                    <dd>{selectedUser.login}</dd>
+                  </div>
+                  <div>
+                    <dt>Situação da senha</dt>
+                    <dd>
+                      {selectedUser.passwordChangeRequired ? 'Troca obrigatória' : 'Atualizada'}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Última atualização</dt>
+                    <dd>{formatUpdatedAt(selectedUser.updatedAt)}</dd>
+                  </div>
+                </dl>
+              </section>
 
               <AccessSummary user={selectedUser} />
             </div>
 
-            {isSupremeAdministrator &&
-            canReadUsers &&
-            canUpdateUsers &&
-            selectedUser.status === 'ACTIVE' &&
-            !selectedUserIsCurrent &&
-            selectedUserIsMutable ? (
-              <TemporaryPasswordReset
-                key={selectedUser.id}
-                api={api}
-                userId={selectedUser.id}
-                disabled={isUpdating || isDeleting || isSavingAccess}
-                onSessionExpired={onSessionExpired}
-                onBusyChange={setIsResettingPassword}
-                onReset={(user) => {
-                  updateKnownUser(user)
-                  hydrateSelectedUser(user)
-                }}
-              />
-            ) : null}
+            <section
+              className="account-dialog__security"
+              aria-labelledby="account-password-security-title"
+            >
+              <div>
+                <h4 id="account-password-security-title">Segurança da senha</h4>
+                <p className="muted">
+                  Gere uma senha temporária somente depois de confirmar a identidade da pessoa.
+                </p>
+              </div>
+              {canResetSelectedUserPassword ? (
+                <TemporaryPasswordReset
+                  key={selectedUser.id}
+                  api={api}
+                  userId={selectedUser.id}
+                  disabled={isUpdating || isDeleting || isSavingAccess}
+                  onSessionExpired={onSessionExpired}
+                  onBusyChange={setIsResettingPassword}
+                  onReset={(user) => {
+                    updateKnownUser(user)
+                    hydrateSelectedUser(user)
+                  }}
+                />
+              ) : (
+                <p className="account-dialog__restricted-action">{passwordResetRestriction}</p>
+              )}
+            </section>
 
             <div className="account-dialog__management">
               {canUpdateUsers && selectedUserIsMutable ? (

@@ -1254,6 +1254,8 @@ export function AssessmentsPanel({
         isLoading={isLoading}
         onNextPage={goToNextPage}
         onPreviousPage={goToPreviousPage}
+        showItemCount={false}
+        totalPages={assessmentPage.page.totalPages}
       />
     </section>
   )

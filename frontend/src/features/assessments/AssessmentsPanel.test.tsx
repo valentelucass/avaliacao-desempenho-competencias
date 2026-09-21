@@ -14,9 +14,13 @@ const summary = (name: string): AssessmentSummary => ({
   status: 'PUBLICADA',
   feedbackStatus: 'PENDENTE',
 })
-const page = (names: string[] = [], nextCursor: string | null = null): Page<AssessmentSummary> => ({
+const page = (
+  names: string[] = [],
+  nextCursor: string | null = null,
+  totalPages?: number,
+): Page<AssessmentSummary> => ({
   items: names.map(summary),
-  page: { limit: 2, nextCursor },
+  page: { limit: 2, nextCursor, totalPages },
 })
 function setup(listAssessments = vi.fn().mockResolvedValue(page(['Registro inicial']))) {
   const onSessionExpired = vi.fn()
@@ -154,6 +158,23 @@ describe('Filtros de avaliações autorizadas', () => {
       ),
     )
     expect(screen.getByRole('button', { name: 'Página anterior' })).toBeDisabled()
+  })
+
+  it('mostra a página atual junto do total informado pela API', async () => {
+    const list = vi
+      .fn()
+      .mockResolvedValueOnce(page(['Página inicial'], 'cursor-inicial', 9))
+      .mockResolvedValueOnce(page(['Página seguinte'], null, 9))
+    setup(list)
+
+    await screen.findByText('Página inicial')
+    expect(screen.getByText('Página 1 de 9')).toBeInTheDocument()
+    expect(screen.getByText('1 / 9')).toHaveAttribute('aria-current', 'page')
+    expect(screen.queryByText(/avaliações exibidos/)).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Próxima página' }))
+    await screen.findByText('Página seguinte')
+    expect(screen.getByText('Página 2 de 9')).toBeInTheDocument()
+    expect(screen.getByText('2 / 9')).toHaveAttribute('aria-current', 'page')
   })
 
   it('ignora respostas antigas quando duas buscas terminam fora de ordem', async () => {

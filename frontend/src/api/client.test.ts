@@ -675,13 +675,15 @@ describe('HttpApiClient', () => {
   it('envia limite e cursor da paginação de avaliações ao servidor', async () => {
     const fetchMock = vi
       .fn()
-      .mockResolvedValue(jsonResponse({ items: [], page: { limit: 12, nextCursor: null } }))
+      .mockResolvedValue(
+        jsonResponse({ items: [], page: { limit: 12, nextCursor: null, totalPages: 9 } }),
+      )
     vi.stubGlobal('fetch', fetchMock)
 
     const api = new HttpApiClient()
     await expect(api.listAssessments({ limit: 12, cursor: 'cursor-seguro' })).resolves.toEqual({
       items: [],
-      page: { limit: 12, nextCursor: null },
+      page: { limit: 12, nextCursor: null, totalPages: 9 },
     })
 
     expect(fetchMock).toHaveBeenCalledWith(

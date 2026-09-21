@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ArrowDown, ArrowUp, ArrowUpDown, X } from 'lucide-react'
+import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react'
 import { useClientPagination } from './useClientPagination'
 import './table-query.css'
 
@@ -66,13 +66,6 @@ export function useTableQuery<T>(
         )
       const selected = sort.key === column.key
       const Icon = !selected ? ArrowUpDown : sort.direction === 'asc' ? ArrowUp : ArrowDown
-      const filter = filters[column.key] ?? ''
-      const choices =
-        column.kind === 'choice'
-          ? Array.from(new Set(items.map((item) => String(column.value!(item) ?? '')))).sort(
-              collator.compare,
-            )
-          : []
       return (
         <th
           key={column.key}
@@ -94,6 +87,25 @@ export function useTableQuery<T>(
             <span>{column.label}</span>
             <Icon size={14} aria-hidden="true" />
           </button>
+        </th>
+      )
+    })
+  }
+
+  function filterCells() {
+    return columns.map((column) => {
+      if (!column.value)
+        return <td key={column.key} className="table-query-filter-cell--empty" aria-hidden="true" />
+
+      const filter = filters[column.key] ?? ''
+      const choices =
+        column.kind === 'choice'
+          ? Array.from(new Set(items.map((item) => String(column.value!(item) ?? '')))).sort(
+              collator.compare,
+            )
+          : []
+      return (
+        <td key={column.key} className="table-query-filter-cell">
           <div className="table-query-filter">
             {column.kind === 'choice' ? (
               <select
@@ -123,18 +135,8 @@ export function useTableQuery<T>(
                 }
               />
             )}
-            {filter ? (
-              <button
-                type="button"
-                className="table-query-clear"
-                aria-label={`Limpar filtro ${column.label}`}
-                onClick={() => setFilters({ ...filters, [column.key]: '' })}
-              >
-                <X size={14} aria-hidden="true" />
-              </button>
-            ) : null}
           </div>
-        </th>
+        </td>
       )
     })
   }
@@ -148,5 +150,5 @@ export function useTableQuery<T>(
       </tr>
     ) : null
   }
-  return { ...pagination, headings, emptyRow, filteredCount: filtered.length }
+  return { ...pagination, headings, filterCells, emptyRow, filteredCount: filtered.length }
 }

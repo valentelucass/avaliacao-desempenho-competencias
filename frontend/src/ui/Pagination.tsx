@@ -11,6 +11,7 @@ type PaginationProps = {
   itemLabel: string
   onNextPage: () => void
   onPreviousPage: () => void
+  showItemCount?: boolean
   totalPages?: number
 }
 
@@ -22,12 +23,15 @@ export function Pagination({
   itemLabel,
   onNextPage,
   onPreviousPage,
+  showItemCount = true,
   totalPages,
 }: PaginationProps) {
   const [isTransitioning, setIsTransitioning] = useState(false)
   const paginationRef = useRef<HTMLElement>(null)
   const anchorTopRef = useRef<number | undefined>(undefined)
   const isBusy = isLoading || isTransitioning
+  // Em uma resposta cursorizada antiga, a última página ainda permite inferir o máximo.
+  const maximumPage = totalPages ?? (!hasNextPage ? currentPage : undefined)
 
   function beginPageNavigation(onPageChange: () => void) {
     anchorTopRef.current = paginationRef.current?.getBoundingClientRect().top
@@ -81,8 +85,8 @@ export function Pagination({
       </span>
       <p className="pagination__summary">
         Página {currentPage}
-        {totalPages !== undefined ? ` de ${totalPages}` : ''} · {itemCountOnPage} {itemLabel}{' '}
-        exibidos
+        {maximumPage !== undefined ? ` de ${maximumPage}` : ''}
+        {showItemCount ? ` · ${itemCountOnPage} ${itemLabel} exibidos` : ''}
       </p>
       <div className="pagination__controls">
         <button
@@ -96,9 +100,9 @@ export function Pagination({
         </button>
         <span
           aria-current="page"
-          className={`pagination__page${totalPages !== undefined ? ' pagination__page--with-total' : ''}`}
+          className={`pagination__page${maximumPage !== undefined ? ' pagination__page--with-total' : ''}`}
         >
-          {totalPages !== undefined ? `${currentPage} / ${totalPages}` : currentPage}
+          {maximumPage !== undefined ? `${currentPage} / ${maximumPage}` : currentPage}
         </span>
         <button
           aria-label="Próxima página"

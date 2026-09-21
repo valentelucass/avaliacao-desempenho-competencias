@@ -10,6 +10,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import br.com.avaliacao.desempenho.avaliacoes.application.AssessmentApplicationService;
@@ -35,7 +36,7 @@ class AssessmentListControllerTests {
   void bindsOptionalFiltersAndKeepsTheOldUnfilteredContract() throws Exception {
     var service = mock(AssessmentApplicationService.class);
     when(service.list(any(), any(), anyInt(), any()))
-        .thenReturn(new AssessmentRepository.AssessmentPageView(List.of(), null));
+        .thenReturn(new AssessmentRepository.AssessmentPageView(List.of(), null, null, 9));
     var mvc =
         MockMvcBuilders.standaloneSetup(new AssessmentController(service))
             .setControllerAdvice(new AssessmentExceptionHandler())
@@ -47,7 +48,8 @@ class AssessmentListControllerTests {
                 .param("managerName", "João")
                 .param("status", "PUBLICADA")
                 .param("feedbackStatus", "CONCLUIDO"))
-        .andExpect(status().isOk());
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.page.totalPages").value(9));
     var filters = ArgumentCaptor.forClass(AssessmentRepository.AssessmentListFilter.class);
     verify(service).list(any(), filters.capture(), eq(12), isNull());
     assertThat(filters.getValue())

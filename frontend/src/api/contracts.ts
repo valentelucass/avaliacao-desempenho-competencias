@@ -540,6 +540,7 @@ export interface Page<T> {
   page: {
     limit: number
     nextCursor: string | null
+    totalPages?: number
   }
 }
 

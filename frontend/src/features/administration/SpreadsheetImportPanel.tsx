@@ -397,7 +397,8 @@ export function SpreadsheetImportPanel({
               <AdministrativeTable>
                 <caption className="visually-hidden">Conferência de {label}</caption>
                 <thead>
-                  <tr>{previewTable.headings()}</tr>
+                  <tr className="table-query-title-row">{previewTable.headings()}</tr>
+                  <tr className="table-query-filter-row">{previewTable.filterCells()}</tr>
                 </thead>
                 <tbody>
                   {previewTable.emptyRow()}

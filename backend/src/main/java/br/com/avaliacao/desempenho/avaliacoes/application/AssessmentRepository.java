@@ -97,9 +97,17 @@ public interface AssessmentRepository {
       Instant updatedAt) {}
 
   record AssessmentPageView(
-      List<AssessmentSummaryView> items, AssessmentCursor nextCursor, AssessmentTotals totals) {
+      List<AssessmentSummaryView> items,
+      AssessmentCursor nextCursor,
+      AssessmentTotals totals,
+      long totalPages) {
     public AssessmentPageView(List<AssessmentSummaryView> items, AssessmentCursor nextCursor) {
-      this(items, nextCursor, null);
+      this(items, nextCursor, null, 0);
+    }
+
+    public AssessmentPageView(
+        List<AssessmentSummaryView> items, AssessmentCursor nextCursor, AssessmentTotals totals) {
+      this(items, nextCursor, totals, 0);
     }
   }
 

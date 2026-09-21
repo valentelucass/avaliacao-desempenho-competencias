@@ -572,7 +572,8 @@ function ClassificationDistribution({
       <h4>Distribuição por classificação</h4>
       <table>
         <thead>
-          <tr>{pagination.headings()}</tr>
+          <tr className="table-query-title-row">{pagination.headings()}</tr>
+          <tr className="table-query-filter-row">{pagination.filterCells()}</tr>
         </thead>
         <tbody>
           {pagination.emptyRow()}

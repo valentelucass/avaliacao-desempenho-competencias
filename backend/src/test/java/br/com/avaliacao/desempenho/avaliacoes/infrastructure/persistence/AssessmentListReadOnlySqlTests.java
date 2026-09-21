@@ -122,7 +122,9 @@ class AssessmentListReadOnlySqlTests {
     assertThat(first.totals().drafts()).isEqualTo(1L);
     assertThat(first.totals().submitted()).isEqualTo(1L);
     assertThat(first.totals().published()).isEqualTo(5L);
+    assertThat(first.totalPages()).isEqualTo(4L);
     assertThat(next.totals()).isEqualTo(first.totals());
+    assertThat(next.totalPages()).isEqualTo(4L);
     var published =
         repository.listAccessible(
             rh,
@@ -131,6 +133,7 @@ class AssessmentListReadOnlySqlTests {
             null);
     assertThat(published.totals().total()).isEqualTo(5L);
     assertThat(published.totals().published()).isEqualTo(5L);
+    assertThat(published.totalPages()).isEqualTo(5L);
     var small =
         repository.listAccessible(
             rh, new AssessmentListFilter(null, null, "Pessoa 1", null, null, null), 2, null);
@@ -138,11 +141,13 @@ class AssessmentListReadOnlySqlTests {
     assertThat(small.totals().drafts()).isNull();
     assertThat(small.totals().submitted()).isNull();
     assertThat(small.totals().published()).isNull();
+    assertThat(small.totalPages()).isEqualTo(1L);
     var denied =
         repository.listAccessible(
             new AssessmentAccessContext(id(101), Set.of()), AssessmentListFilter.none(), 1, null);
     assertThat(denied.items()).isEmpty();
     assertThat(denied.totals().total()).isNull();
+    assertThat(denied.totalPages()).isZero();
   }
 
   @Test

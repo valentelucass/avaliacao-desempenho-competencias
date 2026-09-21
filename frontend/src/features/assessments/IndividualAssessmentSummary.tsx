@@ -240,7 +240,8 @@ export function IndividualAssessmentSummary({
         <table className="individual-assessment-summary__table">
           <caption>Resultado por competência</caption>
           <thead>
-            <tr>{pagination.headings()}</tr>
+            <tr className="table-query-title-row">{pagination.headings()}</tr>
+            <tr className="table-query-filter-row">{pagination.filterCells()}</tr>
           </thead>
           <tbody className="table-query-screen-body">
             {pagination.emptyRow()}

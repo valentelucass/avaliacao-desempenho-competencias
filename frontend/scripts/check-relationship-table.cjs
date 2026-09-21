@@ -37,6 +37,27 @@ module.exports = async function checkRelationshipTable({ send, evaluate, ready, 
     await evaluate(
       'document.fonts.ready.then(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))))',
     )
+    const header = await evaluate(`(() => {
+      const table=document.querySelector('${root} table'),title=table.querySelector('.table-query-title-row'),filters=table.querySelector('.table-query-filter-row');
+      const titleRect=title.getBoundingClientRect(),filterRect=filters.getBoundingClientRect();
+      const controls=[...filters.querySelectorAll('input,select')].map(e=>e.getBoundingClientRect());
+      return {titleCells:title.children.length,filterCells:filters.children.length,titleHeight:titleRect.height,filterTop:filterRect.top,titleBottom:titleRect.bottom,controls:controls.map(r=>({left:r.left,right:r.right,height:r.height})),overflow:document.documentElement.scrollWidth>innerWidth+1};
+    })()`)
+    assert.equal(header.titleCells, 4)
+    assert.equal(header.filterCells, 4)
+    assert.equal(header.overflow, false)
+    assert.ok(
+      header.controls.every(
+        (control) => control.height >= 24 && control.left >= 0 && control.right <= width + 1,
+      ),
+    )
+    if (width > 768) {
+      assert.ok(header.titleHeight > 0, 'Títulos devem permanecer em faixa própria')
+      assert.ok(
+        header.filterTop >= header.titleBottom - 1,
+        'Filtros devem ficar abaixo dos títulos',
+      )
+    }
     const buttons = await evaluate(metrics)
     for (const button of buttons) {
       assert.equal(
@@ -58,6 +79,7 @@ module.exports = async function checkRelationshipTable({ send, evaluate, ready, 
       deviceScaleFactor: scale,
       theme,
       buttons: buttons.length,
+      headerRows: 2,
       lines: 1,
       height: buttons[0].height,
     })

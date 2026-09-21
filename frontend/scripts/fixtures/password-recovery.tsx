@@ -3,6 +3,7 @@ import type { ApiClient } from '../../src/api/client'
 import type { AdministrationUser } from '../../src/api/contracts'
 import { PasswordResetRequestsPanel } from '../../src/features/administration/PasswordResetRequestsPanel'
 import { RelationshipAdministrationPanel } from '../../src/features/administration/RelationshipAdministrationPanel'
+import { UserAdministrationPanel } from '../../src/features/administration/UserAdministrationPanel'
 import { LoginForm } from '../../src/features/auth/LoginForm'
 
 const calls: string[] = []
@@ -31,6 +32,7 @@ const api = {
       requestedAt: `2026-09-21T12:0${index}:00Z`,
     })),
   getAdministrationUser: async (id: string) => users.find((user) => user.id === id),
+  listAdministrationUsers: async () => users,
   generateTemporaryPassword: async (id: string) => {
     calls.push('reset')
     pending = pending.filter((user) => user.id !== id)
@@ -74,6 +76,13 @@ function show(login: boolean) {
           <RelationshipAdministrationPanel
             api={api}
             permissions={['VINCULOS_GESTOR_COLABORADOR.GERIR']}
+            onSessionExpired={() => {}}
+          />
+          <UserAdministrationPanel
+            api={api}
+            currentUserId="fixture-admin"
+            isSupremeAdministrator
+            permissions={['USUARIOS.LER', 'USUARIOS.ALTERAR']}
             onSessionExpired={() => {}}
           />
         </div>

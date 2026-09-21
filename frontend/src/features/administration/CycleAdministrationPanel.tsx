@@ -539,7 +539,12 @@ export function CycleAdministrationPanel({
             <AdministrativeTable>
               <caption className="visually-hidden">Ciclos disponíveis</caption>
               <AdministrativeTable.Head>
-                <AdministrativeTable.Row>{cyclesPagination.headings()}</AdministrativeTable.Row>
+                <AdministrativeTable.Row className="table-query-title-row">
+                  {cyclesPagination.headings()}
+                </AdministrativeTable.Row>
+                <AdministrativeTable.Row className="table-query-filter-row">
+                  {cyclesPagination.filterCells()}
+                </AdministrativeTable.Row>
               </AdministrativeTable.Head>
               <AdministrativeTable.Body>
                 {cyclesPagination.emptyRow()}
@@ -726,7 +731,12 @@ export function CycleAdministrationPanel({
                   Questionários e configurações disponíveis para o ciclo
                 </caption>
                 <AdministrativeTable.Head>
-                  <AdministrativeTable.Row>{versionsPagination.headings()}</AdministrativeTable.Row>
+                  <AdministrativeTable.Row className="table-query-title-row">
+                    {versionsPagination.headings()}
+                  </AdministrativeTable.Row>
+                  <AdministrativeTable.Row className="table-query-filter-row">
+                    {versionsPagination.filterCells()}
+                  </AdministrativeTable.Row>
                 </AdministrativeTable.Head>
                 <AdministrativeTable.Body>
                   {versionsPagination.emptyRow()}

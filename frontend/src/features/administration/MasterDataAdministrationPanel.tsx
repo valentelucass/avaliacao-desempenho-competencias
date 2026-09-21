@@ -692,10 +692,16 @@ export function MasterDataAdministrationPanel({
         </section>
       </div>
 
-      <section className="card" aria-labelledby="collaborators-title">
-        {canHandlePasswordRecovery ? (
+      {canHandlePasswordRecovery ? (
+        <section
+          className="card password-recovery-requests-card"
+          aria-label="Solicitações de redefinição de senha"
+        >
           <PasswordResetRequestsPanel api={api} onSessionExpired={onSessionExpired} />
-        ) : null}
+        </section>
+      ) : null}
+
+      <section className="card" aria-labelledby="collaborators-title">
         <div className="card-title-row">
           <div className="context-help__heading">
             <h3 id="collaborators-title">Colaboradores</h3>
@@ -1235,7 +1241,12 @@ function NamedResourcesTable({
       <AdministrativeTable>
         <caption className="visually-hidden">{caption}</caption>
         <AdministrativeTable.Head>
-          <AdministrativeTable.Row>{pagination.headings()}</AdministrativeTable.Row>
+          <AdministrativeTable.Row className="table-query-title-row">
+            {pagination.headings()}
+          </AdministrativeTable.Row>
+          <AdministrativeTable.Row className="table-query-filter-row">
+            {pagination.filterCells()}
+          </AdministrativeTable.Row>
         </AdministrativeTable.Head>
         <AdministrativeTable.Body>
           {pagination.emptyRow()}
@@ -1377,7 +1388,12 @@ function CollaboratorsTable({
       <AdministrativeTable>
         <caption className="visually-hidden">Colaboradores cadastrados</caption>
         <AdministrativeTable.Head>
-          <AdministrativeTable.Row>{pagination.headings()}</AdministrativeTable.Row>
+          <AdministrativeTable.Row className="table-query-title-row">
+            {pagination.headings()}
+          </AdministrativeTable.Row>
+          <AdministrativeTable.Row className="table-query-filter-row">
+            {pagination.filterCells()}
+          </AdministrativeTable.Row>
         </AdministrativeTable.Head>
         <AdministrativeTable.Body>
           {pagination.emptyRow()}
@@ -1515,7 +1531,12 @@ function AllocationsTable({
       <AdministrativeTable>
         <caption className="visually-hidden">Lotações ativas</caption>
         <AdministrativeTable.Head>
-          <AdministrativeTable.Row>{pagination.headings()}</AdministrativeTable.Row>
+          <AdministrativeTable.Row className="table-query-title-row">
+            {pagination.headings()}
+          </AdministrativeTable.Row>
+          <AdministrativeTable.Row className="table-query-filter-row">
+            {pagination.filterCells()}
+          </AdministrativeTable.Row>
         </AdministrativeTable.Head>
         <AdministrativeTable.Body>
           {pagination.emptyRow()}
@@ -1618,7 +1639,12 @@ function QuestionnaireAssignmentsTable({
       <AdministrativeTable>
         <caption className="visually-hidden">Atribuições de questionário ativas</caption>
         <AdministrativeTable.Head>
-          <AdministrativeTable.Row>{pagination.headings()}</AdministrativeTable.Row>
+          <AdministrativeTable.Row className="table-query-title-row">
+            {pagination.headings()}
+          </AdministrativeTable.Row>
+          <AdministrativeTable.Row className="table-query-filter-row">
+            {pagination.filterCells()}
+          </AdministrativeTable.Row>
         </AdministrativeTable.Head>
         <AdministrativeTable.Body>
           {pagination.emptyRow()}
