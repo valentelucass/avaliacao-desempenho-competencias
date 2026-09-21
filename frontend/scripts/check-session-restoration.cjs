@@ -167,6 +167,63 @@ async function main() {
           assert.deepEqual(errors, [], 'Abertura normal não deve gerar erros no console')
           assert.equal(await evaluate('document.querySelector("[role=alert]") !== null'), false)
         }
+        if (scenario === 'authenticated') {
+          await evaluate(
+            'new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))',
+          )
+          await evaluate(`document.querySelector('[aria-label="Abrir menu"]').click()`)
+          await ready(
+            "document.querySelector('.workspace-sidebar').getAttribute('aria-hidden') === 'false'",
+          )
+          await evaluate(
+            'new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))',
+          )
+          for (const theme of ['light', 'dark']) {
+            await evaluate(`document.documentElement.dataset.theme=${JSON.stringify(theme)}`)
+            const footer = await evaluate(`(()=>{
+              const buttons=[...document.querySelectorAll('.workspace-sidebar__footer > button')];
+              const [password,exit]=buttons.map(button=>button.getBoundingClientRect());
+              const bounds=document.querySelector('.workspace-sidebar__footer').getBoundingClientRect();
+              return {count:buttons.length,gap:exit.top-password.bottom,aligned:Math.abs(password.left-exit.left)<1&&Math.abs(password.width-exit.width)<1,
+                colors:buttons.map(button=>getComputedStyle(button).backgroundColor),
+                icons:buttons.every(button=>button.querySelector('svg')),
+                clip:{x:bounds.x,y:bounds.y,width:bounds.width,height:bounds.height,scale:1}};
+            })()`)
+            assert.equal(footer.count, 2)
+            assert.ok(footer.gap >= 10, 'Ações pessoais precisam de separação visível')
+            assert.equal(footer.aligned, true, 'Botões pessoais devem ter a mesma largura')
+            assert.equal(footer.icons, true)
+            assert.deepEqual(footer.colors, ['rgb(37, 85, 164)', 'rgb(220, 48, 56)'])
+            await evaluate("document.querySelector('.workspace-sidebar__password').focus()")
+            console.log(
+              await evaluate(
+                `JSON.stringify({menu:document.querySelector('.workspace-sidebar').className,inert:document.querySelector('.workspace-sidebar').inert,visible:getComputedStyle(document.querySelector('.workspace-sidebar')).visibility,focused:document.activeElement.className})`,
+              ),
+            )
+            await send('Input.dispatchKeyEvent', {
+              type: 'keyDown',
+              key: 'Tab',
+              code: 'Tab',
+              windowsVirtualKeyCode: 9,
+            })
+            assert.equal(
+              await evaluate(
+                "document.activeElement.classList.contains('workspace-sidebar__sign-out')",
+              ),
+              true,
+            )
+            if (width === 1440) {
+              const screenshot = await send('Page.captureScreenshot', {
+                format: 'png',
+                clip: footer.clip,
+              })
+              fs.writeFileSync(
+                `dist/ui062-menu-${theme}.png`,
+                Buffer.from(screenshot.data, 'base64'),
+              )
+            }
+          }
+        }
         console.log(
           JSON.stringify({
             scenario,

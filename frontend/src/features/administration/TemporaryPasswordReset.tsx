@@ -3,6 +3,7 @@ import type { ApiClient } from '../../api/client'
 import { isAuthenticationError } from '../../api/client'
 import type { AdministrationUser } from '../../api/contracts'
 import { FeedbackMessage } from '../../ui/Feedback'
+import { KeyRound } from 'lucide-react'
 import { safeErrorMessage } from '../../ui/safeErrorMessage'
 
 export function TemporaryPasswordReset(props: Parameters<typeof TemporaryPasswordResetSession>[0]) {
@@ -82,8 +83,8 @@ function TemporaryPasswordResetSession({
     >
       <h4 id={`${id}-title`}>Redefinir senha</h4>
       <p className="muted">
-        Confirme a identidade da pessoa antes de redefinir. A nova senha temporária encerra as
-        sessões atuais e exige uma senha pessoal no próximo acesso.
+        A senha temporária encerra as sessões atuais e exige uma nova senha pessoal no próximo
+        acesso. Confirme a identidade da pessoa antes de continuar.
       </p>
       {error ? (
         <FeedbackMessage kind="error" onDismiss={() => setError(undefined)}>
@@ -111,11 +112,12 @@ function TemporaryPasswordResetSession({
         </div>
       ) : (
         <button
-          className="button button--success"
+          className="button button--primary"
           type="button"
           onClick={() => void reset()}
           disabled={busy || disabled}
         >
+          <KeyRound aria-hidden="true" size={18} />
           {busy ? 'Redefinindo…' : 'Gerar senha temporária e redefinir'}
         </button>
       )}

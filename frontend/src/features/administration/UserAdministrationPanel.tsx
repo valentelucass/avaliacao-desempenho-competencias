@@ -3,7 +3,17 @@ import { PasswordResetRequestsPanel } from './PasswordResetRequestsPanel'
 import { AdministrativeTable } from '@/components/ui/administrative-table'
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
-import { Ellipsis, Plus, RefreshCw, Save, ShieldCheck, Trash2, X } from 'lucide-react'
+import {
+  Ellipsis,
+  KeyRound,
+  Plus,
+  RefreshCw,
+  Save,
+  ShieldCheck,
+  Trash2,
+  UserRound,
+  X,
+} from 'lucide-react'
 import { isAuthenticationError } from '../../api/client'
 import type { ApiClient } from '../../api/client'
 import type {
@@ -865,9 +875,12 @@ export function UserAdministrationPanel({
                 className="account-dialog__identity"
                 aria-labelledby="account-identity-title"
               >
-                <h4 id="account-identity-title">Dados da conta</h4>
+                <h4 id="account-identity-title">
+                  <UserRound aria-hidden="true" size={18} />
+                  Dados da conta
+                </h4>
                 <dl className="definition-list">
-                  <div>
+                  <div className="account-dialog__login">
                     <dt>Login</dt>
                     <dd>{selectedUser.login}</dd>
                   </div>
@@ -891,11 +904,12 @@ export function UserAdministrationPanel({
               className="account-dialog__security"
               aria-labelledby="account-password-security-title"
             >
-              <div>
-                <h4 id="account-password-security-title">Segurança da senha</h4>
-                <p className="muted">
-                  Gere uma senha temporária somente depois de confirmar a identidade da pessoa.
-                </p>
+              <div className="account-dialog__security-heading">
+                <h4 id="account-password-security-title">
+                  <KeyRound aria-hidden="true" size={18} />
+                  Segurança da senha
+                </h4>
+                <p className="muted">Recuperação de acesso e permissões de atendimento.</p>
               </div>
               {canResetSelectedUserPassword ? (
                 <TemporaryPasswordReset
@@ -985,7 +999,11 @@ export function UserAdministrationPanel({
                   noValidate
                   aria-busy={isUpdating}
                 >
-                  <h4>Editar conta</h4>
+                  <h4>
+                    <UserRound aria-hidden="true" size={18} />
+                    Editar conta
+                  </h4>
+                  <p className="muted">Atualize o nome e a situação de acesso.</p>
                   {updateError ? (
                     <FeedbackMessage kind="error" onDismiss={() => setUpdateError(undefined)}>
                       {updateError}
@@ -1067,10 +1085,12 @@ export function UserAdministrationPanel({
                   noValidate
                   aria-busy={isSavingAccess}
                 >
-                  <h4>Perfil de acesso</h4>
+                  <h4>
+                    <ShieldCheck aria-hidden="true" size={18} />
+                    Perfil de acesso
+                  </h4>
                   <p className="muted">
-                    O perfil substitui papéis e exceções comuns. As capacidades de senha permanecem
-                    na seção Segurança; o servidor revalida a operação.
+                    Substitui os acessos comuns; não altera as permissões de senha.
                   </p>
                   {accessError ? (
                     <FeedbackMessage kind="error" onDismiss={() => setAccessError(undefined)}>
@@ -1158,7 +1178,10 @@ function AccessSummary({ user }: { user: AdministrationUser }) {
   )
   return (
     <section aria-labelledby="access-summary-title" className="access-summary">
-      <h4 id="access-summary-title">Acessos atuais</h4>
+      <h4 id="access-summary-title">
+        <ShieldCheck aria-hidden="true" size={18} />
+        Acessos atuais
+      </h4>
       <div className="field">
         <p className="field-hint">Perfil efetivo</p>
         <p>{profile.label}</p>

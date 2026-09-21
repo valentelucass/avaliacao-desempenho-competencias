@@ -10,7 +10,7 @@ import { PasswordChangeForm } from '../../src/features/auth/PasswordChangeForm'
 const calls: string[] = []
 const users: AdministrationUser[] = Array.from({ length: 7 }, (_, index) => ({
   id: `fixture-${index}`,
-  login: `pessoa${index}@example.invalid`,
+  login: `pessoa${index}@exemplo-de-validacao.invalid`,
   displayName: `Pessoa fictícia ${index}`,
   status: 'ACTIVE',
   protectedFromNormalFlow: false,
@@ -86,7 +86,12 @@ function show(login: boolean) {
             api={api}
             currentUserId="fixture-admin"
             isSupremeAdministrator
-            permissions={['USUARIOS.LER', 'USUARIOS.ALTERAR']}
+            permissions={[
+              'USUARIOS.LER',
+              'USUARIOS.ALTERAR',
+              'ACESSOS.GERIR',
+              'ACESSOS.NEGOCIO.GERIR',
+            ]}
             onSessionExpired={() => {}}
           />
         </div>

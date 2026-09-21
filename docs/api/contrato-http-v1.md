@@ -57,15 +57,15 @@ Conflitos de questionário mantêm `409 CONFLICT` e acrescentam motivo estável:
 
 Falhas HTTP tratadas são registradas com método, rota-modelo (ou família permitida antes do mapeamento), status, `code`, `reasonCode` e `requestId`. Não entram no registro corpo, query string, identificador do recurso, cookie, credencial, comentário nem mensagem interna da exceção. Esta instrumentação local precisa ser publicada para produzir evidência no runtime; não reconstrói tentativas anteriores.
 
-| Operação                        | Corpo / retorno                                                                  | Regra                                                                                                                   |
-| ------------------------------- | -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `GET /auth/csrf`                | `{ "token": "…" }`                                                               | Público somente para obter o token técnico de CSRF.                                                                     |
-| `POST /auth/sessions`           | `{ "login", "password" }` → `204`                                                | Aplica limitação local, autenticação genérica e escreve `ADC-ACCESS` e `ADC-REFRESH`.                                   |
-| `POST /auth/sessions/refresh`   | → `204`                                                                          | Rotaciona o refresh opaco armazenado somente por hash e substitui os cookies.                                           |
-| `POST /auth/sessions/restore`   | → `200 { "authenticated": boolean }`                                             | Restauração opcional com CSRF; preserva acesso válido ou tenta o refresh. `false` não autentica nem retorna identidade. |
-| `DELETE /auth/sessions/current` | → `204`                                                                          | Revoga a sessão autenticada e limpa cookies.                                                                            |
-| `GET /auth/me`                  | `{ id, displayName, permissions, passwordChangeRequired, supremeAdministrator }` | Permissões servem à interface; a autorização sempre é revalidada no servidor.                                           |
-| `PUT /auth/password`            | `{ "currentPassword", "newPassword" }` → `204`                                   | Exige nova senha com mínimo de 12 caracteres e máximo de 72 bytes UTF-8, revoga todas as sessões do usuário e limpa os cookies.                         |
+| Operação                        | Corpo / retorno                                                                  | Regra                                                                                                                           |
+| ------------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /auth/csrf`                | `{ "token": "…" }`                                                               | Público somente para obter o token técnico de CSRF.                                                                             |
+| `POST /auth/sessions`           | `{ "login", "password" }` → `204`                                                | Aplica limitação local, autenticação genérica e escreve `ADC-ACCESS` e `ADC-REFRESH`.                                           |
+| `POST /auth/sessions/refresh`   | → `204`                                                                          | Rotaciona o refresh opaco armazenado somente por hash e substitui os cookies.                                                   |
+| `POST /auth/sessions/restore`   | → `200 { "authenticated": boolean }`                                             | Restauração opcional com CSRF; preserva acesso válido ou tenta o refresh. `false` não autentica nem retorna identidade.         |
+| `DELETE /auth/sessions/current` | → `204`                                                                          | Revoga a sessão autenticada e limpa cookies.                                                                                    |
+| `GET /auth/me`                  | `{ id, displayName, permissions, passwordChangeRequired, supremeAdministrator }` | Permissões servem à interface; a autorização sempre é revalidada no servidor.                                                   |
+| `PUT /auth/password`            | `{ "currentPassword", "newPassword" }` → `204`                                   | Exige nova senha com mínimo de 12 caracteres e máximo de 72 bytes UTF-8, revoga todas as sessões do usuário e limpa os cookies. |
 
 Os cookies de credencial são host-only, `HttpOnly`, `Secure`, `SameSite=Strict`; o JWT curto HS256 contém somente `iss`, `aud`, `sub`, `exp`, `nbf`, `jti` e `sid`. Em cada requisição o servidor revalida assinatura, claims, sessão, situação da conta e permissões efetivas. O limiter usa o endereço remoto visto pela aplicação até haver proxy confiável formalmente configurado.
 
@@ -73,16 +73,16 @@ Os cookies de credencial são host-only, `HttpOnly`, `Secure`, `SameSite=Strict`
 
 Todas as rotas abaixo exigem autenticação e a permissão correspondente. A API normal nunca cria, promove ou altera administrador supremo.
 
-| Operação                                                | Permissão                                  | Contrato                                                                                                                                                                                 |
-| ------------------------------------------------------- | ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `GET /administration/users`                             | `USUARIOS.LER` ou `SENHAS.REDEFINIR`       | Lista `UserResponse`, sem hash, senha, token ou sessão.                                                                                                                                  |
-| `GET /administration/users/{userId}`                    | `USUARIOS.LER` ou `SENHAS.REDEFINIR`       | Retorna o mesmo `UserResponse`.                                                                                                                                                          |
-| `POST /administration/users`                            | `USUARIOS.CRIAR`                           | `{ login, displayName, initialPassword, initialRoles: ["GESTOR"] }` → `201`; exige exatamente um perfil suportado e troca de senha inicial.                                              |
-| `PATCH /administration/users/{userId}`                  | `USUARIOS.ALTERAR`                         | `{ displayName, status: ACTIVE\|BLOCKED\|DISABLED }`; bloqueio/desativação revoga sessões.                                                                                               |
-| `PATCH /administration/users/{userId}/logical-deletion` | `USUARIOS.ALTERAR`                         | `{ deleted: true }` marca somente uma conta comum como excluída logicamente, desativa-a e revoga sessões.                                                                                |
-| `PUT /administration/users/{userId}/password-reset`     | Administrador supremo ou `SENHAS.REDEFINIR` | `{ temporaryPassword }` com mínimo de 12 caracteres e máximo de 72 bytes UTF-8; somente para conta elegível, força troca e revoga sessões.                                                                              |
-| `PUT /administration/users/{userId}/password-reset-delegation` | Administrador supremo ou conta com as duas permissões de senha | `{ canResetPassword, canDelegatePasswordReset }`; só o supremo pode conceder a capacidade de delegar.                                                                                  |
-| `PUT /administration/users/{userId}/access-grants`      | `ACESSOS.GERIR` ou `ACESSOS.NEGOCIO.GERIR` | `{ roles: ["GERENCIA_RH"], permissions: [] }`; substitui o perfil por exatamente um papel suportado. O campo `permissions` é obrigatório por compatibilidade, mas só aceita lista vazia. |
+| Operação                                                       | Permissão                                                      | Contrato                                                                                                                                                                                 |
+| -------------------------------------------------------------- | -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /administration/users`                                    | `USUARIOS.LER` ou `SENHAS.REDEFINIR`                           | Lista `UserResponse`, sem hash, senha, token ou sessão.                                                                                                                                  |
+| `GET /administration/users/{userId}`                           | `USUARIOS.LER` ou `SENHAS.REDEFINIR`                           | Retorna o mesmo `UserResponse`.                                                                                                                                                          |
+| `POST /administration/users`                                   | `USUARIOS.CRIAR`                                               | `{ login, displayName, initialPassword, initialRoles: ["GESTOR"] }` → `201`; exige exatamente um perfil suportado e troca de senha inicial.                                              |
+| `PATCH /administration/users/{userId}`                         | `USUARIOS.ALTERAR`                                             | `{ displayName, status: ACTIVE\|BLOCKED\|DISABLED }`; bloqueio/desativação revoga sessões.                                                                                               |
+| `PATCH /administration/users/{userId}/logical-deletion`        | `USUARIOS.ALTERAR`                                             | `{ deleted: true }` marca somente uma conta comum como excluída logicamente, desativa-a e revoga sessões.                                                                                |
+| `PUT /administration/users/{userId}/password-reset`            | Administrador supremo ou `SENHAS.REDEFINIR`                    | `{ temporaryPassword }` com mínimo de 12 caracteres e máximo de 72 bytes UTF-8; somente para conta elegível, força troca e revoga sessões.                                               |
+| `PUT /administration/users/{userId}/password-reset-delegation` | Administrador supremo ou conta com as duas permissões de senha | `{ canResetPassword, canDelegatePasswordReset }`; só o supremo pode conceder a capacidade de delegar.                                                                                    |
+| `PUT /administration/users/{userId}/access-grants`             | `ACESSOS.GERIR` ou `ACESSOS.NEGOCIO.GERIR`                     | `{ roles: ["GERENCIA_RH"], permissions: [] }`; substitui o perfil por exatamente um papel suportado. O campo `permissions` é obrigatório por compatibilidade, mas só aceita lista vazia. |
 
 `UserResponse` contém `id`, `login`, `displayName`, `status`, `protectedFromNormalFlow`, `logicallyDeleted`, `passwordChangeRequired`, `roles`, `individualPermissions` e `updatedAt`. `roles` contém exatamente um dos papéis suportados. `individualPermissions` é somente leitura para visualizar concessões. A API rejeita qualquer item não vazio em `permissions`; a substituição de perfil revoga as exceções comuns, preserva somente `SENHAS.REDEFINIR` e `SENHAS.DELEGAR_REDEFINICAO`, e revoga as sessões do alvo.
 
@@ -172,7 +172,7 @@ Essas rotas exigem `VINCULOS_DIRETORIA_GERENCIA.GERIR`, CSRF nas escritas e pres
 
 | Operação                                                    | Regra                                                                                                                                                                                                                      |
 | ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `GET /assessments`                                          | Retorna `{ items, page: { limit, nextCursor, totalPages } }` no escopo do ator. Aceita `limit=1..100`, `cursor` opaco e os filtros opcionais abaixo; `nextCursor` só deve ser reutilizado com os mesmos filtros.            |
+| `GET /assessments`                                          | Retorna `{ items, page: { limit, nextCursor, totalPages } }` no escopo do ator. Aceita `limit=1..100`, `cursor` opaco e os filtros opcionais abaixo; `nextCursor` só deve ser reutilizado com os mesmos filtros.           |
 | `GET /assessments/creation-options?cycleId={UUID}`          | Gestor recebe somente `{ collaborators: [{ id, displayName }] }` ainda avaliáveis por ele no ciclo.                                                                                                                        |
 | `GET /assessments/director-creation-options?cycleId={UUID}` | Diretoria recebe somente Gerências vinculadas e ainda avaliáveis por ela no ciclo.                                                                                                                                         |
 | `GET /assessments/{assessmentId}`                           | Retorna detalhe somente quando o ator possui escopo do recurso.                                                                                                                                                            |
@@ -256,19 +256,18 @@ Na confirmação, erros de linha ou dados alterados rejeitam todo o lote. Escrit
 
 Erros seguem Problem Details e `requestId`, com `code`: `IMPORT_INVALID_FILE` (422), `IMPORT_LIMIT_EXCEEDED` (413), `IMPORT_EXPIRED` (409, também para UUID de outro ator), `IMPORT_STALE` (409), `IMPORT_RATE_LIMITED` (429). Conteúdo e causas internas não são incluídos. Limites: dez tentativas de upload/confirmação por ator por minuto, duas leituras simultâneas, quatro prévias por ator e 32 globais; instância única. Limpeza de prévias a cada minuto; sem arquivo em disco.
 
-
 ## Manutenção de Áreas e Colaboradores — ADC-COR-022
 
 Extensão aditiva, com `CADASTROS.GERIR`, CSRF e ator obtido da sessão:
 
-| Rota | Corpo / comportamento |
-| --- | --- |
-| `PATCH /master-data/areas/{id}` | `{ name }`; corrige nome inclusive inativo, preserva situação/ID. |
-| `PATCH /master-data/collaborators/{id}` | `{ displayName }`; corrige nome inclusive inativo, preserva situação/ID. |
-| `PATCH /master-data/areas/{id}/reactivate` | Sem corpo; inativo → ativo. |
-| `PATCH /master-data/collaborators/{id}/reactivate` | Sem corpo; inativo → ativo, sem alterar vínculos. |
-| `DELETE /master-data/areas/{id}` | Somente inativo sem lotação, inclusive histórica. |
-| `DELETE /master-data/collaborators/{id}` | Somente inativo sem lotações, vínculos, atribuições ou avaliações, inclusive históricos. |
+| Rota                                               | Corpo / comportamento                                                                    |
+| -------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `PATCH /master-data/areas/{id}`                    | `{ name }`; corrige nome inclusive inativo, preserva situação/ID.                        |
+| `PATCH /master-data/collaborators/{id}`            | `{ displayName }`; corrige nome inclusive inativo, preserva situação/ID.                 |
+| `PATCH /master-data/areas/{id}/reactivate`         | Sem corpo; inativo → ativo.                                                              |
+| `PATCH /master-data/collaborators/{id}/reactivate` | Sem corpo; inativo → ativo, sem alterar vínculos.                                        |
+| `DELETE /master-data/areas/{id}`                   | Somente inativo sem lotação, inclusive histórica.                                        |
+| `DELETE /master-data/collaborators/{id}`           | Somente inativo sem lotações, vínculos, atribuições ou avaliações, inclusive históricos. |
 
 Sucesso: 204. Nome obrigatório, até 200 caracteres; campos extras rejeitados também nos DTOs compartilhados de criação. Estado incompatível/recurso ausente continua conflito, sem vazamento de SQL. Exclusão negada por uso/atividade: 409 `MASTER_DATA_DELETE_BLOCKED`; falta de habilitação SQL: 503 `MASTER_DATA_DELETE_UNAVAILABLE`. Auditoria mínima transacional em todas as operações, sem apagar histórico. Nomes são rótulos atuais do mesmo cadastro, inclusive em consultas históricas, não novos IDs ou versões de avaliação.
 
@@ -276,12 +275,12 @@ Sucesso: 204. Nome obrigatório, até 200 caracteres; campos extras rejeitados t
 
 Prefixo `/administration/manager-assignment-imports`, permissão `VINCULOS_GESTOR_COLABORADOR.GERIR` em todas as rotas; CSRF nas escritas:
 
-| Rota | Contrato |
-| --- | --- |
-| `POST /preview` | Binário XLSX, até 1 MB/1.000 linhas; Conta avaliadora, Colaborador e Início. Sem ciclo. |
-| `GET /{id}?page=1` | Mesma projeção paginada das importações, páginas de 25 linhas. |
-| `POST /{id}/confirm` | Sem corpo; revalidação e criação atômica. Retorna `{ created, existing }`. |
-| `DELETE /{id}` | Descartar apenas prévia do próprio ator/família. Não remove vínculos. |
+| Rota                 | Contrato                                                                                |
+| -------------------- | --------------------------------------------------------------------------------------- |
+| `POST /preview`      | Binário XLSX, até 1 MB/1.000 linhas; Conta avaliadora, Colaborador e Início. Sem ciclo. |
+| `GET /{id}?page=1`   | Mesma projeção paginada das importações, páginas de 25 linhas.                          |
+| `POST /{id}/confirm` | Sem corpo; revalidação e criação atômica. Retorna `{ created, existing }`.              |
+| `DELETE /{id}`       | Descartar apenas prévia do próprio ator/família. Não remove vínculos.                   |
 
 A linha da prévia acrescenta `managerAssignment: { manager, startsOn }`: nome fornecido da conta e data normalizada, sem login, IDs resolvidos, papel ou histórico. Campos existentes dos outros importadores permanecem compatíveis. Mesmos códigos `IMPORT_*`, prazo e limites de memória/taxa. Endpoints de cadastros não acessam tokens de vínculo e vice-versa; a proteção vale também para o mesmo ator com ambas as permissões. Confirmação com permissão revogada é negada antes do serviço, incluindo reenvios. Nomes duplicados/ambíguos, conta inelegível e sobreposição bloqueiam sem criação parcial ou concessão implícita.
 
@@ -291,11 +290,11 @@ Detalhes operacionais: [manutenção e vínculos](../operations/manutencao-cadas
 
 Extensões aditivas de v1, implementadas localmente. Publicar API e aplicar V0015 antes da SPA. Detalhes e limites nas [ADR-0021](../adr/0021-recuperacao-local-assistida-de-senha.md) e [ADR-0022](../adr/0022-delegacao-individual-de-redefinicao-de-senha.md).
 
-| Operação | Entrada e autorização | Resposta |
-| --- | --- | --- |
-| POST /auth/password-reset-requests | JSON contendo somente login, não vazio, máximo 128 caracteres. Anônimo com CSRF; limitação de taxa. | 202 sem corpo e no-store, independentemente de conta elegível. 422 para validação, 400 para JSON/campos desconhecidos, 429 para limite. |
-| GET /administration/password-reset-requests | Sessão e administrador supremo ou `SENHAS.REDEFINIR`. after inteiro não negativo (padrão 0), limit 1–100 (padrão 100). | items: userId, displayName, login, requestedAt UTC. page: limit, nextCursor string ou null. Cursor é a sequência do último evento incluído; enviar como after. Nenhuma senha, hash ou token. |
-| POST /administration/users/{userId}/temporary-password | Mesmo escopo de recuperação, CSRF, sem corpo. Alvo elegível, diferente do ator e nunca técnico; para delegado, também não delegador. | 200 com user (UserResponse) e temporaryPassword; no-store. Credencial individual aleatória, troca obrigatória e revogação de todas as sessões. |
+| Operação                                               | Entrada e autorização                                                                                                                | Resposta                                                                                                                                                                                     |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| POST /auth/password-reset-requests                     | JSON contendo somente login, não vazio, máximo 128 caracteres. Anônimo com CSRF; limitação de taxa.                                  | 202 sem corpo e no-store, independentemente de conta elegível. 422 para validação, 400 para JSON/campos desconhecidos, 429 para limite.                                                      |
+| GET /administration/password-reset-requests            | Sessão e administrador supremo ou `SENHAS.REDEFINIR`. after inteiro não negativo (padrão 0), limit 1–100 (padrão 100).               | items: userId, displayName, login, requestedAt UTC. page: limit, nextCursor string ou null. Cursor é a sequência do último evento incluído; enviar como after. Nenhuma senha, hash ou token. |
+| POST /administration/users/{userId}/temporary-password | Mesmo escopo de recuperação, CSRF, sem corpo. Alvo elegível, diferente do ator e nunca técnico; para delegado, também não delegador. | 200 com user (UserResponse) e temporaryPassword; no-store. Credencial individual aleatória, troca obrigatória e revogação de todas as sessões.                                               |
 
 A solicitação não altera credenciais. Pedidos repetidos para a mesma conta permanecem como uma pendência; redefinição ou troca de senha posterior resolve a pendência preservando auditoria. Reinícios não apagam a fila. Não se envia e-mail. As rotas de listagem e geração negam sem sessão/permissão/escopo; conta indisponível não gera senha. A rota PUT de redefinição existente continua compatível, sujeita ao novo limite explícito do BCrypt (72 bytes).
 

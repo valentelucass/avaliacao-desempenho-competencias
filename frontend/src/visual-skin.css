@@ -560,6 +560,8 @@
   }
 
   .workspace-sidebar__footer {
+    display: grid;
+    gap: 0.75rem;
     border-top: 1px solid color-mix(in srgb, var(--border) 88%, var(--surface));
     margin-inline: 0.05rem;
     padding-top: 0.75rem;
@@ -1043,11 +1045,12 @@
     }
   }
 
-  :root .button.workspace-sidebar__sign-out {
+  :root .workspace-sidebar__footer > .button {
     justify-content: flex-start;
-    min-height: 2.375rem;
-    padding-inline: 0.7rem;
+    min-height: 2.625rem;
+    padding-inline: 0.85rem;
     font-size: 0.875rem;
+    width: 100%;
   }
 
   :root
@@ -1659,22 +1662,6 @@
   .field label,
   .field-hint {
     font-size: 0.78rem;
-  }
-
-  /* ── Account dialog: espaçamento interno reduzido ──────────────── */
-  .account-dialog.selected-user-card {
-    gap: 0.65rem;
-    padding: clamp(0.75rem, 1.5vw, 1rem);
-  }
-
-  .account-dialog .selected-user-overview,
-  .account-dialog .access-summary {
-    gap: 0.5rem;
-  }
-
-  .account-dialog .selected-user-overview .definition-list div,
-  .account-dialog .access-summary .field {
-    padding: 0.5rem 0.65rem;
   }
 
   /* ── Spreadsheet import panel: mais compacto ───────────────────── */

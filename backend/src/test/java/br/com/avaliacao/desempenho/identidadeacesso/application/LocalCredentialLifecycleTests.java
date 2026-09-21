@@ -38,8 +38,8 @@ class LocalCredentialLifecycleTests {
     when(repository.findLocalCredentialByUserId(actor)).thenReturn(Optional.of(account));
     doAnswer(
             call -> {
-              ((java.util.function.Consumer<TransactionStatus>) call.getArgument(0))
-                  .accept(mock(TransactionStatus.class));
+              java.util.function.Consumer<TransactionStatus> action = call.getArgument(0);
+              action.accept(mock(TransactionStatus.class));
               return null;
             })
         .when(transaction)

@@ -4,6 +4,8 @@
 
 ## Resultado vigente
 
+`ADC-UI-062`, implementação visual em validação: login ganhou linha própria, redefinição/delegação passaram a dois blocos sob um cabeçalho comum, edição/perfil têm alinhamento consistente e títulos com ícones. Menu pessoal usa ações do mesmo tamanho, separadas por espaço, com senha azul e saída vermelha. Alteradas somente apresentação/textos e fixtures visuais, sem permissões/callbacks/API/banco. Edge agora exercita os dois formulários administrativos e login longo fictício em 320/768/1080/1440 px, além do menu real nos dois temas.
+
 `ADC-COR-026`, concluída localmente (2026-09-21), neste chat e sem subagentes. Autorização: solicitação anexada do usuário; worktree inicialmente limpo. O [relatório da revisão](docs/security/revisao-senhas-adc-cor-026.md) contém a matriz ator × ação × alvo, catálogo dos cinco perfis, mapa de rotas/DTOs/casos de uso/repositórios/telas, compatibilidade e rollback. Contrato HTTP, ADR-0021/0022 e fundação de segurança atualizados.
 
 Correções concluídas: R/D exclusivamente individuais, sem herança por papel; revalidação persistida de ator/alvo dentro da transação; coleção/detalhe restritos ao operador e fila filtrada antes da paginação. Negados autoatendimento administrativo e alvos supremos, protegidos, técnicos, inativos, bloqueados (inclusive temporariamente), excluídos ou sem credencial. Técnico não supremo não opera mesmo com concessão residual; delegado nunca concede D nem atua sobre delegador. A consulta cadastral normal por USUARIOS.LER mantém o escopo já aprovado. Reuso da senha atual também é rejeitado na rota legada.
@@ -580,6 +582,10 @@ O catálogo contém 15 migrations imutáveis (`V0001`–`V0015`). A reconciliaç
 O release produtivo e a infraestrutura existentes não foram modificados nem tiveram seu estado corrente recertificado nesta auditoria. Evidências anteriores de PM2, HTTPS e restauração técnica são históricas; não significam que esta correção foi implantada em produção.
 
 ## Tarefas pendentes reais
+
+- `ADC-COR-027`, em execução local (2026-09-21): corrigir os dois casts genéricos sem verificação nos testes de credenciais/HTTP e os avisos MD060/MD012 no contrato HTTP enviados pelo usuário durante ADC-UI-062. Usar callbacks tipados e ajustar apenas formatação Markdown; validar compilação, testes afetados e regras do Markdown, sem alterar contrato ou código Java de produção.
+
+- `ADC-UI-062`, em execução local (2026-09-21): reorganizar visualmente o diálogo de conta e as ações pessoais do menu conforme as duas capturas do usuário. Melhorar hierarquia, espaçamento, alinhamento e cores, com saída vermelha; preservar autorização, callbacks e limpeza de credenciais. Validar temas, teclado e responsividade em cópia isolada, sem banco, serviço ou publicação.
 
 - `ADC-COR-026`, concluída localmente (2026-09-21): revisão, correções, matriz, regressões, gate completo e documentação entregues; evidências no Resultado vigente e relatório de segurança. Restam somente decisões/ações externas: V0015 autorizada, contas reais, publicação compatível, aceite operacional/acessível, regra de expiração/histórico e validação de escrita/concorrência em ambiente autorizado. Nenhuma dessas ações foi executada ou implicitamente autorizada.
 

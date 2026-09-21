@@ -15,6 +15,7 @@ import {
   ClipboardCheck,
   FileQuestion,
   LayoutDashboard,
+  KeyRound,
   Link2,
   LoaderCircle,
   LogOut,
@@ -574,7 +575,7 @@ function App({ api = defaultApiClient }: AppProps) {
         </SidebarNavigation>
         <div className="workspace-sidebar__footer">
           <button
-            className="button"
+            className="button button--primary workspace-sidebar__password"
             type="button"
             disabled={isSigningOut}
             onClick={() => {
@@ -582,10 +583,11 @@ function App({ api = defaultApiClient }: AppProps) {
               setVoluntaryPasswordChange(true)
             }}
           >
+            <KeyRound aria-hidden="true" size={18} strokeWidth={2} />
             Alterar minha senha
           </button>
           <button
-            className="button workspace-sidebar__sign-out"
+            className="button button--danger workspace-sidebar__sign-out"
             disabled={isSigningOut}
             onClick={() => void signOut()}
             type="button"

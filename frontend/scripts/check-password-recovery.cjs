@@ -59,6 +59,15 @@ module.exports = async function checkPasswordRecovery({ send, frameId, css }) {
     const metrics = await evaluate(
       `(()=>{const d=document.querySelector('[role=dialog]'),r=d.getBoundingClientRect();return {inside:r.left>=0&&r.top>=0&&r.right<=innerWidth+1&&r.bottom<=innerHeight+1&&d.contains(document.activeElement),left:r.left,top:r.top,right:r.right,bottom:r.bottom,width:innerWidth,height:innerHeight,focus:d.contains(document.activeElement)}})()`,
     )
+    if (!metrics.inside) {
+      const screenshot = await send('Page.captureScreenshot', { format: 'png' })
+      fs.writeFileSync('dist/ui062-dialog-failure.png', Buffer.from(screenshot.data, 'base64'))
+      console.log(
+        await evaluate(
+          `JSON.stringify([...document.querySelector('[role=dialog]').children].map(e=>({class:e.className,height:e.getBoundingClientRect().height})))`,
+        ),
+      )
+    }
     assert.equal(
       metrics.inside,
       true,
@@ -66,8 +75,8 @@ module.exports = async function checkPasswordRecovery({ send, frameId, css }) {
     )
   }
   for (const theme of ['light', 'dark'])
-    for (const width of [320, 768, 1440]) {
-      const height = width === 1440 ? 768 : 1000
+    for (const width of [320, 768, 1080, 1440]) {
+      const height = width >= 1080 ? 768 : 1000
       await send('Emulation.setDeviceMetricsOverride', {
         width,
         height,
@@ -119,6 +128,21 @@ module.exports = async function checkPasswordRecovery({ send, frameId, css }) {
         'new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))',
       )
       await assertDialog()
+      const loginLayout = await evaluate(
+        `(()=>{const login=document.querySelector('.account-dialog__login'),r=login.getBoundingClientRect(),text=login.querySelector('dd');return {width:r.width,available:login.parentElement.clientWidth,textWidth:text.clientWidth,textScroll:text.scrollWidth}})()`,
+      )
+      assert.ok(
+        loginLayout.width >= loginLayout.available - 1 &&
+          loginLayout.textScroll <= loginLayout.textWidth + 1,
+        `O login deve ocupar uma linha própria sem corte: ${JSON.stringify(loginLayout)}`,
+      )
+      assert.equal(
+        await evaluate(
+          `(()=>{const forms=[...document.querySelectorAll('.account-dialog__management > form')];return forms.length===2&&forms.every(form=>form.scrollWidth<=form.clientWidth+1)})()`,
+        ),
+        true,
+        'Edição da conta e perfil devem estar presentes e sem corte',
+      )
       assert.equal(
         await evaluate(
           `(()=>{const dialog=document.querySelector('[role=dialog]'),overview=dialog.querySelector('.account-dialog__overview'),security=dialog.querySelector('.account-dialog__security'),button=[...dialog.querySelectorAll('button')].find(b=>b.textContent.includes('Gerar senha temporária'));const or=overview.getBoundingClientRect(),sr=security.getBoundingClientRect();return !!overview&&!!security&&!!button&&sr.top>=or.bottom-1})()`,
@@ -212,7 +236,7 @@ module.exports = async function checkPasswordRecovery({ send, frameId, css }) {
     JSON.stringify({
       case: 'Recuperação, filtros globais, detalhes de conta e popup de vínculos',
       themes: 2,
-      viewports: [320, 768, 1440],
+      viewports: [320, 768, 1080, 1440],
       network: false,
     }),
   )
