@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
+import { KeyRound, RefreshCw, Save, UserRound, X } from 'lucide-react'
 import { isAuthenticationError, type ApiClient } from '../../api/client'
 import type { AdministrationUser, PasswordResetRequest } from '../../api/contracts'
 import { AdministrativeTable } from '@/components/ui/administrative-table'
@@ -141,9 +142,10 @@ export function PasswordResetRequestsPanel({
   }
 
   return (
-    <section className="stack-form" aria-labelledby={`${id}-title`}>
+    <section className="stack-form password-reset-requests" aria-labelledby={`${id}-title`}>
       <div className="section-heading">
         <h4 id={`${id}-title`}>
+          <KeyRound aria-hidden="true" size={18} />
           Solicitações de redefinição de senha {loaded ? `(${requests.length})` : ''}
         </h4>
         <button
@@ -156,6 +158,7 @@ export function PasswordResetRequestsPanel({
             void load()
           }}
         >
+          <RefreshCw aria-hidden="true" size={18} />
           Atualizar solicitações
         </button>
       </div>
@@ -183,17 +186,18 @@ export function PasswordResetRequestsPanel({
                 <tr key={item.userId}>
                   <td data-label="Nome">{item.displayName}</td>
                   <td data-label="Login">{item.login}</td>
-                  <td data-label="Solicitada em">
+                  <td data-label="Solicitada em" className="password-reset-requests__date">
                     {new Date(item.requestedAt).toLocaleString('pt-BR')}
                   </td>
-                  <td data-label="Ação">
+                  <td data-label="Ação" className="password-reset-requests__action">
                     <button
                       type="button"
-                      className="button"
+                      className="button button--primary"
                       disabled={busy}
                       onClick={() => void open(item.userId)}
                     >
-                      {canEditAccount ? 'Editar e redefinir senha' : 'Redefinir senha'}
+                      <KeyRound aria-hidden="true" size={18} />
+                      Atender solicitação
                     </button>
                   </td>
                 </tr>
@@ -209,25 +213,35 @@ export function PasswordResetRequestsPanel({
             role="dialog"
             aria-modal="true"
             aria-labelledby={`${id}-dialog-title`}
-            className="card stack-form account-dialog"
+            className="card stack-form account-dialog password-request-dialog"
             ref={dialog}
             tabIndex={-1}
           >
             <div className="section-heading">
-              <h3 id={`${id}-dialog-title`}>Atender solicitação de senha</h3>
+              <h3 id={`${id}-dialog-title`}>
+                <KeyRound aria-hidden="true" size={20} />
+                Atender solicitação de senha
+              </h3>
               <button
-                className="button"
+                className="button button--icon"
                 type="button"
+                aria-label="Fechar"
                 disabled={busy}
                 onClick={() => {
                   setUser(undefined)
                   setError(undefined)
                 }}
               >
-                Fechar
+                <X aria-hidden="true" size={18} />
               </button>
             </div>
-            <p>{user.login}</p>
+            <div className="password-request-dialog__identity">
+              <UserRound aria-hidden="true" size={20} />
+              <div>
+                <strong>{user.displayName}</strong>
+                <p className="muted">{user.login}</p>
+              </div>
+            </div>
             {error ? (
               <FeedbackMessage kind="error" onDismiss={() => setError(undefined)}>
                 {error}
@@ -239,7 +253,7 @@ export function PasswordResetRequestsPanel({
               </FeedbackMessage>
             ) : null}
             {canEditAccount ? (
-              <>
+              <div className="password-request-dialog__edit">
                 <div className="field">
                   <label htmlFor={`${id}-name`}>Nome da conta</label>
                   <input
@@ -250,15 +264,18 @@ export function PasswordResetRequestsPanel({
                     onChange={(event) => setName(event.currentTarget.value)}
                   />
                 </div>
-                <button
-                  className="button"
-                  type="button"
-                  disabled={busy || !name.trim()}
-                  onClick={() => void edit()}
-                >
-                  Salvar nome
-                </button>
-              </>
+                <div className="action-row">
+                  <button
+                    className="button button--success"
+                    type="button"
+                    disabled={busy || !name.trim()}
+                    onClick={() => void edit()}
+                  >
+                    <Save aria-hidden="true" size={18} />
+                    Salvar nome
+                  </button>
+                </div>
+              </div>
             ) : null}
             <TemporaryPasswordReset
               key={user.id}

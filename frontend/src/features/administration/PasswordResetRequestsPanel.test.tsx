@@ -51,7 +51,7 @@ describe('Atendimento de solicitações de senha', () => {
     expect(screen.queryByRole('cell', { name: user.displayName })).not.toBeInTheDocument()
     fireEvent.change(screen.getByLabelText('Filtrar Login'), { target: { value: user.login } })
     expect(screen.getByRole('cell', { name: user.displayName })).toBeVisible()
-    const open = screen.getByRole('button', { name: 'Editar e redefinir senha' })
+    const open = screen.getByRole('button', { name: 'Atender solicitação' })
     open.focus()
     fireEvent.click(open)
     const dialog = await screen.findByRole('dialog', { name: 'Atender solicitação de senha' })

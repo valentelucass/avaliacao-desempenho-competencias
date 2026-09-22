@@ -103,9 +103,37 @@ module.exports = async function checkPasswordRecovery({ send, frameId, css }) {
       )
       await fill('input[aria-label="Filtrar Login"]', 'pessoa0@')
       await ready("document.querySelector('tbody').textContent.includes('Pessoa fictícia 0')")
-      await click('Redefinir senha')
+      assert.equal(
+        await evaluate(
+          `(()=>{const b=document.querySelector('.password-reset-requests__action button');return getComputedStyle(b).whiteSpace==='nowrap'&&b.scrollWidth<=b.clientWidth+1})()`,
+        ),
+        true,
+        'O botão de atendimento deve permanecer legível em uma linha',
+      )
+      if (width === 1440) {
+        const screenshot = await send('Page.captureScreenshot', { format: 'png' })
+        fs.writeFileSync(
+          `dist/ui063-request-table-${theme}.png`,
+          Buffer.from(screenshot.data, 'base64'),
+        )
+      }
+      await click('Atender solicitação')
       await ready("document.querySelector('[role=dialog]')")
       await assertDialog()
+      assert.equal(
+        await evaluate(
+          `(()=>{const d=document.querySelector('.password-request-dialog');return d.getBoundingClientRect().width<=576&&d.scrollWidth<=d.clientWidth+1&&!!d.querySelector('.password-request-dialog__edit input')})()`,
+        ),
+        true,
+        'O atendimento deve usar um popup compacto com edição de nome sem corte',
+      )
+      if (width === 1440) {
+        const screenshot = await send('Page.captureScreenshot', { format: 'png' })
+        fs.writeFileSync(
+          `dist/ui063-request-popup-${theme}.png`,
+          Buffer.from(screenshot.data, 'base64'),
+        )
+      }
       await click('Gerar senha temporária e redefinir')
       await ready("document.querySelector('[role=dialog] input[readonly]')")
       // Escape deve fechar com foco restaurado e descartar a credencial.

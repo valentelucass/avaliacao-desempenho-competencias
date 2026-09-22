@@ -6242,6 +6242,87 @@ textarea:hover:not(:disabled) {
   padding: clamp(1rem, 2vw, 1.35rem);
 }
 
+.password-reset-requests > .section-heading h4,
+.password-request-dialog > .section-heading h3 {
+  align-items: center;
+  display: flex;
+  gap: 0.6rem;
+}
+
+.password-reset-requests > .section-heading svg,
+.password-request-dialog svg {
+  flex-shrink: 0;
+}
+
+:root .password-reset-requests__action .button {
+  white-space: nowrap;
+}
+
+.account-dialog.password-request-dialog {
+  gap: 1rem;
+  max-height: calc(100dvh - 2rem);
+  max-width: 36rem;
+  overflow: auto;
+  padding: 1rem;
+  width: min(100%, 36rem);
+}
+
+.password-request-dialog > .section-heading {
+  flex-wrap: nowrap;
+  gap: 0.75rem;
+}
+
+.password-request-dialog__identity {
+  align-items: center;
+  display: flex;
+  gap: 0.75rem;
+  overflow-wrap: anywhere;
+}
+
+.password-request-dialog__identity > svg {
+  color: var(--muted);
+}
+
+.password-request-dialog__identity > div {
+  min-width: 0;
+}
+
+.password-request-dialog__identity p {
+  font-size: 0.875rem;
+  margin: 0.25rem 0 0;
+}
+
+.password-request-dialog__edit,
+.password-request-dialog > .account-password-reset {
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.9rem;
+}
+
+.password-request-dialog__edit .action-row {
+  justify-content: flex-end;
+}
+
+.password-request-dialog > .account-password-reset > .button {
+  justify-content: center;
+  width: 100%;
+}
+
+@media (min-width: 48.0625rem) {
+  .password-reset-requests .administration-users th:last-child,
+  .password-reset-requests .password-reset-requests__action {
+    min-width: 12rem;
+    width: 12rem;
+  }
+
+  .password-reset-requests__date {
+    white-space: nowrap;
+  }
+}
+
 @media (min-width: 48.0625rem) {
   .account-dialog__overview {
     grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);

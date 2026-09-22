@@ -75,7 +75,7 @@ function show(login: boolean) {
       <main className="workspace">
         <div className="workspace__content">
           <section className="card">
-            <PasswordResetRequestsPanel api={api} onSessionExpired={() => {}} />
+            <PasswordResetRequestsPanel api={api} canEditAccount onSessionExpired={() => {}} />
           </section>
           <RelationshipAdministrationPanel
             api={api}
