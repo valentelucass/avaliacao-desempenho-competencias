@@ -14,12 +14,24 @@ function requiredEnvironment(name) {
   return value;
 }
 
-const backendProcess = "avaliacao-api-18081";
-const frontendProcess = "avaliacao-front-18080";
+function requiredPort(name) {
+  const value = requiredEnvironment(name);
+  const port = Number(value);
+  if (!/^\d+$/.test(value) || !Number.isInteger(port) || port < 1 || port > 65535) {
+    throw new Error(`A variável ${name} deve ser uma porta TCP válida (1 a 65535).`);
+  }
+  return String(port);
+}
+
+const backendProcess = "avaliacao-api-28081";
+const frontendProcess = "avaliacao-front-38080";
 const backendHost = requiredEnvironment("ADC_PM2_BACKEND_HOST");
-const backendPort = requiredEnvironment("ADC_PM2_BACKEND_PORT");
+const backendPort = requiredPort("ADC_PM2_BACKEND_PORT");
 const frontendHost = requiredEnvironment("ADC_PM2_FRONTEND_HOST");
-const frontendPort = requiredEnvironment("ADC_PM2_FRONTEND_PORT");
+const frontendPort = requiredPort("ADC_PM2_FRONTEND_PORT");
+if (backendPort === frontendPort) {
+  throw new Error("A API e o front-end devem usar portas TCP diferentes.");
+}
 const backendJar = requiredEnvironment("ADC_PM2_BACKEND_JAR");
 const javaExecutable = requiredEnvironment("ADC_PM2_JAVA_EXECUTABLE");
 const nodeExecutable = requiredEnvironment("ADC_PM2_NODE_EXECUTABLE");

@@ -8,6 +8,10 @@ Thumbs.db
 !.vscode/settings.json
 /images
 
+# Local agent settings and generated analysis
+/.codex/
+/graphify-out/
+
 # Java / Maven
 backend/target/
 *.class

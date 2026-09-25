@@ -10,11 +10,13 @@ exit /b %ERRORLEVEL%
 title Avaliacao de Desempenho - Producao PM2
 
 set "BACKEND_HOST=127.0.0.1"
-set "BACKEND_PORT=18081"
+set "BACKEND_PORT=28081"
 set "FRONTEND_HOST=127.0.0.1"
-set "FRONTEND_PORT=18080"
-set "BACKEND_PROCESS=avaliacao-api-18081"
-set "FRONTEND_PROCESS=avaliacao-front-18080"
+set "FRONTEND_PORT=38080"
+set "BACKEND_PROCESS=avaliacao-api-28081"
+set "FRONTEND_PROCESS=avaliacao-front-38080"
+set "PREVIOUS_BACKEND_PROCESS=avaliacao-api-18081"
+set "PREVIOUS_FRONTEND_PROCESS=avaliacao-front-18080"
 set "LEGACY_BACKEND_PROCESS=avaliacao-desempenho-backend-prod"
 set "LEGACY_FRONTEND_PROCESS=avaliacao-desempenho-frontend-prod"
 set "PRODUCTION_CONFIG_PATH=%AVALIACAO_DESEMPENHO_PRODUCTION_CONFIG%"
@@ -61,10 +63,10 @@ if not exist "frontend\package-lock.json" (
   exit /b 1
 )
 
-call :assert_port_free_when_process_is_missing "%BACKEND_PROCESS%" "%BACKEND_PORT%" "%LEGACY_BACKEND_PROCESS%"
+call :assert_port_free_when_process_is_missing "%BACKEND_PROCESS%" "%BACKEND_PORT%"
 if errorlevel 1 exit /b 1
 
-call :assert_port_free_when_process_is_missing "%FRONTEND_PROCESS%" "%FRONTEND_PORT%" "%LEGACY_FRONTEND_PROCESS%"
+call :assert_port_free_when_process_is_missing "%FRONTEND_PROCESS%" "%FRONTEND_PORT%"
 if errorlevel 1 exit /b 1
 
 if defined CHECK_ONLY (
@@ -233,11 +235,11 @@ echo [Avaliacao PROD] Nao foi possivel localizar node.exe.
 exit /b 1
 
 :start_or_restart_backend
-call :start_or_restart_pm2_application "%BACKEND_PROCESS%" "%BACKEND_PORT%" "%LEGACY_BACKEND_PROCESS%"
+call :start_or_restart_pm2_application "%BACKEND_PROCESS%" "%BACKEND_PORT%" "%PREVIOUS_BACKEND_PROCESS%" "%LEGACY_BACKEND_PROCESS%"
 exit /b %ERRORLEVEL%
 
 :start_or_restart_frontend
-call :start_or_restart_pm2_application "%FRONTEND_PROCESS%" "%FRONTEND_PORT%" "%LEGACY_FRONTEND_PROCESS%"
+call :start_or_restart_pm2_application "%FRONTEND_PROCESS%" "%FRONTEND_PORT%" "%PREVIOUS_FRONTEND_PROCESS%" "%LEGACY_FRONTEND_PROCESS%"
 exit /b %ERRORLEVEL%
 
 :start_or_restart_pm2_application
@@ -249,8 +251,14 @@ if not errorlevel 1 (
 )
 call pm2 describe "%~3" >nul 2>&1
 if not errorlevel 1 (
-  echo [Avaliacao PROD] Substituindo o nome legado %~3 por %~1...
+  echo [Avaliacao PROD] Substituindo o processo anterior %~3 por %~1...
   call pm2 delete "%~3"
+  if errorlevel 1 exit /b 1
+)
+call pm2 describe "%~4" >nul 2>&1
+if not errorlevel 1 (
+  echo [Avaliacao PROD] Substituindo o nome legado %~4 por %~1...
+  call pm2 delete "%~4"
   if errorlevel 1 exit /b 1
 )
 echo [Avaliacao PROD] Iniciando %~1 pelo manifesto PM2...
@@ -261,8 +269,6 @@ exit /b %ERRORLEVEL%
 
 :assert_port_free_when_process_is_missing
 call pm2 describe "%~1" >nul 2>&1
-if not errorlevel 1 exit /b 0
-call pm2 describe "%~3" >nul 2>&1
 if not errorlevel 1 exit /b 0
 call :assert_port_free "%~2"
 exit /b %ERRORLEVEL%

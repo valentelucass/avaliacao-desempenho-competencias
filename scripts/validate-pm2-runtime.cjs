@@ -6,14 +6,23 @@ const chunks = [];
 process.stdin.on("data", (chunk) => chunks.push(chunk));
 process.stdin.on("end", () => {
   const applications = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+  const retiredNames = new Set([
+    "avaliacao-api-18081",
+    "avaliacao-front-18080",
+    "avaliacao-desempenho-backend-prod",
+    "avaliacao-desempenho-frontend-prod",
+  ]);
+  if (applications.some((application) => retiredNames.has(application.name))) {
+    throw new Error("O PM2 ainda contém um processo antigo deste projeto.");
+  }
   const expected = {
-    "avaliacao-api-18081": {
+    "avaliacao-api-28081": {
       keys: ["JAVA_TOOL_OPTIONS", "SystemRoot", "TEMP", "TMP", "WINDIR"],
       values: {
         JAVA_TOOL_OPTIONS: "-Djavax.net.ssl.trustStoreType=Windows-ROOT",
       },
     },
-    "avaliacao-front-18080": {
+    "avaliacao-front-38080": {
       keys: ["NODE_ENV", "SystemRoot", "TEMP", "TMP", "WINDIR"],
       values: { NODE_ENV: "production" },
     },
@@ -70,7 +79,7 @@ process.stdin.on("end", () => {
       Array.isArray(application.pm2_env?.filter_env) &&
       application.pm2_env.filter_env.length === 1 &&
       application.pm2_env.filter_env[0] === "" &&
-      (application.name === "avaliacao-api-18081"
+      (application.name === "avaliacao-api-28081"
         ? Array.isArray(argumentsList) &&
           argumentsList[0] === "-jar" &&
           typeof backendJar === "string" &&
@@ -78,7 +87,7 @@ process.stdin.on("end", () => {
           /^avaliacao-desempenho-api-.+\.jar$/.test(path.basename(backendJar)) &&
           fs.existsSync(backendJar) &&
           argumentsList.includes("--server.address=127.0.0.1") &&
-          argumentsList.includes("--server.port=18081") &&
+          argumentsList.includes("--server.port=28081") &&
           String(application.pm2_env.pm_exec_path)
             .toLowerCase()
             .endsWith(`${path.sep}java.exe`)
@@ -87,7 +96,7 @@ process.stdin.on("end", () => {
           argumentsList.includes("--host") &&
           argumentsList.includes("127.0.0.1") &&
           argumentsList.includes("--port") &&
-          argumentsList.includes("18080") &&
+          argumentsList.includes("38080") &&
           argumentsList.includes("--strictPort") &&
           String(application.pm2_env.pm_exec_path)
             .toLowerCase()

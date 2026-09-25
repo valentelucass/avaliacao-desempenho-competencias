@@ -13,10 +13,10 @@ Por confirmação explícita do usuário em 2026-08-25, esta VM será a origem d
 
 | Host público                               | Serviço privado nesta VM             |
 | ------------------------------------------ | ------------------------------------ |
-| `https://formulario.rodogarcia.com.br`     | `http://127.0.0.1:18080` (front-end) |
-| `https://api-formulario.rodogarcia.com.br` | `http://127.0.0.1:18081` (API)       |
+| `https://formulario.rodogarcia.com.br`     | `http://127.0.0.1:38080` (front-end) |
+| `https://api-formulario.rodogarcia.com.br` | `http://127.0.0.1:28081` (API)       |
 
-O HTTPS público é atendido pela Cloudflare. Os dois serviços da aplicação não devem escutar interfaces públicas, nem exigem IIS, Nginx ou abertura de porta de entrada para funcionarem pelo túnel.
+O HTTPS público é atendido pela Cloudflare. Os dois serviços da aplicação não devem escutar interfaces públicas, nem exigem IIS, Nginx ou abertura de porta de entrada para funcionarem pelo túnel. Em 2026-09-23, as novas portas estavam ativas e respondiam HTTP 200 localmente, mas ambos os hosts públicos retornavam HTTP 502. Como o túnel é gerenciado remotamente e a VM não tem credencial administrativa da Cloudflare, `scripts/repair-public-route.ps1` criou duas pontes TCP restritas ao loopback das portas antigas `18080`/`18081` até as novas `38080`/`28081`. Após a aplicação, os dois hosts públicos responderam HTTP 200. A configuração remota do túnel permanece pendente de atualização direta; quando isso acontecer, remover as pontes com `repair-public-route.ps1 -Remove` depois da validação pública.
 
 O certificado HTTPS autoassinado usado por `iniciar-dev.bat` é somente local, no perfil Windows atual, e não atende nem configura os hosts públicos. A atualização desta documentação não cria ou altera conta, zona, DNS, rota de túnel, regra de proxy, certificado público ou configuração externa.
 

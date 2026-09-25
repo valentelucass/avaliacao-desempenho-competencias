@@ -3,9 +3,9 @@ const path = require("node:path");
 const repositoryRoot = path.resolve(__dirname, "..");
 const requiredVariables = {
   ADC_PM2_BACKEND_HOST: "127.0.0.1",
-  ADC_PM2_BACKEND_PORT: "18081",
+  ADC_PM2_BACKEND_PORT: "28081",
   ADC_PM2_FRONTEND_HOST: "127.0.0.1",
-  ADC_PM2_FRONTEND_PORT: "18080",
+  ADC_PM2_FRONTEND_PORT: "38080",
   ADC_PM2_BACKEND_JAR: path.join(
     repositoryRoot,
     "backend",
@@ -50,14 +50,14 @@ if (!Array.isArray(manifest.apps) || manifest.apps.length !== 2) {
 }
 
 const expectedEnvironmentKeys = {
-  "avaliacao-api-18081": [
+  "avaliacao-api-28081": [
     "JAVA_TOOL_OPTIONS",
     "SystemRoot",
     "TEMP",
     "TMP",
     "WINDIR",
   ],
-  "avaliacao-front-18080": [
+  "avaliacao-front-38080": [
     "NODE_ENV",
     "SystemRoot",
     "TEMP",
@@ -100,13 +100,31 @@ for (const app of manifest.apps) {
   }
 
   if (
-    app.name === "avaliacao-api-18081" &&
+    app.name === "avaliacao-api-28081" &&
     app.env.JAVA_TOOL_OPTIONS !==
       "-Djavax.net.ssl.trustStoreType=Windows-ROOT"
   ) {
     throw new Error(
       "O processo Java deve receber somente a opção de truststore autorizada.",
     );
+  }
+}
+
+for (const [backendPort, frontendPort] of [
+  ["65536", "38080"],
+  ["28081", "28081"],
+]) {
+  process.env.ADC_PM2_BACKEND_PORT = backendPort;
+  process.env.ADC_PM2_FRONTEND_PORT = frontendPort;
+  delete require.cache[require.resolve(manifestPath)];
+  let rejected = false;
+  try {
+    require(manifestPath);
+  } catch {
+    rejected = true;
+  }
+  if (!rejected) {
+    throw new Error("O manifesto aceitou uma porta TCP inválida ou repetida.");
   }
 }
 

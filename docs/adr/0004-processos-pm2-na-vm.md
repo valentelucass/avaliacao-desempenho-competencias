@@ -10,9 +10,9 @@ A VM já possui processos PM2 de outros sistemas. A aplicação precisa de scrip
 
 ## Decisão
 
-- Reservar `127.0.0.1:18081` para a API Java e `127.0.0.1:18080` para o front-end React.
+- Reservar `127.0.0.1:28081` para a API Java e `127.0.0.1:38080` para o front-end React. Essas portas substituem as portas `18081` e `18080` da decisão inicial.
 - Reservar `https://localhost:5181` para a API e `https://localhost:5180` para a SPA no desenvolvimento; o launcher local não verifica, encerra ou ocupa as portas privadas de produção.
-- Usar os nomes PM2 `avaliacao-api-18081` e `avaliacao-front-18080` exclusivamente para esta aplicação.
+- Usar os nomes PM2 `avaliacao-api-28081` e `avaliacao-front-38080` exclusivamente para esta aplicação. O launcher remove os nomes antigos na próxima ativação autorizada.
 - `ecosystem.config.cjs` é o manifesto canônico do PM2. Ele recebe caminhos, portas, logs e configuração externa somente do `iniciar-prod.bat` depois do preflight; não contém segredos, não lê `.env` e falha se for chamado sem o ambiente obrigatório.
 - O script de produção somente inicia ou reinicia processos com esses dois nomes por meio do manifesto; ele nunca encerra processos de terceiros para liberar portas.
 - O script de desenvolvimento não usa PM2 e falha se qualquer porta escolhida já estiver em uso.
@@ -20,7 +20,7 @@ A VM já possui processos PM2 de outros sistemas. A aplicação precisa de scrip
 
 ## Consequências
 
-- As portas escolhidas estavam livres na verificação de 2026-08-25 e não pertencem às faixas de exclusão TCP observadas no Windows.
+- As portas originais estavam livres na verificação de 2026-08-25. As novas portas `28081` e `38080` estavam livres e fora das faixas de exclusão TCP observadas em 2026-09-23; essa leitura não reserva as portas até a ativação.
 - A API e o front-end ficam restritos ao loopback. O acesso público por Cloudflare Tunnel nesta VM está definido na [ADR-0005](0005-acesso-publico-por-cloudflare-tunnel.md).
 - O pre-flight de produção executa a validação local antes de tocar nos processos PM2, mas não implementa rollback automático porque ainda não existe endpoint de saúde nem política de artefatos/reversão aprovada.
 - O script chama `pm2 save` após sucesso, mas não configura inicialização automática do PM2 após reinício da VM.

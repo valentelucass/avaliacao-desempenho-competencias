@@ -78,7 +78,7 @@ Os testes com axe cobrem regras automatizáveis nas jornadas principais e nos di
 
 Depois de atualizar o DEV, `./scripts/testar-filtros-avaliacoes-dev.ps1` (PowerShell 7) verifica os quatro filtros na API realmente em execução, em todas as páginas de dois itens, comparando com o ciclo fictício existente `DEV-COMPLETO-FLUXOS`. Usa a conta fictícia RH local e somente consultas de negócio; login/logout geram sessões e auditoria normais. Esse ensaio opt-in é separado do gate, que valida as fontes e não atualiza os processos ativos. Detalhes e pré-requisitos: [filtros de avaliações](operations/filtros-avaliacoes.md).
 
-`./scripts/check-operation.ps1` é somente leitura: confirma JDK, Node.js, npm, disponibilidade do comando PM2, serviço `cloudflared` e a exposição das portas privadas `18080`/`18081`. Ele alerta sobre firewall e diretório de logs, mas não altera nada e não é aceite de produção. O procedimento completo está em [Runbook de pré-publicação](operations/pre-publication-runbook.md).
+`./scripts/check-operation.ps1` é somente leitura: confirma JDK, Node.js, npm, disponibilidade do comando PM2, serviço `cloudflared` e a exposição das portas privadas `38080`/`28081`. Ele alerta sobre firewall e diretório de logs, mas não altera nada e não é aceite de produção. O procedimento completo está em [Runbook de pré-publicação](operations/pre-publication-runbook.md).
 
 Depois de uma publicação, `pm2 jlist | node .\scripts\validate-pm2-runtime.cjs` valida sem imprimir valores que os dois processos estão online, usam o release e as portas esperadas, possuem logs e não receberam chaves ou valores de ambiente fora da allowlist explícita e dos três metadados internos do PM2.
 
@@ -89,7 +89,6 @@ Depois de uma publicação, `pm2 jlist | node .\scripts\validate-pm2-runtime.cjs
 - Permanecem externos ao gate: carga e desempenho com dados aprovados, navegador/dispositivo e tecnologia assistiva manuais, política/agenda/criptografia dos backups, proxy/Cloudflare, firewall, monitoração e CI. O procedimento técnico de backup e restauração foi executado com sucesso em 2026-08-29, mas não substitui uma política de continuidade.
 
 O estado canônico, as evidências executadas e os pré-requisitos externos para uso real ficam no [STATES.md](../STATES.md).
-
 
 ## Manutenção de cadastros e importação de vínculos
 

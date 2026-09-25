@@ -72,7 +72,7 @@ if ($cloudflared.StartType -ne 'Automatic') {
 Write-Output 'Cloudflared: em execucao e configurado para inicio automatico.'
 
 Write-Output '==> Operacao: portas privadas reservadas'
-foreach ($port in @(18080, 18081)) {
+foreach ($port in @(28081, 38080)) {
   $status = Get-PortBindingStatus -Port $port
   switch ($status) {
     'LIVRE' { Write-Output "Porta ${port}: livre para o processo deste projeto." }

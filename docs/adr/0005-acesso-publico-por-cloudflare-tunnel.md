@@ -12,8 +12,8 @@ Esta VM já possui o serviço `Cloudflared` em execução automática. Os proces
 
 - Esta VM será a origem da aplicação.
 - Cloudflare Tunnel será o único caminho público para os hosts do projeto.
-- `formulario.rodogarcia.com.br` será encaminhado ao front-end em `http://127.0.0.1:18080`.
-- `api-formulario.rodogarcia.com.br` será encaminhado à API em `http://127.0.0.1:18081`.
+- `formulario.rodogarcia.com.br` será encaminhado ao front-end em `http://127.0.0.1:38080` após a migração das rotas.
+- `api-formulario.rodogarcia.com.br` será encaminhado à API em `http://127.0.0.1:28081` após a migração das rotas.
 - O HTTPS público será atendido pela Cloudflare. A comunicação de origem ficará restrita ao loopback da VM.
 - Não será instalado IIS ou Nginx, nem serão expostas portas públicas da aplicação para esse encaminhamento.
 
@@ -26,7 +26,7 @@ Esta VM já possui o serviço `Cloudflared` em execução automática. Os proces
 
 ## Evidência e testes afetados
 
-- O inventário local de 2026-08-25 confirmou o serviço `Cloudflared` em execução automática e as portas `18080` e `18081` estavam livres antes de qualquer publicação.
+- O inventário local de 2026-08-25 confirmou o serviço `Cloudflared` em execução automática e as portas originais `18080` e `18081` estavam livres antes de qualquer publicação. A mudança de 2026-09-23 para `38080` e `28081` foi preparada no repositório; as rotas remotas ainda exigem atualização e validação operacional.
 - Após a configuração externa autorizada, validar cada hostname público, a ausência de escuta pública da aplicação, o encaminhamento para o serviço correto e a recuperação dos processos após reinicialização.
 
 ## Estado operacional posterior — 2026-08-29
