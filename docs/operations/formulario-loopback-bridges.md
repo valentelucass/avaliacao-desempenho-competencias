@@ -1,5 +1,7 @@
 # Pontes locais do Formulario no tunel existente
 
+> Hostname atualizado em 02/10/2026. Os caminhos privados com `preparado-WIN-00NEDIJ1R5P` continuam existentes e devem ser preservados. Diagnosticos e recibos anteriores registram a situacao da epoca; nao comprovam a disponibilidade atual.
+
 O ingress remoto confirmado do tunel `da4be1b8-b8dd-425b-b059-4702bf603471` usa `18080` para Formulario e `18081` para sua API. A aplicacao desta VM usa `38080` e `28081`. O processo Node proprio cria somente estas duas pontes TCP:
 
 | Entrada           | Origem            |
@@ -9,7 +11,7 @@ O ingress remoto confirmado do tunel `da4be1b8-b8dd-425b-b059-4702bf603471` usa 
 
 Os bytes passam sem interpretacao de HTTP: Host, cookies, CSRF, headers encaminhados e respostas permanecem iguais. A autenticacao e as regras de seguranca continuam na API e no proxy existente. O relay usa [streams e pipe do Node](https://nodejs.org/api/stream.html) com backpressure; fechamento normal drena a resposta antes do fim da conexao. Os listeners ficam restritos ao loopback, sem portproxy, firewall, servico Windows, DNS, alteracao SQL ou PM2 compartilhado.
 
-O acionador `scripts/manage-formulario-loopback-bridges.ps1` atende exclusivamente `WIN-00NEDIJ1R5P`, bloqueia a origem por nome ou MachineGuid e conserva os arquivos anteriores. O padrao e somente leitura:
+O acionador `scripts/manage-formulario-loopback-bridges.ps1` atende exclusivamente `ROD-SRVW-001`, bloqueia a origem por nome ou MachineGuid e conserva os arquivos anteriores. O padrao e somente leitura:
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/manage-formulario-loopback-bridges.ps1

@@ -1,6 +1,8 @@
 # Persistencia do conector existente na nova VM
 
-Alvo exclusivo: `WIN-00NEDIJ1R5P`, tunel `da4be1b8-b8dd-425b-b059-4702bf603471`. O preparo recusa a origem `RTR-SVW-002` por nome **ou** MachineGuid, usando o manifesto privado em `C:\CloudflareMigracao`. Os identificadores de maquina nao sao impressos. Execute o registro em Windows PowerShell 5.1 administrativo com a mesma conta que preparou os arquivos privados.
+> Hostname atualizado em 02/10/2026. Os caminhos privados com `preparado-WIN-00NEDIJ1R5P` continuam existentes e devem ser preservados. Diagnosticos e recibos anteriores registram a situacao da epoca; nao comprovam a disponibilidade atual.
+
+Alvo exclusivo: `ROD-SRVW-001`, tunel `da4be1b8-b8dd-425b-b059-4702bf603471`. O preparo recusa a origem `RTR-SVW-002` por nome **ou** MachineGuid, usando o manifesto privado em `C:\CloudflareMigracao`. Os identificadores de maquina nao sao impressos. Execute o registro em Windows PowerShell 5.1 administrativo com a mesma conta que preparou os arquivos privados.
 
 O conector standalone confirmado nesta recuperacao recebeu a versao remota 27, as sete rotas documentadas, a restricao SELIA exata e o catch-all final 404. `/ready` confirmou conexao com a Cloudflare. Isso nao comprova a saude das aplicacoes locais nem acesso ao SQL Server.
 

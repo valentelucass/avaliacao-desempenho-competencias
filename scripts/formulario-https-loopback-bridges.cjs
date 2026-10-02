@@ -1,5 +1,5 @@
 const http = require("node:http");
-const os = require("node:os");
+const { execFileSync } = require("node:child_process");
 
 const productionMappings = Object.freeze([
   Object.freeze({
@@ -317,7 +317,19 @@ function checkOrigin(port, path) {
 async function main() {
   if (
     process.platform !== "win32" ||
-    !require("node:child_process").execFileSync("C:/Windows/System32/reg.exe", ["query", "HKLM\\SOFTWARE\\Microsoft\\Cryptography", "/v", "MachineGuid", "/reg:64"], { encoding: "utf8", windowsHide: true }).toLowerCase().includes("307c6e6f-185b-4e19-b354-5cbd5c37adcc") ||
+    !execFileSync(
+      "C:/Windows/System32/reg.exe",
+      [
+        "query",
+        "HKLM\\SOFTWARE\\Microsoft\\Cryptography",
+        "/v",
+        "MachineGuid",
+        "/reg:64",
+      ],
+      { encoding: "utf8", windowsHide: true },
+    )
+      .toLowerCase()
+      .includes("307c6e6f-185b-4e19-b354-5cbd5c37adcc") ||
     process.argv.length !== 2
   ) {
     throw new Error("Alvo da ponte diverge da nova VM autorizada.");

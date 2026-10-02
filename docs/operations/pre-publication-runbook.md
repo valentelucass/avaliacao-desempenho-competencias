@@ -1,5 +1,7 @@
 # Runbook de pré-publicação
 
+> Hostname atualizado em 02/10/2026. Os caminhos privados com `preparado-WIN-00NEDIJ1R5P` continuam existentes e devem ser preservados. Diagnosticos e recibos anteriores registram a situacao da epoca; nao comprovam a disponibilidade atual.
+
 > Status: checklist para uma nova publicação ou mudança operacional. O release técnico atual possui evidências próprias; este documento não autoriza alteração de Cloudflare, firewall, PM2 ou banco.
 
 ## Objetivo
@@ -8,7 +10,7 @@ Verificar de forma repetível o que precisa estar pronto antes de expor o sistem
 
 ## Diagnóstico nesta VM — 2026-10-01
 
-A VM atual é `WIN-00NEDIJ1R5P`. Em leitura anônima, os dois hosts públicos responderam HTTP 530 com erro Cloudflare 1033, tanto em HTTP quanto em HTTPS. Esse erro indica ausência de conector `cloudflared` saudável; HTTP 502 indica outro estágio, em que o conector alcança a Cloudflare, mas falha ao acessar a origem local. Não é evidência de falha no SQL Server. [Diagnóstico oficial do túnel](https://developers.cloudflare.com/tunnel/troubleshooting/).
+A VM atual é `ROD-SRVW-001`. Em leitura anônima, os dois hosts públicos responderam HTTP 530 com erro Cloudflare 1033, tanto em HTTP quanto em HTTPS. Esse erro indica ausência de conector `cloudflared` saudável; HTTP 502 indica outro estágio, em que o conector alcança a Cloudflare, mas falha ao acessar a origem local. Não é evidência de falha no SQL Server. [Diagnóstico oficial do túnel](https://developers.cloudflare.com/tunnel/troubleshooting/).
 
 O inventário inicial não encontrou serviço, processo ou executável `cloudflared` nos locais verificados, nem listeners em `18080`, `18081`, `28081` ou `38080`, nem regras portproxy. O MSI `Cloudflare_WARP_2026.7.1376.0.msi` existe, mas o inventário e a consulta somente leitura ao Windows Installer não confirmaram instalação concluída. O WARP/Cloudflare One Client encaminha tráfego do dispositivo; a publicação destes hosts requer o conector `cloudflared` previsto na ADR-0005. [Arquitetura do cliente WARP](https://developers.cloudflare.com/cloudflare-one/team-and-resources/devices/cloudflare-one-client/configure/route-traffic/client-architecture/).
 

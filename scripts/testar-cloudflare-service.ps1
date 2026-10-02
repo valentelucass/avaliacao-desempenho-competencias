@@ -23,23 +23,28 @@ $passed++
 Assert-Rejected { Assert-CloudflareServicePreflight -TunnelId ([Guid]'00000000-0000-4000-8000-000000000001') }
 
 $fixtureSourceGuid = [Guid]'00000000-0000-4000-8000-000000000001'
-$fixtureCurrentGuid = [Guid]'00000000-0000-4000-8000-000000000002'
+$fixtureCurrentGuid = [Guid]'307c6e6f-185b-4e19-b354-5cbd5c37adcc'
 Assert-CloudflareNewVmIdentity -SourceComputer 'RTR-SVW-002' -SourceMachineGuid $fixtureSourceGuid `
-    -CurrentComputer 'WIN-00NEDIJ1R5P' -CurrentMachineGuid $fixtureCurrentGuid `
+    -CurrentComputer 'ROD-SRVW-001' -CurrentMachineGuid $fixtureCurrentGuid `
+    -ManifestTunnelId $authorizedTunnelId -TunnelId $authorizedTunnelId
+$passed++
+# A renamed VM keeps its authorized MachineGuid; another VM cannot reuse the name.
+Assert-CloudflareNewVmIdentity -SourceComputer 'RTR-SVW-002' -SourceMachineGuid $fixtureSourceGuid `
+    -CurrentComputer 'RENOMEADA-NOVAMENTE' -CurrentMachineGuid $fixtureCurrentGuid `
     -ManifestTunnelId $authorizedTunnelId -TunnelId $authorizedTunnelId
 $passed++
 foreach ($identity in @(
         @{ SourceComputer = 'RTR-SVW-002'; SourceMachineGuid = $fixtureSourceGuid; CurrentComputer = 'RTR-SVW-002'; CurrentMachineGuid = $fixtureCurrentGuid },
-        @{ SourceComputer = 'RTR-SVW-002'; SourceMachineGuid = $fixtureSourceGuid; CurrentComputer = 'WIN-00NEDIJ1R5P'; CurrentMachineGuid = $fixtureSourceGuid },
-        @{ SourceComputer = 'RTR-SVW-002'; SourceMachineGuid = $fixtureSourceGuid; CurrentComputer = 'OUTRA-VM'; CurrentMachineGuid = $fixtureCurrentGuid },
-        @{ SourceComputer = 'ORIGEM-INDEFINIDA'; SourceMachineGuid = $fixtureSourceGuid; CurrentComputer = 'WIN-00NEDIJ1R5P'; CurrentMachineGuid = $fixtureCurrentGuid },
-        @{ SourceComputer = 'RTR-SVW-002'; SourceMachineGuid = [Guid]::Empty; CurrentComputer = 'WIN-00NEDIJ1R5P'; CurrentMachineGuid = $fixtureCurrentGuid },
-        @{ SourceComputer = 'RTR-SVW-002'; SourceMachineGuid = $fixtureSourceGuid; CurrentComputer = 'WIN-00NEDIJ1R5P'; CurrentMachineGuid = [Guid]::Empty }
+        @{ SourceComputer = 'RTR-SVW-002'; SourceMachineGuid = $fixtureSourceGuid; CurrentComputer = 'ROD-SRVW-001'; CurrentMachineGuid = $fixtureSourceGuid },
+        @{ SourceComputer = 'RTR-SVW-002'; SourceMachineGuid = $fixtureSourceGuid; CurrentComputer = 'ROD-SRVW-001'; CurrentMachineGuid = [Guid]'00000000-0000-4000-8000-000000000002' },
+        @{ SourceComputer = 'ORIGEM-INDEFINIDA'; SourceMachineGuid = $fixtureSourceGuid; CurrentComputer = 'ROD-SRVW-001'; CurrentMachineGuid = $fixtureCurrentGuid },
+        @{ SourceComputer = 'RTR-SVW-002'; SourceMachineGuid = [Guid]::Empty; CurrentComputer = 'ROD-SRVW-001'; CurrentMachineGuid = $fixtureCurrentGuid },
+        @{ SourceComputer = 'RTR-SVW-002'; SourceMachineGuid = $fixtureSourceGuid; CurrentComputer = 'ROD-SRVW-001'; CurrentMachineGuid = [Guid]::Empty }
     )) {
     Assert-Rejected { Assert-CloudflareNewVmIdentity @identity -ManifestTunnelId $authorizedTunnelId -TunnelId $authorizedTunnelId }
 }
 Assert-Rejected { Assert-CloudflareNewVmIdentity -SourceComputer 'RTR-SVW-002' -SourceMachineGuid $fixtureSourceGuid `
-    -CurrentComputer 'WIN-00NEDIJ1R5P' -CurrentMachineGuid $fixtureCurrentGuid `
+    -CurrentComputer 'ROD-SRVW-001' -CurrentMachineGuid $fixtureCurrentGuid `
     -ManifestTunnelId $fixtureSourceGuid -TunnelId $authorizedTunnelId }
 
 $script:servicePresent = $false

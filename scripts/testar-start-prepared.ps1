@@ -8,6 +8,8 @@ function New-FakeCheck([bool]$Ready){
     return [pscustomobject]@{ExitCode=1;status='BLOCKED_NO_START';applyRequested=$false;processesStarted=0;blockers=@($script:elevationBlocker)}
 }
 $account=$script:expectedPreparedAccount;$sid=$script:expectedPreparedSid
+Assert-PreparedCase ((Get-PreparedStartDecision (New-FakeCheck $true) $true 'ROD-SRVW-001\suporte' $sid) -eq 'DIRECT_APPLY') 'renamed Windows account accepted with approved SID'
+Assert-PreparedCase ((Get-PreparedStartDecision (New-FakeCheck $true) $true 'WIN-00NEDIJ1R5P\suporte' $sid) -eq 'BLOCKED_ACCOUNT') 'previous Windows account name rejected'
 Assert-PreparedCase ((Get-PreparedStartDecision (New-FakeCheck $true) $true $account $sid) -eq 'DIRECT_APPLY') 'elevated approved preflight requests only explicit apply'
 Assert-PreparedCase ((Get-PreparedStartDecision (New-FakeCheck $false) $false $account $sid) -eq 'LEGITIMATE_UAC') 'only elevation blocker permits normal UAC'
 Assert-PreparedCase ((Get-PreparedStartDecision (New-FakeCheck $false) $true $account $sid) -eq 'BLOCKED_PREREQUISITES') 'unexpected blocker under admin does not start'

@@ -3,7 +3,7 @@ param([switch]$StartPrepared)
 Set-StrictMode -Version Latest
 $ErrorActionPreference='Stop'
 $script:preparedHelper='C:\CloudflareMigracao\preparado-WIN-00NEDIJ1R5P\pm2\start-avaliacao-only.ps1'
-$script:expectedPreparedAccount='WIN-00NEDIJ1R5P\suporte'
+$script:expectedPreparedAccount='ROD-SRVW-001\suporte'
 $script:expectedPreparedSid='S-1-5-21-263687237-119212591-4036808788-1000'
 $script:elevationBlocker='Usar console administrativo da mesma conta: servidor PM2 confirmado elevado.'
 
@@ -51,7 +51,7 @@ function Invoke-PreparedElevation {
 
 if ($MyInvocation.InvocationName -eq '.') { return }
 try {
-    if($env:COMPUTERNAME -cne 'WIN-00NEDIJ1R5P' -or (Get-ItemProperty -LiteralPath HKLM:\SOFTWARE\Microsoft\Cryptography -Name MachineGuid).MachineGuid -ne '307c6e6f-185b-4e19-b354-5cbd5c37adcc'){throw 'WRONG_VM'}
+    if($env:COMPUTERNAME -cne 'ROD-SRVW-001' -or (Get-ItemProperty -LiteralPath HKLM:\SOFTWARE\Microsoft\Cryptography -Name MachineGuid).MachineGuid -ne '307c6e6f-185b-4e19-b354-5cbd5c37adcc'){throw 'WRONG_VM'}
     . (Join-Path $PSScriptRoot 'prepare-production-config.ps1')
     Assert-NoReparsePoint $script:preparedHelper
     $allowed=@($script:expectedPreparedSid,'S-1-5-18','S-1-5-32-544')

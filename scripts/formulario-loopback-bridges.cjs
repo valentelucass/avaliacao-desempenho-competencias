@@ -113,7 +113,7 @@ function checkOrigin(port, path) {
 async function main() {
   if (
     process.platform !== "win32" ||
-    os.hostname() !== "WIN-00NEDIJ1R5P" ||
+    os.hostname() !== "ROD-SRVW-001" ||
     process.argv.length !== 2
   ) {
     throw new Error("Alvo da ponte diverge da nova VM autorizada.");
