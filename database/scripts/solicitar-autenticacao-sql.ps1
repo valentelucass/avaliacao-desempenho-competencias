@@ -33,30 +33,29 @@ function Invoke-DatabaseWithSqlAuthentication {
     if ($Mode) { $runnerArguments = @($argumentsByMode[$Mode]) }
 
     $login = $env:ADC_DB_USER
-    if ([string]::IsNullOrWhiteSpace($login)) {
-        $login = Read-Host 'Login SQL existente e autorizado para os alvos selecionados'
+    $password = $env:SQLCMDPASSWORD
+    if ($env:ADC_DATABASE_CREDENTIAL_FILE -and -not $env:ADC_DATABASE_SQL_USER) {
+        try {
+            $credential = Import-Clixml -LiteralPath $env:ADC_DATABASE_CREDENTIAL_FILE
+            if ($credential -isnot [Management.Automation.PSCredential]) { throw 'Invalid credential type' }
+            $login = $credential.UserName
+            $password = $credential.GetNetworkCredential().Password
+        } catch {
+            throw 'Credencial local protegida indisponivel para esta conta Windows.'
+        }
     }
     if ($login -notmatch '^[A-Za-z_][A-Za-z0-9_.-]{0,127}$') {
-        throw 'Login SQL invalido ou nao informado. Operacao cancelada.'
+        throw 'ADC_DB_USER ausente ou invalido no ambiente. Nenhuma credencial sera solicitada.'
+    }
+    if ([string]::IsNullOrEmpty($password)) {
+        throw 'SQLCMDPASSWORD ausente no ambiente. Nenhuma credencial sera solicitada.'
     }
 
     $previousLogin = $env:ADC_DB_USER
     $previousOverride = $env:ADC_DATABASE_SQL_USER
     $previousPassword = $env:SQLCMDPASSWORD
-    $securePassword = $null
     try {
-        if ([string]::IsNullOrEmpty($previousPassword)) {
-            $securePassword = Read-Host 'Senha SQL (entrada oculta)' -AsSecureString
-            if ($securePassword.Length -eq 0) {
-                throw 'Senha SQL nao informada. Operacao cancelada.'
-            }
-            $pointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($securePassword)
-            try {
-                $env:SQLCMDPASSWORD = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($pointer)
-            } finally {
-                [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($pointer)
-            }
-        }
+        $env:SQLCMDPASSWORD = $password
         $env:ADC_DB_USER = $login
         $env:ADC_DATABASE_SQL_USER = $login
         $global:LASTEXITCODE = 0
@@ -66,7 +65,6 @@ function Invoke-DatabaseWithSqlAuthentication {
         $env:SQLCMDPASSWORD = $previousPassword
         $env:ADC_DB_USER = $previousLogin
         $env:ADC_DATABASE_SQL_USER = $previousOverride
-        if ($null -ne $securePassword) { $securePassword.Dispose() }
     }
 }
 

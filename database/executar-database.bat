@@ -8,6 +8,9 @@ set "MODO="
 set "EXIT_CODE=0"
 set "WORK_DIR="
 set "CONFIG_FILE=%ADC_DATABASE_CONFIG%"
+set "FORCAR_AUTENTICACAO_SQL="
+set "AUTENTICACAO_SOLICITADA="
+if not defined ADC_SQLCMD_EXECUTABLE set "ADC_SQLCMD_EXECUTABLE=sqlcmd"
 
 :LER_ARGUMENTOS
 if "%~1"=="" goto :ARGUMENTOS_OK
@@ -15,7 +18,17 @@ if /i "%~1"=="--help" goto :AJUDA
 if /i "%~1"=="-h" goto :AJUDA
 if /i "%~1"=="/?" goto :AJUDA
 if /i "%~1"=="--sql" (
+  if /i "%AUTENTICACAO_SOLICITADA%"=="WINDOWS" goto :ARGUMENTOS_INVALIDOS
+  set "AUTENTICACAO_SOLICITADA=SQL"
+  set "ADC_DATABASE_WINDOWS_AUTH="
   set "FORCAR_AUTENTICACAO_SQL=1"
+  shift
+  goto :LER_ARGUMENTOS
+)
+if /i "%~1"=="--windows" (
+  if /i "%AUTENTICACAO_SOLICITADA%"=="SQL" goto :ARGUMENTOS_INVALIDOS
+  set "AUTENTICACAO_SOLICITADA=WINDOWS"
+  set "ADC_DATABASE_WINDOWS_AUTH=1"
   shift
   goto :LER_ARGUMENTOS
 )
@@ -95,8 +108,16 @@ if errorlevel 1 (
   goto :FIM
 )
 rem O login escolhido com --sql vale somente nesta execucao, nos alvos selecionados.
+if not defined ADC_DATABASE_WINDOWS_AUTH if not defined ADC_DATABASE_SQL_USER if defined ADC_DATABASE_CREDENTIAL_FILE goto :EXECUTAR_COM_AUTENTICACAO_SQL
 if defined ADC_DATABASE_SQL_USER set "ADC_DB_USER=%ADC_DATABASE_SQL_USER%"
+if defined ADC_DATABASE_WINDOWS_AUTH set "ADC_DB_USER="
 call :VALIDAR_CONFIGURACAO
+if errorlevel 1 (
+  set "EXIT_CODE=1"
+  goto :FIM
+)
+
+call :SINCRONIZAR_CERTIFICADO_LOCAL
 if errorlevel 1 (
   set "EXIT_CODE=1"
   goto :FIM
@@ -113,6 +134,7 @@ if defined ADC_DB_USER set "SQLCMD_AUTH=-U %ADC_DB_USER%"
 set "SQLCMD_SERVER=%ADC_DB_SERVER%,%ADC_DB_PORT%"
 set "SQLCMD_FLAGS=-b -r1 -I -f 65001 -N"
 if "%ADC_SQLCMD_TRUST_SERVER_CERTIFICATE%"=="1" set "SQLCMD_FLAGS=%SQLCMD_FLAGS% -C"
+if defined ADC_SQLCMD_SERVER_CERTIFICATE set "SQLCMD_FLAGS=-b -r1 -I -N true -J "%ADC_SQLCMD_SERVER_CERTIFICATE%""
 call :VERIFICAR_CONEXAO
 if errorlevel 1 (
   set "EXIT_CODE=1"
@@ -163,7 +185,7 @@ if errorlevel 1 (
 
 if /i "%DATABASE_STATUS%"=="MISSING" (
   echo [ETAPA] Criando o banco dedicado %ADC_DB_NAME%...
-  sqlcmd %SQLCMD_FLAGS% -S "%SQLCMD_SERVER%" %SQLCMD_AUTH% -d master -v DatabaseName=%ADC_DB_NAME% -i "%~dp0sql\bootstrap\001_criar_banco.sql"
+  "%ADC_SQLCMD_EXECUTABLE%" %SQLCMD_FLAGS% -S "%SQLCMD_SERVER%" %SQLCMD_AUTH% -d master -v DatabaseName=%ADC_DB_NAME% -i "%~dp0sql\bootstrap\001_criar_banco.sql"
   if errorlevel 1 (
     echo [ERRO] Falha ao criar o banco. Nenhuma migration foi iniciada.
     set "EXIT_CODE=1"
@@ -181,7 +203,7 @@ if /i "%DATABASE_STATUS%"=="MISSING" (
 
 :PREPARAR_CONTROLE_E_APLICAR_MIGRATIONS
 echo [ETAPA] Garantindo o controle de migrations...
-sqlcmd %SQLCMD_FLAGS% -S "%SQLCMD_SERVER%" %SQLCMD_AUTH% -d "%ADC_DB_NAME%" -i "%~dp0sql\bootstrap\002_criar_controle_migrations.sql"
+"%ADC_SQLCMD_EXECUTABLE%" %SQLCMD_FLAGS% -S "%SQLCMD_SERVER%" %SQLCMD_AUTH% -d "%ADC_DB_NAME%" -i "%~dp0sql\bootstrap\002_criar_controle_migrations.sql"
 if errorlevel 1 (
   echo [ERRO] Falha ao preparar o controle de migrations.
   set "EXIT_CODE=1"
@@ -436,7 +458,7 @@ if errorlevel 1 (
 )
 
 echo [ETAPA] Garantindo o controle de migrations...
-sqlcmd %SQLCMD_FLAGS% -S "%SQLCMD_SERVER%" %SQLCMD_AUTH% -d "%ADC_DB_NAME%" -i "%~dp0sql\bootstrap\002_criar_controle_migrations.sql"
+"%ADC_SQLCMD_EXECUTABLE%" %SQLCMD_FLAGS% -S "%SQLCMD_SERVER%" %SQLCMD_AUTH% -d "%ADC_DB_NAME%" -i "%~dp0sql\bootstrap\002_criar_controle_migrations.sql"
 if errorlevel 1 (
   echo [ERRO] Falha ao preparar o controle de migrations.
   set "EXIT_CODE=1"
@@ -480,7 +502,7 @@ if errorlevel 1 (
 )
 
 echo [ETAPA] Executando validacao somente leitura...
-sqlcmd %SQLCMD_FLAGS% -S "%SQLCMD_SERVER%" %SQLCMD_AUTH% -d "%ADC_DB_NAME%" -i "%~dp0sql\validation\001_validar_fundacao_identidade.sql"
+"%ADC_SQLCMD_EXECUTABLE%" %SQLCMD_FLAGS% -S "%SQLCMD_SERVER%" %SQLCMD_AUTH% -d "%ADC_DB_NAME%" -i "%~dp0sql\validation\001_validar_fundacao_identidade.sql"
 if errorlevel 1 (
   echo [ERRO] A validacao falhou. Verifique o banco antes de prosseguir.
   set "EXIT_CODE=1"
@@ -513,6 +535,10 @@ echo [INFO] Base vazia confirmada; retomando somente o bootstrap e as migrations
 goto :PREPARAR_CONTROLE_E_APLICAR_MIGRATIONS
 
 :VALIDAR_CONFIGURACAO
+if defined ADC_SQLCMD_SERVER_CERTIFICATE if not exist "%ADC_SQLCMD_SERVER_CERTIFICATE%" (
+  echo [ERRO] Certificado SQL local configurado nao encontrado.
+  exit /b 1
+)
 rem A senha SQL vem somente de SQLCMDPASSWORD no processo, nunca de argumentos.
 powershell -NoProfile -Command "if ($env:ADC_DB_USER) { if ($env:ADC_DB_USER -notmatch '^[A-Za-z_][A-Za-z0-9_.-]{0,127}$') { throw 'ADC_DB_USER invalido.' }; if ([string]::IsNullOrEmpty($env:SQLCMDPASSWORD)) { throw 'Defina SQLCMDPASSWORD apenas nesta sessao para autenticacao SQL.' } }" >nul
 if errorlevel 1 exit /b 1
@@ -524,19 +550,25 @@ if errorlevel 1 (
 )
 exit /b 0
 
+:SINCRONIZAR_CERTIFICADO_LOCAL
+if not defined ADC_SQLCMD_LOCAL_TLS_PROFILE exit /b 0
+powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "%~dp0scripts\sincronizar-certificado-sql-local.ps1"
+exit /b %ERRORLEVEL%
+
 :VERIFICAR_SQLCMD
-where sqlcmd >nul 2>nul
+if exist "%ADC_SQLCMD_EXECUTABLE%" exit /b 0
+where "%ADC_SQLCMD_EXECUTABLE%" >nul 2>nul
 if errorlevel 1 (
-  echo [ERRO] sqlcmd nao foi encontrado no PATH.
+  echo [ERRO] Executavel sqlcmd configurado nao foi encontrado.
   exit /b 1
 )
 exit /b 0
 
 :VERIFICAR_CONEXAO
-sqlcmd %SQLCMD_FLAGS% -S "%SQLCMD_SERVER%" %SQLCMD_AUTH% -d master -Q "SET NOCOUNT ON; SELECT 1;" >nul
+"%ADC_SQLCMD_EXECUTABLE%" %SQLCMD_FLAGS% -S "%SQLCMD_SERVER%" %SQLCMD_AUTH% -d master -Q "SET NOCOUNT ON; SELECT 1;" >nul
 if errorlevel 1 (
   echo [ERRO] Nao foi possivel conectar ao SQL Server. Confira autenticacao e certificado.
-  if not defined ADC_DB_USER echo [INFO] A tentativa usou a conta Windows. Para um login SQL existente, execute executar-database.bat --check-all --sql.
+  if not defined ADC_DB_USER echo [INFO] A tentativa usou a conta Windows configurada. O executor nao solicita credenciais.
   exit /b 1
 )
 exit /b 0
@@ -544,7 +576,7 @@ exit /b 0
 :EXECUTAR_COM_AUTENTICACAO_SQL
 set "FORCAR_AUTENTICACAO_SQL="
 set "ADC_DATABASE_SQL_MODE=%MODO%"
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\solicitar-autenticacao-sql.ps1"
+powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "%~dp0scripts\solicitar-autenticacao-sql.ps1"
 set "EXIT_CODE=%ERRORLEVEL%"
 goto :FIM
 
@@ -572,7 +604,7 @@ for %%F in (
   015_validar_delegacao_individual_redefinicao_senha.sql
 ) do (
   echo [ETAPA] Validando %%F...
-  sqlcmd %SQLCMD_FLAGS% -S "%SQLCMD_SERVER%" %SQLCMD_AUTH% -d "%ADC_DB_NAME%" -i "%~dp0sql\validation\%%F"
+  "%ADC_SQLCMD_EXECUTABLE%" %SQLCMD_FLAGS% -S "%SQLCMD_SERVER%" %SQLCMD_AUTH% -d "%ADC_DB_NAME%" -i "%~dp0sql\validation\%%F"
   if errorlevel 1 exit /b 1
 )
 exit /b 0
@@ -589,7 +621,7 @@ for %%F in (
   009_validar_perfis_administrador_integral_e_usuario_comum.sql
 ) do (
   echo [ETAPA] Validando %%F...
-  sqlcmd %SQLCMD_FLAGS% -S "%SQLCMD_SERVER%" %SQLCMD_AUTH% -d "%ADC_DB_NAME%" -i "%~dp0sql\validation\%%F"
+  "%ADC_SQLCMD_EXECUTABLE%" %SQLCMD_FLAGS% -S "%SQLCMD_SERVER%" %SQLCMD_AUTH% -d "%ADC_DB_NAME%" -i "%~dp0sql\validation\%%F"
   if errorlevel 1 exit /b 1
 )
 exit /b 0
@@ -600,13 +632,13 @@ if not exist "%~1" (
   exit /b 1
 )
 echo [ETAPA] Validando %~nx1...
-sqlcmd %SQLCMD_FLAGS% -S "%SQLCMD_SERVER%" %SQLCMD_AUTH% -d "%ADC_DB_NAME%" -i "%~1"
+"%ADC_SQLCMD_EXECUTABLE%" %SQLCMD_FLAGS% -S "%SQLCMD_SERVER%" %SQLCMD_AUTH% -d "%ADC_DB_NAME%" -i "%~1"
 exit /b %ERRORLEVEL%
 
 :OBTER_STATUS_BANCO
 set "DATABASE_STATUS="
 set "DATABASE_STATUS_FILE=%WORK_DIR%\database-status.txt"
-sqlcmd %SQLCMD_FLAGS% -S "%SQLCMD_SERVER%" %SQLCMD_AUTH% -d master -h -1 -W -v DatabaseName=%ADC_DB_NAME% -i "%~dp0sql\bootstrap\003_verificar_banco.sql" > "%DATABASE_STATUS_FILE%"
+"%ADC_SQLCMD_EXECUTABLE%" %SQLCMD_FLAGS% -S "%SQLCMD_SERVER%" %SQLCMD_AUTH% -d master -h -1 -W -v DatabaseName=%ADC_DB_NAME% -i "%~dp0sql\bootstrap\003_verificar_banco.sql" > "%DATABASE_STATUS_FILE%"
 if errorlevel 1 (
   if exist "%DATABASE_STATUS_FILE%" del /q "%DATABASE_STATUS_FILE%" >nul 2>&1
   echo [ERRO] Falha ao consultar o estado do banco dedicado.
@@ -638,7 +670,7 @@ exit /b 0
 :VERIFICAR_PROPRIEDADE
 set "PROJECT_OWNERSHIP="
 set "PROJECT_OWNERSHIP_FILE=%WORK_DIR%\project-ownership.txt"
-sqlcmd %SQLCMD_FLAGS% -S "%SQLCMD_SERVER%" %SQLCMD_AUTH% -d "%ADC_DB_NAME%" -h -1 -W -i "%~dp0sql\bootstrap\005_verificar_propriedade.sql" > "%PROJECT_OWNERSHIP_FILE%"
+"%ADC_SQLCMD_EXECUTABLE%" %SQLCMD_FLAGS% -S "%SQLCMD_SERVER%" %SQLCMD_AUTH% -d "%ADC_DB_NAME%" -h -1 -W -i "%~dp0sql\bootstrap\005_verificar_propriedade.sql" > "%PROJECT_OWNERSHIP_FILE%"
 if errorlevel 1 (
   if exist "%PROJECT_OWNERSHIP_FILE%" del /q "%PROJECT_OWNERSHIP_FILE%" >nul 2>&1
   echo [ERRO] Nao foi possivel confirmar a propriedade do banco existente.
@@ -662,7 +694,7 @@ exit /b 1
 :VERIFICAR_BOOTSTRAP_VAZIO
 set "EMPTY_BOOTSTRAP_STATUS="
 set "EMPTY_BOOTSTRAP_FILE=%WORK_DIR%\empty-bootstrap-status.txt"
-sqlcmd %SQLCMD_FLAGS% -S "%SQLCMD_SERVER%" %SQLCMD_AUTH% -d "%ADC_DB_NAME%" -h -1 -W -i "%~dp0sql\bootstrap\007_verificar_bootstrap_vazio.sql" > "%EMPTY_BOOTSTRAP_FILE%"
+"%ADC_SQLCMD_EXECUTABLE%" %SQLCMD_FLAGS% -S "%SQLCMD_SERVER%" %SQLCMD_AUTH% -d "%ADC_DB_NAME%" -h -1 -W -i "%~dp0sql\bootstrap\007_verificar_bootstrap_vazio.sql" > "%EMPTY_BOOTSTRAP_FILE%"
 if errorlevel 1 (
   if exist "%EMPTY_BOOTSTRAP_FILE%" del /q "%EMPTY_BOOTSTRAP_FILE%" >nul 2>&1
   echo [ERRO] Nao foi possivel verificar se o bootstrap interrompido deixou a base vazia.
@@ -828,7 +860,7 @@ exit /b 0
 
 :RECONCILIAR_HISTORICO
 set "ADC_MIGRATION_HISTORY=%WORK_DIR%\migration-history.txt"
-sqlcmd %SQLCMD_FLAGS% -S "%SQLCMD_SERVER%" %SQLCMD_AUTH% -d "%ADC_DB_NAME%" -h -1 -W -s "|" -i "%~dp0sql\bootstrap\006_listar_historico_migrations.sql" > "%ADC_MIGRATION_HISTORY%"
+"%ADC_SQLCMD_EXECUTABLE%" %SQLCMD_FLAGS% -S "%SQLCMD_SERVER%" %SQLCMD_AUTH% -d "%ADC_DB_NAME%" -h -1 -W -s "|" -i "%~dp0sql\bootstrap\006_listar_historico_migrations.sql" > "%ADC_MIGRATION_HISTORY%"
 if errorlevel 1 (
   echo [ERRO] Nao foi possivel ler o historico de migrations.
   exit /b 1
@@ -843,7 +875,7 @@ exit /b 0
 :OBTER_ESTADO_FUNDACAO_V0001
 set "FUNDACAO_V0001_ESTADO="
 set "FUNDACAO_V0001_FILE=%WORK_DIR%\fundacao-v0001-status.txt"
-sqlcmd %SQLCMD_FLAGS% -S "%SQLCMD_SERVER%" %SQLCMD_AUTH% -d "%ADC_DB_NAME%" -h -1 -W -i "%~dp0sql\validation\002_verificar_deriva_v0001.sql" > "%FUNDACAO_V0001_FILE%"
+"%ADC_SQLCMD_EXECUTABLE%" %SQLCMD_FLAGS% -S "%SQLCMD_SERVER%" %SQLCMD_AUTH% -d "%ADC_DB_NAME%" -h -1 -W -i "%~dp0sql\validation\002_verificar_deriva_v0001.sql" > "%FUNDACAO_V0001_FILE%"
 if errorlevel 1 (
   if exist "%FUNDACAO_V0001_FILE%" del /q "%FUNDACAO_V0001_FILE%" >nul 2>&1
   echo [ERRO] Nao foi possivel verificar o estado da fundacao V0001.
@@ -885,7 +917,7 @@ if errorlevel 1 (
 
 set "MIGRATION_STATUS="
 set "MIGRATION_STATUS_FILE=%WORK_DIR%\%MIGRATION_VERSION%_status.txt"
-sqlcmd %SQLCMD_FLAGS% -S "%SQLCMD_SERVER%" %SQLCMD_AUTH% -d "%ADC_DB_NAME%" -h -1 -W -v MigrationVersion=%MIGRATION_VERSION% MigrationChecksum=%MIGRATION_CHECKSUM% -i "%~dp0sql\bootstrap\004_verificar_migration.sql" > "%MIGRATION_STATUS_FILE%"
+"%ADC_SQLCMD_EXECUTABLE%" %SQLCMD_FLAGS% -S "%SQLCMD_SERVER%" %SQLCMD_AUTH% -d "%ADC_DB_NAME%" -h -1 -W -v MigrationVersion=%MIGRATION_VERSION% MigrationChecksum=%MIGRATION_CHECKSUM% -i "%~dp0sql\bootstrap\004_verificar_migration.sql" > "%MIGRATION_STATUS_FILE%"
 if errorlevel 1 (
   if exist "%MIGRATION_STATUS_FILE%" del /q "%MIGRATION_STATUS_FILE%" >nul 2>&1
   echo [ERRO] Falha ao consultar o historico de %MIGRATION_NAME%.
@@ -918,7 +950,7 @@ if errorlevel 1 (
 
 echo [ETAPA] Aplicando %MIGRATION_NAME%...
 set "MIGRATION_RESULT_FILE=%WORK_DIR%\%MIGRATION_VERSION%_result.txt"
-sqlcmd %SQLCMD_FLAGS% -S "%SQLCMD_SERVER%" %SQLCMD_AUTH% -d "%ADC_DB_NAME%" -h -1 -W -i "%MASTER_MIGRATION%" > "%MIGRATION_RESULT_FILE%"
+"%ADC_SQLCMD_EXECUTABLE%" %SQLCMD_FLAGS% -S "%SQLCMD_SERVER%" %SQLCMD_AUTH% -d "%ADC_DB_NAME%" -h -1 -W -i "%MASTER_MIGRATION%" > "%MIGRATION_RESULT_FILE%"
 if errorlevel 1 (
   if exist "%MIGRATION_RESULT_FILE%" del /q "%MIGRATION_RESULT_FILE%" >nul 2>&1
   echo [ERRO] Falha ao aplicar %MIGRATION_NAME%.
@@ -949,7 +981,8 @@ echo Uso:
 echo   executar-database.bat
 echo      Atualiza primeiro AVALIACAO_DEV e depois AVALIACAO_PROD, usando somente
 echo      os arquivos locais config.local.bat e config.production.local.bat.
-echo      Executa sem confirmacao interativa; use somente quando os dois alvos forem autorizados.
+echo      Usa a autenticacao configurada, sem solicitar login ou senha.
+echo      Sem confirmacao de migrations; use somente quando os dois alvos forem autorizados.
 echo.
 echo   executar-database.bat --apply-all
 echo      Atualiza primeiro AVALIACAO_DEV e depois AVALIACAO_PROD, usando somente
@@ -985,10 +1018,13 @@ echo      Retoma somente um bootstrap interrompido antes de qualquer tabela ou m
 echo      Exige base vazia confirmada e uma confirmacao distinta.
 echo.
 echo Seguranca:
-echo   - Usa autenticacao integrada do Windows por padrao.
-echo   - Adicione --sql a qualquer modo para informar login SQL existente e senha oculta.
+echo   - Usa o login configurado ou a autenticacao Windows, sem solicitar credenciais.
+echo   - ADC_DATABASE_CREDENTIAL_FILE carrega automaticamente uma credencial local cifrada.
+echo   - Use --windows para escolher Windows explicitamente, inclusive sem modo.
+echo     --windows e --sql nao podem ser combinados.
+echo   - --sql usa ADC_DB_USER e SQLCMDPASSWORD ja fornecidos no ambiente do processo.
 echo     Exemplo sem escrita: executar-database.bat --check-all --sql.
-echo     A senha fica somente no processo e o login informado vale para os alvos selecionados.
+echo     Tambem aceita ADC_DATABASE_CREDENTIAL_FILE. Sem credencial, encerra sem pedir entrada.
 echo   - Nao possui DROP DATABASE, --recriar, --force ou alteracao de outros bancos.
 echo   - Migration aplicada e imutavel: checksum divergente interrompe a execucao.
 echo.

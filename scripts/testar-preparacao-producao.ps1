@@ -87,6 +87,7 @@ try {
         $validationExit = $LASTEXITCODE
     } finally { $ErrorActionPreference = $previousPreference }
     Assert-Preparation ($validationExit -ne 0 -and $validationOutput.Contains('INCOMPLETA')) 'Publicacao normal aceitou configuracao incompleta.'
+    $global:LASTEXITCODE = 0
     Write-Output 'Preparacao validada em TEMP: ACL privada, HMAC, senha SQL ausente, nao sobrescrita, destinos, reparse e bloqueio de publicacao.'
 } finally {
     $resolvedRoot = [IO.Path]::GetFullPath($temporaryRoot)
