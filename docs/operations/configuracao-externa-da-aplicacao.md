@@ -52,7 +52,7 @@ O primeiro valor deve apontar para um arquivo `.properties` protegido fora do re
 
 Copie `.env.example` para `.env` e preencha os caminhos externos já provisionados. O `.env` não substitui o arquivo `.properties`: ele não deve conter senha, token, chave de sessão, URL JDBC com credencial ou qualquer outro segredo. Variáveis já definidas pelo mecanismo de ambiente aprovado continuam utilizáveis quando o campo correspondente do `.env` estiver vazio.
 
-O launcher valida a existência e a localização externa do arquivo/diretório, bem como a URL HTTPS exata da API, antes de executar `npm ci`, o gate ou qualquer alteração no PM2. Em seguida ele fornece o arquivo à JVM por `SPRING_CONFIG_ADDITIONAL_LOCATION`, a URL ao Vite por `VITE_API_BASE_URL` e os caminhos externos ao PM2. O validador não lê, imprime ou tenta validar o conteúdo do arquivo de propriedades; permissões do arquivo/diretório, retenção e rotação continuam responsabilidades operacionais que exigem autorização e evidência próprias.
+O launcher valida a existência e a localização externa do arquivo/diretório, bem como a URL HTTPS exata da API, antes de executar `npm ci`, o gate ou qualquer alteração no PM2. Ele lê somente os bytes do marcador inicial `#ADC_CONFIGURATION_INCOMPLETE` e bloqueia arquivos ainda incompletos, sem ler ou imprimir valores de credenciais. Em seguida ele fornece o arquivo à JVM por `SPRING_CONFIG_ADDITIONAL_LOCATION`, a URL ao Vite por `VITE_API_BASE_URL` e os caminhos externos ao PM2. Essas verificações não comprovam credenciais nem TLS SQL; permissões do arquivo/diretório, retenção e rotação continuam responsabilidades operacionais que exigem autorização e evidência próprias.
 
 ## Exemplo sem segredo
 

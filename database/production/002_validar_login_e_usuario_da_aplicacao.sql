@@ -1,13 +1,16 @@
-/* Execute com uma conta administrativa depois do script 001. Esta validacao e somente leitura. */
+/* Execute com conta administrativa apos identidade e matriz completa revisadas. Somente leitura. */
 :setvar DatabaseName "AVALIACAO_PROD"
 :setvar ApplicationLogin "rodogarcia_adc_app"
+:setvar ApplicationUser "rodogarcia_adc_app"
 
 SET NOCOUNT ON;
 
 DECLARE @database_name sysname = N'$(DatabaseName)';
 DECLARE @login_name sysname = N'$(ApplicationLogin)';
+DECLARE @user_name sysname = N'$(ApplicationUser)';
 
 IF @database_name <> N'AVALIACAO_PROD' OR @login_name <> N'rodogarcia_adc_app'
+    OR @user_name NOT IN (N'rodogarcia_adc_app', N'rodogarcia_adc_runtime')
     THROW 52010, N'Parametros de validacao nao autorizados.', 1;
 
 IF NOT EXISTS (
@@ -63,7 +66,6 @@ EXEC sys.sp_executesql
 
 DECLARE @validation nvarchar(max) =
     N'USE ' + QUOTENAME(@database_name) + N';
-      DECLARE @user_name sysname = @login_name;
       IF NOT EXISTS (
           SELECT 1
           FROM sys.database_principals
@@ -99,7 +101,9 @@ DECLARE @validation nvarchar(max) =
                         class_desc = N''OBJECT_OR_COLUMN''
                         AND major_id IN (
                             OBJECT_ID(N''dbo.filial''),
-                            OBJECT_ID(N''dbo.ciclo_questionario'')
+                            OBJECT_ID(N''dbo.ciclo_questionario''),
+                            OBJECT_ID(N''dbo.area''),
+                            OBJECT_ID(N''dbo.colaborador'')
                         )
                         AND permission_name = N''DELETE''
                     )
@@ -124,11 +128,15 @@ DECLARE @validation nvarchar(max) =
           THROW 52023, N''A aplicacao precisa de DELETE restrito em dbo.filial.'', 1;
       IF HAS_PERMS_BY_NAME(N''dbo.ciclo_questionario'', N''OBJECT'', N''DELETE'') <> 1
           THROW 52024, N''A aplicacao precisa de DELETE restrito em dbo.ciclo_questionario.'', 1;
+      IF HAS_PERMS_BY_NAME(N''dbo.area'', N''OBJECT'', N''DELETE'') <> 1
+          THROW 52028, N''A aplicacao precisa de DELETE restrito em dbo.area.'', 1;
+      IF HAS_PERMS_BY_NAME(N''dbo.colaborador'', N''OBJECT'', N''DELETE'') <> 1
+          THROW 52029, N''A aplicacao precisa de DELETE restrito em dbo.colaborador.'', 1;
       IF EXISTS (
           SELECT 1
           FROM sys.tables
           WHERE schema_id = SCHEMA_ID(N''dbo'')
-            AND name NOT IN (N''filial'', N''ciclo_questionario'')
+            AND name NOT IN (N''filial'', N''ciclo_questionario'', N''area'', N''colaborador'')
             AND HAS_PERMS_BY_NAME(
                 QUOTENAME(SCHEMA_NAME(schema_id)) + N''.'' + QUOTENAME(name),
                 N''OBJECT'',
@@ -139,4 +147,5 @@ DECLARE @validation nvarchar(max) =
       REVERT;
       SELECT N''PRIVILEGIOS_MINIMOS_VALIDOS'';';
 
-EXEC sys.sp_executesql @validation, N'@login_name sysname', @login_name = @login_name;
+EXEC sys.sp_executesql @validation, N'@login_name sysname, @user_name sysname',
+    @login_name = @login_name, @user_name = @user_name;

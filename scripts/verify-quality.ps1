@@ -70,12 +70,48 @@ Invoke-Validation 'Repositorio: sintaxe PowerShell' {
     Assert-PowerShellSyntax -RepositoryRoot $repositoryRoot
 }
 
+Invoke-Validation 'Banco: autenticacao do executor com SQL simulado' {
+    & (Join-Path $PSScriptRoot 'testar-database-auth.ps1')
+}
+
 Invoke-Validation 'Operacao: manifesto PM2 com ambiente minimo' {
     & node (Join-Path $PSScriptRoot 'validate-pm2-manifest.cjs')
 }
 
 Invoke-Validation 'Operacao: regressao dos launchers DEV sem alterar processos reais' {
     & (Join-Path $PSScriptRoot 'testar-launchers-dev.ps1')
+}
+
+Invoke-Validation 'Operacao: diagnostico PROD sem iniciar daemon PM2' {
+    & node (Join-Path $PSScriptRoot 'testar-launcher-prod.cjs')
+}
+
+Invoke-Validation 'Operacao: preparacao privada de configuracao em TEMP' {
+    & (Join-Path $PSScriptRoot 'testar-preparacao-producao.ps1')
+}
+
+Invoke-Validation 'Operacao: captura privada de token Cloudflare com fixtures' {
+    & (Join-Path $PSScriptRoot 'testar-cloudflare-token.ps1')
+}
+
+Invoke-Validation 'Operacao: projecao privada de rotas Cloudflare com fixtures' {
+    & (Join-Path $PSScriptRoot 'testar-cloudflare-routes.ps1')
+}
+
+Invoke-Validation 'Operacao: preparo parado do servico Cloudflare com fixtures' {
+    & (Join-Path $PSScriptRoot 'testar-cloudflare-service.ps1')
+}
+
+Invoke-Validation 'Operacao: pontes TCP loopback com portas efemeras' {
+    & node --test (Join-Path $PSScriptRoot 'testar-loopback-bridges.cjs')
+}
+
+Invoke-Validation 'Operacao: pontes HTTP com HTTPS obrigatorio e origens ficticias' {
+    & node --test (Join-Path $PSScriptRoot 'testar-https-loopback-bridges.cjs')
+}
+
+Invoke-Validation 'Operacao: gerenciador de pontes com fixtures isoladas' {
+    & (Join-Path $PSScriptRoot 'testar-gerenciador-pontes.ps1')
 }
 
 Invoke-Validation 'Banco: regras estaticas de migrations' {

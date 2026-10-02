@@ -46,7 +46,7 @@ function Assert-OutsideRepository {
 try {
     $configurationFile = Get-Item -LiteralPath $ConfigurationPath -Force -ErrorAction Stop
 } catch {
-    throw 'O arquivo de configuracao externa de producao nao foi encontrado.'
+    throw "Falta a configuracao da aplicacao em $ConfigurationPath. O banco pode estar recuperado, mas este arquivo externo precisa conter a conexao SQL e a chave de autenticacao antes de iniciar a API."
 }
 
 if ($configurationFile.PSIsContainer -or $configurationFile.Extension -ine '.properties') {
@@ -54,6 +54,10 @@ if ($configurationFile.PSIsContainer -or $configurationFile.Extension -ine '.pro
 }
 
 Assert-OutsideRepository -Item $configurationFile -Description 'A configuracao de producao'
+. (Join-Path $PSScriptRoot 'production-config-status.ps1')
+if (Test-ProductionConfigurationIncomplete -Path $configurationFile.FullName) {
+    throw 'A configuracao externa esta INCOMPLETA. Credencial SQL, identidade e TLS precisam de validacao autorizada antes de iniciar a API.'
+}
 
 try {
     $logDirectoryItem = Get-Item -LiteralPath $LogDirectory -Force -ErrorAction Stop

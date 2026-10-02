@@ -69,6 +69,8 @@ if (Test-Path -LiteralPath $environmentFile -PathType Leaf) {
     }
 }
 
+. (Join-Path $PSScriptRoot 'select-production-java.ps1')
+Select-ProductionJava
 [Environment]::SetEnvironmentVariable('AVALIACAO_DESEMPENHO_ENV_LOADED', '1', 'Process')
 & $env:ComSpec '/d' '/c' (Join-Path $repositoryRoot 'iniciar-prod.bat') @Arguments
 exit $LASTEXITCODE

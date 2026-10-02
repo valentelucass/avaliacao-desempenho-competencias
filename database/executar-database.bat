@@ -14,6 +14,11 @@ if "%~1"=="" goto :ARGUMENTOS_OK
 if /i "%~1"=="--help" goto :AJUDA
 if /i "%~1"=="-h" goto :AJUDA
 if /i "%~1"=="/?" goto :AJUDA
+if /i "%~1"=="--sql" (
+  set "FORCAR_AUTENTICACAO_SQL=1"
+  shift
+  goto :LER_ARGUMENTOS
+)
 if /i "%~1"=="--check" (
   if defined MODO goto :ARGUMENTOS_INVALIDOS
   set "MODO=CHECK"
@@ -65,6 +70,7 @@ if /i "%~1"=="--recover-empty-bootstrap" (
 goto :ARGUMENTOS_INVALIDOS
 
 :ARGUMENTOS_OK
+if defined FORCAR_AUTENTICACAO_SQL goto :EXECUTAR_COM_AUTENTICACAO_SQL
 if not defined MODO (
   set "MODO=APPLY_ALL"
   set "APLICACAO_SEM_ARGUMENTO=1"
@@ -88,6 +94,8 @@ if errorlevel 1 (
   set "EXIT_CODE=1"
   goto :FIM
 )
+rem O login escolhido com --sql vale somente nesta execucao, nos alvos selecionados.
+if defined ADC_DATABASE_SQL_USER set "ADC_DB_USER=%ADC_DATABASE_SQL_USER%"
 call :VALIDAR_CONFIGURACAO
 if errorlevel 1 (
   set "EXIT_CODE=1"
@@ -100,6 +108,8 @@ if errorlevel 1 (
   goto :FIM
 )
 
+set "SQLCMD_AUTH=-E"
+if defined ADC_DB_USER set "SQLCMD_AUTH=-U %ADC_DB_USER%"
 set "SQLCMD_SERVER=%ADC_DB_SERVER%,%ADC_DB_PORT%"
 set "SQLCMD_FLAGS=-b -r1 -I -f 65001 -N"
 if "%ADC_SQLCMD_TRUST_SERVER_CERTIFICATE%"=="1" set "SQLCMD_FLAGS=%SQLCMD_FLAGS% -C"
@@ -153,7 +163,7 @@ if errorlevel 1 (
 
 if /i "%DATABASE_STATUS%"=="MISSING" (
   echo [ETAPA] Criando o banco dedicado %ADC_DB_NAME%...
-  sqlcmd %SQLCMD_FLAGS% -S "%SQLCMD_SERVER%" -E -d master -v DatabaseName=%ADC_DB_NAME% -i "%~dp0sql\bootstrap\001_criar_banco.sql"
+  sqlcmd %SQLCMD_FLAGS% -S "%SQLCMD_SERVER%" %SQLCMD_AUTH% -d master -v DatabaseName=%ADC_DB_NAME% -i "%~dp0sql\bootstrap\001_criar_banco.sql"
   if errorlevel 1 (
     echo [ERRO] Falha ao criar o banco. Nenhuma migration foi iniciada.
     set "EXIT_CODE=1"
@@ -171,7 +181,7 @@ if /i "%DATABASE_STATUS%"=="MISSING" (
 
 :PREPARAR_CONTROLE_E_APLICAR_MIGRATIONS
 echo [ETAPA] Garantindo o controle de migrations...
-sqlcmd %SQLCMD_FLAGS% -S "%SQLCMD_SERVER%" -E -d "%ADC_DB_NAME%" -i "%~dp0sql\bootstrap\002_criar_controle_migrations.sql"
+sqlcmd %SQLCMD_FLAGS% -S "%SQLCMD_SERVER%" %SQLCMD_AUTH% -d "%ADC_DB_NAME%" -i "%~dp0sql\bootstrap\002_criar_controle_migrations.sql"
 if errorlevel 1 (
   echo [ERRO] Falha ao preparar o controle de migrations.
   set "EXIT_CODE=1"
@@ -426,7 +436,7 @@ if errorlevel 1 (
 )
 
 echo [ETAPA] Garantindo o controle de migrations...
-sqlcmd %SQLCMD_FLAGS% -S "%SQLCMD_SERVER%" -E -d "%ADC_DB_NAME%" -i "%~dp0sql\bootstrap\002_criar_controle_migrations.sql"
+sqlcmd %SQLCMD_FLAGS% -S "%SQLCMD_SERVER%" %SQLCMD_AUTH% -d "%ADC_DB_NAME%" -i "%~dp0sql\bootstrap\002_criar_controle_migrations.sql"
 if errorlevel 1 (
   echo [ERRO] Falha ao preparar o controle de migrations.
   set "EXIT_CODE=1"
@@ -470,7 +480,7 @@ if errorlevel 1 (
 )
 
 echo [ETAPA] Executando validacao somente leitura...
-sqlcmd %SQLCMD_FLAGS% -S "%SQLCMD_SERVER%" -E -d "%ADC_DB_NAME%" -i "%~dp0sql\validation\001_validar_fundacao_identidade.sql"
+sqlcmd %SQLCMD_FLAGS% -S "%SQLCMD_SERVER%" %SQLCMD_AUTH% -d "%ADC_DB_NAME%" -i "%~dp0sql\validation\001_validar_fundacao_identidade.sql"
 if errorlevel 1 (
   echo [ERRO] A validacao falhou. Verifique o banco antes de prosseguir.
   set "EXIT_CODE=1"
@@ -503,6 +513,9 @@ echo [INFO] Base vazia confirmada; retomando somente o bootstrap e as migrations
 goto :PREPARAR_CONTROLE_E_APLICAR_MIGRATIONS
 
 :VALIDAR_CONFIGURACAO
+rem A senha SQL vem somente de SQLCMDPASSWORD no processo, nunca de argumentos.
+powershell -NoProfile -Command "if ($env:ADC_DB_USER) { if ($env:ADC_DB_USER -notmatch '^[A-Za-z_][A-Za-z0-9_.-]{0,127}$') { throw 'ADC_DB_USER invalido.' }; if ([string]::IsNullOrEmpty($env:SQLCMDPASSWORD)) { throw 'Defina SQLCMDPASSWORD apenas nesta sessao para autenticacao SQL.' } }" >nul
+if errorlevel 1 exit /b 1
 if not defined ADC_SQLCMD_TRUST_SERVER_CERTIFICATE set "ADC_SQLCMD_TRUST_SERVER_CERTIFICATE=0"
 powershell -NoProfile -Command "$server=$env:ADC_DB_SERVER; $port=$env:ADC_DB_PORT; $database=$env:ADC_DB_NAME; $trust=$env:ADC_SQLCMD_TRUST_SERVER_CERTIFICATE; $allowedDatabases=@('AVALIACAO_DEV','AVALIACAO_PROD'); if ($server -notin @('localhost','127.0.0.1')) { throw 'ADC_DB_SERVER deve ser localhost ou 127.0.0.1.' }; if ($port -notmatch '^[0-9]{1,5}$' -or [int]$port -lt 1 -or [int]$port -gt 65535) { throw 'ADC_DB_PORT deve estar entre 1 e 65535.' }; if ($database -notin $allowedDatabases) { throw 'ADC_DB_NAME deve ser AVALIACAO_DEV ou AVALIACAO_PROD.' }; if ($trust -notin @('0','1')) { throw 'ADC_SQLCMD_TRUST_SERVER_CERTIFICATE deve ser 0 ou 1.' }" >nul
 if errorlevel 1 (
@@ -520,12 +533,20 @@ if errorlevel 1 (
 exit /b 0
 
 :VERIFICAR_CONEXAO
-sqlcmd %SQLCMD_FLAGS% -S "%SQLCMD_SERVER%" -E -d master -Q "SET NOCOUNT ON; SELECT 1;" >nul
+sqlcmd %SQLCMD_FLAGS% -S "%SQLCMD_SERVER%" %SQLCMD_AUTH% -d master -Q "SET NOCOUNT ON; SELECT 1;" >nul
 if errorlevel 1 (
-  echo [ERRO] Nao foi possivel conectar ao SQL Server com autenticacao integrada.
+  echo [ERRO] Nao foi possivel conectar ao SQL Server. Confira autenticacao e certificado.
+  if not defined ADC_DB_USER echo [INFO] A tentativa usou a conta Windows. Para um login SQL existente, execute executar-database.bat --check-all --sql.
   exit /b 1
 )
 exit /b 0
+
+:EXECUTAR_COM_AUTENTICACAO_SQL
+set "FORCAR_AUTENTICACAO_SQL="
+set "ADC_DATABASE_SQL_MODE=%MODO%"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\solicitar-autenticacao-sql.ps1"
+set "EXIT_CODE=%ERRORLEVEL%"
+goto :FIM
 
 :VALIDAR_MIGRATIONS
 set "ADC_MIGRATION_DIR=%~dp0sql\migrations"
@@ -551,7 +572,7 @@ for %%F in (
   015_validar_delegacao_individual_redefinicao_senha.sql
 ) do (
   echo [ETAPA] Validando %%F...
-  sqlcmd %SQLCMD_FLAGS% -S "%SQLCMD_SERVER%" -E -d "%ADC_DB_NAME%" -i "%~dp0sql\validation\%%F"
+  sqlcmd %SQLCMD_FLAGS% -S "%SQLCMD_SERVER%" %SQLCMD_AUTH% -d "%ADC_DB_NAME%" -i "%~dp0sql\validation\%%F"
   if errorlevel 1 exit /b 1
 )
 exit /b 0
@@ -568,7 +589,7 @@ for %%F in (
   009_validar_perfis_administrador_integral_e_usuario_comum.sql
 ) do (
   echo [ETAPA] Validando %%F...
-  sqlcmd %SQLCMD_FLAGS% -S "%SQLCMD_SERVER%" -E -d "%ADC_DB_NAME%" -i "%~dp0sql\validation\%%F"
+  sqlcmd %SQLCMD_FLAGS% -S "%SQLCMD_SERVER%" %SQLCMD_AUTH% -d "%ADC_DB_NAME%" -i "%~dp0sql\validation\%%F"
   if errorlevel 1 exit /b 1
 )
 exit /b 0
@@ -579,13 +600,13 @@ if not exist "%~1" (
   exit /b 1
 )
 echo [ETAPA] Validando %~nx1...
-sqlcmd %SQLCMD_FLAGS% -S "%SQLCMD_SERVER%" -E -d "%ADC_DB_NAME%" -i "%~1"
+sqlcmd %SQLCMD_FLAGS% -S "%SQLCMD_SERVER%" %SQLCMD_AUTH% -d "%ADC_DB_NAME%" -i "%~1"
 exit /b %ERRORLEVEL%
 
 :OBTER_STATUS_BANCO
 set "DATABASE_STATUS="
 set "DATABASE_STATUS_FILE=%WORK_DIR%\database-status.txt"
-sqlcmd %SQLCMD_FLAGS% -S "%SQLCMD_SERVER%" -E -d master -h -1 -W -v DatabaseName=%ADC_DB_NAME% -i "%~dp0sql\bootstrap\003_verificar_banco.sql" > "%DATABASE_STATUS_FILE%"
+sqlcmd %SQLCMD_FLAGS% -S "%SQLCMD_SERVER%" %SQLCMD_AUTH% -d master -h -1 -W -v DatabaseName=%ADC_DB_NAME% -i "%~dp0sql\bootstrap\003_verificar_banco.sql" > "%DATABASE_STATUS_FILE%"
 if errorlevel 1 (
   if exist "%DATABASE_STATUS_FILE%" del /q "%DATABASE_STATUS_FILE%" >nul 2>&1
   echo [ERRO] Falha ao consultar o estado do banco dedicado.
@@ -617,7 +638,7 @@ exit /b 0
 :VERIFICAR_PROPRIEDADE
 set "PROJECT_OWNERSHIP="
 set "PROJECT_OWNERSHIP_FILE=%WORK_DIR%\project-ownership.txt"
-sqlcmd %SQLCMD_FLAGS% -S "%SQLCMD_SERVER%" -E -d "%ADC_DB_NAME%" -h -1 -W -i "%~dp0sql\bootstrap\005_verificar_propriedade.sql" > "%PROJECT_OWNERSHIP_FILE%"
+sqlcmd %SQLCMD_FLAGS% -S "%SQLCMD_SERVER%" %SQLCMD_AUTH% -d "%ADC_DB_NAME%" -h -1 -W -i "%~dp0sql\bootstrap\005_verificar_propriedade.sql" > "%PROJECT_OWNERSHIP_FILE%"
 if errorlevel 1 (
   if exist "%PROJECT_OWNERSHIP_FILE%" del /q "%PROJECT_OWNERSHIP_FILE%" >nul 2>&1
   echo [ERRO] Nao foi possivel confirmar a propriedade do banco existente.
@@ -641,7 +662,7 @@ exit /b 1
 :VERIFICAR_BOOTSTRAP_VAZIO
 set "EMPTY_BOOTSTRAP_STATUS="
 set "EMPTY_BOOTSTRAP_FILE=%WORK_DIR%\empty-bootstrap-status.txt"
-sqlcmd %SQLCMD_FLAGS% -S "%SQLCMD_SERVER%" -E -d "%ADC_DB_NAME%" -h -1 -W -i "%~dp0sql\bootstrap\007_verificar_bootstrap_vazio.sql" > "%EMPTY_BOOTSTRAP_FILE%"
+sqlcmd %SQLCMD_FLAGS% -S "%SQLCMD_SERVER%" %SQLCMD_AUTH% -d "%ADC_DB_NAME%" -h -1 -W -i "%~dp0sql\bootstrap\007_verificar_bootstrap_vazio.sql" > "%EMPTY_BOOTSTRAP_FILE%"
 if errorlevel 1 (
   if exist "%EMPTY_BOOTSTRAP_FILE%" del /q "%EMPTY_BOOTSTRAP_FILE%" >nul 2>&1
   echo [ERRO] Nao foi possivel verificar se o bootstrap interrompido deixou a base vazia.
@@ -807,7 +828,7 @@ exit /b 0
 
 :RECONCILIAR_HISTORICO
 set "ADC_MIGRATION_HISTORY=%WORK_DIR%\migration-history.txt"
-sqlcmd %SQLCMD_FLAGS% -S "%SQLCMD_SERVER%" -E -d "%ADC_DB_NAME%" -h -1 -W -s "|" -i "%~dp0sql\bootstrap\006_listar_historico_migrations.sql" > "%ADC_MIGRATION_HISTORY%"
+sqlcmd %SQLCMD_FLAGS% -S "%SQLCMD_SERVER%" %SQLCMD_AUTH% -d "%ADC_DB_NAME%" -h -1 -W -s "|" -i "%~dp0sql\bootstrap\006_listar_historico_migrations.sql" > "%ADC_MIGRATION_HISTORY%"
 if errorlevel 1 (
   echo [ERRO] Nao foi possivel ler o historico de migrations.
   exit /b 1
@@ -822,7 +843,7 @@ exit /b 0
 :OBTER_ESTADO_FUNDACAO_V0001
 set "FUNDACAO_V0001_ESTADO="
 set "FUNDACAO_V0001_FILE=%WORK_DIR%\fundacao-v0001-status.txt"
-sqlcmd %SQLCMD_FLAGS% -S "%SQLCMD_SERVER%" -E -d "%ADC_DB_NAME%" -h -1 -W -i "%~dp0sql\validation\002_verificar_deriva_v0001.sql" > "%FUNDACAO_V0001_FILE%"
+sqlcmd %SQLCMD_FLAGS% -S "%SQLCMD_SERVER%" %SQLCMD_AUTH% -d "%ADC_DB_NAME%" -h -1 -W -i "%~dp0sql\validation\002_verificar_deriva_v0001.sql" > "%FUNDACAO_V0001_FILE%"
 if errorlevel 1 (
   if exist "%FUNDACAO_V0001_FILE%" del /q "%FUNDACAO_V0001_FILE%" >nul 2>&1
   echo [ERRO] Nao foi possivel verificar o estado da fundacao V0001.
@@ -864,7 +885,7 @@ if errorlevel 1 (
 
 set "MIGRATION_STATUS="
 set "MIGRATION_STATUS_FILE=%WORK_DIR%\%MIGRATION_VERSION%_status.txt"
-sqlcmd %SQLCMD_FLAGS% -S "%SQLCMD_SERVER%" -E -d "%ADC_DB_NAME%" -h -1 -W -v MigrationVersion=%MIGRATION_VERSION% MigrationChecksum=%MIGRATION_CHECKSUM% -i "%~dp0sql\bootstrap\004_verificar_migration.sql" > "%MIGRATION_STATUS_FILE%"
+sqlcmd %SQLCMD_FLAGS% -S "%SQLCMD_SERVER%" %SQLCMD_AUTH% -d "%ADC_DB_NAME%" -h -1 -W -v MigrationVersion=%MIGRATION_VERSION% MigrationChecksum=%MIGRATION_CHECKSUM% -i "%~dp0sql\bootstrap\004_verificar_migration.sql" > "%MIGRATION_STATUS_FILE%"
 if errorlevel 1 (
   if exist "%MIGRATION_STATUS_FILE%" del /q "%MIGRATION_STATUS_FILE%" >nul 2>&1
   echo [ERRO] Falha ao consultar o historico de %MIGRATION_NAME%.
@@ -897,7 +918,7 @@ if errorlevel 1 (
 
 echo [ETAPA] Aplicando %MIGRATION_NAME%...
 set "MIGRATION_RESULT_FILE=%WORK_DIR%\%MIGRATION_VERSION%_result.txt"
-sqlcmd %SQLCMD_FLAGS% -S "%SQLCMD_SERVER%" -E -d "%ADC_DB_NAME%" -h -1 -W -i "%MASTER_MIGRATION%" > "%MIGRATION_RESULT_FILE%"
+sqlcmd %SQLCMD_FLAGS% -S "%SQLCMD_SERVER%" %SQLCMD_AUTH% -d "%ADC_DB_NAME%" -h -1 -W -i "%MASTER_MIGRATION%" > "%MIGRATION_RESULT_FILE%"
 if errorlevel 1 (
   if exist "%MIGRATION_RESULT_FILE%" del /q "%MIGRATION_RESULT_FILE%" >nul 2>&1
   echo [ERRO] Falha ao aplicar %MIGRATION_NAME%.
@@ -964,7 +985,10 @@ echo      Retoma somente um bootstrap interrompido antes de qualquer tabela ou m
 echo      Exige base vazia confirmada e uma confirmacao distinta.
 echo.
 echo Seguranca:
-echo   - Usa autenticacao integrada do Windows; nao le senha nem usa sa.
+echo   - Usa autenticacao integrada do Windows por padrao.
+echo   - Adicione --sql a qualquer modo para informar login SQL existente e senha oculta.
+echo     Exemplo sem escrita: executar-database.bat --check-all --sql.
+echo     A senha fica somente no processo e o login informado vale para os alvos selecionados.
 echo   - Nao possui DROP DATABASE, --recriar, --force ou alteracao de outros bancos.
 echo   - Migration aplicada e imutavel: checksum divergente interrompe a execucao.
 echo.

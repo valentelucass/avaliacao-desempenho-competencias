@@ -1,6 +1,7 @@
 @echo off
 rem Copie este arquivo para config.local.bat. O arquivo local nao entra no Git.
-rem O bootstrap usa somente autenticacao integrada do Windows; nao coloque senha aqui.
+rem Sem ADC_DB_USER usa autenticacao Windows. Para SQL, defina o login e
+rem SQLCMDPASSWORD apenas no processo. Nunca coloque senha neste arquivo.
 
 set "ADC_DB_SERVER=localhost"
 set "ADC_DB_PORT=1433"

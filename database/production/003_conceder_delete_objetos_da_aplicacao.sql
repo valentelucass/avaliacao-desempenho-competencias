@@ -5,14 +5,17 @@
 */
 :setvar DatabaseName "AVALIACAO_PROD"
 :setvar ApplicationLogin "rodogarcia_adc_app"
+:setvar ApplicationUser "rodogarcia_adc_app"
 
 SET NOCOUNT ON;
 SET XACT_ABORT ON;
 
 DECLARE @database_name sysname = N'$(DatabaseName)';
 DECLARE @login_name sysname = N'$(ApplicationLogin)';
+DECLARE @user_name sysname = N'$(ApplicationUser)';
 
 IF @database_name <> N'AVALIACAO_PROD' OR @login_name <> N'rodogarcia_adc_app'
+    OR @user_name NOT IN (N'rodogarcia_adc_app', N'rodogarcia_adc_runtime')
     THROW 52020, N'Parametros de reparo nao autorizados.', 1;
 
 IF DB_ID(@database_name) IS NULL
@@ -33,17 +36,19 @@ DECLARE @grant_sql nvarchar(max) =
       IF NOT EXISTS (
           SELECT 1
           FROM sys.database_principals
-          WHERE name = @login_name
+          WHERE name = @user_name
             AND type_desc = N''SQL_USER''
             AND authentication_type_desc = N''INSTANCE''
+            AND sid = SUSER_SID(@login_name)
       )
           THROW 52023, N''O usuario SQL da aplicacao nao existe ou nao corresponde ao login.'', 1;
       BEGIN TRANSACTION;
-      REVOKE DELETE ON SCHEMA::dbo FROM ' + QUOTENAME(@login_name) + N';
-      GRANT DELETE ON OBJECT::dbo.ciclo_questionario TO ' + QUOTENAME(@login_name) + N';
-      GRANT DELETE ON OBJECT::dbo.filial TO ' + QUOTENAME(@login_name) + N';
+      REVOKE DELETE ON SCHEMA::dbo FROM ' + QUOTENAME(@user_name) + N';
+      GRANT DELETE ON OBJECT::dbo.ciclo_questionario TO ' + QUOTENAME(@user_name) + N';
+      GRANT DELETE ON OBJECT::dbo.filial TO ' + QUOTENAME(@user_name) + N';
       COMMIT TRANSACTION;';
 
-EXEC sys.sp_executesql @grant_sql, N'@login_name sysname', @login_name = @login_name;
+EXEC sys.sp_executesql @grant_sql, N'@login_name sysname, @user_name sysname',
+    @login_name = @login_name, @user_name = @user_name;
 
 PRINT N'Permissoes DELETE restritas aos dois objetos autorizados foram reconciliadas.';

@@ -2,6 +2,8 @@
 setlocal EnableExtensions DisableDelayedExpansion
 cd /d "%~dp0"
 
+if /i "%~1"=="--start-prepared" goto :start_prepared_only
+
 if /i "%AVALIACAO_DESEMPENHO_ENV_LOADED%"=="1" goto :environment_loaded
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\run-production-from-env.ps1" %*
 exit /b %ERRORLEVEL%
@@ -30,10 +32,12 @@ if /i "%~1"=="--check" (
   goto :arguments_ok
 )
 
-echo Uso: %~nx0 [--check]
+echo Uso: %~nx0 [--check ^| --start-prepared]
 exit /b 2
 
 :arguments_ok
+if defined CHECK_ONLY goto :check_prerequisites_only
+
 where powershell >nul 2>&1
 if errorlevel 1 (
   echo [Avaliacao PROD] PowerShell nao foi encontrado.
@@ -58,6 +62,9 @@ if errorlevel 1 exit /b 1
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\validate-production-runtime.ps1"
 if errorlevel 1 exit /b 1
 
+node "%~dp0scripts\check-pm2-access.cjs"
+if errorlevel 1 exit /b 1
+
 if not exist "frontend\package-lock.json" (
   echo [Avaliacao PROD] frontend\package-lock.json nao foi encontrado.
   exit /b 1
@@ -68,13 +75,6 @@ if errorlevel 1 exit /b 1
 
 call :assert_port_free_when_process_is_missing "%FRONTEND_PROCESS%" "%FRONTEND_PORT%"
 if errorlevel 1 exit /b 1
-
-if defined CHECK_ONLY (
-  echo [Avaliacao PROD] Pre-requisitos validados. Nenhum build ou processo PM2 foi alterado.
-  echo [Avaliacao PROD] Processos PM2 previstos: %BACKEND_PROCESS% e %FRONTEND_PROCESS%
-  echo [Avaliacao PROD] Portas privadas previstas: %BACKEND_PORT% e %FRONTEND_PORT%
-  exit /b 0
-)
 
 echo [Avaliacao PROD] Encerrando apenas a instancia local de desenvolvimento deste repositorio, se existir...
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\encerrar-dev-local-antes-producao.ps1"
@@ -90,7 +90,15 @@ if not defined BACKEND_RELEASE_DIRECTORY (
 )
 
 echo [Avaliacao PROD] Executando o gate local completo antes de alterar PM2...
-powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\verify-quality.ps1" -BackendBuildDirectory "%BACKEND_RELEASE_DIRECTORY%"
+rem O gate deste launcher deve consultar PROD, mesmo quando DEV estiver ausente.
+set "ADC_DATABASE_CONFIG=%~dp0database\config.production.local.bat"
+if not exist "%ADC_DATABASE_CONFIG%" (
+  echo [Avaliacao PROD] Crie database\config.production.local.bat usando o exemplo de producao.
+  exit /b 1
+)
+call "%ADC_DATABASE_CONFIG%"
+if errorlevel 1 exit /b 1
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\verify-production-quality.ps1" -BackendBuildDirectory "%BACKEND_RELEASE_DIRECTORY%"
 if errorlevel 1 (
   echo [Avaliacao PROD] Pre-flight falhou; nenhum processo PM2 foi alterado.
   exit /b 1
@@ -161,6 +169,18 @@ echo [Avaliacao PROD] Front-end privado: http://%FRONTEND_HOST%:%FRONTEND_PORT%
 echo [Avaliacao PROD] Status: pm2 status %BACKEND_PROCESS% %FRONTEND_PROCESS%
 echo [Avaliacao PROD] O script nao configura Cloudflare, firewall, TLS ou inicializacao apos reboot.
 exit /b 0
+
+:check_prerequisites_only
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\check-production-readiness.ps1"
+exit /b %ERRORLEVEL%
+
+:start_prepared_only
+if not "%~2"=="" (
+  echo Uso: %~nx0 --start-prepared
+  exit /b 2
+)
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\run-prepared-production.ps1" -StartPrepared
+exit /b %ERRORLEVEL%
 
 :resolve_backend_jar
 set "BACKEND_JAR="
