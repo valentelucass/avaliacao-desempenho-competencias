@@ -8,6 +8,8 @@ import br.com.avaliacao.desempenho.avaliacoes.application.AssessmentRepository;
 import br.com.avaliacao.desempenho.avaliacoes.application.AssessmentRevision;
 import br.com.avaliacao.desempenho.avaliacoes.application.AssessmentValidationException;
 import br.com.avaliacao.desempenho.avaliacoes.domain.model.AssessmentAccessContext;
+import br.com.avaliacao.desempenho.avaliacoes.domain.model.AssessmentAuthorizationPolicy;
+import br.com.avaliacao.desempenho.avaliacoes.domain.model.AssessmentAuthorizationPolicy.AssessmentOwnership;
 import br.com.avaliacao.desempenho.avaliacoes.domain.model.AssessmentCycleAccessPolicy;
 import br.com.avaliacao.desempenho.avaliacoes.domain.model.AssessmentCycleAccessPolicy.CycleState;
 import br.com.avaliacao.desempenho.avaliacoes.domain.model.AssessmentLifecycle;
@@ -69,6 +71,8 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
   private static final int REOPEN_REASON_MAXIMUM_LENGTH = 80;
 
   private final AssessmentCycleAccessPolicy cycleAccessPolicy = new AssessmentCycleAccessPolicy();
+  private final AssessmentAuthorizationPolicy authorizationPolicy =
+      new AssessmentAuthorizationPolicy();
   private final FeedbackLifecycle feedbackLifecycle = new FeedbackLifecycle();
 
   private static final String ASSESSMENT_SELECT =
@@ -1060,6 +1064,7 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
             if (decision.replayedAssessmentId() != null) {
               LockedAssessment replay = requireLocked(decision.replayedAssessmentId());
               requireView(replay, safeActor);
+              requirePublish(replay, safeActor);
               writeAudit(
                   safeActor.userId(),
                   "AVALIACOES.PUBLICAR",
@@ -1453,8 +1458,13 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
 
   private void requirePublish(LockedAssessment assessment, AssessmentAccessContext actor) {
     requireActiveActor(actor.userId());
-    requirePermission(actor, "AVALIACOES.PUBLICAR");
-    requireAdministrativeDecisionRole(actor);
+    if (!authorizationPolicy.canPublish(
+        actor, new AssessmentOwnership(assessment.authorUserId(), assessment.type()))) {
+      throw new AssessmentForbiddenException();
+    }
+    if (!authorizationPolicy.canPublish(actor, assessment.type())) {
+      requireActiveManagerLink(assessment, actor.userId());
+    }
     requireAdministrativeDecisionWindow(assessment);
   }
 

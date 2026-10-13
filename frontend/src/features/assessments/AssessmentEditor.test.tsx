@@ -66,6 +66,14 @@ function renderRh(detail: AssessmentDetail) {
 }
 
 describe('ações individuais da avaliação', () => {
+  it.each([deniedActions, undefined])(
+    'não oferece publicação de avaliação enviada sem autorização individual da API (%s)',
+    async (allowedActions) => {
+      renderRh({ ...sample, status: 'ENVIADA', allowedActions })
+      await screen.findByRole('button', { name: 'Voltar para a lista' })
+      expect(screen.queryByRole('button', { name: 'Publicar avaliação' })).not.toBeInTheDocument()
+    },
+  )
   it.each(['GESTOR', 'AUTOAVALIACAO'])(
     'RH não edita nem envia %s de outro autor apesar de possuir as jornadas',
     async (type) => {

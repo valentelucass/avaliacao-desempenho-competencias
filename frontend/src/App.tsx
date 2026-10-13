@@ -333,7 +333,11 @@ function App({ api = defaultApiClient }: AppProps) {
     hasAnyPermission(user, ['AVALIACOES.AVALIAR_GERENCIAS_VINCULADAS']) &&
     user.roles?.includes('DIRETORIA') === true &&
     !(user.roles ?? []).includes('ADMINISTRADOR_PLATAFORMA')
-  const canPublishAssessments = hasAnyPermission(user, ['AVALIACOES.PUBLICAR'])
+  const canPublishAssessments =
+    !(user.roles ?? []).includes('ADMINISTRADOR_PLATAFORMA') &&
+    (hasAnyPermission(user, ['AVALIACOES.PUBLICAR']) ||
+      (user.roles?.includes('GESTOR') === true &&
+        hasAnyPermission(user, ['AVALIACOES.AVALIAR_VINCULADOS'])))
   const canReopenAssessments = hasAnyPermission(user, ['AVALIACOES.REABRIR'])
   const canRecordAssessmentFeedback = hasAnyPermission(user, [
     'AVALIACOES.REGISTRAR_FEEDBACK_PROPRIO',

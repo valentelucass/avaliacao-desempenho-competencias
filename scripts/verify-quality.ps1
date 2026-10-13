@@ -82,6 +82,11 @@ Invoke-Validation 'Operacao: regressao dos launchers DEV sem alterar processos r
     & (Join-Path $PSScriptRoot 'testar-launchers-dev.ps1')
 }
 
+Invoke-Validation 'Operacao: recuperacao SQL local sem banco ou processos reais' {
+    & (Join-Path $PSScriptRoot 'testar-local-sql-recovery.ps1')
+    & node (Join-Path $PSScriptRoot 'testar-avaliacao-running.cjs')
+}
+
 Invoke-Validation 'Operacao: diagnostico PROD sem iniciar daemon PM2' {
     & node (Join-Path $PSScriptRoot 'testar-launcher-prod.cjs')
 }
@@ -134,6 +139,10 @@ Invoke-Validation 'Front-end: impressao A4 e hover desabilitado no Edge real' {
 
 Invoke-Validation 'Front-end: restauracao de sessao e console no Edge real' {
     & node (Join-Path $repositoryRoot 'frontend/scripts/check-session-restoration.cjs')
+}
+
+Invoke-Validation 'Front-end: publicacao pelo gestor no Edge com dados ficticios' {
+    & node (Join-Path $repositoryRoot 'frontend/scripts/check-manager-publication.cjs')
 }
 
 Invoke-Validation 'Back-end: SBOM e vulnerabilidades conhecidas' {

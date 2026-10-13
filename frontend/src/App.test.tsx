@@ -834,45 +834,52 @@ describe('App', () => {
     expect(screen.queryByRole('button', { name: 'Nova avaliação' })).not.toBeInTheDocument()
   })
 
-  it('permite a RH publicar uma avaliação enviada pelo gestor', async () => {
-    const submittedAssessment: AssessmentDetail = {
-      ...sampleManagerAssessment(),
-      status: 'ENVIADA',
-      result: {
-        finalScore: 100,
-        classification: { label: 'Dentro das expectativas' },
-      },
-    }
-    const api = createApi({
-      currentUser: vi.fn().mockResolvedValue({
-        id: 'rh-1',
-        displayName: 'Pessoa de RH',
-        permissions: ['AVALIACOES.VISUALIZAR_TODAS', 'AVALIACOES.PUBLICAR'],
-      }),
-      listAssessments: vi.fn().mockResolvedValue([
-        {
-          id: submittedAssessment.id,
-          cycle: submittedAssessment.cycle,
-          evaluated: submittedAssessment.evaluated,
-          type: submittedAssessment.type,
-          status: submittedAssessment.status,
+  it.each(['GERENCIA_RH', 'GESTOR', 'DIRETORIA'])(
+    'permite a %s publicar uma avaliação enviada quando a API autoriza',
+    async (role) => {
+      const submittedAssessment: AssessmentDetail = {
+        ...sampleManagerAssessment(),
+        status: 'ENVIADA',
+        result: {
+          finalScore: 100,
+          classification: { label: 'Dentro das expectativas' },
         },
-      ]),
-      getAssessment: vi.fn().mockResolvedValue(submittedAssessment),
-      publishAssessment: vi.fn().mockResolvedValue({
-        ...submittedAssessment,
-        status: 'PUBLICADA',
-      }),
-    })
+      }
+      const api = createApi({
+        currentUser: vi.fn().mockResolvedValue({
+          id: 'rh-1',
+          displayName: 'Pessoa de RH',
+          roles: [role],
+          permissions:
+            role === 'GESTOR'
+              ? ['AVALIACOES.AVALIAR_VINCULADOS', 'AVALIACOES.VISUALIZAR_PROPRIAS_RESPOSTAS']
+              : ['AVALIACOES.VISUALIZAR_TODAS', 'AVALIACOES.PUBLICAR'],
+        }),
+        listAssessments: vi.fn().mockResolvedValue([
+          {
+            id: submittedAssessment.id,
+            cycle: submittedAssessment.cycle,
+            evaluated: submittedAssessment.evaluated,
+            type: submittedAssessment.type,
+            status: submittedAssessment.status,
+          },
+        ]),
+        getAssessment: vi.fn().mockResolvedValue(submittedAssessment),
+        publishAssessment: vi.fn().mockResolvedValue({
+          ...submittedAssessment,
+          status: 'PUBLICADA',
+        }),
+      })
 
-    renderWithExistingSession(api, '/avaliacoes')
+      renderWithExistingSession(api, '/avaliacoes')
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Abrir avaliação' }))
-    fireEvent.click(await screen.findByRole('button', { name: 'Publicar avaliação' }))
+      fireEvent.click(await screen.findByRole('button', { name: 'Abrir avaliação' }))
+      fireEvent.click(await screen.findByRole('button', { name: 'Publicar avaliação' }))
 
-    expect(await screen.findByText('Avaliação publicada com sucesso.')).toBeInTheDocument()
-    expect(api.publishAssessment).toHaveBeenCalledWith(submittedAssessment.id)
-  })
+      expect(await screen.findByText('Avaliação publicada com sucesso.')).toBeInTheDocument()
+      expect(api.publishAssessment).toHaveBeenCalledWith(submittedAssessment.id)
+    },
+  )
 
   it('pré-visualiza o gráfico ao selecionar ciclo e colaborador na visão administrativa', async () => {
     const completedAssessment: AssessmentDetail = {

@@ -17,6 +17,82 @@ import org.junit.jupiter.api.Test;
 class SqlServerAssessmentRepositoryTests {
 
   @Test
+  void publicationRevalidatesManagerOwnershipActiveAccountLinkAndCycle() throws Exception {
+    var jdbc = mock(org.springframework.jdbc.core.JdbcTemplate.class);
+    var repository =
+        new SqlServerAssessmentRepository(
+            jdbc, mock(org.springframework.transaction.support.TransactionTemplate.class));
+    UUID author = UUID.randomUUID();
+    UUID collaborator = UUID.randomUUID();
+    UUID link = UUID.randomUUID();
+    var actor =
+        new br.com.avaliacao.desempenho.avaliacoes.domain.model.AssessmentAccessContext(
+            author, java.util.Set.of("AVALIACOES.AVALIAR_VINCULADOS"), java.util.Set.of("GESTOR"));
+    var type = Class.forName(SqlServerAssessmentRepository.class.getName() + "$LockedAssessment");
+    var owner = new java.util.concurrent.atomic.AtomicReference<>(author);
+    var cycle =
+        new java.util.concurrent.atomic.AtomicReference<>(
+            br.com.avaliacao.desempenho.avaliacoes.domain.model.AssessmentCycleAccessPolicy
+                .CycleState.OPEN);
+    Object assessment =
+        mock(
+            type,
+            invocation ->
+                switch (invocation.getMethod().getName()) {
+                  case "authorUserId" -> owner.get();
+                  case "collaboratorId" -> collaborator;
+                  case "managerLinkId" -> link;
+                  case "type" ->
+                      br.com.avaliacao.desempenho.avaliacoes.domain.model.AssessmentType.GESTOR;
+                  case "cycleState" -> cycle.get();
+                  default -> org.mockito.Answers.RETURNS_DEFAULTS.answer(invocation);
+                });
+    var active = new java.util.concurrent.atomic.AtomicBoolean(true);
+    var linked = new java.util.concurrent.atomic.AtomicBoolean(true);
+    org.mockito.Mockito.doAnswer(
+            invocation -> {
+              String sql = invocation.getArgument(0);
+              if (sql.contains("dbo.vinculo_gestor_colaborador")) {
+                assertThat(invocation.<UUID>getArgument(2)).isEqualTo(link);
+                assertThat(invocation.<UUID>getArgument(3)).isEqualTo(author);
+                assertThat(invocation.<UUID>getArgument(4)).isEqualTo(collaborator);
+                return linked.get();
+              }
+              return active.get();
+            })
+        .when(jdbc)
+        .query(
+            org.mockito.ArgumentMatchers.anyString(),
+            org.mockito.ArgumentMatchers
+                .<org.springframework.jdbc.core.ResultSetExtractor<Boolean>>any(),
+            org.mockito.ArgumentMatchers.any(Object[].class));
+    Runnable publish =
+        () ->
+            org.springframework.test.util.ReflectionTestUtils.invokeMethod(
+                repository, "requirePublish", assessment, actor);
+    publish.run();
+    cycle.set(
+        br.com.avaliacao.desempenho.avaliacoes.domain.model.AssessmentCycleAccessPolicy.CycleState
+            .CLOSED);
+    publish.run();
+    linked.set(false);
+    assertThatThrownBy(publish::run).isInstanceOf(AssessmentForbiddenException.class);
+    linked.set(true);
+    active.set(false);
+    assertThatThrownBy(publish::run).isInstanceOf(AssessmentForbiddenException.class);
+    active.set(true);
+    owner.set(UUID.randomUUID());
+    assertThatThrownBy(publish::run).isInstanceOf(AssessmentForbiddenException.class);
+    owner.set(author);
+    cycle.set(
+        br.com.avaliacao.desempenho.avaliacoes.domain.model.AssessmentCycleAccessPolicy.CycleState
+            .DRAFT);
+    assertThatThrownBy(publish::run)
+        .isInstanceOf(
+            br.com.avaliacao.desempenho.avaliacoes.application.AssessmentConflictException.class);
+  }
+
+  @Test
   void actionAvailabilityDeniesAuthorizationFailuresButNeverHidesInfrastructureErrors() {
     assertThat(SqlServerAssessmentRepository.permitsAction(() -> {})).isTrue();
     assertThat(

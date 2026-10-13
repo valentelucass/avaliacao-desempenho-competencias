@@ -11,6 +11,48 @@ class AssessmentAuthorizationPolicyTests {
   private final AssessmentAuthorizationPolicy policy = new AssessmentAuthorizationPolicy();
 
   @Test
+  void managerPublishesOnlyItsOwnTeamAssessmentWithoutGainingAdministrativePowers() {
+    UUID manager = UUID.randomUUID();
+    var own = new AssessmentAuthorizationPolicy.AssessmentOwnership(manager, AssessmentType.GESTOR);
+    var actor =
+        new AssessmentAccessContext(
+            manager, Set.of(AssessmentAuthorizationPolicy.EVALUATE_LINKED), Set.of("GESTOR"));
+    assertThat(policy.canPublish(actor, own)).isTrue();
+    assertThat(
+            policy.canPublish(
+                actor,
+                new AssessmentAuthorizationPolicy.AssessmentOwnership(
+                    UUID.randomUUID(), AssessmentType.GESTOR)))
+        .isFalse();
+    for (AssessmentType type : AssessmentType.values()) {
+      assertThat(
+              policy.canPublish(
+                  actor, new AssessmentAuthorizationPolicy.AssessmentOwnership(manager, type)))
+          .isEqualTo(type == AssessmentType.GESTOR);
+      assertThat(policy.canReopen(actor, type)).isFalse();
+    }
+    assertThat(
+            policy.canPublish(
+                new AssessmentAccessContext(manager, Set.of(), Set.of("GESTOR")), own))
+        .isFalse();
+    assertThat(
+            policy.canPublish(
+                new AssessmentAccessContext(manager, actor.permissions(), Set.of()), own))
+        .isFalse();
+    assertThat(
+            policy.canPublish(
+                new AssessmentAccessContext(manager, actor.permissions(), Set.of("COLABORADOR")),
+                own))
+        .isFalse();
+    assertThat(
+            policy.canPublish(
+                new AssessmentAccessContext(
+                    manager, actor.permissions(), Set.of("GESTOR", "ADMINISTRADOR_PLATAFORMA")),
+                own))
+        .isFalse();
+  }
+
+  @Test
   void managerCanViewOnlyAnAssessmentItAuthored() {
     UUID manager = UUID.randomUUID();
     AssessmentAccessContext actor =

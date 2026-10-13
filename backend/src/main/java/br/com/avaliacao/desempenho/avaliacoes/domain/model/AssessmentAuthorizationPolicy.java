@@ -79,6 +79,17 @@ public final class AssessmentAuthorizationPolicy {
     return safeActor.has(REOPEN) && hasAdministrativeDecisionRole(safeActor);
   }
 
+  public boolean canPublish(AssessmentAccessContext actor, AssessmentOwnership ownership) {
+    Objects.requireNonNull(actor, "actor");
+    AssessmentOwnership assessment = Objects.requireNonNull(ownership, "ownership");
+    return canPublish(actor, assessment.type())
+        || (!actor.hasRole("ADMINISTRADOR_PLATAFORMA")
+            && actor.hasRole("GESTOR")
+            && actor.has(EVALUATE_LINKED)
+            && assessment.type() == AssessmentType.GESTOR
+            && actor.userId().equals(assessment.authorUserId()));
+  }
+
   public boolean canRecordOwnFeedback(
       AssessmentAccessContext actor, AssessmentOwnership ownership, FeedbackStatus feedbackStatus) {
     AssessmentAccessContext safeActor = Objects.requireNonNull(actor, "actor");

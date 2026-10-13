@@ -56,3 +56,7 @@ Continuam fora desta decisão a criação de pessoas reais, o provisionamento de
 3. Um gestor consulta somente os dados das respostas que ele registrou e não pode exportar dados consolidados, comparar gestores ou acessar resultados de terceiros.
 4. Uma autoavaliação só é disponibilizada para colaborador com conta vinculada, quando o ciclo a habilitar; não altera a nota de gestor e não é visível ao gestor.
 5. Um indicador filtrado para menos de cinco colaboradores distintos não devolve números ou gráficos; a Gerência de RH e a Diretoria recebem apenas a mensagem de dados insuficientes.
+
+## Revisão de publicação — 13/10/2026
+
+O pedido ADC-GESTOR-PUBLICAR-20261013 substitui a exclusividade histórica de publicação por RH/Diretoria descrita acima: GESTOR também publica avaliação de equipe de sua autoria, enviada e com vínculo vigente. A reabertura permanece exclusiva de RH/Diretoria. Origem, responsável, exemplo e testes estão em [regras operacionais](regras-operacionais-v1.md#publicação-pelo-gestor--adc-gestor-publicar-20261013). Não concede publicação global nem acesso a avaliações de outros autores.

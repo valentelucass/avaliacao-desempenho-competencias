@@ -2,6 +2,14 @@
 
 Aplicação interna para avaliações de colaboradores, com cálculo no servidor, classificação versionada e indicadores consolidados. As regras vigentes estão em [AGENTS.md](AGENTS.md), [STATES.md](STATES.md) e na [Regra operacional 2024.1](docs/business/regras-operacionais-v1.md).
 
+## Subir a versão instalada na VM
+
+Abra `iniciar-prod.bat` e confirme o UAC do Windows, quando solicitado. O fluxo confere o banco, renova a confiança TLS privada quando o certificado local muda e inicia somente os processos da Avaliação que estiverem parados. Ao terminar, acesse https://formulario.rodogarcia.com.br/. Executar novamente preserva processos saudáveis.
+
+Na VM atual, a tarefa `Rodogarcia-Avaliacao-SQL-Recovery` verifica mudanças do processo SQL a cada minuto e recupera a conexão da API. Ela aguarda o banco voltar e não reinicia o SQL. Se a API foi parada pelo operador, use o BAT para subi-la. Recibos ficam em `C:\ProgramData\Rodogarcia\AvaliacaoDesempenho\production\sql-recovery`; `REVIEW_PARTIAL_RECOVERY` exige revisão do recibo antes de outra recuperação automática.
+
+Para publicar alterações de código com build e validações completas, use `iniciar-prod.bat --publicar`. A subida comum reutiliza a versão instalada. `--check` conserva o diagnóstico de pré-requisitos de publicação; `--start-prepared` é um modo legado, dispensável no fluxo normal. A recuperação acima pressupõe o gerenciador PM2 existente e os dois processos cadastrados com a definição aprovada; divergências são informadas, sem criar um gerenciador concorrente.
+
 ## Estado da entrega
 
 O código-fonte implementa autenticação local, administração de acesso, cadastros, questionários, ciclos, avaliações de gestor e autoavaliação, indicadores agregados e exportação CSV. A SPA cobre login, troca de senha, avaliações e indicadores.

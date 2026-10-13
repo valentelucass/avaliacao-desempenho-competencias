@@ -266,8 +266,10 @@ public class AssessmentController {
 
   @PostMapping("/{assessmentId}/publish")
   @PreAuthorize(
-      "hasAuthority('PERMISSION:AVALIACOES.PUBLICAR')"
-          + " and hasAnyAuthority('ROLE:GERENCIA_RH', 'ROLE:DIRETORIA')"
+      "((hasAuthority('PERMISSION:AVALIACOES.PUBLICAR')"
+          + " and hasAnyAuthority('ROLE:GERENCIA_RH', 'ROLE:DIRETORIA'))"
+          + " or (hasAuthority('ROLE:GESTOR')"
+          + " and hasAuthority('PERMISSION:AVALIACOES.AVALIAR_VINCULADOS')))"
           + " and !hasAuthority('ROLE:ADMINISTRADOR_PLATAFORMA')")
   public ResponseEntity<AssessmentDetailResponse> publish(
       @PathVariable UUID assessmentId,

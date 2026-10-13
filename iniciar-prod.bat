@@ -2,6 +2,8 @@
 setlocal EnableExtensions DisableDelayedExpansion
 cd /d "%~dp0"
 
+if "%~1"=="" goto :start_installed
+if /i "%~1"=="--subir" goto :start_installed
 if /i "%~1"=="--start-prepared" goto :start_prepared_only
 
 if /i "%AVALIACAO_DESEMPENHO_ENV_LOADED%"=="1" goto :environment_loaded
@@ -27,12 +29,13 @@ set "PRODUCTION_LOG_DIRECTORY=%AVALIACAO_DESEMPENHO_PRODUCTION_LOG_DIRECTORY%"
 set "CHECK_ONLY="
 
 if "%~1"=="" goto :arguments_ok
+if /i "%~1"=="--publicar" goto :arguments_ok
 if /i "%~1"=="--check" (
   set "CHECK_ONLY=1"
   goto :arguments_ok
 )
 
-echo Uso: %~nx0 [--check ^| --start-prepared]
+echo Uso: %~nx0 [--subir ^| --publicar ^| --check ^| --start-prepared]
 exit /b 2
 
 :arguments_ok
@@ -180,6 +183,12 @@ if not "%~2"=="" (
   exit /b 2
 )
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\run-prepared-production.ps1" -StartPrepared
+exit /b %ERRORLEVEL%
+
+:start_installed
+if not "%~2"=="" exit /b 2
+echo [Avaliacao] Conferindo banco e iniciando a versao instalada...
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\start-installed-production.ps1"
 exit /b %ERRORLEVEL%
 
 :resolve_backend_jar

@@ -9,8 +9,32 @@ Thumbs.db
 /images
 
 # Local agent settings and generated analysis
-/.codex/
-/graphify-out/
+.agents/
+.codex/
+.maestri/
+.graphify/
+graphify-out/
+/.ai-memory.toml
+/.graphifyignore
+/artifacts/
+.tools/
+.runtime/
+
+# Temporary files, caches and test reports
+.cache/
+.tmp/
+.vite/
+.vitest/
+coverage/
+test-results/
+playwright-report/
+*.tmp
+*.bak
+*.orig
+*.rej
+*.swp
+*.swo
+*~
 
 # Java / Maven
 backend/target/
@@ -45,3 +69,7 @@ secrets/
 
 # Fonte local com dados pessoais e cache de avaliações; não versionar.
 /docs/AVALIAÇÃO DE DESEMPENHO - MACRO.xlsm
+
+# Saídas e configuração local das ferramentas MCP.
+AGENTS.md.bak-*
+*.mcp-tools.tmp
