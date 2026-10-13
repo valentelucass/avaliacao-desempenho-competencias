@@ -7,6 +7,28 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
+if ($null -eq $Arguments) { $Arguments = @() }
+if ($Arguments.Count -gt 1 -or ($Arguments.Count -eq 1 -and $Arguments[0] -notin @('--publicar', '--check'))) {
+    Write-Host '[Avaliacao PROD] Use iniciar-prod.bat [--publicar | --check | --subir | --start-prepared].'
+    exit 2
+}
+
+# Probe without PM2 CLI, so permission failures never create a second daemon.
+if ($Arguments.Count -eq 0 -or $Arguments[0] -ieq '--publicar') {
+    . (Join-Path $PSScriptRoot 'production-launcher-access.ps1')
+    $caller = Get-ProductionCaller
+    & node (Join-Path $PSScriptRoot 'check-pm2-access.cjs') --require-existing --elevation-exit-code
+    $decision = Get-ProductionAccessDecision -ProbeExitCode $LASTEXITCODE -Administrator $caller.Administrator
+    if ($decision -eq 'ELEVATE') {
+        $code = Invoke-ProductionElevation -CallerSid $caller.Sid
+        exit $code
+    }
+    if ($decision -eq 'BLOCKED') {
+        Write-Host '[Avaliacao PROD] PM2 existente indisponivel ou sem permissao mesmo apos elevacao. Publicacao interrompida antes do build.'
+        exit 1
+    }
+}
+
 $repositoryRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
 $environmentFile = Join-Path $repositoryRoot '.env'
 $allowedNames = [System.Collections.Generic.HashSet[string]]::new(
@@ -72,5 +94,6 @@ if (Test-Path -LiteralPath $environmentFile -PathType Leaf) {
 . (Join-Path $PSScriptRoot 'select-production-java.ps1')
 Select-ProductionJava
 [Environment]::SetEnvironmentVariable('AVALIACAO_DESEMPENHO_ENV_LOADED', '1', 'Process')
-& $env:ComSpec '/d' '/c' (Join-Path $repositoryRoot 'iniciar-prod.bat') @Arguments
+# Emit native output as host records immediately, including inside a transcript.
+& $env:ComSpec '/d' '/c' (Join-Path $repositoryRoot 'iniciar-prod.bat') @Arguments | ForEach-Object { Write-Host $_ }
 exit $LASTEXITCODE

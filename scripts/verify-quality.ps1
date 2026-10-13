@@ -80,6 +80,7 @@ Invoke-Validation 'Operacao: manifesto PM2 com ambiente minimo' {
 
 Invoke-Validation 'Operacao: regressao dos launchers DEV sem alterar processos reais' {
     & (Join-Path $PSScriptRoot 'testar-launchers-dev.ps1')
+    & (Join-Path $PSScriptRoot 'testar-launcher-java-access.ps1')
 }
 
 Invoke-Validation 'Operacao: recuperacao SQL local sem banco ou processos reais' {

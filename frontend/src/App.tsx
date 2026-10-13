@@ -26,6 +26,7 @@ import {
   X,
 } from 'lucide-react'
 import type { ApiClient } from './api/client'
+import { BuildStamp } from './ui/BuildStamp'
 import { defaultApiClient } from './api/client'
 import type { CurrentUser } from './api/contracts'
 import { AuthPageFrame } from './features/auth/AuthPageFrame'
@@ -671,6 +672,7 @@ function App({ api = defaultApiClient }: AppProps) {
           <p className="application-footer__context">
             <strong>Avaliação de Desempenho e Competências</strong>
             <span>Ambiente interno</span>
+            <BuildStamp />
           </p>
           <p className="application-footer__credit">
             Todos os direitos reservados à Rodogarcia. Desenvolvido por{' '}

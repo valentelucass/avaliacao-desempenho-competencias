@@ -102,7 +102,12 @@ function secureLocalDevelopmentServer() {
 }
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ command }) => ({
+  define: {
+    'import.meta.env.VITE_BUILD_TIMESTAMP': JSON.stringify(
+      command === 'build' ? new Date().toISOString() : '',
+    ),
+  },
   plugins: [react()],
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
@@ -118,4 +123,4 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
   },
-})
+}))

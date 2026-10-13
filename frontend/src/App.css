@@ -1862,6 +1862,7 @@ thead th {
 .application-footer__context {
   align-items: center;
   display: flex;
+  flex-wrap: wrap;
 }
 
 .application-footer__content {
@@ -1888,6 +1889,10 @@ thead th {
 .application-footer__credit {
   flex: none;
   font-size: 0.76rem;
+}
+
+.application-footer__build {
+  white-space: nowrap;
 }
 
 .workspace__content,

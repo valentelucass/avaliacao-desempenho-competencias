@@ -12,7 +12,12 @@ const probeSource = fs.readFileSync(
 );
 let cases = 0;
 
-function simulateProbe(event, code, requireExistingDaemon) {
+function simulateProbe(
+  event,
+  code,
+  requireExistingDaemon,
+  elevationExitCode = false,
+) {
   const handlers = {};
   const messages = [];
   let destroyed = false;
@@ -22,6 +27,7 @@ function simulateProbe(event, code, requireExistingDaemon) {
       "node",
       "probe",
       ...(requireExistingDaemon ? ["--require-existing"] : []),
+      ...(elevationExitCode ? ["--elevation-exit-code"] : []),
     ],
     exitCode: 0,
   };
@@ -81,6 +87,16 @@ const timedOut = simulateProbe("timeout", undefined, true);
 assert.equal(timedOut.exitCode, 1);
 assert.equal(timedOut.destroyed, true);
 cases++;
+for (const [code, expected] of [
+  ["EPERM", 5],
+  ["EACCES", 5],
+  ["ENOENT", 1],
+  ["ECONNREFUSED", 1],
+  ["EIO", 1],
+]) {
+  assert.equal(simulateProbe("error", code, true, true).exitCode, expected);
+  cases++;
+}
 const unsupportedProcess = {
   platform: "linux",
   argv: ["node", "probe", "--require-existing"],

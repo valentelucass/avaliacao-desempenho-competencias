@@ -142,6 +142,8 @@ A aplicação será executada diretamente na VM. A escolha de sistema operaciona
 
 Separar configuração de desenvolvimento, teste e produção. Nunca reutilizar dados produtivos ou credenciais reais em testes.
 
+Conforme pedido do usuário em 13/10/2026, publicação e validação do banco não devem solicitar login ou senha SQL. Usar a credencial protegida já configurada ou a autenticação do processo; se indisponível, falhar claramente sem prompt. A confirmação UAC do Windows para acessar o PM2 elevado permanece independente da autenticação SQL.
+
 Registrar auditoria de login, falha de acesso, criação, edição, envio, publicação, reabertura, exportação e operações administrativas, com usuário, horário, ação e recurso. Não registrar senha, token, comentário integral de avaliação ou dado sensível desnecessário.
 
 Manter logs estruturados, correlação por requisição e monitoramento básico de disponibilidade, erros, latência, tentativas de login e falhas de autorização. Logs e backups devem ter acesso restrito e restauração testada.

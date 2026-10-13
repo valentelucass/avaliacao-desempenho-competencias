@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     [switch]$OpenBrowser,
     [switch]$KeepRunning,
@@ -498,9 +498,6 @@ function Get-SqlServerNativeAuthenticationDirectory {
 }
 
 try {
-    if ([string]::IsNullOrWhiteSpace($env:JAVA_HOME)) {
-        throw 'JAVA_HOME não está definido.'
-    }
     if ($null -eq (Get-Command npm.cmd -ErrorAction SilentlyContinue)) {
         throw 'npm não foi encontrado no PATH.'
     }
@@ -520,6 +517,12 @@ try {
     if ($null -ne $validatedPublicPreviewOrigin) {
         $frontendPort = Get-DevTunnelForwardedPort -Origin $validatedPublicPreviewOrigin
     }
+
+    # Preserve the caller environment even when invoked directly from PowerShell.
+    Set-TemporaryEnvironment -Name 'JAVA_HOME' -Value $env:JAVA_HOME
+    Set-TemporaryEnvironment -Name 'PATH' -Value $env:PATH
+    . (Join-Path $PSScriptRoot 'select-production-java.ps1')
+    Select-ProductionJava -Mode DEV
 
     $backendArtifact = New-DevelopmentBackendArtifact
     Assert-BackendArtifactIsCurrent -Artifact $backendArtifact

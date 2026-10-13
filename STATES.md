@@ -1,5 +1,37 @@
 # Estado atual — Avaliação de Desempenho e Competências
 
+## Data da build no rodapé — ADC-BUILD-FOOTER-20261013
+
+Conferência final: suite completa do frontend aprovada, 280 testes/27 arquivos; diff e UTF-8 estrito aprovados. Graphify AST atualizado (5.063 nós/13.798 relações), sem nova extração semântica documental.
+
+Implementado em 13/10/2026, a pedido do usuário: rodapé autenticado mostra “Build dd/mm/aaaa, hh:mm:ss (Brasília)” ao lado de Ambiente interno. Vite gera o instante UTC a cada build e o incorpora no bundle; SPA formata em America/Sao_Paulo com elemento time/dateTime. Não usa relógio do navegador para simular publicação nem expõe dados do repositório/máquina. O marcador identifica o frontend carregado e muda ao carregar uma nova build publicada; não certifica conclusão do deploy/API nem substitui a página aberta automaticamente. Em dev, rótulo explícito sem falsa data de publicação. Flex-wrap no rodapé mantém acomodação em telas menores.
+
+Evidências locais: TypeScript, Prettier, Oxlint e scanner de segredos aprovados; 57 testes direcionados de App/BuildStamp aprovados. A primeira execução encontrou conversão de null para string no ambiente Vitest; ajustado o valor de dev para string vazia e incluída regressão. Duas compilações Vite reais em memória produziram marcas distintas (`2026-10-13T19:40:59.301Z` e `2026-10-13T19:41:01.136Z`), ambas presentes nos respectivos bundles, sem escrever dist. Edge/SPA real com HTTP fictício em loopback verificou timestamp do bundle, ausência de overflow do rodapé e de erros no console em 1800/375 px. Capturas locais em `artifacts/gestor-publicacao/depois-{1800,375}.png`; quebra preexistente da tabela móvel permanece fora deste ajuste. Suite de navegador existente passou a carregar a configuração Vite real.
+
+Sem alteração em backend, contratos, banco ou dependências; sem deploy, alteração de PM2 ou escrita em dist servido. Auditoria npm executada novamente retornou os oito achados preexistentes (seis altos/dois moderados), evidência `backend/target/build-footer-audit.json`; ADC-DEPS-20261013 continua bloqueando liberação integral. Testes/build Java, SBOM Java e SQL não repetidos por ausência de mudanças correspondentes. Recuperação: reverter apenas este incremento de componente/configuração/CSS/testes e publicar nova build mediante fluxo operacional.
+
+## Publicação sem prompt SQL e saída contínua — ADC-PUBLISH-OUTPUT-20261013
+
+Conferência final: 32 cenários adicionais do launcher PROD, scanner de segredos, UTF-8 estrito e exclusão Git da configuração local aprovados. Regra de ausência de prompt SQL registrada em AGENTS.md. Graphify AST atualizado (5.056 nós/13.789 relações), sem nova extração semântica documental.
+
+Corrigido em 13/10/2026. Diagnóstico elevado somente leitura identificou a tentativa iniciada pelo usuário às 16:13:50 BRT parada em `verify-production-quality.ps1`, antes do gate, aguardando Read-Host da senha SQL em console oculto. A janela desse processo foi exibida sem reiniciar a publicação e o usuário confirmou o prompt. Os PIDs dessa tentativa já não existiam na conferência posterior; nenhum processo PM2 foi encerrado por esta tarefa. Não era evidência de build em andamento: a resposta anterior que informou apenas processo ativo foi insuficiente.
+
+Removido Read-Host do wrapper de qualidade: a autenticação fica no executor de banco, que já carrega DPAPI sem interação. Gate invocado com `-NonInteractive`, preservando validações. Saída nativa do BAT agora é emitida imediatamente como registros de host; removido pipeline externo redundante, e o terminal omite o cabeçalho técnico/base64 do transcript. Regressão com cmd e PowerShell reais, subprocesso com espera e código de falha comprova log atualizado antes da saída do filho. Suite Java/UAC ampliada para 55 verificações aprovadas; autenticação de banco aprovada em 58 verificações simuladas sem prompt. Parser e diff conferidos.
+
+Usuário determinou ausência de prompt e informou uso de sa. Conferência local encontrou o runner ainda ligado a usuario_etl, além da credencial sa já protegida da mesma conta Windows/VM. Credencial existente foi convertida em memória para PSCredential/DPAPI em diretório privado; somente `database/config.production.local.bat` ignorado passou a apontar para sa e esse arquivo. Senha não exibida nem incluída em código/argumentos; conta SQL da aplicação preservada, sem criar login ou mudar senha/grants. Backup e credencial em `C:\ProgramData\Rodogarcia\AvaliacaoDesempenho\database-runner\publish-sa-b721b4952aec44a491de61851142d42b`; original DPAPI preservado. Recuperação: restaurar desse diretório apenas o backup de configuração local e reverter o incremento do código, sem restaurar pin TLS antigo.
+
+Conexão direta inicial recusada por pin TLS desatualizado. Executado o fluxo existente `executar-database.bat --validate` limitado a AVALIACAO_PROD: reconciliou o certificado público com backup do pin anterior, autenticou automaticamente com a credencial sa e concluiu código 0, 15 migrations aplicadas/zero pendentes, validações somente leitura aprovadas. Nenhum DDL/DML ou publicação da aplicação executado. Gate integral/build/auditorias não repetidos nesta correção de launcher; pendência ADC-DEPS-20261013 preservada.
+
+## Java no DEV e elevação da publicação — ADC-LAUNCHER-JAVA-UAC-20261013
+
+Conferência final: 42 cenários do modo legado também aprovados; sintaxe Node, diff e UTF-8 estrito conferidos. Graphify AST atualizado (5.055 nós/13.788 relações), sem nova extração semântica documental.
+
+Corrigido localmente em 13/10/2026 após relatos de Java 17 recusado pelo Maven no DEV e EPERM no canal PM2 em PROD. DEV agora reutiliza o seletor de JDK 21–25 antes do build, preservando um JAVA_HOME compatível ou buscando instalações locais; JAVA_HOME/PATH são restaurados ao sair, inclusive em falha. Script DEV gravado em UTF-8 com BOM para leitura correta pelo Windows PowerShell 5.1. A mensagem do seletor usa Write-Host para separar as linhas antes da saída nativa.
+
+A publicação testa acesso ao canal existente sem PM2 CLI: acesso negado retorna código específico e solicita UAC normal somente se ainda não elevado. O filho valida mesmo SID e token administrativo antes de relançar o fluxo completo; não aceita outra conta nem repete a elevação. Saída é acompanhada no terminal original via transcript em diretório TEMP com ACL privada, cujo caminho é informado. Cancelamento propaga falha; canal ausente, erro genérico ou acesso negado já elevado bloqueiam antes do build. O BAT também exige daemon existente no segundo preflight. `--check`, `--subir` e o gate integral mantidos. Não há parada manual prévia do PM2. README corrigido também quanto ao build local que o DEV já executava.
+
+Evidência: 49 verificações Java/UAC e 32 cenários PROD simulados aprovados; regressão DEV aprovada. Fixtures exercitam escolha de JDK, JRE incompleto, limites 17/21/25/26, ambiente ausente, restauração, roteamento real dos wrappers, cancelamento, códigos de saída e transmissão do log, sem UAC/SQL/PM2 reais. Nova suite integrada ao verify-quality. Seletor real encontrou o JDK 21 instalado e `mvnw -o validate` aprovou Enforcer (incluindo RequireJavaVersion) e Spotless. Parser PowerShell, Prettier e scanner de segredos aprovados. Nenhuma aplicação foi iniciada, nenhuma publicação/elevação real foi executada e não houve mudança de banco/dependências. Gate integral/build da aplicação e auditorias de dependências não repetidos nesta alteração de launchers; ADC-DEPS-20261013 permanece. Aceite do UAC real e publicação no ambiente de destino não estão comprovados por fixtures. Recuperação: reverter somente o incremento destes launchers/helpers, testes e documentação, preservando a publicação sem argumentos da tarefa anterior.
+
 ## Publicação padrão pelo BAT — ADC-LAUNCHER-DEFAULT-20261013
 
 Concluído em 13/10/2026, por pedido explícito do usuário: `iniciar-prod.bat` sem argumentos agora segue o fluxo existente de validação, build e publicação, equivalente a `--publicar`. Removido o desvio inicial para a versão instalada e acrescentada mensagem de publicação no terminal. `--subir` conserva exclusivamente a subida/recuperação da versão instalada; `--check` e `--start-prepared` preservados. README atualizado. Esta decisão substitui o padrão sem argumentos registrado em ADC-RECOVERY-20261007 abaixo.
@@ -153,6 +185,9 @@ Validação local: `iniciar-prod.bat --check` confirmou JDK, configuração exte
 Registro da preparação anterior à ativação: naquele momento o acesso ao PM2 retornava `EPERM`, o dump ainda continha as portas antigas e a troca das rotas remotas precisava ser coordenada. O estado operacional observado depois da execução pelo usuário está na seção acima. A ponte local preparada resolve a conexão com o túnel sem alterar a configuração remota; quando as rotas do Cloudflare forem atualizadas diretamente para `38080`/`28081`, as pontes poderão ser removidas com `repair-public-route.ps1 -Remove`.
 
 ## Tarefas pendentes reais
+
+
+
 
 
 - [ ] **ADC-DEPS-20261013** Avaliar e corrigir os três avisos de dependências npm preexistentes (`braces`, `postcss-selector-parser`, `source-map-js`), com atualização compatível e regressão; auditoria atual contém seis entradas altas e duas moderadas, inclusive uma alta com `--omit=dev`. Não liberar a candidata enquanto o gate de dependências estiver reprovado. Não aplicar `npm audit fix --force` sem tratar a migração incompatível do Tailwind. Publicação do ajuste GESTOR requer essa verificação e autorização operacional do alvo.

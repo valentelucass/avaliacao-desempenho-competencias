@@ -1,5 +1,6 @@
 const net = require("node:net");
 const requireExistingDaemon = process.argv.includes("--require-existing");
+const distinguishAccessDenied = process.argv.includes("--elevation-exit-code");
 
 // Connect only to the existing daemon; do not spawn or restart PM2.
 if (process.platform === "win32") {
@@ -14,6 +15,10 @@ if (process.platform === "win32") {
         );
         process.exitCode = 1;
       }
+      return;
+    }
+    if (distinguishAccessDenied && ["EPERM", "EACCES"].includes(error.code)) {
+      process.exitCode = 5;
       return;
     }
     console.error(

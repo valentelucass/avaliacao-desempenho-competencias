@@ -66,7 +66,7 @@ if errorlevel 1 exit /b 1
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\validate-production-runtime.ps1"
 if errorlevel 1 exit /b 1
 
-node "%~dp0scripts\check-pm2-access.cjs"
+node "%~dp0scripts\check-pm2-access.cjs" --require-existing
 if errorlevel 1 exit /b 1
 
 if not exist "frontend\package-lock.json" (
@@ -102,7 +102,7 @@ if not exist "%ADC_DATABASE_CONFIG%" (
 )
 call "%ADC_DATABASE_CONFIG%"
 if errorlevel 1 exit /b 1
-powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\verify-production-quality.ps1" -BackendBuildDirectory "%BACKEND_RELEASE_DIRECTORY%"
+powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "%~dp0scripts\verify-production-quality.ps1" -BackendBuildDirectory "%BACKEND_RELEASE_DIRECTORY%"
 if errorlevel 1 (
   echo [Avaliacao PROD] Pre-flight falhou; nenhum processo PM2 foi alterado.
   exit /b 1

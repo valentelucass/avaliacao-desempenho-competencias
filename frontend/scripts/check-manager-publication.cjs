@@ -8,19 +8,21 @@ const { spawn } = require('node:child_process')
 
 async function main() {
   const { build } = await import('vite')
-  const { default: react } = await import('@vitejs/plugin-react')
   const root = path.resolve(__dirname, '..')
   process.chdir(root)
   const before = process.argv.includes('--before')
   const baseline = path.join(root, '..', 'artifacts', 'gestor-publicacao', 'App.before.tsx')
+  let buildTimestamp
   const bundle = await build({
-    configFile: false,
+    configFile: path.join(root, 'vite.config.ts'),
     root,
     plugins: [
-      react(),
       {
         name: 'baseline-app',
         enforce: 'pre',
+        configResolved(config) {
+          buildTimestamp = JSON.parse(config.define['import.meta.env.VITE_BUILD_TIMESTAMP'])
+        },
         load(id) {
           if (before && id === path.join(root, 'src', 'App.tsx').replaceAll('\\', '/'))
             return fs.readFileSync(baseline, 'utf8')
@@ -239,6 +241,20 @@ async function main() {
       const button = `[...document.querySelectorAll('button')].find(b=>b.textContent.trim()==='Publicar avaliação')`
       assert.equal(await evaluate(`!!(${button})`), !before)
       assert.equal(await evaluate('document.documentElement.scrollWidth<=window.innerWidth'), true)
+      if (!before) {
+        assert.equal(
+          await evaluate(`document.querySelector('.application-footer__build time')?.dateTime`),
+          buildTimestamp,
+        )
+        assert.equal(
+          await evaluate(`(() => {
+            const stamp = document.querySelector('.application-footer__build');
+            const rect = stamp.getBoundingClientRect();
+            return stamp.textContent.includes('(Brasília)') && rect.left >= 0 && rect.right <= innerWidth;
+          })()`),
+          true,
+        )
+      }
       const screenshot = await send('Page.captureScreenshot', { format: 'png' })
       fs.writeFileSync(
         path.join(output, `${before ? 'antes' : 'depois'}-${width}.png`),

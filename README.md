@@ -6,6 +6,12 @@ Aplicação interna para avaliações de colaboradores, com cálculo no servidor
 
 Execute `iniciar-prod.bat` sem argumentos para validar, compilar e publicar as atualizações de código. O comando mostra as etapas no terminal e mantém o gate de qualidade antes da publicação. `--publicar` continua aceito como equivalente. Ao terminar com sucesso, acesse https://formulario.rodogarcia.com.br/.
 
+O rodapé interno exibe a data/hora da build carregada, em horário de Brasília, ao lado de “Ambiente interno”. Cada build de produção gera automaticamente uma nova marca; após a publicação, recarregue a página para conferir a versão recebida. A marca identifica a compilação do frontend, não a hora de abertura da página nem a conclusão do deploy da API. Em desenvolvimento, aparece “Build de desenvolvimento”.
+
+Não é necessário parar a Avaliação no PM2 antes. Se o gerenciador existente recusar acesso por permissão, o launcher solicita o UAC da mesma conta e acompanha a saída no terminal original, com log privado no caminho informado. Cancelar o UAC interrompe a publicação. PM2 ausente ou ainda inacessível após elevação bloqueia o fluxo antes do build; o launcher não tenta criar outro gerenciador. `--check` permanece somente diagnóstico, sem solicitar elevação.
+
+A publicação não solicita login ou senha SQL. A validação do banco usa a credencial DPAPI apontada por `ADC_DATABASE_CREDENTIAL_FILE` no arquivo local de produção (ou autenticação já configurada no processo). Credencial ausente ou inválida encerra com erro, sem prompt. A identidade operacional do runner é independente da conta da API; senhas não ficam no BAT nem no Git.
+
 Para iniciar somente a versão já instalada, use `iniciar-prod.bat --subir` e confirme o UAC do Windows, quando solicitado. Esse modo confere o banco, renova a confiança TLS privada quando o certificado local muda e inicia somente os processos da Avaliação que estiverem parados; processos saudáveis são preservados.
 
 Na VM atual, a tarefa `Rodogarcia-Avaliacao-SQL-Recovery` verifica mudanças do processo SQL a cada minuto e recupera a conexão da API. Ela aguarda o banco voltar e não reinicia o SQL. Se a API foi parada pelo operador, use `iniciar-prod.bat --subir` para subi-la sem publicar código novo. Recibos ficam em `C:\ProgramData\Rodogarcia\AvaliacaoDesempenho\production\sql-recovery`; `REVIEW_PARTIAL_RECOVERY` exige revisão do recibo antes de outra recuperação automática.
@@ -33,7 +39,7 @@ Em 2026-08-26, os bancos canônicos `AVALIACAO_DEV` e `AVALIACAO_PROD` foram rec
 
 ## Pré-requisitos de desenvolvimento
 
-- JDK 21 ou superior; a VM está padronizada no Temurin JDK 25.0.2.
+- JDK 21 a 25. Os launchers DEV e PROD preservam `JAVA_HOME` quando compatível; caso contrário, procuram um JDK instalado nas pastas Eclipse Adoptium/Java do usuário e de Program Files. A seleção vale somente para o processo, sem alterar a configuração global do Windows.
 - Node.js 24.18.0 e npm 11.16.0.
 - Acesso à internet somente para restaurar/auditar dependências de desenvolvimento.
 
@@ -88,7 +94,7 @@ No alvo local atual, `--validate` deve ficar verde porque o banco já está reco
 iniciar-dev.bat
 ```
 
-Este é o único launcher canônico de desenvolvimento e é separado de `iniciar-prod.bat`. Ele inicia a SPA e a API somente em loopback com HTTPS local, configura o proxy Vite de `/api` e usa autenticação integrada da identidade Windows do processo para o SQL Server. Cada nova execução encerra somente os processos Java/Vite identificados como pertencentes a este repositório e os reinicia nas portas fixas `5181` e `5180`; se uma porta pertencer a outro processo, falha sem encerrá-lo. As portas privadas de produção `38080` e `28081` não são usadas pelo modo de desenvolvimento. O terminal permanece em execução enquanto o modo local estiver ativo; use `Ctrl+C` para encerrar somente a API e o front-end iniciados por aquele terminal. O launcher não compila a API nem instala dependências: ele exige um JAR atual em `backend/target` e dependências atuais em `frontend/node_modules`, preparados pelo fluxo de produção autorizado. Por padrão, o navegador não é aberto; para solicitá-lo explicitamente, use `iniciar-dev.bat --open-browser`.
+Este é o único launcher canônico de desenvolvimento e é separado de `iniciar-prod.bat`. Ele inicia a SPA e a API somente em loopback com HTTPS local, configura o proxy Vite de `/api` e usa autenticação integrada da identidade Windows do processo para o SQL Server. Cada nova execução encerra somente os processos Java/Vite identificados como pertencentes a este repositório e os reinicia nas portas fixas `5181` e `5180`; se uma porta pertencer a outro processo, falha sem encerrá-lo. As portas privadas de produção `38080` e `28081` não são usadas pelo modo de desenvolvimento. O terminal permanece em execução enquanto o modo local estiver ativo; use `Ctrl+C` para encerrar somente a API e o front-end iniciados por aquele terminal. O launcher seleciona um JDK compatível antes de compilar a API em `backend/target/dev-local-releases`; ele não instala dependências do frontend e exige uma instalação atual em `frontend/node_modules`. Por padrão, o navegador não é aberto; para solicitá-lo explicitamente, use `iniciar-dev.bat --open-browser`.
 
 `ecosystem.config.cjs` é o manifesto PM2 de produção. Ele não lê `.env`, não contém credenciais e só aceita caminhos, portas, JAR, executáveis e diretório de logs fornecidos pelo `iniciar-prod.bat` após o preflight. O launcher o utiliza para recriar individualmente apenas `avaliacao-desempenho-backend-prod` e `avaliacao-desempenho-frontend-prod` com reinício automático e backoff; não execute esse manifesto manualmente fora do launcher.
 
