@@ -272,6 +272,66 @@ function Get-NetTCPConnection {
       );
       cases++;
     }
+    fs.writeFileSync(
+      path.join(fixtureRoot, "powershell.cmd"),
+      "@echo off\r\necho helper-mock:%~nx5 %6\r\nexit /b 17\r\n",
+    );
+    // Stop at the first helper: no build, SQL, UAC or real PM2 is executed.
+    for (const scenario of [
+      { args: "", loaded: "", helper: "run-production-from-env.ps1" },
+      { args: "--publicar", loaded: "", helper: "run-production-from-env.ps1" },
+      { args: "", loaded: "1", helper: "run-backend.ps1 -ValidateOnly" },
+      {
+        args: "--publicar",
+        loaded: "1",
+        helper: "run-backend.ps1 -ValidateOnly",
+      },
+      { args: "--subir", loaded: "", helper: "start-installed-production.ps1" },
+      {
+        args: "--SUBIR",
+        loaded: "1",
+        helper: "start-installed-production.ps1",
+      },
+      { args: "--invalido", loaded: "1", exit: 2 },
+      { args: "--subir extra", loaded: "1", exit: 2 },
+    ]) {
+      const result = spawnSync(
+        process.env.ComSpec,
+        ["/d", "/c", `iniciar-prod.bat ${scenario.args}`],
+        {
+          cwd: fixtureRoot,
+          encoding: "utf8",
+          windowsHide: true,
+          env: {
+            ...process.env,
+            PATH: fixtureRoot + ";" + process.env.PATH,
+            AVALIACAO_DESEMPENHO_ENV_LOADED: scenario.loaded,
+          },
+        },
+      );
+      assert.ifError(result.error);
+      assert.equal(
+        result.status,
+        scenario.exit ?? 17,
+        result.stdout + result.stderr,
+      );
+      if (scenario.helper) {
+        assert.ok(
+          result.stdout.includes(`helper-mock:${scenario.helper}`),
+          result.stdout,
+        );
+      } else {
+        assert.doesNotMatch(result.stdout, /helper-mock:/);
+      }
+      if (scenario.helper === "run-backend.ps1 -ValidateOnly") {
+        assert.match(result.stdout, /Publicando atualizacoes/);
+      }
+      assert.equal(
+        fs.existsSync(path.join(fixtureRoot, "unexpected-cli.txt")),
+        false,
+      );
+      cases++;
+    }
   } finally {
     // Remove only the fixture created by this test, after validating its boundary.
     const fixturePath = fs.realpathSync(fixtureRoot);

@@ -2,7 +2,6 @@
 setlocal EnableExtensions DisableDelayedExpansion
 cd /d "%~dp0"
 
-if "%~1"=="" goto :start_installed
 if /i "%~1"=="--subir" goto :start_installed
 if /i "%~1"=="--start-prepared" goto :start_prepared_only
 
@@ -36,10 +35,12 @@ if /i "%~1"=="--check" (
 )
 
 echo Uso: %~nx0 [--subir ^| --publicar ^| --check ^| --start-prepared]
+echo Sem argumentos: validar, compilar e publicar as atualizacoes.
 exit /b 2
 
 :arguments_ok
 if defined CHECK_ONLY goto :check_prerequisites_only
+echo [Avaliacao PROD] Publicando atualizacoes: validacao, build e reinicio da Avaliacao...
 
 where powershell >nul 2>&1
 if errorlevel 1 (

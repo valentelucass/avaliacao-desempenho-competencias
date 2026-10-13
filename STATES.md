@@ -1,5 +1,11 @@
 # Estado atual — Avaliação de Desempenho e Competências
 
+## Publicação padrão pelo BAT — ADC-LAUNCHER-DEFAULT-20261013
+
+Concluído em 13/10/2026, por pedido explícito do usuário: `iniciar-prod.bat` sem argumentos agora segue o fluxo existente de validação, build e publicação, equivalente a `--publicar`. Removido o desvio inicial para a versão instalada e acrescentada mensagem de publicação no terminal. `--subir` conserva exclusivamente a subida/recuperação da versão instalada; `--check` e `--start-prepared` preservados. README atualizado. Esta decisão substitui o padrão sem argumentos registrado em ADC-RECOVERY-20261007 abaixo.
+
+Evidência: 27 cenários simulados do launcher PROD e 42 cenários do modo legado aprovados, sem SQL, UAC real ou PM2. Os oito cenários novos executam uma cópia isolada do BAT e interrompem no primeiro helper fictício, verificando carregamento do ambiente, rota padrão/alias de publicação, subida instalada e rejeição de argumentos inválidos. Sintaxe Node, Prettier, scanner de segredos, diff, UTF-8 estrito e CRLF do BAT aprovados. `graphify update .` concluído: 5.043 nós/13.773 relações; atualização AST, sem nova extração semântica dos documentos. Sem mudança em API/SPA, dependências ou schema; build integral da aplicação, auditorias de dependências e banco não repetidos nesta mudança de roteamento. Nenhuma publicação real foi executada; o gate de publicação continua obrigatório e as pendências de ADC-DEPS-20261013 permanecem. Recuperação: reverter somente este incremento do BAT e da documentação.
+
 ## Higiene do Git — ADC-GITIGNORE-20261013
 
 Concluído em 13/10/2026, a pedido do usuário: `.gitignore` passou a cobrir `.agents/`, configurações locais de agentes/MCP, `artifacts/`, caches, relatórios de teste e resíduos temporários/de editor. Regras repetidas de Codex/Graphify consolidadas. Nenhum arquivo apagado ou retirado do índice; capturas antes/depois continuam disponíveis localmente. `git check-ignore` confirmou as exclusões e a preservação de fontes, migrations, AGENTS.md, STATES.md, `.env.example`, scripts, documentação e lockfile. `git ls-files -ci --exclude-standard` não encontrou arquivos rastreados cobertos pelas regras. Scanner de segredos e diff aprovados. Sem mudança na aplicação ou dependências; builds/testes da aplicação não repetidos nesta alteração de configuração Git. Recuperação: reverter somente este incremento do `.gitignore`.
@@ -147,6 +153,7 @@ Validação local: `iniciar-prod.bat --check` confirmou JDK, configuração exte
 Registro da preparação anterior à ativação: naquele momento o acesso ao PM2 retornava `EPERM`, o dump ainda continha as portas antigas e a troca das rotas remotas precisava ser coordenada. O estado operacional observado depois da execução pelo usuário está na seção acima. A ponte local preparada resolve a conexão com o túnel sem alterar a configuração remota; quando as rotas do Cloudflare forem atualizadas diretamente para `38080`/`28081`, as pontes poderão ser removidas com `repair-public-route.ps1 -Remove`.
 
 ## Tarefas pendentes reais
+
 
 - [ ] **ADC-DEPS-20261013** Avaliar e corrigir os três avisos de dependências npm preexistentes (`braces`, `postcss-selector-parser`, `source-map-js`), com atualização compatível e regressão; auditoria atual contém seis entradas altas e duas moderadas, inclusive uma alta com `--omit=dev`. Não liberar a candidata enquanto o gate de dependências estiver reprovado. Não aplicar `npm audit fix --force` sem tratar a migração incompatível do Tailwind. Publicação do ajuste GESTOR requer essa verificação e autorização operacional do alvo.
 
