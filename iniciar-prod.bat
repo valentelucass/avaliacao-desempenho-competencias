@@ -221,21 +221,40 @@ exit /b 0
 :install_frontend_dependencies
 echo [Avaliacao PROD] Instalando dependencias exatas do front-end...
 pushd frontend
-call npm ci
-set "NPM_CI_EXIT=%ERRORLEVEL%"
+rem Valida o lock sem apagar modulos nativos carregados pelo preview ativo.
+call npm ci --dry-run --ignore-scripts
+if errorlevel 1 (
+  popd
+  echo [Avaliacao PROD] Lockfile invalido; instalacao e publicacao interrompidas.
+  exit /b 1
+)
+call npm install --no-save --include=dev
+set "NPM_INSTALL_EXIT=%ERRORLEVEL%"
+if not "%NPM_INSTALL_EXIT%"=="0" (
+  popd
+  echo [Avaliacao PROD] npm install falhou; o gate e os processos PM2 nao serao executados.
+  exit /b 1
+)
+call npm ls --all >nul
+set "NPM_TREE_EXIT=%ERRORLEVEL%"
 popd
-if not "%NPM_CI_EXIT%"=="0" (
-  echo [Avaliacao PROD] npm ci falhou; o gate e os processos PM2 nao serao executados.
+if not "%NPM_TREE_EXIT%"=="0" (
+  echo [Avaliacao PROD] Arvore de dependencias invalida; publicacao interrompida.
   exit /b 1
 )
 call :assert_frontend_dependency_files
 if errorlevel 1 (
   exit /b 1
 )
+set "FRONTEND_EXPECTED_HASH=%FRONTEND_LOCK_HASH%"
 set "FRONTEND_LOCK_HASH="
 for /f "skip=1 tokens=*" %%H in ('certutil -hashfile "frontend\package-lock.json" SHA256') do if not defined FRONTEND_LOCK_HASH set "FRONTEND_LOCK_HASH=%%H"
 set "FRONTEND_LOCK_HASH=%FRONTEND_LOCK_HASH: =%"
 if not defined FRONTEND_LOCK_HASH (
+  exit /b 1
+)
+if /i not "%FRONTEND_LOCK_HASH%"=="%FRONTEND_EXPECTED_HASH%" (
+  echo [Avaliacao PROD] O lockfile mudou durante a instalacao; publicacao interrompida.
   exit /b 1
 )
 > "frontend\node_modules\.adc-package-lock.sha256" echo %FRONTEND_LOCK_HASH%

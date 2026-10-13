@@ -6,6 +6,8 @@ Aplicação interna para avaliações de colaboradores, com cálculo no servidor
 
 Execute `iniciar-prod.bat` sem argumentos para validar, compilar e publicar as atualizações de código. O comando mostra as etapas no terminal e mantém o gate de qualidade antes da publicação. `--publicar` continua aceito como equivalente. Ao terminar com sucesso, acesse https://formulario.rodogarcia.com.br/.
 
+Na atualização das dependências, o BAT valida o lockfile com `npm ci --dry-run --ignore-scripts` e instala suas versões com `npm install --no-save --include=dev`, conferindo a árvore e o hash do lockfile ao terminar. Isso evita a limpeza integral de `node_modules` que falha no Windows quando o preview mantém um módulo nativo aberto. Falhas de instalação ou divergência do lockfile interrompem o fluxo antes do gate e do reinício.
+
 O rodapé interno exibe a data/hora da build carregada, em horário de Brasília, ao lado de “Ambiente interno”. Cada build de produção gera automaticamente uma nova marca; após a publicação, recarregue a página para conferir a versão recebida. A marca identifica a compilação do frontend, não a hora de abertura da página nem a conclusão do deploy da API. Em desenvolvimento, aparece “Build de desenvolvimento”.
 
 Não é necessário parar a Avaliação no PM2 antes. Se o gerenciador existente recusar acesso por permissão, o launcher solicita o UAC da mesma conta e acompanha a saída no terminal original, com log privado no caminho informado. Cancelar o UAC interrompe a publicação. PM2 ausente ou ainda inacessível após elevação bloqueia o fluxo antes do build; o launcher não tenta criar outro gerenciador. `--check` permanece somente diagnóstico, sem solicitar elevação.
@@ -25,6 +27,8 @@ O código-fonte implementa autenticação local, administração de acesso, cada
 Em 2026-08-26, os bancos canônicos `AVALIACAO_DEV` e `AVALIACAO_PROD` foram reconciliados até `V0010`; a validação somente leitura confirmou o catálogo inicial, sem ciclos, lotações, vínculos, atribuições ou avaliações. Na mesma evidência, a verificação anônima de `https://formulario.rodogarcia.com.br/` e de `GET /api/v1/auth/csrf` retornou `200`, com os dois processos PM2 do projeto online. A fonte já contém a `V0011`, que restringe a autoridade do Administrador e normaliza contas administrativas legadas para perfil único, preservando o histórico; ela permanece pendente de aplicação autorizada nos alvos canônicos. Isso confirma a disponibilidade observada naquele momento, não um aceite de negócio, uma jornada autenticada de ponta a ponta, autorização para alterar produção ou o uso de dados reais. As flags persistidas continuam desabilitadas por padrão na configuração versionada; qualquer ativação, alteração de banco ou publicação posterior exige alvo, autorização e validação próprios. Veja [Configuração externa da aplicação](docs/operations/configuracao-externa-da-aplicacao.md) antes de qualquer operação em outro alvo.
 
 ## Estrutura
+
+O Tailwind 4 usa `@tailwindcss/postcss` e carrega `tailwind.config.ts` explicitamente em `visual-skin.css` para compilar os tokens usados por `@apply`. Essa folha não importa Preflight ou utilities, preservando os estilos globais da aplicação. A migração e seus ensaios estão registrados em ADC-DEPS-20261013 no `STATES.md`.
 
 ```text
 .

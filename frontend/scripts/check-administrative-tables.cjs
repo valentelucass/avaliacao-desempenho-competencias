@@ -1,11 +1,12 @@
 // Chamado pelo ensaio Edge existente. Componentes reais, sem API ou dados reais.
 const assert = require('node:assert/strict')
 const fs = require('node:fs')
+const path = require('node:path')
 const Module = require('node:module')
 const React = require('react')
 const { createRoot } = require('react-dom/client')
 const postcss = require('postcss')
-const tailwind = require('tailwindcss')
+const tailwind = require('@tailwindcss/postcss')
 
 const variants = [
   [
@@ -138,13 +139,13 @@ module.exports = async function checkAdministrativeTables({ send, frameId, css }
   }
 
   // Comparar controles fora das tabelas contra as mesmas folhas da SPA sem o pacote.
-  const legacySource = ['index.css', 'App.css', 'visual-skin.css']
-    .map((name) => fs.readFileSync('src/' + name, 'utf8'))
-    .join('\n')
-  const legacy = await postcss([tailwind(require('../tailwind.config.ts').default)]).process(
-    legacySource,
-    { from: undefined },
+  const legacySheets = await Promise.all(
+    ['index.css', 'App.css', 'visual-skin.css'].map(async (name) => {
+      const from = path.resolve(__dirname, '../src', name)
+      return postcss([tailwind()]).process(fs.readFileSync(from, 'utf8'), { from })
+    }),
   )
+  const legacy = { css: legacySheets.map((sheet) => sheet.css).join('\n') }
   const probes =
     '<div id="outside"><h2>Controle existente</h2><button class="button">Ação existente</button><input aria-label="Campo existente" value="Teste"><label class="answer-option"><input type="radio" disabled>Resposta existente</label></div>'
   const load = async (styles, content, theme) => {

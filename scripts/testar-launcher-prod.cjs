@@ -357,6 +357,107 @@ function Get-NetTCPConnection {
     fs.rmSync(fixturePath, { recursive: true });
   }
 }
+if (process.platform === "win32") {
+  const fixtureRoot = fs.mkdtempSync(
+    path.join(os.tmpdir(), "adc-dependencies-"),
+  );
+  try {
+    const source = fs.readFileSync(
+      path.join(repositoryRoot, "iniciar-prod.bat"),
+      "utf8",
+    );
+    const section = source.slice(
+      source.indexOf("\n:ensure_frontend_dependencies\r\n") + 1,
+      source.indexOf("\n:resolve_node_executable\r\n") + 1,
+    );
+    assert.ok(section.includes("npm ci --dry-run --ignore-scripts"));
+    fs.writeFileSync(
+      path.join(fixtureRoot, "install-fixture.bat"),
+      "@echo off\r\nsetlocal\r\ncall :ensure_frontend_dependencies\r\nexit /b %ERRORLEVEL%\r\n" +
+        section,
+    );
+    fs.writeFileSync(
+      path.join(fixtureRoot, "npm.cmd"),
+      [
+        "@echo off",
+        'echo %*>>"%~dp0calls.txt"',
+        'if "%1"=="%ADC_FAIL_COMMAND%" exit /b 23',
+        'if "%1"=="install" if "%ADC_MUTATE_LOCK%"=="1" echo changed>>package-lock.json',
+        "exit /b 0",
+        "",
+      ].join("\r\n"),
+    );
+    const frontend = path.join(fixtureRoot, "frontend");
+    const marker = path.join(frontend, "node_modules/.adc-package-lock.sha256");
+    for (const relative of [
+      ".package-lock.json",
+      ".bin/prettier.cmd",
+      "prettier/package.json",
+      "vite/bin/vite.js",
+    ]) {
+      const file = path.join(frontend, "node_modules", relative);
+      fs.mkdirSync(path.dirname(file), { recursive: true });
+      fs.writeFileSync(file, "fixture");
+    }
+    for (const scenario of [
+      { fail: "ci" },
+      { fail: "install" },
+      { fail: "ls" },
+      { mutate: true },
+      {},
+    ]) {
+      fs.writeFileSync(path.join(frontend, "package-lock.json"), "{}");
+      fs.rmSync(marker, { force: true });
+      fs.writeFileSync(path.join(fixtureRoot, "calls.txt"), "");
+      const run = () =>
+        spawnSync(process.env.ComSpec, ["/d", "/c", "install-fixture.bat"], {
+          cwd: fixtureRoot,
+          encoding: "utf8",
+          windowsHide: true,
+          env: {
+            ...process.env,
+            PATH: fixtureRoot + ";" + process.env.PATH,
+            ADC_FAIL_COMMAND: scenario.fail ?? "",
+            ADC_MUTATE_LOCK: scenario.mutate ? "1" : "0",
+          },
+        });
+      const result = run();
+      assert.ifError(result.error);
+      const success = !scenario.fail && !scenario.mutate;
+      assert.equal(
+        result.status,
+        success ? 0 : 1,
+        result.stdout + result.stderr,
+      );
+      assert.equal(fs.existsSync(marker), success);
+      const calls = fs
+        .readFileSync(path.join(fixtureRoot, "calls.txt"), "utf8")
+        .trim()
+        .split(/\r?\n/);
+      assert.equal(calls[0], "ci --dry-run --ignore-scripts");
+      if (scenario.fail === "ci") assert.equal(calls.length, 1);
+      else assert.equal(calls[1], "install --no-save --include=dev");
+      if (scenario.fail === "install") assert.equal(calls.length, 2);
+      cases++;
+      if (success) {
+        assert.equal(run().status, 0);
+        assert.equal(
+          fs
+            .readFileSync(path.join(fixtureRoot, "calls.txt"), "utf8")
+            .trim()
+            .split(/\r?\n/).length,
+          3,
+        );
+        cases++;
+      }
+    }
+  } finally {
+    const resolved = fs.realpathSync(fixtureRoot);
+    assert.ok(resolved.startsWith(fs.realpathSync(os.tmpdir()) + path.sep));
+    assert.ok(path.basename(resolved).startsWith("adc-dependencies-"));
+    fs.rmSync(resolved, { recursive: true });
+  }
+}
 console.log(
   `Launcher PROD validado: ${cases} cenarios simulados, sem SQL ou PM2 real.`,
 );

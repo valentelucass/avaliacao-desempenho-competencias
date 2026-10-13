@@ -5,11 +5,8 @@ export default {
   // detector do Tailwind emitir classes de layout que a SPA não utiliza.
   content: ['./index.html', './src/**/*.{ts,tsx}'],
   darkMode: ['class', '[data-theme="dark"]'],
-  corePlugins: {
-    // A SPA já possui estilos globais e HTML acessível. Preflight alteraria
-    // controles e margens existentes, portanto Tailwind atua só como compilador.
-    preflight: false,
-  },
+  // No Tailwind 4, visual-skin.css carrega apenas esta configuração, sem
+  // importar Preflight ou utilities: os estilos globais existentes prevalecem.
   theme: {
     extend: {
       borderRadius: {

@@ -1,5 +1,31 @@
 # Estado atual — Avaliação de Desempenho e Competências
 
+## Publicação confirmada — ADC-PUBLISH-20261013
+
+Reexecução manual confirmada em 13/10/2026: usuário executou o BAT e apresentou término às 17:42:49 BRT. Conferência HTTPS somente leitura retornou 200 no frontend e no endpoint público de CSRF da API; index e bundle JS públicos correspondem por SHA-256 ao dist local. Nova marca entregue: **Build 13/10/2026, 17:42:08 (Brasília)**. Os caracteres corrompidos na tabela PM2 do terminal são problema de apresentação/encoding e não impediram essa publicação. Nenhum novo deploy ou reinício foi executado pela conferência.
+
+Concluída em 13/10/2026, após autorização explícita do usuário e confirmação do UAC. `iniciar-prod.bat` executado sem argumentos; gate integral aprovado, saída final 0. API publicada a partir de `backend/target/releases/b98804ce0f8740b4a0641cc0e333149f/`; frontend publicado com **Build 13/10/2026, 17:18:50 (Brasília)**, instante UTC `2026-10-13T20:18:50.159Z`. A candidata inclui permissão de publicação GESTOR, marcador de build e correções de dependências/launchers.
+
+Evidência real às 17:19:46 BRT: frontend HTTPS e endpoint público `/api/v1/auth/csrf` retornaram 200; SHA-256 do index e dos dois assets JS/CSS públicos corresponde exatamente à build final local. CSP, HSTS, X-Content-Type-Options e X-Frame-Options presentes. Ambos os processos `avaliacao-api-28081` e `avaliacao-front-38080` online, com PIDs novos; API aponta para novo release. Validador do contrato PM2 aprovou os dois processos, ambiente mínimo e logs. Snapshots antes/depois confirmam que PID, status e contador de reinícios dos demais aplicativos não mudaram.
+
+Gate: 302 testes Java aprovados/17 ignorados (319 totais), 280 testes frontend/27 arquivos aprovados, builds, formatter/lint, scanner de segredos, verificações operacionais, Edge completo, auditorias Java/SBOM e npm aprovados. SQL PROD validado pelo fluxo somente leitura, sem prompt de senha; nenhuma migration aplicada nem DDL/DML de negócio executado por esta publicação. A jornada autenticada com conta real e o aceite visual/funcional ficam para o teste manual do usuário; não foi criada ou publicada avaliação real para verificar implantação.
+
+Evidências sanitizadas: `artifacts/dependency-upgrade/live-verification.json` e `runtime-verification.json`. Log integral e snapshots privados: `C:\Users\suporte\AppData\Local\Temp\3\adc-deploy-2a79ec5c6db24b2498fb903c955460ef\publication-final.log`, `applications-{before,after}.json`, `other-applications-{before,after}.json`; saída em `exit-code-final.txt`. Recuperação preservada em `dist-before` e definição anterior dos dois processos; JAR anterior mantido em disco. Nenhum rollback necessário. Graphify AST atualizado (5.067 nós/13.803 relações), sem nova extração semântica documental.
+
+## Correção da auditoria e publicação — ADC-DEPS-20261013
+
+Andamento operacional posterior: usuário informou que o UAC inicial não apareceu. Confirmados sessão RDP 3/suporte, desktop WinSta0/Default e serviço Appinfo ativo; nova chamada ao PowerShell absoluto do sistema elevou corretamente. Supervisor privado teve leitura JSON do PM2 corrigida para Node (PowerShell 5.1 recusa chaves username/USERNAME), com fixture aprovada. Cópia das definições dos dois processos finalmente preservada. BAT interrompeu antes do gate porque `npm ci` tentou apagar a DLL rolldown carregada pelo preview; npm log `2026-10-13T20_04_52_903Z-debug-0.log` confirma EPERM no unlink. Instalação recuperada com `npm ci --dry-run --ignore-scripts` seguido de `npm install --no-save --include=dev`: árvore válida, lockfile inalterado e zero achados. Npm preservou DLL antiga em diretório temporário por estar carregada; nenhum processo foi encerrado para removê-la.
+
+Launcher atualizado com essa sequência, validação `npm ls --all` e comparação SHA-256 antes de gravar marcador. Regressões: 38 cenários PROD aprovados (seis novos para lock inválido, falha de instalação, árvore inválida, lock alterado, sucesso e reexecução sem reinstalar). Nenhuma etapa de segurança removida. Próxima tentativa executará gate integral e confirmação pública antes de declarar implantação.
+
+Correção local concluída em 13/10/2026. Usuário autorizou corrigir e publicar na VM atual, avisando somente após confirmação real. Alvos: `avaliacao-api-28081`, `avaliacao-front-38080` e https://formulario.rodogarcia.com.br/. Publicação prevista pelo launcher existente, com breve reinício apenas desses processos e validação SQL somente leitura. Recuperação: dist anterior copiado para diretório privado antes do gate; supervisor preparado para preservar a definição atual dos dois processos após elevação. JARs anteriores permanecem em disco. Não restaurar o dump global nem reiniciar outros aplicativos.
+
+Tailwind migrado de 3.4.17 para 4.3.3 com `@tailwindcss/postcss` 4.3.3 e configuração explícita na folha visual, sem importar Preflight ou utilities. Removida opção corePlugins incompatível; ensaio administrativo adaptado ao plugin novo, resolvendo cada folha a partir de seu arquivo real. `source-map-js` atualizado para 1.2.2 no lockfile. Não há overrides, exceções de auditoria ou uso de --force. A cadeia anterior de braces não possui versão corrigida ([aviso](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm)); migração segue a [integração PostCSS oficial](https://tailwindcss.com/docs/upgrade-guide). O parser vulnerável deixou a árvore junto com Tailwind 3.
+
+Evidências: auditorias npm completa e omit=dev com zero vulnerabilidades; 280 testes/27 arquivos aprovados; TypeScript, Prettier, Oxlint, scanner de segredos e diff aprovados. Build Vite em memória e Edge com publicação simulada pelo gestor aprovados em 1800/375 px. Suite completa Edge de impressão A4, tabelas, botões, sidebar, filtros, ciclos, importações e recuperação aprovada em temas claro/escuro e larguras de 320 a 1440 px. Capturas revisadas em `artifacts/gestor-publicacao/`; logs e auditorias em `artifacts/dependency-upgrade/`. Graphify AST atualizado: 5.067 nós/13.803 relações; sem extração semântica documental adicional.
+
+**Registro da primeira tentativa, superada pela publicação confirmada acima:** PM2 confirmou necessidade de elevação (probe 5). Start-Process RunAs retornou “operação cancelada pelo usuário” no UAC; o usuário posteriormente informou que a janela não apareceu. Supervisor/BAT/gate não chegaram a iniciar nessa tentativa e nenhum processo PM2, dist servido ou banco foi alterado por ela. Backup privado de dist preservado antes das novas tentativas. Elevação, snapshots e verificações públicas foram concluídos posteriormente, conforme a seção de publicação confirmada.
+
 ## Data da build no rodapé — ADC-BUILD-FOOTER-20261013
 
 Conferência final: suite completa do frontend aprovada, 280 testes/27 arquivos; diff e UTF-8 estrito aprovados. Graphify AST atualizado (5.063 nós/13.798 relações), sem nova extração semântica documental.
@@ -190,7 +216,8 @@ Registro da preparação anterior à ativação: naquele momento o acesso ao PM2
 
 
 
-- [ ] **ADC-DEPS-20261013** Avaliar e corrigir os três avisos de dependências npm preexistentes (`braces`, `postcss-selector-parser`, `source-map-js`), com atualização compatível e regressão; auditoria atual contém seis entradas altas e duas moderadas, inclusive uma alta com `--omit=dev`. Não liberar a candidata enquanto o gate de dependências estiver reprovado. Não aplicar `npm audit fix --force` sem tratar a migração incompatível do Tailwind. Publicação do ajuste GESTOR requer essa verificação e autorização operacional do alvo.
+- [x] **ADC-DEPS-20261013** Corrigidos os três avisos npm por migração integrada ao Tailwind 4 e atualização de source-map-js; auditorias completa/omit=dev com zero achados, 280 testes e regressões Edge aprovados. Evidências e limitações na seção do topo.
+- [x] **ADC-PUBLISH-20261013** Candidata publicada pelo BAT sem argumentos, gate integral e validação real aprovados; frontend/API HTTP 200, build 13/10/2026 17:18:50 BRT confirmada por hashes, dois processos online e demais aplicativos preservados. Aceite autenticado manual pelo usuário ainda não executado.
 
 - [x] **ADC-RECOVERY-20261007** Conexão restaurada, subida simples e monitor específico ativados e verificados; detalhes e limites na seção acima. Usuário confirmou login funcional.
 
@@ -851,7 +878,7 @@ O release produtivo e a infraestrutura existentes não foram modificados nem tiv
 
 ## Registro de tarefas concluídas e substituídas
 
-- **ADC-GESTOR-PUBLICAR-20261013:** ajuste funcional local concluído e capturas antes/depois entregues; 302 testes Java e 277 frontend aprovados. Implantação não realizada; gate de dependências reprovado por achados preexistentes, tratado em ADC-DEPS-20261013. Evidências e limites na seção do topo.
+- **ADC-GESTOR-PUBLICAR-20261013:** ajuste funcional e capturas antes/depois entregues; implantado em ADC-PUBLISH-20261013 após correção da auditoria. Gate final com 302 testes Java aprovados/17 ignorados e 280 frontend aprovados. Aceite autenticado manual pendente; evidências da implantação na seção do topo.
 
 Este registro conserva o resultado e os limites de cada entrega na data indicada. Menções antigas a publicação, modelos ou ativações não reabrem tarefas de código: a situação corrente está nas seções de pendências e pré-requisitos externos. O detalhamento técnico e os logs permanecem nas seções por entrega acima.
 
