@@ -1,6 +1,7 @@
 // Chamado pelo ensaio Edge existente. Componentes reais, sem API ou dados reais.
 const assert = require('node:assert/strict')
 const fs = require('node:fs')
+const { browserArtifactPath } = require('./browser-artifacts.cjs')
 const path = require('node:path')
 const Module = require('node:module')
 const React = require('react')
@@ -224,10 +225,10 @@ module.exports = async function checkAdministrativeTables({ send, frameId, css }
     row.background,
     'Linha passiva mudou com hover',
   )
-  // Artefato fictício local, dentro de dist (ignorado), para inspeção visual.
+  // Artefato fictício local, fora do diretório servido, para inspeção visual.
   const screenshot = await send('Page.captureScreenshot', { format: 'png' })
   fs.writeFileSync(
-    'dist/administrative-tables-regression.png',
+    browserArtifactPath('administrative-tables-regression.png'),
     Buffer.from(screenshot.data, 'base64'),
   )
   console.log(

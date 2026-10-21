@@ -1,5 +1,6 @@
 const assert = require('node:assert/strict')
 const fs = require('node:fs')
+const { browserArtifactPath } = require('./browser-artifacts.cjs')
 const path = require('node:path')
 
 module.exports = async function checkMasterDataMaintenance({ send, frameId, css }) {
@@ -13,7 +14,10 @@ module.exports = async function checkMasterDataMaintenance({ send, frameId, css 
       root: path.resolve(__dirname, '..'),
       plugins: [react()],
       resolve: { alias: { '@': path.resolve(__dirname, '../src') } },
-      define: { 'process.env.NODE_ENV': JSON.stringify('production') },
+      define: {
+        'process.env.NODE_ENV': JSON.stringify('production'),
+        'import.meta.env.VITE_API_BASE_URL': JSON.stringify('/api/v1'),
+      },
       logLevel: 'silent',
       build: {
         write: false,
@@ -97,7 +101,7 @@ module.exports = async function checkMasterDataMaintenance({ send, frameId, css 
           'document.querySelector("#areas-title").scrollIntoView({block:"start",behavior:"instant"})',
         )
         fs.writeFileSync(
-          'dist/master-data-maintenance-inactive-' + theme + '-' + width + '.png',
+          browserArtifactPath(`master-data-maintenance-inactive-${theme}-${width}.png`),
           Buffer.from((await send('Page.captureScreenshot', { format: 'png' })).data, 'base64'),
         )
       }
@@ -192,7 +196,7 @@ module.exports = async function checkMasterDataMaintenance({ send, frameId, css 
           'document.querySelector("#areas-title").scrollIntoView({block:"start",behavior:"instant"})',
         )
         fs.writeFileSync(
-          'dist/master-data-maintenance-' + theme + '-' + width + '.png',
+          browserArtifactPath(`master-data-maintenance-${theme}-${width}.png`),
           Buffer.from((await send('Page.captureScreenshot', { format: 'png' })).data, 'base64'),
         )
       }

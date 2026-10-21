@@ -46,6 +46,10 @@ function errorMessage(error: unknown): string {
       return 'Você não possui acesso a esta operação.'
     }
     if (error.status === 409) {
+      if (error.reasonCode === 'CYCLE_EXTENSION_CONFLICT')
+        return 'O ciclo foi alterado ou não está mais aberto. Consulte-o novamente antes de prorrogar o prazo.'
+      if (error.reasonCode === 'CYCLE_EXTENSION_NOT_FUTURE')
+        return 'Informe um novo encerramento posterior ao prazo atual e ao horário atual de Brasília.'
       if (error.reasonCode === 'CYCLE_CODE_ALREADY_EXISTS')
         return 'Já existe um ciclo com esse código. Para configurar ou abrir esse ciclo, selecione-o em Ciclos disponíveis. Para criar outro, informe um código diferente.'
       if (error.reasonCode === 'CYCLE_OPENING_NOT_REACHED')

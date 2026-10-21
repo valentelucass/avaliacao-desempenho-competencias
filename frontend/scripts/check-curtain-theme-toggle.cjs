@@ -1,6 +1,7 @@
 // Navegador real, fixture React local e dados fictícios. Nenhuma API ou serviço.
 const assert = require('node:assert/strict')
 const fs = require('node:fs')
+const { browserArtifactPath } = require('./browser-artifacts.cjs')
 const path = require('node:path')
 
 module.exports = async function checkCurtainThemeToggle({ send, frameId, css }) {
@@ -14,7 +15,10 @@ module.exports = async function checkCurtainThemeToggle({ send, frameId, css }) 
       root: path.resolve(__dirname, '..'),
       plugins: [react()],
       resolve: { alias: { '@': path.resolve(__dirname, '../src') } },
-      define: { 'process.env.NODE_ENV': JSON.stringify('production') },
+      define: {
+        'process.env.NODE_ENV': JSON.stringify('production'),
+        'import.meta.env.VITE_API_BASE_URL': JSON.stringify('/api/v1'),
+      },
       logLevel: 'silent',
       build: {
         write: false,
@@ -131,7 +135,7 @@ module.exports = async function checkCurtainThemeToggle({ send, frameId, css }) 
     assert.equal(dark.buttonWidth, falling.buttonWidth)
     const screenshot = await send('Page.captureScreenshot', { format: 'png' })
     fs.writeFileSync(
-      `dist/curtain-theme-toggle-${width}.png`,
+      browserArtifactPath(`curtain-theme-toggle-${width}.png`),
       Buffer.from(screenshot.data, 'base64'),
     )
 

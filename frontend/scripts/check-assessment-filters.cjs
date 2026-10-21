@@ -1,6 +1,7 @@
 // Geometria do painel real com dados fictícios; as interações têm cobertura Vitest.
 const assert = require('node:assert/strict')
 const fs = require('node:fs')
+const { browserArtifactPath } = require('./browser-artifacts.cjs')
 const React = require('react')
 const { createRoot } = require('react-dom/client')
 
@@ -171,7 +172,7 @@ module.exports = async function checkAssessmentFilters({ send, frameId, css }) {
         )
         const screenshot = await send('Page.captureScreenshot', { format: 'png' })
         fs.writeFileSync(
-          `dist/assessment-filters-${theme}-${width}.png`,
+          browserArtifactPath(`assessment-filters-${theme}-${width}.png`),
           Buffer.from(screenshot.data, 'base64'),
         )
       }
@@ -179,7 +180,7 @@ module.exports = async function checkAssessmentFilters({ send, frameId, css }) {
         await evaluate("document.querySelector('.assessment-list').scrollIntoView({block:'start'})")
         const screenshot = await send('Page.captureScreenshot', { format: 'png' })
         fs.writeFileSync(
-          `dist/assessment-cards-${theme}-${width}.png`,
+          browserArtifactPath(`assessment-cards-${theme}-${width}.png`),
           Buffer.from(screenshot.data, 'base64'),
         )
       }

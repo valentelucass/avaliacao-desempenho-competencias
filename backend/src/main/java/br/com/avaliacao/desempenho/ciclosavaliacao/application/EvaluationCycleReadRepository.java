@@ -2,6 +2,8 @@ package br.com.avaliacao.desempenho.ciclosavaliacao.application;
 
 import br.com.avaliacao.desempenho.ciclosavaliacao.domain.model.EvaluationCycleReadScope;
 import br.com.avaliacao.desempenho.ciclosavaliacao.domain.model.EvaluationCycleStatus;
+import br.com.avaliacao.desempenho.ciclosavaliacao.domain.model.EvaluationCycleWindowStatus;
+import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -23,12 +25,23 @@ public interface EvaluationCycleReadRepository {
     }
   }
 
-  record EvaluationCycleView(UUID id, String name, EvaluationCycleStatus status) {
+  record EvaluationCycleView(
+      UUID id,
+      String name,
+      EvaluationCycleStatus status,
+      Instant openingAt,
+      Instant closingAt,
+      EvaluationCycleWindowStatus windowStatus) {
+
+    public EvaluationCycleView(UUID id, String name, EvaluationCycleStatus status) {
+      this(id, name, status, null, null, EvaluationCycleWindowStatus.SEM_JANELA);
+    }
 
     public EvaluationCycleView {
       Objects.requireNonNull(id, "identificador do ciclo não pode ser nulo");
       requireText(name, "nome do ciclo");
       Objects.requireNonNull(status, "situação do ciclo não pode ser nula");
+      Objects.requireNonNull(windowStatus, "situação da janela não pode ser nula");
     }
   }
 

@@ -1,5 +1,6 @@
 const assert = require('node:assert/strict')
 const fs = require('node:fs')
+const { browserArtifactPath } = require('./browser-artifacts.cjs')
 
 module.exports = async function checkRelationshipTable({ send, evaluate, ready, load }) {
   const root = '[data-relationship-regression]'
@@ -118,7 +119,7 @@ module.exports = async function checkRelationshipTable({ send, evaluate, ready, 
     if (scale === 1.5) {
       const screenshot = await send('Page.captureScreenshot', { format: 'png' })
       fs.writeFileSync(
-        `dist/relationships-buttons-fixed-${theme}-150.png`,
+        browserArtifactPath(`relationships-buttons-fixed-${theme}-150.png`),
         Buffer.from(screenshot.data, 'base64'),
       )
     }

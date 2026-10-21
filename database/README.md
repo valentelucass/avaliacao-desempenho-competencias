@@ -1,6 +1,8 @@
 # Banco de dados — Avaliação de Desempenho e Competências
 
-Esta pasta contém a fonte versionada do banco SQL Server do projeto. Os nomes canônicos são `AVALIACAO_DEV` para desenvolvimento e `AVALIACAO_PROD` para produção. A fonte contém as migrations `V0001` a `V0014`; verificações somente leitura em 2026-09-08 confirmaram os dois históricos reconciliados até `V0014`. A `V0014` habilita as jornadas de avaliação e autoavaliação da Gerência de RH, sempre dependentes dos vínculos e demais condições validadas pela API. A base de produção usa uma identidade SQL de mínimo privilégio definida em [`production/`](production/README.md).
+Esta pasta contém a fonte versionada do banco SQL Server do projeto. Os nomes canônicos são `AVALIACAO_DEV` para desenvolvimento e `AVALIACAO_PROD` para produção. A fonte contém as migrations `V0001` a `V0016`. A leitura de 19/10/2026 confirmou `V0001`–`V0015` aplicadas; `V0016`, que habilita a prorrogação auditada do encerramento de ciclos ainda abertos, é candidata a aplicação e não integra essa evidência. Seu estado deve ser conferido por alvo antes da publicação da nova API. A base de produção usa uma identidade SQL de mínimo privilégio definida em [`production/`](production/README.md).
+
+O registro de 08/09/2026, com os históricos reconciliados até `V0014`, é histórico. A `V0014` habilitou as jornadas da Gerência de RH, sempre dependentes dos vínculos e demais condições validadas pela API; não descreve o limite atual das migrations da fonte.
 
 ## Estrutura
 
@@ -16,7 +18,7 @@ database/
 │   └── preparar-migrations.ps1 # Lista e manifesto UTF-8 sem BOM das migrations
 └── sql/
     ├── bootstrap/            # Criação controlada do banco e infraestrutura de migrations
-    ├── migrations/           # Fonte única do schema, em ordem V0001 a V0014
+    ├── migrations/           # Fonte única do schema, em ordem V0001 a V0016
     ├── validation/           # Consultas de validação somente leitura e detecção de deriva
     └── manual/               # Scripts manuais que nunca são executados automaticamente
 ```
@@ -126,6 +128,8 @@ Com o DEV deste repositório iniciado por `iniciar-dev.bat`, execute `pwsh -NoPr
 A rotina aceita somente `AVALIACAO_DEV` local, exige o processo da API do launcher DEV e verifica a identidade autenticada contra essa base. Não cria schema/migration, não altera PROD ou concessões e não preenche valores nulos que representem estados ainda não concluídos. Os marcadores e as chaves idempotentes permitem retomada; carga concluída não sobrescreve testes manuais nem duplica registros. `-Validate` confere opções de criação, indicadores, supressão e CSV da massa inicial, sem editar avaliações/cadastros. Credenciais fictícias permanecem em arquivos locais protegidos e ignorados pelo Git, nunca na saída do comando. Não executar o SQL manual fora do wrapper nem incluir esse arquivo no runner de migrations.
 
 ## Convenção de migrations
+
+A validação `sql/validation/016_validar_prorrogacao_encerramento_ciclo.sql` é somente leitura: confere a estrutura e os controles de `V0016`, sem prorrogar ciclo ou inserir histórico. Os ensaios funcionais de escrita usam exclusivamente fixtures fictícias em `AVALIACAO_DEV`, com rollback e conferência de ausência dos próprios registros ao final; devem ser executados separadamente no ambiente autorizado. Não inclua fixtures, testes de escrita ou carga de dados no runner `--apply`/`--apply-all`.
 
 - Um arquivo por alteração, no formato `V0001__descricao_em_minusculo.sql`.
 - Uma migration aplicada é imutável. O runner armazena versão, nome, checksum SHA-256, horário UTC e executor em `dbo.schema_migrations`; alteração de checksum interrompe a execução.

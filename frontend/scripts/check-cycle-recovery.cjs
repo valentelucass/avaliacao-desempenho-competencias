@@ -1,5 +1,6 @@
 const assert = require('node:assert/strict')
 const fs = require('node:fs')
+const { browserArtifactPath } = require('./browser-artifacts.cjs')
 const path = require('node:path')
 
 module.exports = async function checkCycleRecovery({ send, frameId, css }) {
@@ -158,7 +159,7 @@ module.exports = async function checkCycleRecovery({ send, frameId, css }) {
     assert.ok(successBounds.top >= 0 && successBounds.top <= 24)
     assert.ok(successBounds.right <= width)
     fs.writeFileSync(
-      `dist/cycle-success-${width}.png`,
+      browserArtifactPath(`cycle-success-${width}.png`),
       Buffer.from((await send('Page.captureScreenshot', { format: 'png' })).data, 'base64'),
     )
     if (width === 375)
@@ -193,7 +194,7 @@ module.exports = async function checkCycleRecovery({ send, frameId, css }) {
       "document.querySelector('h2').scrollIntoView({block:'start',behavior:'instant'})",
     )
     fs.writeFileSync(
-      `dist/cycle-recovery-${width}.png`,
+      browserArtifactPath(`cycle-recovery-${width}.png`),
       Buffer.from((await send('Page.captureScreenshot', { format: 'png' })).data, 'base64'),
     )
     // Reproduz a estrutura dos diálogos para conferir o aviso também durante a rolagem modal.
@@ -241,7 +242,7 @@ module.exports = async function checkCycleRecovery({ send, frameId, css }) {
       2,
     )
     fs.writeFileSync(
-      `dist/cycle-duplicate-${width}.png`,
+      browserArtifactPath(`cycle-duplicate-${width}.png`),
       Buffer.from((await send('Page.captureScreenshot', { format: 'png' })).data, 'base64'),
     )
     if (width === 375) {

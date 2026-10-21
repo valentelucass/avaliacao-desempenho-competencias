@@ -8,6 +8,7 @@ import br.com.avaliacao.desempenho.administracao.api.dto.AdministrativeReadRespo
 import br.com.avaliacao.desempenho.administracao.api.dto.AdministrativeReadResponses.ActiveUserCollaboratorLink;
 import br.com.avaliacao.desempenho.administracao.api.dto.AdministrativeReadResponses.ApprovedQuestionnaireVersion;
 import br.com.avaliacao.desempenho.administracao.api.dto.AdministrativeReadResponses.Collaborator;
+import br.com.avaliacao.desempenho.administracao.api.dto.AdministrativeReadResponses.CycleConfiguration;
 import br.com.avaliacao.desempenho.administracao.api.dto.AdministrativeReadResponses.DirectorManagerAssignmentOptions;
 import br.com.avaliacao.desempenho.administracao.api.dto.AdministrativeReadResponses.DraftCycleConfiguration;
 import br.com.avaliacao.desempenho.administracao.api.dto.AdministrativeReadResponses.ManagerAssignmentOptions;
@@ -160,6 +161,14 @@ public class AdministrativeReadController {
       @PathVariable UUID cycleId, @AuthenticationPrincipal AuthenticatedPrincipal principal) {
     return responseMapper.toDraftCycleConfiguration(
         service.draftCycleConfiguration(cycleId, context(principal)));
+  }
+
+  @GetMapping("/evaluation-cycles/{cycleId}/administration-configuration")
+  @PreAuthorize(MANAGE_CYCLES)
+  public CycleConfiguration cycleConfiguration(
+      @PathVariable UUID cycleId, @AuthenticationPrincipal AuthenticatedPrincipal principal) {
+    return responseMapper.toCycleConfiguration(
+        service.cycleConfiguration(cycleId, context(principal)));
   }
 
   private static AdministrativeReadAccessContext context(AuthenticatedPrincipal principal) {

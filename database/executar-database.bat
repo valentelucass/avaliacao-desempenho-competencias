@@ -602,6 +602,7 @@ for %%F in (
   013_validar_restricao_avaliacoes_administrador_plataforma.sql
   014_validar_avaliacoes_e_autoavaliacoes_gerencia_rh.sql
   015_validar_delegacao_individual_redefinicao_senha.sql
+  016_validar_prorrogacao_encerramento_ciclo.sql
 ) do (
   echo [ETAPA] Validando %%F...
   "%ADC_SQLCMD_EXECUTABLE%" %SQLCMD_FLAGS% -S "%SQLCMD_SERVER%" %SQLCMD_AUTH% -d "%ADC_DB_NAME%" -i "%~dp0sql\validation\%%F"

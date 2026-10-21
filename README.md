@@ -6,6 +6,8 @@ Aplicação interna para avaliações de colaboradores, com cálculo no servidor
 
 Execute `iniciar-prod.bat` sem argumentos para validar, compilar e publicar as atualizações de código. O comando mostra as etapas no terminal e mantém o gate de qualidade antes da publicação. `--publicar` continua aceito como equivalente. Ao terminar com sucesso, acesse https://formulario.rodogarcia.com.br/.
 
+O frontend candidato e as capturas de teste ficam em `backend/target/frontend-staging/<id>/`, fora da pasta servida. A URL pública da API é aplicada somente ao build candidato; os testes de navegador usam dados fictícios e transporte isolado. Depois de todo o gate passar, o launcher confere os hashes aprovados, preserva um backup e promove os arquivos, com troca atômica do index por último. Falhas no gate preservam a tela em uso; erros durante a promoção acionam a recuperação dos arquivos anteriores antes de qualquer operação PM2.
+
 Na atualização das dependências, o BAT valida o lockfile com `npm ci --dry-run --ignore-scripts` e instala suas versões com `npm install --no-save --include=dev`, conferindo a árvore e o hash do lockfile ao terminar. Isso evita a limpeza integral de `node_modules` que falha no Windows quando o preview mantém um módulo nativo aberto. Falhas de instalação ou divergência do lockfile interrompem o fluxo antes do gate e do reinício.
 
 O rodapé interno exibe a data/hora da build carregada, em horário de Brasília, ao lado de “Ambiente interno”. Cada build de produção gera automaticamente uma nova marca; após a publicação, recarregue a página para conferir a versão recebida. A marca identifica a compilação do frontend, não a hora de abertura da página nem a conclusão do deploy da API. Em desenvolvimento, aparece “Build de desenvolvimento”.
@@ -24,7 +26,9 @@ Na VM atual, a tarefa `Rodogarcia-Avaliacao-SQL-Recovery` verifica mudanças do 
 
 O código-fonte implementa autenticação local, administração de acesso, cadastros, questionários, ciclos, avaliações de gestor e autoavaliação, indicadores agregados e exportação CSV. A SPA cobre login, troca de senha, avaliações e indicadores.
 
-Em 2026-08-26, os bancos canônicos `AVALIACAO_DEV` e `AVALIACAO_PROD` foram reconciliados até `V0010`; a validação somente leitura confirmou o catálogo inicial, sem ciclos, lotações, vínculos, atribuições ou avaliações. Na mesma evidência, a verificação anônima de `https://formulario.rodogarcia.com.br/` e de `GET /api/v1/auth/csrf` retornou `200`, com os dois processos PM2 do projeto online. A fonte já contém a `V0011`, que restringe a autoridade do Administrador e normaliza contas administrativas legadas para perfil único, preservando o histórico; ela permanece pendente de aplicação autorizada nos alvos canônicos. Isso confirma a disponibilidade observada naquele momento, não um aceite de negócio, uma jornada autenticada de ponta a ponta, autorização para alterar produção ou o uso de dados reais. As flags persistidas continuam desabilitadas por padrão na configuração versionada; qualquer ativação, alteração de banco ou publicação posterior exige alvo, autorização e validação próprios. Veja [Configuração externa da aplicação](docs/operations/configuracao-externa-da-aplicacao.md) antes de qualquer operação em outro alvo.
+Na administração de ciclos, a consulta distingue a situação `ABERTO` da vigência do prazo e mostra a configuração preservada. Com `CICLOS.GERIR`, um ciclo ainda aberto pode ter somente seu encerramento prorrogado para uma data futura posterior ao encerramento atual, mediante motivo e auditoria. Ciclos encerrados permanecem imutáveis. Essa ação exige `V0016` validada antes da publicação da API; veja a [regra de prorrogação](docs/business/regras-operacionais-v1.md#prorrogação-auditada-do-encerramento--19102026) e a [sequência de publicação](docs/operations/pre-publication-runbook.md#publicação-da-prorrogação-de-ciclos).
+
+O inventário de 2026-08-26 é histórico: naquela data, `AVALIACAO_DEV` e `AVALIACAO_PROD` estavam reconciliados até `V0010`, com catálogo inicial e sem ciclos, lotações, vínculos, atribuições ou avaliações; a `V0011` ainda aguardava aplicação. Na mesma verificação, o frontend público e `GET /api/v1/auth/csrf` retornaram `200`. Esse retrato não descreve o conteúdo nem as migrations atuais dos bancos. Consulte [STATES.md](STATES.md) para as evidências posteriores e revalide o alvo antes de operar. As flags persistidas continuam desabilitadas por padrão na configuração versionada; ativação, alteração de banco e publicação exigem alvo, autorização e validação próprios. Veja [Configuração externa da aplicação](docs/operations/configuracao-externa-da-aplicacao.md) antes de qualquer operação em outro alvo.
 
 ## Estrutura
 
@@ -49,7 +53,7 @@ O Tailwind 4 usa `@tailwindcss/postcss` e carrega `tailwind.config.ts` explicita
 
 ## Verificação local
 
-Na raiz, execute:
+Os scripts `verify.ps1` e `verify-quality.ps1` constroem o frontend em staging e mantêm `frontend/dist` preservado. O comando direto `npm run build` usa o diretório de saída padrão; execute-o em uma cópia isolada quando `frontend/dist` estiver em produção. Para verificar o projeto pelo fluxo isolado:
 
 ```powershell
 .\scripts\verify.ps1
@@ -61,7 +65,7 @@ Para o gate de fonte completo, incluindo scanner heurístico de segredos, script
 .\scripts\verify-quality.ps1 -SkipDatabase
 ```
 
-Use o gate sem `-SkipDatabase` para validar o banco local dedicado, que já está reconciliado com todas as migrations. Use `-SkipDatabase` somente quando o alvo SQL Server não estiver disponível para a verificação; essa opção não substitui a validação contra o banco antes de uma liberação.
+Use o gate sem `-SkipDatabase` quando o banco dedicado autorizado estiver disponível para validação. `-SkipDatabase` não substitui a validação contra o banco antes de uma liberação.
 
 Também é possível validar os projetos separadamente:
 
@@ -81,7 +85,7 @@ npm run build
 
 ## Banco SQL Server
 
-Os bancos exclusivos são `AVALIACAO_DEV` e `AVALIACAO_PROD`. A evidência mais recente registra `V0001`–`V0010` reconciliadas nos dois alvos e catálogo inicial sem ciclos, lotações, vínculos, atribuições ou avaliações; a `V0011` está em fonte e aguarda aplicação autorizada. Não aplique migrations em outro alvo, crie conta SQL ou cadastre dados de negócio sem autorização explícita e ambiente alvo confirmado.
+Os bancos exclusivos são `AVALIACAO_DEV` e `AVALIACAO_PROD`. O inventário de `V0001`–`V0010` e catálogo vazio descrito acima corresponde a 26/08/2026; o estado posterior está registrado em [STATES.md](STATES.md) e deve ser conferido no alvo. Não aplique migrations em outro alvo, crie conta SQL ou cadastre dados de negócio sem autorização explícita e ambiente alvo confirmado.
 
 Para inspeção sem alteração:
 
@@ -90,7 +94,7 @@ database\executar-database.bat --check
 database\executar-database.bat --validate
 ```
 
-No alvo local atual, `--validate` deve ficar verde porque o banco já está reconciliado. `--apply` exige confirmação literal e altera o banco; não faz parte da verificação de desenvolvimento.
+`--validate` confere o alvo e informa eventuais divergências; um registro histórico não garante seu resultado atual. `--apply` exige confirmação literal e altera o banco; não faz parte da verificação de desenvolvimento.
 
 ## Desenvolvimento local
 
@@ -111,4 +115,4 @@ O launcher mantém o segredo de sessão e o PFX de execução apenas durante o p
 - [Modelo relacional lógico](docs/architecture/modelo-relacional-logico.md)
 - [Qualidade e verificações locais](docs/quality.md)
 
-O Administrador administra a plataforma e não é autoridade para publicar ou reabrir avaliações, consultar indicadores ou exportar dados: essas ações exigem Gerência de RH ou Diretoria, além da permissão e do escopo aplicáveis. Indicadores só retornam agregados com pelo menos cinco colaboradores distintos após os filtros. A validação autenticada contra SQL Server, Tunnel/TLS, backup/restauração, ASVS/LGPD e aceite de negócio ainda permanece necessária.
+O Administrador administra a plataforma e não recebe autoridade sobre avaliações ou indicadores. RH e Diretoria publicam avaliações; o Gestor também pode publicar avaliação de equipe do tipo `GESTOR` de sua autoria, enviada, com permissão de avaliar vinculados e vínculo vigente, conforme a decisão de 13/10/2026. Reabertura, indicadores e exportação continuam exigindo RH ou Diretoria e o escopo aplicável. Indicadores só retornam agregados com pelo menos cinco colaboradores distintos após os filtros. Evidências de SQL Server, Tunnel/TLS, backup/restauração e aceites estão em [STATES.md](STATES.md) e exigem validação própria para cada alvo.

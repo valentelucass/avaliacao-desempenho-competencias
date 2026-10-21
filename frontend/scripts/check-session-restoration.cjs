@@ -1,6 +1,7 @@
 // SPA e cliente reais, HTTP fictício em loopback e perfil de navegador exclusivo.
 const assert = require('node:assert/strict')
 const fs = require('node:fs')
+const { browserArtifactPath } = require('./browser-artifacts.cjs')
 const http = require('node:http')
 const os = require('node:os')
 const path = require('node:path')
@@ -81,10 +82,39 @@ async function main() {
     { windowsHide: true, stdio: 'ignore' },
   )
   let ws
+  let send
+  let browserCleanup
+  const closeOwnedBrowser = () => {
+    browserCleanup ??= (async () => {
+      let closeTimer
+      try {
+        if (send && ws?.readyState === WebSocket.OPEN) {
+          await Promise.race([
+            send('Browser.close'),
+            new Promise((resolve) => {
+              closeTimer = setTimeout(resolve, 1500)
+            }),
+          ])
+        }
+      } catch {
+        // O navegador pode encerrar o CDP antes da resposta; manter o fallback local.
+      } finally {
+        clearTimeout(closeTimer)
+        try {
+          ws?.close()
+        } catch {}
+        try {
+          edge.kill()
+        } catch {}
+      }
+    })()
+    return browserCleanup
+  }
   const watchdog = setTimeout(() => {
-    edge.kill()
-    server.close()
-    process.exit(1)
+    void closeOwnedBrowser().finally(() => {
+      server.close()
+      process.exit(1)
+    })
   }, 60000)
   try {
     const portFile = path.join(profile, 'DevToolsActivePort')
@@ -99,7 +129,7 @@ async function main() {
     let nextId = 0
     const pending = new Map()
     const errors = []
-    const send = (method, params = {}) =>
+    send = (method, params = {}) =>
       new Promise((resolve, reject) => {
         const id = ++nextId
         pending.set(id, { resolve, reject })
@@ -218,7 +248,7 @@ async function main() {
                 clip: footer.clip,
               })
               fs.writeFileSync(
-                `dist/ui062-menu-${theme}.png`,
+                browserArtifactPath(`ui062-menu-${theme}.png`),
                 Buffer.from(screenshot.data, 'base64'),
               )
             }
@@ -247,8 +277,7 @@ async function main() {
     console.log(JSON.stringify({ scenario: 'invalid-login', status: 401, feedbackVisible: true }))
   } finally {
     clearTimeout(watchdog)
-    ws?.close()
-    edge.kill()
+    await closeOwnedBrowser()
     server.closeAllConnections()
     await new Promise((resolve) => server.close(resolve))
   }

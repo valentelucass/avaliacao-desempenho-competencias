@@ -1,6 +1,7 @@
 // Regressão de acabamento: navegação lateral hierárquica e superfícies não interativas.
 const assert = require('node:assert/strict')
 const fs = require('node:fs')
+const { browserArtifactPath } = require('./browser-artifacts.cjs')
 
 module.exports = async function checkSidebarCards({ send, frameId, css }) {
   const evaluate = async (expression) => {
@@ -149,7 +150,10 @@ module.exports = async function checkSidebarCards({ send, frameId, css }) {
   })
   await evaluate('window.scrollTo(0,0); document.fonts.ready')
   const screenshot = await send('Page.captureScreenshot', { format: 'png' })
-  fs.writeFileSync('dist/sidebar-cards-light.png', Buffer.from(screenshot.data, 'base64'))
+  fs.writeFileSync(
+    browserArtifactPath('sidebar-cards-light.png'),
+    Buffer.from(screenshot.data, 'base64'),
+  )
   console.log(
     JSON.stringify({ case: 'Sidebar e cards: hierarquia, acabamento, foco e hover', results }),
   )

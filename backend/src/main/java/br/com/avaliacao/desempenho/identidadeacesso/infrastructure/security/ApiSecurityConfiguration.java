@@ -172,7 +172,11 @@ public class ApiSecurityConfiguration {
                     .requestMatchers(HttpMethod.GET, "/api/v1/questionnaire-versions/approved")
                     .hasAnyAuthority("PERMISSION:QUESTIONARIOS.GERIR", "PERMISSION:CICLOS.GERIR")
                     .requestMatchers(
-                        HttpMethod.GET, "/api/v1/evaluation-cycles/*/administration-draft")
+                        HttpMethod.GET,
+                        "/api/v1/evaluation-cycles/*/administration-draft",
+                        "/api/v1/evaluation-cycles/*/administration-configuration")
+                    .hasAuthority("PERMISSION:CICLOS.GERIR")
+                    .requestMatchers(HttpMethod.POST, "/api/v1/evaluation-cycles/*/extend-closing")
                     .hasAuthority("PERMISSION:CICLOS.GERIR")
                     .requestMatchers("/api/v1/administration/manager-assignment-imports/**")
                     .hasAuthority("PERMISSION:VINCULOS_GESTOR_COLABORADOR.GERIR")

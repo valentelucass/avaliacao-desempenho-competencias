@@ -92,6 +92,9 @@ if not defined BACKEND_RELEASE_DIRECTORY (
   echo [Avaliacao PROD] Nao foi possivel preparar o diretorio imutavel do release.
   exit /b 1
 )
+for %%D in ("%BACKEND_RELEASE_DIRECTORY%") do set "ADC_FRONTEND_BUILD_DIRECTORY=%~dp0backend\target\frontend-staging\%%~nxD\dist"
+set "ADC_FRONTEND_API_BASE_URL=%PRODUCTION_API_BASE_URL%"
+set "VITE_API_BASE_URL="
 
 echo [Avaliacao PROD] Executando o gate local completo antes de alterar PM2...
 rem O gate deste launcher deve consultar PROD, mesmo quando DEV estiver ausente.
@@ -113,16 +116,6 @@ if errorlevel 1 exit /b 1
 
 call :resolve_node_executable
 if errorlevel 1 exit /b 1
-
-set "VITE_API_BASE_URL=%PRODUCTION_API_BASE_URL%"
-echo [Avaliacao PROD] Gerando o build final do front-end com a API publica autorizada...
-pushd frontend
-call npm run build
-if errorlevel 1 (
-  popd
-  exit /b 1
-)
-popd
 
 set "VITE_CLI=%~dp0frontend\node_modules\vite\bin\vite.js"
 if not exist "%VITE_CLI%" (
@@ -151,6 +144,12 @@ set "ADC_PM2_NODE_EXECUTABLE=%NODE_EXECUTABLE%"
 set "ADC_PM2_VITE_CLI=%VITE_CLI%"
 set "ADC_PM2_PRODUCTION_CONFIG_PATH=%PRODUCTION_CONFIG_PATH%"
 set "ADC_PM2_PRODUCTION_LOG_DIRECTORY=%PRODUCTION_LOG_DIRECTORY%"
+
+powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "%~dp0scripts\frontend-staging.ps1" -Action Promote -BuildDirectory "%ADC_FRONTEND_BUILD_DIRECTORY%" -ExpectedApiBaseUrl "%PRODUCTION_API_BASE_URL%"
+if errorlevel 1 (
+  echo [Avaliacao PROD] Promocao do frontend recusada; nenhum processo PM2 foi alterado.
+  exit /b 1
+)
 
 call :start_or_restart_backend
 if errorlevel 1 goto :pm2_failed

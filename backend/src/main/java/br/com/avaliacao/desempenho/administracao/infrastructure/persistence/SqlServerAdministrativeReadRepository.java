@@ -3,6 +3,8 @@ package br.com.avaliacao.desempenho.administracao.infrastructure.persistence;
 import br.com.avaliacao.desempenho.administracao.application.AdministrativeReadException;
 import br.com.avaliacao.desempenho.administracao.application.AdministrativeReadException.Reason;
 import br.com.avaliacao.desempenho.administracao.application.AdministrativeReadRepository;
+import br.com.avaliacao.desempenho.ciclosavaliacao.domain.model.EvaluationCycleStatus;
+import br.com.avaliacao.desempenho.ciclosavaliacao.domain.model.EvaluationCycleWindowStatus;
 import br.com.avaliacao.desempenho.identidadeacesso.infrastructure.persistence.ConditionalOnSqlServerPersistence;
 import br.com.avaliacao.desempenho.identidadeacesso.infrastructure.persistence.SqlServerUtcDateTime;
 import java.sql.ResultSet;
@@ -229,7 +231,7 @@ public class SqlServerAdministrativeReadRepository implements AdministrativeRead
                matriz.matriz_classificacao_versao_id
       """;
 
-  static final String FIND_DRAFT_CYCLE_CONFIGURATION_SQL =
+  static final String FIND_CYCLE_CONFIGURATION_SQL =
       """
       SELECT ciclo.ciclo_avaliacao_id,
              ciclo.codigo,
@@ -237,11 +239,15 @@ public class SqlServerAdministrativeReadRepository implements AdministrativeRead
              ciclo.janela_abertura_em_utc,
              ciclo.janela_encerramento_em_utc,
              ciclo.fuso_horario_iana,
-             ciclo.autoavaliacao_habilitada
+             ciclo.autoavaliacao_habilitada,
+             ciclo.situacao,
+             SYSUTCDATETIME() AS observado_em_utc
       FROM dbo.ciclo_avaliacao AS ciclo
       WHERE ciclo.ciclo_avaliacao_id = ?
-        AND ciclo.situacao = 'RASCUNHO'
       """;
+
+  static final String FIND_DRAFT_CYCLE_CONFIGURATION_SQL =
+      FIND_CYCLE_CONFIGURATION_SQL + " AND ciclo.situacao = 'RASCUNHO'";
 
   static final String LIST_DRAFT_CYCLE_QUESTIONNAIRES_SQL =
       """
@@ -462,17 +468,45 @@ public class SqlServerAdministrativeReadRepository implements AdministrativeRead
     if (configurations.isEmpty()) {
       return Optional.empty();
     }
-    DraftCycleBase configuration = configurations.getFirst();
+    return Optional.of(cycleConfiguration(configurations.getFirst()));
+  }
+
+  @Override
+  public Optional<CycleConfigurationView> findCycleConfiguration(UUID cycleId) {
+    requireRequiredMigrations();
+    var configurations =
+        jdbcTemplate.query(
+            FIND_CYCLE_CONFIGURATION_SQL,
+            (resultSet, rowNumber) -> {
+              DraftCycleBase configuration = draftCycleBase(resultSet);
+              return new CycleConfigurationBase(
+                  configuration,
+                  EvaluationCycleStatus.valueOf(resultSet.getString("situacao")),
+                  EvaluationCycleWindowStatus.at(
+                      configuration.openingAtUtc(),
+                      configuration.closingAtUtc(),
+                      SqlServerUtcDateTime.read(resultSet, "observado_em_utc")));
+            },
+            cycleId);
+    if (configurations.isEmpty()) {
+      return Optional.empty();
+    }
+    var row = configurations.getFirst();
     return Optional.of(
-        new DraftCycleConfigurationView(
-            configuration.cycleId(),
-            configuration.code(),
-            configuration.name(),
-            configuration.openingAtUtc(),
-            configuration.closingAtUtc(),
-            configuration.timeZone(),
-            configuration.selfAssessmentEnabled(),
-            listDraftAppliedQuestionnaires(cycleId)));
+        new CycleConfigurationView(
+            cycleConfiguration(row.configuration()), row.status(), row.windowStatus()));
+  }
+
+  private DraftCycleConfigurationView cycleConfiguration(DraftCycleBase configuration) {
+    return new DraftCycleConfigurationView(
+        configuration.cycleId(),
+        configuration.code(),
+        configuration.name(),
+        configuration.openingAtUtc(),
+        configuration.closingAtUtc(),
+        configuration.timeZone(),
+        configuration.selfAssessmentEnabled(),
+        listDraftAppliedQuestionnaires(configuration.cycleId()));
   }
 
   private static DraftCycleBase draftCycleBase(ResultSet resultSet) throws SQLException {
@@ -553,6 +587,11 @@ public class SqlServerAdministrativeReadRepository implements AdministrativeRead
         Reason.UNAVAILABLE,
         "A estrutura necessária para leitura administrativa não está disponível.");
   }
+
+  private record CycleConfigurationBase(
+      DraftCycleBase configuration,
+      EvaluationCycleStatus status,
+      EvaluationCycleWindowStatus windowStatus) {}
 
   private record DraftCycleBase(
       UUID cycleId,

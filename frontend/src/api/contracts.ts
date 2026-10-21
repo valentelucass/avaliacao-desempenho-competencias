@@ -307,6 +307,12 @@ export interface ReplaceEvaluationCycleInput {
   configuration: EvaluationCycleConfigurationInput
 }
 
+export interface ExtendEvaluationCycleClosingInput {
+  closingAtLocal: string
+  expectedClosingAt: string
+  reason: string
+}
+
 export interface CreatedEvaluationCycleQuestionnaire {
   cycleQuestionnaireId: string
   questionnaireVersionId: string
@@ -332,6 +338,24 @@ export interface EvaluationCycle {
   id: string
   name: string
   status: string
+  openingAt?: string | null
+  closingAt?: string | null
+  windowStatus?: EvaluationCycleWindowStatus
+}
+
+export type EvaluationCycleWindowStatus =
+  'AGUARDANDO_ABERTURA' | 'VIGENTE' | 'PRAZO_ENCERRADO' | 'SEM_JANELA'
+
+export interface EvaluationCycleAdministrationConfiguration extends Omit<
+  DraftCycleConfiguration,
+  'openingAtLocal' | 'closingAtLocal'
+> {
+  openingAtLocal: string | null
+  closingAtLocal: string | null
+  /** Ausência em uma API anterior mantém a prorrogação indisponível. */
+  closingAt?: string | null
+  status: string
+  windowStatus: EvaluationCycleWindowStatus
 }
 
 export interface AppliedCycleQuestionnaire {

@@ -12,6 +12,8 @@ import br.com.avaliacao.desempenho.administracao.application.AdministrativeReadR
 import br.com.avaliacao.desempenho.administracao.application.AdministrativeReadRepository.DraftCycleConfigurationView;
 import br.com.avaliacao.desempenho.administracao.domain.model.AdministrativeReadAccessContext;
 import br.com.avaliacao.desempenho.administracao.domain.model.AdministrativeReadAuthorizationPolicy;
+import br.com.avaliacao.desempenho.ciclosavaliacao.domain.model.EvaluationCycleStatus;
+import br.com.avaliacao.desempenho.ciclosavaliacao.domain.model.EvaluationCycleWindowStatus;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -145,5 +147,49 @@ class AdministrativeReadServiceTests {
 
   private static AdministrativeReadAccessContext actor(String permission) {
     return new AdministrativeReadAccessContext(UUID.randomUUID(), Set.of(permission));
+  }
+
+  @Test
+  void cycleConfigurationRequiresItsOwnPermissionBeforeLookingUpAnyCycle() {
+    assertThatThrownBy(
+            () -> service.cycleConfiguration(UUID.randomUUID(), actor("QUESTIONARIOS.GERIR")))
+        .isInstanceOf(AdministrativeReadException.class)
+        .extracting(exception -> ((AdministrativeReadException) exception).reason())
+        .isEqualTo(Reason.FORBIDDEN);
+    verifyNoInteractions(repository);
+  }
+
+  @Test
+  void readingAnOpenExpiredCyclePreservesItsStoredConfigurationAndIndependentWindowState() {
+    UUID id = UUID.randomUUID();
+    var questionnaire =
+        new DraftAppliedQuestionnaireView(
+            UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID());
+    when(repository.findCycleConfiguration(id))
+        .thenReturn(
+            Optional.of(
+                new AdministrativeReadRepository.CycleConfigurationView(
+                    new DraftCycleConfigurationView(
+                        id,
+                        "2026.1",
+                        "Ciclo 2026",
+                        Instant.parse("2026-09-01T03:00:00Z"),
+                        Instant.parse("2026-09-16T03:00:00Z"),
+                        "America/Sao_Paulo",
+                        true,
+                        List.of(questionnaire)),
+                    EvaluationCycleStatus.ABERTO,
+                    EvaluationCycleWindowStatus.PRAZO_ENCERRADO)));
+
+    var result = service.cycleConfiguration(id, actor("CICLOS.GERIR"));
+    assertThat(result.status()).isEqualTo(EvaluationCycleStatus.ABERTO);
+    assertThat(result.windowStatus()).isEqualTo(EvaluationCycleWindowStatus.PRAZO_ENCERRADO);
+    assertThat(result.configuration().code()).isEqualTo("2026.1");
+    assertThat(result.configuration().openingAtLocal())
+        .isEqualTo(LocalDateTime.of(2026, 9, 1, 0, 0));
+    assertThat(result.configuration().closingAtLocal())
+        .isEqualTo(LocalDateTime.of(2026, 9, 16, 0, 0));
+    assertThat(result.configuration().selfAssessmentEnabled()).isTrue();
+    assertThat(result.configuration().questionnaires()).containsExactly(questionnaire);
   }
 }

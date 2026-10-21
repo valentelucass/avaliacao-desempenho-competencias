@@ -2,6 +2,7 @@ package br.com.avaliacao.desempenho.ciclosavaliacao.infrastructure.persistence;
 
 import br.com.avaliacao.desempenho.ciclosavaliacao.application.EvaluationCycleAdministrationException;
 import br.com.avaliacao.desempenho.ciclosavaliacao.application.EvaluationCycleAdministrationRepository;
+import br.com.avaliacao.desempenho.ciclosavaliacao.domain.model.EvaluationCycleClosingExtension;
 import br.com.avaliacao.desempenho.ciclosavaliacao.domain.model.EvaluationCycleConfigurationDraft;
 import br.com.avaliacao.desempenho.ciclosavaliacao.domain.model.EvaluationCycleConfigurationDraft.AppliedQuestionnaireDraft;
 import br.com.avaliacao.desempenho.ciclosavaliacao.domain.model.EvaluationCycleDraft;
@@ -19,7 +20,7 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
-/** JDBC para configurar apenas ciclos em rascunho com artefatos previamente aprovados. */
+/** JDBC para configurar rascunhos, transitar ciclos e registrar prorrogações auditadas. */
 @Repository
 @ConditionalOnSqlServerPersistence
 public class SqlServerEvaluationCycleAdministrationRepository
@@ -57,6 +58,15 @@ public class SqlServerEvaluationCycleAdministrationRepository
         AND situacao = ?
         AND janela_encerramento_em_utc IS NOT NULL
         AND SYSUTCDATETIME() >= janela_encerramento_em_utc
+      """;
+
+  static final String EXTEND_CLOSING_SQL =
+      """
+      INSERT INTO dbo.prorrogacao_ciclo_avaliacao (
+          prorrogacao_ciclo_avaliacao_id, ciclo_avaliacao_id,
+          encerramento_anterior_em_utc, novo_encerramento_em_utc,
+          motivo, ator_usuario_id, request_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)
       """;
 
   private final JdbcTemplate jdbcTemplate;
@@ -117,6 +127,61 @@ public class SqlServerEvaluationCycleAdministrationRepository
                 EvaluationCycleStatus.valueOf(resultSet.getString("situacao")),
             cycleId);
     return statuses.stream().findFirst();
+  }
+
+  @Override
+  public void extendClosing(
+      UUID cycleId, EvaluationCycleClosingExtension extension, UUID actorUserId, String requestId) {
+    try {
+      Integer applied =
+          jdbcTemplate.queryForObject(
+              "SELECT COUNT(*) FROM dbo.schema_migrations WHERE version = 'V0016'", Integer.class);
+      if (applied == null || applied != 1) {
+        throw extensionFailure(EvaluationCycleAdministrationException.Reason.UNAVAILABLE);
+      }
+      int inserted =
+          jdbcTemplate.update(
+              EXTEND_CLOSING_SQL,
+              UUID.randomUUID(),
+              cycleId,
+              SqlServerUtcDateTime.forBinding(extension.expectedClosingAt()),
+              SqlServerUtcDateTime.forBinding(extension.closingAtUtc()),
+              extension.reason(),
+              actorUserId,
+              requestId);
+      if (inserted != 1) {
+        throw extensionFailure(EvaluationCycleAdministrationException.Reason.UNAVAILABLE);
+      }
+    } catch (DataAccessException exception) {
+      throw extensionFailure(extensionFailureReason(exception));
+    }
+  }
+
+  static EvaluationCycleAdministrationException.Reason extensionFailureReason(
+      DataAccessException failure) {
+    for (Throwable cause = failure; cause != null; cause = cause.getCause()) {
+      if (cause instanceof SQLException sql) {
+        for (SQLException error = sql; error != null; error = error.getNextException()) {
+          if (error.getErrorCode() == 51211) {
+            return EvaluationCycleAdministrationException.Reason.EXTENSION_NOT_FUTURE;
+          }
+          if (error.getErrorCode() == 51210
+              || error.getErrorCode() == 547
+              || error.getErrorCode() == 2601
+              || error.getErrorCode() == 2627
+              || error.getErrorCode() == 1205) {
+            return EvaluationCycleAdministrationException.Reason.EXTENSION_CONFLICT;
+          }
+        }
+      }
+    }
+    return EvaluationCycleAdministrationException.Reason.UNAVAILABLE;
+  }
+
+  private static EvaluationCycleAdministrationException extensionFailure(
+      EvaluationCycleAdministrationException.Reason reason) {
+    return new EvaluationCycleAdministrationException(
+        reason, "A prorrogação não pôde ser concluída.");
   }
 
   @Override

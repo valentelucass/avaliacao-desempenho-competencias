@@ -3,6 +3,8 @@ package br.com.avaliacao.desempenho.ciclosavaliacao.infrastructure.persistence;
 import br.com.avaliacao.desempenho.ciclosavaliacao.application.EvaluationCycleReadRepository;
 import br.com.avaliacao.desempenho.ciclosavaliacao.domain.model.EvaluationCycleReadScope;
 import br.com.avaliacao.desempenho.ciclosavaliacao.domain.model.EvaluationCycleStatus;
+import br.com.avaliacao.desempenho.ciclosavaliacao.domain.model.EvaluationCycleWindowStatus;
+import br.com.avaliacao.desempenho.identidadeacesso.infrastructure.persistence.SqlServerUtcDateTime;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -78,7 +80,10 @@ public final class SqlServerEvaluationCycleReadRepository implements EvaluationC
         SELECT TOP (?)
                ciclo.ciclo_avaliacao_id,
                ciclo.nome,
-               ciclo.situacao
+               ciclo.situacao,
+               ciclo.janela_abertura_em_utc,
+               ciclo.janela_encerramento_em_utc,
+               SYSUTCDATETIME() AS observado_em_utc
         FROM dbo.ciclo_avaliacao AS ciclo
         WHERE 1 = 1
         """
@@ -284,11 +289,17 @@ public final class SqlServerEvaluationCycleReadRepository implements EvaluationC
     }
   }
 
-  private static EvaluationCycleView mapCycle(ResultSet resultSet) throws SQLException {
+  static EvaluationCycleView mapCycle(ResultSet resultSet) throws SQLException {
+    var openingAt = SqlServerUtcDateTime.read(resultSet, "janela_abertura_em_utc");
+    var closingAt = SqlServerUtcDateTime.read(resultSet, "janela_encerramento_em_utc");
     return new EvaluationCycleView(
         resultSet.getObject("ciclo_avaliacao_id", UUID.class),
         resultSet.getString("nome"),
-        mapStatus(resultSet.getString("situacao")));
+        mapStatus(resultSet.getString("situacao")),
+        openingAt,
+        closingAt,
+        EvaluationCycleWindowStatus.at(
+            openingAt, closingAt, SqlServerUtcDateTime.read(resultSet, "observado_em_utc")));
   }
 
   private static QuestionnaireRow mapQuestionnaireRow(ResultSet resultSet) throws SQLException {

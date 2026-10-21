@@ -1,5 +1,6 @@
 package br.com.avaliacao.desempenho.ciclosavaliacao.application;
 
+import br.com.avaliacao.desempenho.ciclosavaliacao.domain.model.EvaluationCycleClosingExtension;
 import br.com.avaliacao.desempenho.ciclosavaliacao.domain.model.EvaluationCycleConfigurationDraft;
 import br.com.avaliacao.desempenho.ciclosavaliacao.domain.model.EvaluationCycleDraft;
 import br.com.avaliacao.desempenho.ciclosavaliacao.domain.model.EvaluationCycleStatus;
@@ -7,7 +8,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-/** Porta de escrita para ciclos de rascunho e seus questionários efetivamente aplicados. */
+/** Porta de escrita para rascunhos, transições e prorrogações auditadas de ciclo. */
 public interface EvaluationCycleAdministrationRepository {
 
   CreatedCycle createDraftCycle(EvaluationCycleDraft draft, UUID actorUserId, String requestId);
@@ -16,6 +17,9 @@ public interface EvaluationCycleAdministrationRepository {
       UUID cycleId, EvaluationCycleConfigurationDraft configuration, UUID actorUserId);
 
   Optional<EvaluationCycleStatus> lockCurrentStatus(UUID cycleId);
+
+  void extendClosing(
+      UUID cycleId, EvaluationCycleClosingExtension extension, UUID actorUserId, String requestId);
 
   boolean transition(
       UUID cycleId,

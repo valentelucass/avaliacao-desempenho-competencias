@@ -85,6 +85,57 @@ class ManagerPublicationSecurityTests {
   }
 
   @Test
+  void permitsSelfAssessmentSubmissionPermissionForEveryBusinessRole() throws Exception {
+    for (String role : List.of("COLABORADOR", "GESTOR", "GERENCIA_RH", "DIRETORIA")) {
+      mvc.perform(
+              post(route)
+                  .header("Idempotency-Key", "fixture-self-publication")
+                  .with(csrf())
+                  .with(actor(Set.of(role), Set.of("AUTOAVALIACOES.ENVIAR_PROPRIA"))))
+          .andExpect(status().isConflict());
+      verify(service)
+          .publish(
+              eq(assessmentId),
+              argThat(
+                  context ->
+                      context.userId().equals(actorId)
+                          && context.hasRole(role)
+                          && context.has("AUTOAVALIACOES.ENVIAR_PROPRIA")),
+              eq("fixture-self-publication"),
+              any());
+    }
+  }
+
+  @Test
+  void deniesSelfAssessmentPublicationWithoutCsrfOrSubmissionPermissionAndToTechnicalAdministrator()
+      throws Exception {
+    mvc.perform(
+            post(route)
+                .header("Idempotency-Key", "fixture-self-publication")
+                .with(actor(Set.of("COLABORADOR"), Set.of("AUTOAVALIACOES.ENVIAR_PROPRIA"))))
+        .andExpect(status().isForbidden());
+    for (String permission :
+        List.of("AUTOAVALIACOES.PREENCHER_PROPRIA", "AUTOAVALIACOES.VISUALIZAR_PROPRIA")) {
+      mvc.perform(
+              post(route)
+                  .header("Idempotency-Key", "fixture-self-publication")
+                  .with(csrf())
+                  .with(actor(Set.of("COLABORADOR"), Set.of(permission))))
+          .andExpect(status().isForbidden());
+    }
+    mvc.perform(
+            post(route)
+                .header("Idempotency-Key", "fixture-self-publication")
+                .with(csrf())
+                .with(
+                    actor(
+                        Set.of("ADMINISTRADOR_PLATAFORMA", "GESTOR"),
+                        Set.of("AUTOAVALIACOES.ENVIAR_PROPRIA"))))
+        .andExpect(status().isForbidden());
+    verifyNoInteractions(service);
+  }
+
+  @Test
   void deniesAnonymousMissingCsrfMissingPermissionWrongRoleAndTechnicalAdministrator()
       throws Exception {
     mvc.perform(post(route).with(csrf())).andExpect(status().isUnauthorized());

@@ -1,11 +1,53 @@
 // Regressao real em Edge headless, com dados ficticios e sem conexao com a API.
-const fs = require('node:fs')
 const path = require('node:path')
+const { spawn, spawnSync } = require('node:child_process')
+const { frontendBuildAssetsDirectory } = require('./browser-artifacts.cjs')
+const phases = [
+  'check-administrative-tables',
+  'check-curtain-theme-toggle',
+  'check-global-buttons',
+  'check-assessment-filters',
+  'check-assessment-creation-options',
+  'check-sidebar-cards',
+  'check-cycle-recovery',
+  'check-spreadsheet-import',
+  'check-master-data-maintenance',
+  'check-password-recovery',
+]
+const selectedPhases = process.argv.slice(2).map((argument) => {
+  if (!argument.startsWith('--phase=') || !phases.includes(argument.slice(8))) {
+    throw new Error('Fase de regressão inválida: ' + argument)
+  }
+  return argument.slice(8)
+})
+if (!selectedPhases.length) {
+  // Cada fase libera o runtime de build antes de iniciar a próxima.
+  for (const phase of phases) {
+    const child = spawnSync(
+      process.execPath,
+      [...process.execArgv, __filename, '--phase=' + phase],
+      { cwd: path.resolve(__dirname, '..'), windowsHide: true, stdio: 'inherit' },
+    )
+    if (child.error || child.signal || child.status !== 0) {
+      console.error(
+        'Falha na fase ' + phase + ':',
+        child.error?.message || child.signal || child.status,
+      )
+      process.exit(
+        Number.isInteger(child.status) && child.status > 0 && child.status <= 255
+          ? child.status
+          : 1,
+      )
+    }
+  }
+  process.exit(0)
+}
+
+const fs = require('node:fs')
 const os = require('node:os')
 const assert = require('node:assert/strict')
 process.chdir(path.resolve(__dirname, '..'))
 const Module = require('node:module')
-const { spawn } = require('node:child_process')
 const ts = require('typescript')
 for (const ext of ['.ts', '.tsx'])
   Module._extensions[ext] = (m, file) =>
@@ -125,15 +167,16 @@ async function mount(d, key) {
   )
   assert.equal(document.querySelector('input[type=date]'), null)
   const markup = document.getElementById('mount').innerHTML
-  const cssFile = fs.readdirSync('dist/assets').find((f) => f.endsWith('.css'))
+  const assetsDirectory = frontendBuildAssetsDirectory()
+  const cssFile = fs.readdirSync(assetsDirectory).find((f) => f.endsWith('.css'))
   const css = fs
-    .readFileSync('dist/assets/' + cssFile, 'utf8')
+    .readFileSync(path.join(assetsDirectory, cssFile), 'utf8')
     .replace(
       /url\(([^)]*\.woff2)\)/g,
       (_, url) =>
         'url(data:font/woff2;base64,' +
         fs
-          .readFileSync('dist/assets/' + path.basename(url.replace(/["']/g, '')))
+          .readFileSync(path.join(assetsDirectory, path.basename(url.replace(/["']/g, ''))))
           .toString('base64') +
         ')',
     )
@@ -152,11 +195,38 @@ async function mount(d, key) {
     { windowsHide: true, stdio: ['ignore', 'ignore', 'pipe'] },
   )
   let ws
+  let send
+  let browserCleanup
+  const closeOwnedBrowser = () => {
+    browserCleanup ??= (async () => {
+      let closeTimer
+      try {
+        if (send && ws?.readyState === WebSocket.OPEN) {
+          await Promise.race([
+            send('Browser.close'),
+            new Promise((resolve) => {
+              closeTimer = setTimeout(resolve, 1500)
+            }),
+          ])
+        }
+      } catch {
+        // O navegador pode encerrar o CDP antes da resposta; manter o fallback local.
+      } finally {
+        clearTimeout(closeTimer)
+        try {
+          ws?.close()
+        } catch {}
+        try {
+          edge.kill()
+        } catch {}
+      }
+    })()
+    return browserCleanup
+  }
   let browserPhase = 'inicialização e impressão'
   const timer = setTimeout(() => {
-    edge.kill()
     console.error(`browser timeout: ${browserPhase}`)
-    process.exit(1)
+    void closeOwnedBrowser().finally(() => process.exit(1))
   }, 65000)
   try {
     const browserUrl = await new Promise((resolve, reject) => {
@@ -206,7 +276,7 @@ async function mount(d, key) {
         else resolve(msg.result)
       }
     })
-    const send = (method, params = {}) =>
+    send = (method, params = {}) =>
       new Promise((resolve, reject) => {
         const id = ++seq
         pending.set(id, { resolve, reject })
@@ -287,24 +357,6 @@ async function mount(d, key) {
         after: hover.result.value,
       }),
     )
-    const phases = [
-      'check-administrative-tables',
-      'check-curtain-theme-toggle',
-      'check-global-buttons',
-      'check-assessment-filters',
-      'check-assessment-creation-options',
-      'check-sidebar-cards',
-      'check-cycle-recovery',
-      'check-spreadsheet-import',
-      'check-master-data-maintenance',
-      'check-password-recovery',
-    ]
-    const selectedPhases = process.argv.slice(2).map((argument) => {
-      if (!argument.startsWith('--phase=') || !phases.includes(argument.slice(8))) {
-        throw new Error('Fase de regressão inválida: ' + argument)
-      }
-      return argument.slice(8)
-    })
     for (const phase of phases.filter(
       (phase) => !selectedPhases.length || selectedPhases.includes(phase),
     )) {
@@ -313,11 +365,9 @@ async function mount(d, key) {
       timer.refresh()
       await require(`./${phase}.cjs`)({ send, frameId: frameTree.frame.id, css })
     }
-    await send('Browser.close').catch(() => {})
   } finally {
     clearTimeout(timer)
-    if (ws) ws.close()
-    edge.kill()
+    await closeOwnedBrowser()
     await React.act(async () => root.unmount())
     dom.window.close()
   }

@@ -336,7 +336,8 @@ function App({ api = defaultApiClient }: AppProps) {
     !(user.roles ?? []).includes('ADMINISTRADOR_PLATAFORMA')
   const canPublishAssessments =
     !(user.roles ?? []).includes('ADMINISTRADOR_PLATAFORMA') &&
-    (hasAnyPermission(user, ['AVALIACOES.PUBLICAR']) ||
+    (canSubmitSelfAssessment ||
+      hasAnyPermission(user, ['AVALIACOES.PUBLICAR']) ||
       (user.roles?.includes('GESTOR') === true &&
         hasAnyPermission(user, ['AVALIACOES.AVALIAR_VINCULADOS'])))
   const canReopenAssessments = hasAnyPermission(user, ['AVALIACOES.REABRIR'])

@@ -1255,6 +1255,59 @@ describe('HttpApiClient', () => {
     ])
   })
 
+  it('prorroga o encerramento com precondição exata e proteção CSRF', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ token: 'csrf-synthetic' }))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
+    vi.stubGlobal('fetch', fetchMock)
+    const api = new HttpApiClient()
+    const input = {
+      closingAtLocal: '2026-12-31T23:59',
+      expectedClosingAt: '2026-10-17T02:59:00Z',
+      reason: 'Prazo ampliado para concluir o ciclo.',
+    }
+    await api.extendEvaluationCycleClosing('cycle one', input)
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+      '/api/v1/auth/csrf',
+      '/api/v1/evaluation-cycles/cycle%20one/extend-closing',
+    ])
+    const request = fetchMock.mock.calls[1][1]
+    expect(request.method).toBe('POST')
+    expect(request.credentials).toBe('include')
+    expect(request.headers.get('X-CSRF-TOKEN')).toBe('csrf-synthetic')
+    expect(JSON.parse(request.body)).toEqual(input)
+  })
+
+  it('consulta a configuração administrativa do ciclo por GET com identificador codificado', async () => {
+    const configuration = {
+      cycleId: 'cycle one',
+      code: '2026',
+      name: 'Ciclo fictício',
+      status: 'ABERTO',
+      windowStatus: 'PRAZO_ENCERRADO',
+      openingAtLocal: '2026-09-16T14:00:00',
+      closingAtLocal: '2026-10-16T23:59:00',
+      timeZone: 'America/Sao_Paulo',
+      selfAssessmentEnabled: true,
+      questionnaires: [],
+    }
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(configuration))
+    vi.stubGlobal('fetch', fetchMock)
+    const api = new HttpApiClient()
+
+    await expect(api.getEvaluationCycleAdministrationConfiguration('cycle one')).resolves.toEqual(
+      configuration,
+    )
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v1/evaluation-cycles/cycle%20one/administration-configuration',
+      expect.objectContaining({ method: 'GET', credentials: 'include' }),
+    )
+    const headers = fetchMock.mock.calls[0][1].headers as Headers
+    expect(headers.get('X-CSRF-TOKEN')).toBeNull()
+  })
+
   it('cria questionário e ciclo, consulta a versão aplicada e percorre todos os ciclos', async () => {
     const questionnaireVersion = {
       questionnaireVersionId: 'questionnaire-version-1',

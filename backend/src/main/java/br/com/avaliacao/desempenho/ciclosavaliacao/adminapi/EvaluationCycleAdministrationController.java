@@ -3,6 +3,7 @@ package br.com.avaliacao.desempenho.ciclosavaliacao.adminapi;
 import br.com.avaliacao.desempenho.ciclosavaliacao.adminapi.dto.CreatedEvaluationCycleResponse;
 import br.com.avaliacao.desempenho.ciclosavaliacao.adminapi.dto.CreatedEvaluationCycleResponse.AppliedQuestionnaire;
 import br.com.avaliacao.desempenho.ciclosavaliacao.adminapi.dto.EvaluationCycleAdministrationRequests.CreateCycle;
+import br.com.avaliacao.desempenho.ciclosavaliacao.adminapi.dto.EvaluationCycleAdministrationRequests.ExtendClosing;
 import br.com.avaliacao.desempenho.ciclosavaliacao.adminapi.dto.EvaluationCycleAdministrationRequests.UpdateCycle;
 import br.com.avaliacao.desempenho.ciclosavaliacao.application.EvaluationCycleAdministrationRepository.CreatedCycle;
 import br.com.avaliacao.desempenho.ciclosavaliacao.application.EvaluationCycleAdministrationService;
@@ -25,7 +26,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/** Administração de ciclos em rascunho, separada dos endpoints existentes somente de leitura. */
+/** Administração de rascunhos, transições e prorrogações, separada das consultas de ciclo. */
 @RestController
 @RequestMapping("/api/v1/evaluation-cycles")
 @ConditionalOnSqlServerPersistence
@@ -93,11 +94,24 @@ public class EvaluationCycleAdministrationController {
             .toList());
   }
 
+  @PostMapping("/{cycleId}/extend-closing")
+  @PreAuthorize(MANAGE_CYCLES)
+  public ResponseEntity<Void> extendClosing(
+      @PathVariable UUID cycleId,
+      @Valid @RequestBody ExtendClosing request,
+      @AuthenticationPrincipal AuthenticatedPrincipal principal,
+      HttpServletRequest servletRequest) {
+    service.extendClosing(cycleId, request.toExtension(), context(principal, servletRequest));
+    return ResponseEntity.noContent().build();
+  }
+
   private static EvaluationCycleCommandContext context(
       AuthenticatedPrincipal principal, HttpServletRequest servletRequest) {
     AuthenticatedPrincipal authenticated =
         Objects.requireNonNull(principal, "principal autenticado não foi resolvido");
     return new EvaluationCycleCommandContext(
-        authenticated.userId(), RequestCorrelationFilter.getRequestId(servletRequest));
+        authenticated.userId(),
+        RequestCorrelationFilter.getRequestId(servletRequest),
+        authenticated.user().permissions());
   }
 }

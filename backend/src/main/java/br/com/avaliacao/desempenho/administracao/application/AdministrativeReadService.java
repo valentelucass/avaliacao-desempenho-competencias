@@ -4,6 +4,8 @@ import br.com.avaliacao.desempenho.administracao.application.AdministrativeReadE
 import br.com.avaliacao.desempenho.administracao.application.AdministrativeReadRepository.DraftCycleConfigurationView;
 import br.com.avaliacao.desempenho.administracao.domain.model.AdministrativeReadAccessContext;
 import br.com.avaliacao.desempenho.administracao.domain.model.AdministrativeReadAuthorizationPolicy;
+import br.com.avaliacao.desempenho.ciclosavaliacao.domain.model.EvaluationCycleStatus;
+import br.com.avaliacao.desempenho.ciclosavaliacao.domain.model.EvaluationCycleWindowStatus;
 import br.com.avaliacao.desempenho.identidadeacesso.infrastructure.persistence.ConditionalOnSqlServerPersistence;
 import java.time.DateTimeException;
 import java.time.Instant;
@@ -140,6 +142,23 @@ public class AdministrativeReadService {
     return mapDraftConfiguration(view);
   }
 
+  public CycleConfiguration cycleConfiguration(
+      UUID cycleId, AdministrativeReadAccessContext actor) {
+    Objects.requireNonNull(cycleId, "identificador do ciclo não pode ser nulo");
+    require(authorizationPolicy.mayReadCycleConfiguration(actor));
+    var view =
+        read(() -> repository.findCycleConfiguration(cycleId))
+            .orElseThrow(
+                () ->
+                    new AdministrativeReadException(
+                        Reason.NOT_FOUND, "A configuração solicitada não está disponível."));
+    return new CycleConfiguration(
+        mapDraftConfiguration(view.configuration()),
+        view.status(),
+        view.windowStatus(),
+        view.configuration().closingAtUtc());
+  }
+
   private static DraftCycleConfiguration mapDraftConfiguration(DraftCycleConfigurationView source) {
     try {
       ZoneId zoneId = ZoneId.of(source.timeZone());
@@ -180,7 +199,13 @@ public class AdministrativeReadService {
     }
   }
 
-  /** Configuração de rascunho no mesmo formato local aceito pela escrita administrativa. */
+  public record CycleConfiguration(
+      DraftCycleConfiguration configuration,
+      EvaluationCycleStatus status,
+      EvaluationCycleWindowStatus windowStatus,
+      Instant closingAt) {}
+
+  /** Configuração persistida no mesmo formato local aceito pela escrita de rascunhos. */
   public record DraftCycleConfiguration(
       UUID cycleId,
       String code,

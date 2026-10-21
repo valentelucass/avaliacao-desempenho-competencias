@@ -11,6 +11,62 @@ class AssessmentAuthorizationPolicyTests {
   private final AssessmentAuthorizationPolicy policy = new AssessmentAuthorizationPolicy();
 
   @Test
+  void selfAssessmentPublicationRequiresItsAuthorAndExplicitSubmissionPermission() {
+    UUID author = UUID.randomUUID();
+    var own =
+        new AssessmentAuthorizationPolicy.AssessmentOwnership(author, AssessmentType.AUTOAVALIACAO);
+    for (String role : Set.of("COLABORADOR", "GESTOR", "GERENCIA_RH", "DIRETORIA")) {
+      var actor =
+          new AssessmentAccessContext(
+              author,
+              Set.of(AssessmentAuthorizationPolicy.SUBMIT_OWN_SELF_ASSESSMENT),
+              Set.of(role));
+
+      assertThat(policy.canPublish(actor, own)).as(role).isTrue();
+      assertThat(
+              policy.canPublish(
+                  actor,
+                  new AssessmentAuthorizationPolicy.AssessmentOwnership(
+                      UUID.randomUUID(), AssessmentType.AUTOAVALIACAO)))
+          .as(role)
+          .isFalse();
+      assertThat(policy.canPublish(actor, AssessmentType.AUTOAVALIACAO)).isFalse();
+      assertThat(policy.canReopen(actor, AssessmentType.AUTOAVALIACAO)).isFalse();
+      assertThat(
+              policy.canPublish(
+                  actor,
+                  new AssessmentAuthorizationPolicy.AssessmentOwnership(
+                      author, AssessmentType.GESTOR)))
+          .isFalse();
+      assertThat(
+              policy.canPublish(
+                  actor,
+                  new AssessmentAuthorizationPolicy.AssessmentOwnership(
+                      author, AssessmentType.DIRETORIA_GERENCIA)))
+          .isFalse();
+    }
+
+    assertThat(
+            policy.canPublish(
+                new AssessmentAccessContext(
+                    author,
+                    Set.of(
+                        AssessmentAuthorizationPolicy.FILL_OWN_SELF_ASSESSMENT,
+                        AssessmentAuthorizationPolicy.VIEW_OWN_SELF_ASSESSMENT),
+                    Set.of("COLABORADOR")),
+                own))
+        .isFalse();
+    assertThat(
+            policy.canPublish(
+                new AssessmentAccessContext(
+                    author,
+                    Set.of(AssessmentAuthorizationPolicy.SUBMIT_OWN_SELF_ASSESSMENT),
+                    Set.of("ADMINISTRADOR_PLATAFORMA", "GESTOR")),
+                own))
+        .isFalse();
+  }
+
+  @Test
   void managerPublishesOnlyItsOwnTeamAssessmentWithoutGainingAdministrativePowers() {
     UUID manager = UUID.randomUUID();
     var own = new AssessmentAuthorizationPolicy.AssessmentOwnership(manager, AssessmentType.GESTOR);

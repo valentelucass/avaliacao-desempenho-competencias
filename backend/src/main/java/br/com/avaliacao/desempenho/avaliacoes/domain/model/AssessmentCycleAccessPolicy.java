@@ -1,5 +1,6 @@
 package br.com.avaliacao.desempenho.avaliacoes.domain.model;
 
+import br.com.avaliacao.desempenho.ciclosavaliacao.domain.model.EvaluationCycleWindowStatus;
 import java.time.Instant;
 import java.util.Objects;
 
@@ -11,10 +12,8 @@ public final class AssessmentCycleAccessPolicy {
     Objects.requireNonNull(cycleState, "estado do ciclo não pode ser nulo");
     Objects.requireNonNull(now, "horário atual não pode ser nulo");
     return cycleState == CycleState.OPEN
-        && openingAt != null
-        && closingAt != null
-        && !now.isBefore(openingAt)
-        && now.isBefore(closingAt);
+        && EvaluationCycleWindowStatus.at(openingAt, closingAt, now)
+            == EvaluationCycleWindowStatus.VIGENTE;
   }
 
   /**

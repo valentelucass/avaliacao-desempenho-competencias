@@ -58,7 +58,7 @@ Todas as perguntas da versão são obrigatórias para envio e publicação. Come
 
 ### Ciclo, área e filial
 
-Cada ciclo tem datas e horários de abertura e encerramento configuráveis por quem possui `CICLOS.GERIR`, no fuso obrigatório `America/Sao_Paulo`. O encerramento deve ser estritamente posterior à abertura; o período pode atravessar meses ou anos. O início é inclusivo e o fim exclusivo: o prazo termina exatamente no horário informado. A configuração persiste por ciclo e fica imutável após a abertura.
+Cada ciclo tem datas e horários de abertura e encerramento configuráveis por quem possui `CICLOS.GERIR`, no fuso obrigatório `America/Sao_Paulo`. O encerramento deve ser estritamente posterior à abertura; o período pode atravessar meses ou anos. O início é inclusivo e o fim exclusivo: o prazo termina exatamente no horário informado. Após a abertura, a configuração permanece bloqueada para edição geral; a única exceção é a prorrogação auditada do encerramento descrita abaixo.
 
 Criar um rascunho não o abre automaticamente. A ação **Abrir ciclo** exige horário atual igual ou posterior à abertura salva e anterior ao encerramento salvo, além de questionário aplicado. **Encerrar ciclo** exige que o prazo salvo tenha terminado. Ao editar datas, salvar a configuração antes de executar a transição. Essa regra já constava no contrato HTTP e no SQL de transição; o esclarecimento `ADC-COR-014` não altera sua vigência. Exemplo: em 15/09/2026, um ciclo marcado para 16/09/2026 14:00 pode ser criado, mas ainda não pode ser aberto.
 
@@ -68,7 +68,17 @@ Origem e responsável pela decisão: usuário solicitante, que autorizou “pode
 
 Exemplo aceito: abertura em **16/09/2026 14:00** e encerramento em **16/10/2026 23:59**, preservando os horários escolhidos. Em UTC: `2026-09-16T17:00:00Z` a `2026-10-17T02:59:00Z`. Encerramento igual ou anterior à abertura é inválido. A autoavaliação continua sendo uma opção independente do calendário.
 
-Testes afetados: `EvaluationCycleConfigurationDraftTests`, `EvaluationCycleHttpValidationTests`, `CycleCreationDevSqlTests`, `CycleAdministrationPanel.test.tsx`, `safeErrorMessage.test.ts` e `check-cycle-recovery.cjs`. Permanecem as verificações de permissão, questionários aprovados, auditoria e imutabilidade. Nenhuma migration é necessária: o schema já armazena a janela por ciclo.
+Testes afetados pela revisão de 15/09/2026: `EvaluationCycleConfigurationDraftTests`, `EvaluationCycleHttpValidationTests`, `CycleCreationDevSqlTests`, `CycleAdministrationPanel.test.tsx`, `safeErrorMessage.test.ts` e `check-cycle-recovery.cjs`. A revisão preservou as verificações de permissão, questionários aprovados, auditoria e imutabilidade. Não exigiu migration: o schema já armazenava a janela por ciclo.
+
+### Prorrogação auditada do encerramento — 19/10/2026
+
+Origem e responsável pela decisão: usuário solicitante autorizou a prorrogação do encerramento de ciclo ainda `ABERTO`, inclusive quando o prazo anterior já terminou. A operação exige `CICLOS.GERIR`, motivo obrigatório e uma nova data estritamente posterior tanto ao encerramento atual quanto ao horário corrente do servidor. Datas informadas usam o fuso persistido `America/Sao_Paulo`; não há prorrogação automática.
+
+A operação altera somente o encerramento do mesmo ciclo e registra autoria, horário, motivo e prazos anterior e novo na auditoria transacional. Código, nome, abertura, fuso, autoavaliação, questionários, cálculo, matriz, atribuições e avaliações existentes permanecem preservados. O ciclo continua `ABERTO`; a elegibilidade para novas avaliações, edição e envio volta a ser determinada pela janela e pelos demais controles vigentes, sem duplicar avaliações já iniciadas.
+
+Ciclo `ENCERRADO` não pode ser prorrogado nem reaberto por esse fluxo. Rascunho continua usando a edição de configuração existente. Exemplo: um ciclo ainda `ABERTO`, com fim em 16/10/2026 23:59, pode receber em 19/10/2026 um encerramento futuro em 30/10/2026 23:59, com motivo registrado. Uma tentativa de antecipar o fim, usar data passada ou modificar outro campo deve ser recusada sem alteração parcial.
+
+A exceção exige a migration `V0016` e o fluxo específico da API; não autoriza desabilitar gatilhos, editar migrations já aplicadas, executar atualização direta de dados ou apagar auditoria. A publicação deve validar `V0016` antes de ativar a nova API e a SPA. Reverter a aplicação preserva a migration, o novo prazo e a trilha de auditoria; não restaura silenciosamente o encerramento antigo.
 
 As listas de filiais e áreas de 2024 na especificação sanitizada são a base inicial do catálogo `2024.1`. Elas serão cadastradas somente por fluxo administrativo futuro, com histórico de vigência; não haverá importação de pessoas da macro. Administradores de plataforma manterão o catálogo mediante solicitação registrada da Gerência de RH.
 
@@ -85,7 +95,7 @@ No fluxo administrativo, toda conta possui exatamente um perfil: `ADMINISTRADOR_
 | Perfil         | Escopo v1                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Administrador  | Administra contas, acessos e operações técnicas autorizadas; não cria, consulta, publica ou reabre avaliações, não registra feedback, não consulta indicadores e não exporta.                                                                                                                                                                                                                                                                         |
-| Gestor         | Cria, edita, envia, publica e consulta somente avaliações que ele próprio realizou para colaboradores com vínculo vigente; preenche e consulta a própria autoavaliação; registra o feedback somente das avaliações que realizou.                                                                                                                                                                                                                               |
+| Gestor         | Cria, edita, envia, publica e consulta somente avaliações que ele próprio realizou para colaboradores com vínculo vigente; preenche, envia, publica e consulta a própria autoavaliação autorizada; registra o feedback somente das avaliações de equipe que realizou. |
 | Gerência de RH | Visualiza todas as avaliações, inclusive autoavaliações; publica e reabre; consulta indicadores e exporta agregados. Quando possuir vínculo gestor–colaborador vigente, cria, edita, envia e consulta somente as avaliações que realizou para esses subordinados; também preenche e consulta a própria autoavaliação quando houver vínculo conta–colaborador, ciclo e questionário aplicáveis. Registra feedback somente das avaliações que realizou. |
 | Diretoria      | Visualiza todas as avaliações, inclusive autoavaliações; publica e reabre; pode criar avaliações de Gerência quando possuir vínculo Diretoria–Gerência vigente. Não altera feedback de outro avaliador.                                                                                                                                                                                                                                               |
 | Colaborador    | Sem acesso à plataforma nesta versão quando não for avaliador. Não consulta avaliação recebida, resultado ou feedback.                                                                                                                                                                                                                                                                                                                                |
@@ -100,20 +110,32 @@ Cada avaliação possui duas dimensões independentes e persistidas:
 
 | Dimensão              | Valores                                  | Significado                                                                                           |
 | --------------------- | ---------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| Situação da avaliação | `RASCUNHO`, `ENVIADA`, `PUBLICADA`       | Preenchimento, envio e publicação por RH/Diretoria ou gestor autor autorizado.                                   |
+| Situação da avaliação | `RASCUNHO`, `ENVIADA`, `PUBLICADA`       | Preenchimento, envio e publicação por RH/Diretoria ou autor autorizado do tipo de avaliação. |
 | Situação do feedback  | `NAO_APLICAVEL`, `PENDENTE`, `CONCLUIDO` | Etapa posterior à publicação. É apresentada junto da situação principal, sem substituir a publicação. |
 
 As avaliações de Gestor e de Diretoria sobre Gerência seguem `RASCUNHO → ENVIADA → PUBLICADA`. Publicação exige respostas completas, cálculo válido e ação individual de Gerência de RH, Diretoria ou, para avaliação de equipe, gestor autor autorizado; ao publicar, o feedback passa para `PENDENTE`. Somente o autor original da avaliação pode registrar uma única conclusão de feedback da respectiva versão publicada, informando data e comentário, o que a leva a `CONCLUIDO`. RH e Diretoria podem visualizar e reabrir, mas não podem editar, substituir ou concluir o feedback em nome do avaliador.
 
 ### Publicação pelo gestor — ADC-GESTOR-PUBLICAR-20261013
 
-Origem e responsável pela decisão: usuário solicitante, em 13/10/2026, pediu que o perfil GESTOR também possa publicar. GESTOR ativo com `AVALIACOES.AVALIAR_VINCULADOS` pode publicar avaliação do tipo `GESTOR`, de sua autoria, enviada, com vínculo gestor–colaborador vigente. Mantém-se a janela existente de publicação: ciclo aberto ou encerrado, nunca rascunho ou cancelado. Exemplo: após enviar sua avaliação de equipe, o gestor vê **Publicar avaliação**; outro gestor, vínculo encerrado ou autoavaliação não recebe essa ação. O envio continua uma etapa separada.
+Origem e responsável pela decisão: usuário solicitante, em 13/10/2026, pediu que o perfil GESTOR também possa publicar. GESTOR ativo com `AVALIACOES.AVALIAR_VINCULADOS` pode publicar avaliação do tipo `GESTOR`, de sua autoria, enviada, com vínculo gestor–colaborador vigente. Mantém-se a janela existente de publicação: ciclo aberto ou encerrado, nunca rascunho ou cancelado. Exemplo: após enviar sua avaliação de equipe, o gestor vê **Publicar avaliação**; outro gestor ou vínculo encerrado não recebe essa ação. Essa exceção de equipe não autorizava autoavaliações; a autorização da própria autoavaliação foi acrescentada pela decisão de 21/10/2026 abaixo. O envio continua uma etapa separada.
 
 A autorização por recurso e `allowedActions.publish` usam a mesma regra no servidor; reenvio idempotente também revalida a autorização. Não há concessão de `AVALIACOES.PUBLICAR` global ao perfil, migration ou ampliação de leitura, reabertura, feedback, indicadores ou exportação. A publicação preserva versões, cálculo persistido, auditoria e feedback pendente. RH/Diretoria conservam suas permissões anteriores.
 
 Testes afetados: `AssessmentAuthorizationPolicyTests`, `SqlServerAssessmentRepositoryTests`, `ManagerPublicationSecurityTests`, `App.test.tsx`, `AssessmentEditor.test.tsx` e `check-manager-publication.cjs`. Capturas com SPA real e transporte fictício, sem avaliação pessoal ou banco real; evidência de implantação é separada.
 
-A autoavaliação também segue `RASCUNHO → ENVIADA → PUBLICADA`, com publicação por RH ou Diretoria, mas recebe `NAO_APLICAVEL` e não expõe registro de feedback.
+A autoavaliação também segue `RASCUNHO → ENVIADA → PUBLICADA`, com publicação por RH, Diretoria ou pelo próprio autor autorizado conforme ADC-COR-AUTO-PUBLICACAO-20261021; recebe `NAO_APLICAVEL` e não expõe registro de feedback.
+
+### Publicação da própria autoavaliação — ADC-COR-AUTO-PUBLICACAO-20261021
+
+Origem e responsável: usuário solicitante, em 21/10/2026, após conferir a ausência do botão na visão do autor, solicitou corrigir o fluxo e testar em DEV com fotos antes/depois. A regra anterior reservava a publicação de `AUTOAVALIACAO` a RH/Diretoria; a exceção de equipe de 13/10 não abrangia esse tipo. Essa combinação retirava a ação do próprio autor após o envio.
+
+Uma conta ativa com `AUTOAVALIACOES.ENVIAR_PROPRIA` pode publicar somente a `AUTOAVALIACAO` de sua autoria, já `ENVIADA`, cujo vínculo conta–colaborador registrado continue vigente e corresponda ao próprio avaliado. `ADMINISTRADOR_PLATAFORMA` permanece impedido, mesmo em combinação com outros papéis ou permissões. Não há nova concessão de permissão ou habilitação de contas/perfis; os avaliadores elegíveis continuam definidos pelo catálogo vigente.
+
+Exemplo: o gestor salva e aciona **Enviar avaliação** no rascunho completo; depois vê **Publicar avaliação** na própria autoavaliação enviada. A publicação confirma `PUBLICADA`, retira o botão e preserva respostas, nota, classificação e versão já calculadas no servidor. Outra pessoa com a mesma permissão não pode publicar essa autoavaliação. Vínculo encerrado, conta inativa, falta da permissão e avaliação ainda em rascunho são recusados.
+
+A etapa de publicação usa a janela existente: ciclo `ABERTO` ou `ENCERRADO`, inclusive aberto com prazo vencido, sem permitir novas contribuições fora do prazo. O envio do rascunho continua exigindo a janela de contribuição válida. RH/Diretoria conservam o caminho administrativo. Reabertura permanece exclusiva de RH/Diretoria; feedback continua `NAO_APLICAVEL`; indicadores de equipe não passam a incluir autoavaliações.
+
+A mesma autorização por recurso determina `allowedActions.publish`, a escrita e o reenvio idempotente. São preservadas a transação, a trilha de auditoria e a proteção contra duas transições concorrentes. Não se concede `AVALIACOES.PUBLICAR` global, não se altera schema e não se executa migration. Testes afetados: domínio, repositório SQL parametrizado, segurança HTTP, `App.test.tsx`, `AssessmentEditor.test.tsx` e `check-self-assessment-publication.cjs`. Evidência de DEV e capturas não representam implantação produtiva.
 
 Há também a avaliação do tipo `DIRETORIA_GERENCIA`. Ela exige vínculo Diretoria–Gerência vigente e não reutiliza vínculo gestor–colaborador. Mantém uma ocorrência por ciclo, avaliado e tipo, e segue o mesmo fluxo e feedback das avaliações de Gestor.
 
@@ -182,7 +204,6 @@ Uma pessoa já autorizada a abrir o detalhe de uma avaliação pode solicitar a 
 7. RH publica uma avaliação de gestor completa: ela fica `PUBLICADA` com feedback `PENDENTE`; somente o gestor autor a conclui com data e comentário.
 8. RH reabre uma avaliação com feedback concluído: a versão anterior e sua conclusão permanecem consultáveis; ao publicar a nova versão, o feedback retorna a `PENDENTE`.
 9. Uma autoavaliação publicada fica com feedback `NAO_APLICAVEL`; tentar registrar feedback nela é negado.
-
 
 ## Manutenção de cadastros e vínculos em lote (ADC-COR-022 / ADC-IMP-003)
 

@@ -1,6 +1,7 @@
 // Regressão visual dos seletores realmente usados na SPA, sem API ou dados reais.
 const assert = require('node:assert/strict')
 const fs = require('node:fs')
+const { browserArtifactPath } = require('./browser-artifacts.cjs')
 const React = require('react')
 const { renderToStaticMarkup } = require('react-dom/server')
 const { Trash2, Save, Plus, ArrowUp, Ellipsis, Sun, ChevronRight } = require('lucide-react')
@@ -208,7 +209,10 @@ module.exports = async function checkGlobalButtons({ send, frameId, css }) {
 
       if (width === 1440) {
         const screenshot = await send('Page.captureScreenshot', { format: 'png' })
-        fs.writeFileSync(`dist/global-buttons-${theme}.png`, Buffer.from(screenshot.data, 'base64'))
+        fs.writeFileSync(
+          browserArtifactPath(`global-buttons-${theme}.png`),
+          Buffer.from(screenshot.data, 'base64'),
+        )
       }
     }
 

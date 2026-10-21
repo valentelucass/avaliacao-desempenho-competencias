@@ -84,10 +84,12 @@ public final class AssessmentAuthorizationPolicy {
     AssessmentOwnership assessment = Objects.requireNonNull(ownership, "ownership");
     return canPublish(actor, assessment.type())
         || (!actor.hasRole("ADMINISTRADOR_PLATAFORMA")
-            && actor.hasRole("GESTOR")
-            && actor.has(EVALUATE_LINKED)
-            && assessment.type() == AssessmentType.GESTOR
-            && actor.userId().equals(assessment.authorUserId()));
+            && actor.userId().equals(assessment.authorUserId())
+            && ((assessment.type() == AssessmentType.GESTOR
+                    && actor.hasRole("GESTOR")
+                    && actor.has(EVALUATE_LINKED))
+                || (assessment.type() == AssessmentType.AUTOAVALIACAO
+                    && actor.has(SUBMIT_OWN_SELF_ASSESSMENT))));
   }
 
   public boolean canRecordOwnFeedback(

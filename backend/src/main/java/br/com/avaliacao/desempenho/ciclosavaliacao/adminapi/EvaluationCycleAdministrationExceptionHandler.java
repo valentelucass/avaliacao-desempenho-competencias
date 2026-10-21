@@ -69,9 +69,33 @@ public class EvaluationCycleAdministrationExceptionHandler {
                   "SERVICE_UNAVAILABLE",
                   "Recurso indisponível",
                   "O recurso administrativo ainda não está disponível.");
+          case EXTENSION_CONFLICT ->
+              problem(
+                  request,
+                  HttpStatus.CONFLICT,
+                  "CONFLICT",
+                  "Prorrogação não disponível",
+                  "O ciclo deve estar aberto e manter o encerramento consultado. Atualize a consulta.");
+          case EXTENSION_NOT_FUTURE ->
+              problem(
+                  request,
+                  HttpStatus.CONFLICT,
+                  "CONFLICT",
+                  "Novo prazo inválido",
+                  "O novo encerramento deve ser posterior ao prazo atual e ao horário atual de Brasília.");
+          case FORBIDDEN ->
+              problem(
+                  request,
+                  HttpStatus.FORBIDDEN,
+                  "ACCESS_DENIED",
+                  "Acesso negado",
+                  "Você não possui acesso a esta operação.");
         };
     if (exception.reason() != EvaluationCycleAdministrationException.Reason.CONFLICT
         && exception.reason() != EvaluationCycleAdministrationException.Reason.UNAVAILABLE) {
+      if (exception.reason() == EvaluationCycleAdministrationException.Reason.FORBIDDEN) {
+        return response;
+      }
       response.getBody().setProperty("reasonCode", "CYCLE_" + exception.reason().name());
     }
     return response;

@@ -881,6 +881,209 @@ describe('App', () => {
     },
   )
 
+  it.each(['COLABORADOR', 'GESTOR', 'GERENCIA_RH', 'DIRETORIA'])(
+    'permite a %s publicar a própria autoavaliação enviada com autorização individual',
+    async (role) => {
+      const detail: AssessmentDetail = {
+        ...sampleAssessment(),
+        type: 'AUTOAVALIACAO',
+        status: 'ENVIADA',
+        allowedActions: {
+          edit: false,
+          submit: false,
+          publish: true,
+          reopen: false,
+          completeFeedback: false,
+        },
+        result: { finalScore: 100, classification: { label: 'Dentro das expectativas' } },
+      }
+      const api = createApi({
+        currentUser: vi.fn().mockResolvedValue({
+          id: 'self-author',
+          displayName: 'Pessoa fictícia',
+          roles: [role],
+          permissions: ['AUTOAVALIACOES.ENVIAR_PROPRIA'],
+        }),
+        listAssessments: vi.fn().mockResolvedValue([detail]),
+        getAssessment: vi.fn().mockResolvedValue(detail),
+        publishAssessment: vi.fn().mockResolvedValue({
+          ...detail,
+          status: 'PUBLICADA',
+          allowedActions: { ...detail.allowedActions!, publish: false },
+        }),
+      })
+
+      renderWithExistingSession(api, '/avaliacoes')
+      fireEvent.click(await screen.findByRole('button', { name: 'Abrir avaliação' }))
+      fireEvent.click(await screen.findByRole('button', { name: 'Publicar avaliação' }))
+
+      expect(await screen.findByText('Avaliação publicada com sucesso.')).toBeInTheDocument()
+      expect(api.publishAssessment).toHaveBeenCalledExactlyOnceWith(detail.id)
+      expect(screen.queryByRole('button', { name: 'Publicar avaliação' })).not.toBeInTheDocument()
+      expect(screen.queryByLabelText('Motivo da reabertura')).not.toBeInTheDocument()
+      expect(screen.getByText('Não se aplica a autoavaliações.')).toBeInTheDocument()
+    },
+  )
+
+  it.each([
+    { role: 'COLABORADOR', permission: 'AUTOAVALIACOES.ENVIAR_PROPRIA', publish: false },
+    { role: 'GESTOR', permission: 'AUTOAVALIACOES.ENVIAR_PROPRIA', publish: undefined },
+    { role: 'COLABORADOR', permission: 'AUTOAVALIACOES.VISUALIZAR_PROPRIA', publish: true },
+    { role: 'COLABORADOR', permission: 'AUTOAVALIACOES.PREENCHER_PROPRIA', publish: true },
+    {
+      role: 'ADMINISTRADOR_PLATAFORMA',
+      permission: 'AUTOAVALIACOES.ENVIAR_PROPRIA',
+      publish: true,
+    },
+  ])('não amplia a publicação da autoavaliação sem as duas autorizações (%s)', async (scenario) => {
+    const detail: AssessmentDetail = {
+      ...sampleAssessment(),
+      id: 'self-or-foreign-assessment',
+      type: 'AUTOAVALIACAO',
+      status: 'ENVIADA',
+      allowedActions:
+        scenario.publish === undefined
+          ? undefined
+          : {
+              edit: false,
+              submit: false,
+              publish: scenario.publish,
+              reopen: false,
+              completeFeedback: false,
+            },
+    }
+    const api = createApi({
+      currentUser: vi.fn().mockResolvedValue({
+        id: 'self-author',
+        displayName: 'Pessoa fictícia',
+        roles: [scenario.role],
+        permissions: [scenario.permission],
+      }),
+      listAssessments: vi.fn().mockResolvedValue([detail]),
+      getAssessment: vi.fn().mockResolvedValue(detail),
+    })
+
+    renderWithExistingSession(api, '/avaliacoes')
+    fireEvent.click(await screen.findByRole('button', { name: 'Abrir avaliação' }))
+
+    expect(
+      await screen.findByText(
+        'Esta avaliação está disponível somente para consulta com as permissões atuais.',
+      ),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Publicar avaliação' })).not.toBeInTheDocument()
+    expect(api.publishAssessment).not.toHaveBeenCalled()
+  })
+
+  it('preserva envio e publicação como etapas distintas sem duplicar operações pendentes', async () => {
+    const draft: AssessmentDetail = {
+      ...sampleAssessment(),
+      type: 'AUTOAVALIACAO',
+      allowedActions: {
+        edit: true,
+        submit: true,
+        publish: false,
+        reopen: false,
+        completeFeedback: false,
+      },
+    }
+    const saved: AssessmentDetail = { ...draft, revision: 'saved-revision' }
+    const submitted: AssessmentDetail = {
+      ...saved,
+      status: 'ENVIADA',
+      allowedActions: { ...draft.allowedActions!, edit: false, submit: false, publish: true },
+      result: { finalScore: 100, classification: { label: 'Dentro das expectativas' } },
+    }
+    let resolveSave!: (value: AssessmentDetail) => void
+    let resolvePublish!: (value: AssessmentDetail) => void
+    const api = createApi({
+      currentUser: vi.fn().mockResolvedValue({
+        id: 'self-author',
+        displayName: 'Pessoa fictícia',
+        roles: ['COLABORADOR'],
+        permissions: ['AUTOAVALIACOES.PREENCHER_PROPRIA', 'AUTOAVALIACOES.ENVIAR_PROPRIA'],
+      }),
+      listAssessments: vi.fn().mockResolvedValue([draft]),
+      getAssessment: vi.fn().mockResolvedValue(draft),
+      saveAssessment: vi.fn().mockImplementation(
+        () =>
+          new Promise<AssessmentDetail>((resolve) => {
+            resolveSave = resolve
+          }),
+      ),
+      submitAssessment: vi.fn().mockResolvedValue(submitted),
+      publishAssessment: vi.fn().mockImplementation(
+        () =>
+          new Promise<AssessmentDetail>((resolve) => {
+            resolvePublish = resolve
+          }),
+      ),
+    })
+
+    renderWithExistingSession(api, '/avaliacoes')
+    fireEvent.click(await screen.findByRole('button', { name: 'Abrir avaliação' }))
+    fireEvent.click(await screen.findByLabelText(/Dentro das expectativas/))
+    expect(screen.queryByRole('button', { name: 'Publicar avaliação' })).not.toBeInTheDocument()
+    const submit = screen.getByRole('button', { name: 'Enviar avaliação' })
+    fireEvent.click(submit)
+    expect(submit).toBeDisabled()
+    fireEvent.click(submit)
+    expect(api.saveAssessment).toHaveBeenCalledTimes(1)
+    expect(api.submitAssessment).not.toHaveBeenCalled()
+    expect(api.publishAssessment).not.toHaveBeenCalled()
+    await act(async () => resolveSave(saved))
+
+    const publish = await screen.findByRole('button', { name: 'Publicar avaliação' })
+    expect(api.submitAssessment).toHaveBeenCalledExactlyOnceWith(draft.id, 'saved-revision')
+    expect(screen.queryByRole('button', { name: 'Enviar avaliação' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Salvar rascunho' })).not.toBeInTheDocument()
+    expect(await screen.findByRole('radio', { name: /Dentro das expectativas/ })).toBeDisabled()
+    fireEvent.click(publish)
+    expect(publish).toBeDisabled()
+    fireEvent.click(publish)
+    expect(api.publishAssessment).toHaveBeenCalledExactlyOnceWith(draft.id)
+    await act(async () =>
+      resolvePublish({
+        ...submitted,
+        status: 'PUBLICADA',
+        allowedActions: { ...submitted.allowedActions!, publish: false },
+      }),
+    )
+
+    expect(await screen.findByText('Avaliação publicada com sucesso.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Publicar avaliação' })).not.toBeInTheDocument()
+  })
+
+  it('não mostra sucesso de publicação da própria autoavaliação quando o servidor recusa', async () => {
+    const detail: AssessmentDetail = {
+      ...sampleAssessment(),
+      type: 'AUTOAVALIACAO',
+      status: 'ENVIADA',
+    }
+    const api = createApi({
+      currentUser: vi.fn().mockResolvedValue({
+        id: 'self-author',
+        displayName: 'Pessoa fictícia',
+        roles: ['COLABORADOR'],
+        permissions: ['AUTOAVALIACOES.ENVIAR_PROPRIA'],
+      }),
+      listAssessments: vi.fn().mockResolvedValue([detail]),
+      getAssessment: vi.fn().mockResolvedValue(detail),
+      publishAssessment: vi
+        .fn()
+        .mockRejectedValue(new ApiError({ status: 403, code: 'ASSESSMENT_ACCESS_DENIED' })),
+    })
+
+    renderWithExistingSession(api, '/avaliacoes')
+    fireEvent.click(await screen.findByRole('button', { name: 'Abrir avaliação' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Publicar avaliação' }))
+
+    expect(await screen.findByRole('alert')).toBeInTheDocument()
+    expect(screen.queryByText('Avaliação publicada com sucesso.')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Publicar avaliação' })).toBeEnabled()
+    expect(api.publishAssessment).toHaveBeenCalledExactlyOnceWith(detail.id)
+  })
+
   it('pré-visualiza o gráfico ao selecionar ciclo e colaborador na visão administrativa', async () => {
     const completedAssessment: AssessmentDetail = {
       ...sampleManagerAssessment(),

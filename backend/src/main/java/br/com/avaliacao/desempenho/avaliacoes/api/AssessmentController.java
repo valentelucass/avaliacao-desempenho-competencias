@@ -269,7 +269,8 @@ public class AssessmentController {
       "((hasAuthority('PERMISSION:AVALIACOES.PUBLICAR')"
           + " and hasAnyAuthority('ROLE:GERENCIA_RH', 'ROLE:DIRETORIA'))"
           + " or (hasAuthority('ROLE:GESTOR')"
-          + " and hasAuthority('PERMISSION:AVALIACOES.AVALIAR_VINCULADOS')))"
+          + " and hasAuthority('PERMISSION:AVALIACOES.AVALIAR_VINCULADOS'))"
+          + " or hasAuthority('PERMISSION:AUTOAVALIACOES.ENVIAR_PROPRIA'))"
           + " and !hasAuthority('ROLE:ADMINISTRADOR_PLATAFORMA')")
   public ResponseEntity<AssessmentDetailResponse> publish(
       @PathVariable UUID assessmentId,

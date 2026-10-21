@@ -20,6 +20,9 @@ public final class EvaluationCycleAdministrationException extends RuntimeExcepti
     OPENING_NOT_REACHED,
     WINDOW_ENDED,
     CLOSING_NOT_REACHED,
+    EXTENSION_CONFLICT,
+    EXTENSION_NOT_FUTURE,
+    FORBIDDEN,
     UNAVAILABLE
   }
 }

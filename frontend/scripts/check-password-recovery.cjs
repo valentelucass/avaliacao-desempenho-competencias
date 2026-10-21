@@ -2,6 +2,7 @@
 const assert = require('node:assert/strict')
 const path = require('node:path')
 const fs = require('node:fs')
+const { browserArtifactPath } = require('./browser-artifacts.cjs')
 
 module.exports = async function checkPasswordRecovery({ send, frameId, css }) {
   const { build } = await import('vite')
@@ -14,7 +15,10 @@ module.exports = async function checkPasswordRecovery({ send, frameId, css }) {
       root: path.resolve(__dirname, '..'),
       plugins: [react()],
       resolve: { alias: { '@': path.resolve(__dirname, '../src') } },
-      define: { 'process.env.NODE_ENV': JSON.stringify('production') },
+      define: {
+        'process.env.NODE_ENV': JSON.stringify('production'),
+        'import.meta.env.VITE_API_BASE_URL': JSON.stringify('/api/v1'),
+      },
       logLevel: 'silent',
       build: {
         write: false,
@@ -61,7 +65,10 @@ module.exports = async function checkPasswordRecovery({ send, frameId, css }) {
     )
     if (!metrics.inside) {
       const screenshot = await send('Page.captureScreenshot', { format: 'png' })
-      fs.writeFileSync('dist/ui062-dialog-failure.png', Buffer.from(screenshot.data, 'base64'))
+      fs.writeFileSync(
+        browserArtifactPath('ui062-dialog-failure.png'),
+        Buffer.from(screenshot.data, 'base64'),
+      )
       console.log(
         await evaluate(
           `JSON.stringify([...document.querySelector('[role=dialog]').children].map(e=>({class:e.className,height:e.getBoundingClientRect().height})))`,
@@ -113,7 +120,7 @@ module.exports = async function checkPasswordRecovery({ send, frameId, css }) {
       if (width === 1440) {
         const screenshot = await send('Page.captureScreenshot', { format: 'png' })
         fs.writeFileSync(
-          `dist/ui063-request-table-${theme}.png`,
+          browserArtifactPath(`ui063-request-table-${theme}.png`),
           Buffer.from(screenshot.data, 'base64'),
         )
       }
@@ -130,7 +137,7 @@ module.exports = async function checkPasswordRecovery({ send, frameId, css }) {
       if (width === 1440) {
         const screenshot = await send('Page.captureScreenshot', { format: 'png' })
         fs.writeFileSync(
-          `dist/ui063-request-popup-${theme}.png`,
+          browserArtifactPath(`ui063-request-popup-${theme}.png`),
           Buffer.from(screenshot.data, 'base64'),
         )
       }
@@ -189,7 +196,7 @@ module.exports = async function checkPasswordRecovery({ send, frameId, css }) {
         )
         const screenshot = await send('Page.captureScreenshot', { format: 'png' })
         fs.writeFileSync(
-          `dist/cor024-account-popup-${theme}.png`,
+          browserArtifactPath(`cor024-account-popup-${theme}.png`),
           Buffer.from(screenshot.data, 'base64'),
         )
       }
@@ -201,7 +208,10 @@ module.exports = async function checkPasswordRecovery({ send, frameId, css }) {
       assert.equal(await evaluate("document.activeElement.type==='date'"), true)
       if (width === 1440) {
         const screenshot = await send('Page.captureScreenshot', { format: 'png' })
-        fs.writeFileSync(`dist/cor024-popup-${theme}.png`, Buffer.from(screenshot.data, 'base64'))
+        fs.writeFileSync(
+          browserArtifactPath(`cor024-popup-${theme}.png`),
+          Buffer.from(screenshot.data, 'base64'),
+        )
       }
       await click('Cancelar')
       await ready("!document.querySelector('[role=dialog]')")

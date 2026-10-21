@@ -1463,7 +1463,11 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
       throw new AssessmentForbiddenException();
     }
     if (!authorizationPolicy.canPublish(actor, assessment.type())) {
-      requireActiveManagerLink(assessment, actor.userId());
+      if (assessment.type() == AssessmentType.AUTOAVALIACAO) {
+        requireActiveUserCollaboratorLink(assessment, actor.userId());
+      } else {
+        requireActiveManagerLink(assessment, actor.userId());
+      }
     }
     requireAdministrativeDecisionWindow(assessment);
   }

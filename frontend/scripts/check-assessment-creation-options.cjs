@@ -11,7 +11,10 @@ module.exports = async function checkAssessmentCreationOptions({ send, frameId, 
       configFile: false,
       root: path.resolve(__dirname, '..'),
       plugins: [react()],
-      define: { 'process.env.NODE_ENV': JSON.stringify('production') },
+      define: {
+        'process.env.NODE_ENV': JSON.stringify('production'),
+        'import.meta.env.VITE_API_BASE_URL': JSON.stringify('/api/v1'),
+      },
       logLevel: 'silent',
       build: {
         write: false,

@@ -90,6 +90,8 @@ class AdministrativeReadControllerTests {
         .isEqualTo("hasAnyAuthority('PERMISSION:QUESTIONARIOS.GERIR', 'PERMISSION:CICLOS.GERIR')");
     assertThat(permissionOf("draftCycleConfiguration", UUID.class, AuthenticatedPrincipal.class))
         .isEqualTo("hasAuthority('PERMISSION:CICLOS.GERIR')");
+    assertThat(permissionOf("cycleConfiguration", UUID.class, AuthenticatedPrincipal.class))
+        .isEqualTo("hasAuthority('PERMISSION:CICLOS.GERIR')");
   }
 
   @Test

@@ -39,6 +39,8 @@ import type {
   CurrentUser,
   DraftCycleConfiguration,
   EvaluationCycle,
+  EvaluationCycleAdministrationConfiguration,
+  ExtendEvaluationCycleClosingInput,
   IndicatorExport,
   IndicatorFilterOptions,
   IndicatorQuery,
@@ -176,6 +178,9 @@ export interface ApiClient {
   listCycles(): Promise<readonly EvaluationCycle[]>
   listAllCycles(): Promise<readonly EvaluationCycle[]>
   getEvaluationCycleAdministrationDraft(cycleId: string): Promise<DraftCycleConfiguration>
+  getEvaluationCycleAdministrationConfiguration(
+    cycleId: string,
+  ): Promise<EvaluationCycleAdministrationConfiguration>
   getAppliedCycleQuestionnaire(
     cycleId: string,
     cycleQuestionnaireId: string,
@@ -184,6 +189,10 @@ export interface ApiClient {
   replaceEvaluationCycle(cycleId: string, input: ReplaceEvaluationCycleInput): Promise<void>
   openEvaluationCycle(cycleId: string): Promise<void>
   closeEvaluationCycle(cycleId: string): Promise<void>
+  extendEvaluationCycleClosing(
+    cycleId: string,
+    input: ExtendEvaluationCycleClosingInput,
+  ): Promise<void>
   listAssessments(request?: AssessmentListRequest): Promise<Page<AssessmentSummary>>
   listAssessmentCreationCycleOptions(
     type: AssessmentCreationType,
@@ -821,6 +830,14 @@ export class HttpApiClient implements ApiClient {
     )
   }
 
+  getEvaluationCycleAdministrationConfiguration(
+    cycleId: string,
+  ): Promise<EvaluationCycleAdministrationConfiguration> {
+    return this.request<EvaluationCycleAdministrationConfiguration>(
+      `/evaluation-cycles/${encodeURIComponent(cycleId)}/administration-configuration`,
+    )
+  }
+
   getAppliedCycleQuestionnaire(
     cycleId: string,
     cycleQuestionnaireId: string,
@@ -858,6 +875,17 @@ export class HttpApiClient implements ApiClient {
   closeEvaluationCycle(cycleId: string): Promise<void> {
     return this.request<void>(`/evaluation-cycles/${encodeURIComponent(cycleId)}/close`, {
       method: 'POST',
+      requiresCsrf: true,
+    })
+  }
+
+  extendEvaluationCycleClosing(
+    cycleId: string,
+    input: ExtendEvaluationCycleClosingInput,
+  ): Promise<void> {
+    return this.request<void>(`/evaluation-cycles/${encodeURIComponent(cycleId)}/extend-closing`, {
+      method: 'POST',
+      body: input,
       requiresCsrf: true,
     })
   }

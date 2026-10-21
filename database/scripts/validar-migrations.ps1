@@ -255,6 +255,27 @@ try {
     }
   }
 
+  $v0016 = $files | Where-Object {
+    $_.Name -eq 'V0016__prorrogacao_auditada_encerramento_ciclo.sql'
+  }
+  if ($null -ne $v0016) {
+    $extensionValidation = Join-Path $PSScriptRoot 'testar-v0016-prorrogacao-ciclo.ps1'
+    $sqlValidation = Join-Path $resolvedDirectory '..\validation\016_validar_prorrogacao_encerramento_ciclo.sql'
+
+    if (-not (Test-Path -LiteralPath $extensionValidation)) {
+      throw 'Teste estatico da V0016 nao encontrado.'
+    }
+    if (-not (Test-Path -LiteralPath $sqlValidation)) {
+      throw 'Validacao SQL da V0016 nao encontrada.'
+    }
+
+    $global:LASTEXITCODE = 0
+    & $extensionValidation -MigrationPath $v0016.FullName -SqlValidationPath $sqlValidation
+    if ($LASTEXITCODE -ne 0) {
+      throw 'Teste estatico da V0016 falhou.'
+    }
+  }
+
   Write-Output "Migrations validas: $($files.Count)"
   Write-Output 'Conteudo de migrations compativel com o runner.'
 } catch {

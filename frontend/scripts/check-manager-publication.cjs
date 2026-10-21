@@ -5,6 +5,7 @@ const http = require('node:http')
 const os = require('node:os')
 const path = require('node:path')
 const { spawn } = require('node:child_process')
+const { safeBrowserArtifactDirectory, safeBrowserArtifactPath } = require('./browser-artifacts.cjs')
 
 async function main() {
   const { build } = await import('vite')
@@ -149,10 +150,39 @@ async function main() {
     { windowsHide: true, stdio: 'ignore' },
   )
   let ws
+  let send
+  let browserCleanup
+  const closeOwnedBrowser = () => {
+    browserCleanup ??= (async () => {
+      let closeTimer
+      try {
+        if (send && ws?.readyState === WebSocket.OPEN) {
+          await Promise.race([
+            send('Browser.close'),
+            new Promise((resolve) => {
+              closeTimer = setTimeout(resolve, 1500)
+            }),
+          ])
+        }
+      } catch {
+        // O navegador pode encerrar o CDP antes da resposta; manter o fallback local.
+      } finally {
+        clearTimeout(closeTimer)
+        try {
+          ws?.close()
+        } catch {}
+        try {
+          edge.kill()
+        } catch {}
+      }
+    })()
+    return browserCleanup
+  }
   const watchdog = setTimeout(() => {
-    edge.kill()
-    server.close()
-    process.exit(1)
+    void closeOwnedBrowser().finally(() => {
+      server.close()
+      process.exit(1)
+    })
   }, 60000)
   try {
     const portFile = path.join(profile, 'DevToolsActivePort')
@@ -167,7 +197,7 @@ async function main() {
     let nextId = 0
     const pending = new Map()
     const errors = []
-    const send = (method, params = {}) =>
+    send = (method, params = {}) =>
       new Promise((resolve, reject) => {
         const id = ++nextId
         pending.set(id, { resolve, reject })
@@ -208,7 +238,10 @@ async function main() {
     await send('Log.enable')
     await send('Network.enable')
     await send('Network.setBlockedURLs', { urls: ['https://*'] })
-    const output = path.join(root, '..', 'artifacts', 'gestor-publicacao')
+    const output = safeBrowserArtifactDirectory(
+      process.env.ADC_BROWSER_ARTIFACT_DIRECTORY ||
+        path.join(root, '..', 'artifacts', 'gestor-publicacao'),
+    )
     fs.mkdirSync(output, { recursive: true })
     for (const width of [1800, 375]) {
       detail = {
@@ -257,7 +290,7 @@ async function main() {
       }
       const screenshot = await send('Page.captureScreenshot', { format: 'png' })
       fs.writeFileSync(
-        path.join(output, `${before ? 'antes' : 'depois'}-${width}.png`),
+        safeBrowserArtifactPath(output, `${before ? 'antes' : 'depois'}-${width}.png`),
         Buffer.from(screenshot.data, 'base64'),
       )
       if (!before) {
@@ -280,8 +313,7 @@ async function main() {
     assert.equal(writes, before ? 0 : 2)
   } finally {
     clearTimeout(watchdog)
-    ws?.close()
-    edge.kill()
+    await closeOwnedBrowser()
     server.closeAllConnections()
     await new Promise((resolve) => server.close(resolve))
   }

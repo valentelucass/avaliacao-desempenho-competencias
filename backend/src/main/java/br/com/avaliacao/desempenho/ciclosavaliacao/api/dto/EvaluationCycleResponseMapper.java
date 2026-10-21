@@ -33,7 +33,13 @@ public final class EvaluationCycleResponseMapper {
   }
 
   private EvaluationCycleResponse toCycleResponse(EvaluationCycleView view) {
-    return new EvaluationCycleResponse(view.id(), view.name(), view.status().name());
+    return new EvaluationCycleResponse(
+        view.id(),
+        view.name(),
+        view.status().name(),
+        view.openingAt(),
+        view.closingAt(),
+        view.windowStatus().name());
   }
 
   private AppliedQuestionnaireResponse.CompetencyResponse toCompetencyResponse(

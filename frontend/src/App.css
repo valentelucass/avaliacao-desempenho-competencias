@@ -3507,14 +3507,20 @@ thead th {
   vertical-align: middle;
 }
 
-.cycle-questionnaire-table th:nth-child(1),
-.cycle-questionnaire-table td:nth-child(1) {
-  width: 50%;
-}
+@media (min-width: 48.0625rem) {
+  .cycle-questionnaire-table th:nth-child(1),
+  .cycle-questionnaire-table td:nth-child(1) {
+    width: calc(58% - 7rem);
+  }
 
-.cycle-questionnaire-table th:nth-child(2),
-.cycle-questionnaire-table td:nth-child(2) {
-  width: 8%;
+  .cycle-questionnaire-table th:nth-child(2),
+  .cycle-questionnaire-table td:nth-child(2) {
+    width: 7rem;
+  }
+
+  .cycle-questionnaire-table th:nth-child(2) .table-query-sort span {
+    white-space: nowrap;
+  }
 }
 
 .cycle-questionnaire-table th:nth-child(3),
@@ -5595,7 +5601,7 @@ textarea:hover:not(:disabled) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .individual-assessment-summary__table td {
+  .individual-assessment-summary__table td:nth-child(n) {
     background: var(--surface-muted);
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);

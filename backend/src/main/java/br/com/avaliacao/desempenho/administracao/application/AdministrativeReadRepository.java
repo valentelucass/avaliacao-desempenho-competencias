@@ -1,5 +1,7 @@
 package br.com.avaliacao.desempenho.administracao.application;
 
+import br.com.avaliacao.desempenho.ciclosavaliacao.domain.model.EvaluationCycleStatus;
+import br.com.avaliacao.desempenho.ciclosavaliacao.domain.model.EvaluationCycleWindowStatus;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -42,6 +44,8 @@ public interface AdministrativeReadRepository {
   List<ApprovedQuestionnaireVersionView> listApprovedQuestionnaireVersions();
 
   Optional<DraftCycleConfigurationView> findDraftCycleConfiguration(UUID cycleId);
+
+  Optional<CycleConfigurationView> findCycleConfiguration(UUID cycleId);
 
   record NamedResourceView(UUID id, String name, boolean active) {
 
@@ -226,6 +230,18 @@ public interface AdministrativeReadRepository {
       if (classificationMatrixVersionNumber < 1) {
         throw new IllegalArgumentException("A versão da matriz deve ser positiva.");
       }
+    }
+  }
+
+  record CycleConfigurationView(
+      DraftCycleConfigurationView configuration,
+      EvaluationCycleStatus status,
+      EvaluationCycleWindowStatus windowStatus) {
+
+    public CycleConfigurationView {
+      Objects.requireNonNull(configuration, "configuração não pode ser nula");
+      Objects.requireNonNull(status, "situação do ciclo não pode ser nula");
+      Objects.requireNonNull(windowStatus, "situação da janela não pode ser nula");
     }
   }
 

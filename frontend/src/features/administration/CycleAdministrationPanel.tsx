@@ -1,5 +1,5 @@
 import { AdministrativeTable } from '@/components/ui/administrative-table'
-import { useCallback, useEffect, useId, useMemo, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { CheckCircle2, Eye, Pencil, Plus, RefreshCw, XCircle } from 'lucide-react'
 import { isAuthenticationError } from '../../api/client'
@@ -10,6 +10,8 @@ import type {
   CycleQuestionnaireInput,
   DraftCycleConfiguration,
   EvaluationCycle,
+  EvaluationCycleAdministrationConfiguration,
+  EvaluationCycleWindowStatus,
   Permission,
 } from '../../api/contracts'
 import { FeedbackMessage } from '../../ui/Feedback'
@@ -46,8 +48,8 @@ const emptyForm: CycleForm = {
 }
 
 /**
- * Cria e mantém somente a configuração de ciclos em rascunho. A abertura e o
- * encerramento continuam transições auditadas e validadas pela API.
+ * Configura rascunhos, consulta ciclos e permite prorrogar o encerramento de
+ * ciclos abertos. As alterações são autorizadas, validadas e auditadas pela API.
  */
 export function CycleAdministrationPanel({
   api,
@@ -62,10 +64,15 @@ export function CycleAdministrationPanel({
   const selfAssessmentId = useId()
   const questionnairesFieldsetId = useId()
   const formErrorId = useId()
+  const extensionClosingId = useId()
+  const extensionReasonId = useId()
+  const extensionErrorId = useId()
   const [cycles, setCycles] = useState<readonly EvaluationCycle[]>([])
   const [versions, setVersions] = useState<readonly ApprovedQuestionnaireVersion[]>([])
   const [selectedCycle, setSelectedCycle] = useState<EvaluationCycle>()
-  const [draft, setDraft] = useState<DraftCycleConfiguration>()
+  const [cycleConfiguration, setCycleConfiguration] = useState<
+    DraftCycleConfiguration | EvaluationCycleAdministrationConfiguration
+  >()
   const [appliedQuestionnaire, setAppliedQuestionnaire] = useState<AppliedCycleQuestionnaire>()
   const [form, setForm] = useState<CycleForm>(emptyForm)
   const [selectedOptionKeys, setSelectedOptionKeys] = useState<readonly string[]>([])
@@ -75,12 +82,20 @@ export function CycleAdministrationPanel({
     isAvailable,
     errors: loadErrors,
   } = useAdministrativeLoad(onSessionExpired)
-  const [isLoadingDraft, setIsLoadingDraft] = useState(false)
+  const [isLoadingConfiguration, setIsLoadingConfiguration] = useState(false)
   const [isLoadingAppliedQuestionnaire, setIsLoadingAppliedQuestionnaire] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [isTransitioning, setIsTransitioning] = useState(false)
+  const [isExtendingClosing, setIsExtendingClosing] = useState(false)
+  const [extensionClosingAtLocal, setExtensionClosingAtLocal] = useState('')
+  const [extensionReason, setExtensionReason] = useState('')
+  const [extensionError, setExtensionError] = useState<string>()
   const [error, setError] = useState<string>()
   const [notice, setNotice] = useState<string>()
+  const configurationRequestId = useRef(0)
+  const appliedQuestionnaireRequestId = useRef(0)
+  const extensionRequestId = useRef(0)
+  const extensionInFlight = useRef(false)
   const {
     highlightPulse,
     isFieldHighlighted,
@@ -132,7 +147,7 @@ export function CycleAdministrationPanel({
       {
         key: 'status',
         label: 'Situação',
-        value: (item) => formatCycleStatus(item.status),
+        value: (item) => formatCycleStatus(item.status, item.windowStatus),
         kind: 'choice',
       },
       { key: 'actions', label: 'Ação' },
@@ -183,61 +198,116 @@ export function CycleAdministrationPanel({
   }, [canManageCycles, loadData])
 
   const resetForm = useCallback(() => {
+    configurationRequestId.current += 1
+    appliedQuestionnaireRequestId.current += 1
+    extensionRequestId.current += 1
+    extensionInFlight.current = false
+    setIsExtendingClosing(false)
+    setExtensionClosingAtLocal('')
+    setExtensionReason('')
+    setExtensionError(undefined)
     setSelectedCycle(undefined)
-    setDraft(undefined)
+    setCycleConfiguration(undefined)
     setAppliedQuestionnaire(undefined)
+    setIsLoadingConfiguration(false)
+    setIsLoadingAppliedQuestionnaire(false)
     setForm(emptyForm)
     setSelectedOptionKeys([])
     setError(undefined)
     setNotice(undefined)
   }, [])
 
+  useEffect(
+    () => () => {
+      configurationRequestId.current += 1
+      appliedQuestionnaireRequestId.current += 1
+      extensionRequestId.current += 1
+    },
+    [],
+  )
+
   const startNewCycle = useCallback(() => {
+    if (extensionInFlight.current) return
     resetForm()
     revealInlinePanel([codeId])
   }, [codeId, resetForm, revealInlinePanel])
 
   const selectCycle = useCallback(
-    async (cycle: EvaluationCycle) => {
+    async (cycle: EvaluationCycle, refreshAfterExtension = false) => {
+      if (extensionInFlight.current && !refreshAfterExtension) return false
+      const requestId = ++configurationRequestId.current
+      appliedQuestionnaireRequestId.current += 1
+      extensionRequestId.current += 1
+      extensionInFlight.current = false
+      setIsExtendingClosing(false)
+      setExtensionClosingAtLocal('')
+      setExtensionReason('')
+      setExtensionError(undefined)
       setSelectedCycle(cycle)
-      setDraft(undefined)
+      setCycleConfiguration(undefined)
       setAppliedQuestionnaire(undefined)
+      setIsLoadingAppliedQuestionnaire(false)
+      setForm(emptyForm)
+      setSelectedOptionKeys([])
       setError(undefined)
       setNotice(undefined)
-
-      if (cycle.status !== 'RASCUNHO') {
-        setForm(emptyForm)
-        setSelectedOptionKeys([])
-        revealInlinePanel()
-        return
-      }
-
-      setIsLoadingDraft(true)
+      setIsLoadingConfiguration(true)
       try {
-        const loadedDraft = await api.getEvaluationCycleAdministrationDraft(cycle.id)
-        setDraft(loadedDraft)
+        let loadedConfiguration:
+          DraftCycleConfiguration | EvaluationCycleAdministrationConfiguration
+        let loadedAdministrationConfiguration:
+          EvaluationCycleAdministrationConfiguration | undefined
+        if (cycle.status === 'RASCUNHO') {
+          loadedConfiguration = await api.getEvaluationCycleAdministrationDraft(cycle.id)
+        } else {
+          loadedAdministrationConfiguration =
+            await api.getEvaluationCycleAdministrationConfiguration(cycle.id)
+          loadedConfiguration = loadedAdministrationConfiguration
+        }
+        if (requestId !== configurationRequestId.current) return false
+        setCycleConfiguration(loadedConfiguration)
+        if (loadedAdministrationConfiguration) {
+          const updatedCycle = {
+            ...cycle,
+            name: loadedConfiguration.name,
+            status: loadedAdministrationConfiguration.status,
+            windowStatus: loadedAdministrationConfiguration.windowStatus,
+            closingAt:
+              loadedAdministrationConfiguration.closingAt !== undefined
+                ? loadedAdministrationConfiguration.closingAt
+                : cycle.closingAt,
+          }
+          setSelectedCycle(updatedCycle)
+          setCycles((current) =>
+            current.map((item) => (item.id === cycle.id ? updatedCycle : item)),
+          )
+        }
         setForm({
-          code: loadedDraft.code,
-          name: loadedDraft.name,
-          openingAtLocal: loadedDraft.openingAtLocal,
-          closingAtLocal: loadedDraft.closingAtLocal,
-          timeZone: loadedDraft.timeZone,
-          selfAssessmentEnabled: loadedDraft.selfAssessmentEnabled,
+          code: loadedConfiguration.code,
+          name: loadedConfiguration.name,
+          openingAtLocal: loadedConfiguration.openingAtLocal ?? '',
+          closingAtLocal: loadedConfiguration.closingAtLocal ?? '',
+          timeZone: loadedConfiguration.timeZone,
+          selfAssessmentEnabled: loadedConfiguration.selfAssessmentEnabled,
         })
         setSelectedOptionKeys(
-          loadedDraft.questionnaires.map((questionnaire) =>
+          loadedConfiguration.questionnaires.map((questionnaire) =>
             optionKey(questionnaire.questionnaireVersionId, questionnaire),
           ),
         )
         revealInlinePanel(configurationFieldIds)
+        return true
       } catch (requestError) {
+        if (requestId !== configurationRequestId.current) return false
         if (isAuthenticationError(requestError)) {
           onSessionExpired()
-          return
+          return false
         }
         setError(safeErrorMessage(requestError))
+        revealInlinePanel()
+        return false
       } finally {
-        setIsLoadingDraft(false)
+        if (requestId === configurationRequestId.current) setIsLoadingConfiguration(false)
       }
     },
     [api, configurationFieldIds, onSessionExpired, revealInlinePanel],
@@ -246,6 +316,72 @@ export function CycleAdministrationPanel({
   function updateForm<K extends keyof CycleForm>(field: K, value: CycleForm[K]) {
     // Capture o valor no evento; o updater pode rodar após o DOM ser restaurado.
     setForm((current) => ({ ...current, [field]: value }))
+  }
+
+  const configuredClosingAt =
+    cycleConfiguration &&
+    'closingAt' in cycleConfiguration &&
+    typeof cycleConfiguration.closingAt === 'string'
+      ? cycleConfiguration.closingAt
+      : undefined
+  const canExtendClosing =
+    selectedCycle?.status === 'ABERTO' &&
+    cycleConfiguration?.closingAtLocal &&
+    configuredClosingAt &&
+    !Number.isNaN(Date.parse(configuredClosingAt))
+
+  async function extendClosing(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (
+      !canManageCycles ||
+      !canExtendClosing ||
+      !configuredClosingAt ||
+      !selectedCycle ||
+      extensionInFlight.current
+    )
+      return
+    const reason = extensionReason.trim()
+    setExtensionError(undefined)
+    setNotice(undefined)
+    if (
+      !extensionClosingAtLocal ||
+      extensionClosingAtLocal <= (cycleConfiguration?.closingAtLocal ?? '')
+    ) {
+      setExtensionError('Informe um novo encerramento posterior ao prazo atual.')
+      return
+    }
+    if (reason.length < 10 || reason.length > 500) {
+      setExtensionError('Informe um motivo entre 10 e 500 caracteres.')
+      return
+    }
+    const requestId = ++extensionRequestId.current
+    extensionInFlight.current = true
+    setIsExtendingClosing(true)
+    try {
+      await api.extendEvaluationCycleClosing(selectedCycle.id, {
+        closingAtLocal: extensionClosingAtLocal,
+        expectedClosingAt: configuredClosingAt,
+        reason,
+      })
+      if (requestId !== extensionRequestId.current) return
+      await loadData()
+      if (requestId !== extensionRequestId.current) return
+      if (await selectCycle(selectedCycle, true)) {
+        setNotice('Encerramento prorrogado. A vigência e a configuração foram atualizadas.')
+      }
+    } catch (requestError) {
+      if (requestId !== extensionRequestId.current) return
+      if (isAuthenticationError(requestError)) {
+        onSessionExpired()
+        return
+      }
+      setExtensionError(safeErrorMessage(requestError))
+    } finally {
+      if (requestId === extensionRequestId.current) {
+        extensionInFlight.current = false
+        setIsExtendingClosing(false)
+      }
+    }
   }
 
   async function saveCycle(event: FormEvent<HTMLFormElement>) {
@@ -323,7 +459,7 @@ export function CycleAdministrationPanel({
         const newCycle: EvaluationCycle = { id: created.cycleId, name, status: 'RASCUNHO' }
         setCycles((currentCycles) => [newCycle, ...currentCycles])
         setSelectedCycle(newCycle)
-        setDraft({
+        setCycleConfiguration({
           cycleId: created.cycleId,
           code,
           ...configuration,
@@ -357,7 +493,7 @@ export function CycleAdministrationPanel({
   }
 
   async function transitionCycle(action: 'open' | 'close') {
-    if (!selectedCycle || !canManageCycles) {
+    if (!selectedCycle || !canManageCycles || extensionInFlight.current) {
       return
     }
     const verb = action === 'open' ? 'abrir' : 'encerrar'
@@ -397,6 +533,7 @@ export function CycleAdministrationPanel({
       return
     }
 
+    const requestId = ++appliedQuestionnaireRequestId.current
     setError(undefined)
     setNotice(undefined)
     setIsLoadingAppliedQuestionnaire(true)
@@ -405,15 +542,20 @@ export function CycleAdministrationPanel({
         selectedCycle.id,
         cycleQuestionnaireId,
       )
-      setAppliedQuestionnaire(loadedQuestionnaire)
+      if (requestId === appliedQuestionnaireRequestId.current) {
+        setAppliedQuestionnaire(loadedQuestionnaire)
+      }
     } catch (requestError) {
+      if (requestId !== appliedQuestionnaireRequestId.current) return
       if (isAuthenticationError(requestError)) {
         onSessionExpired()
         return
       }
       setError(safeErrorMessage(requestError))
     } finally {
-      setIsLoadingAppliedQuestionnaire(false)
+      if (requestId === appliedQuestionnaireRequestId.current) {
+        setIsLoadingAppliedQuestionnaire(false)
+      }
     }
   }
 
@@ -486,13 +628,18 @@ export function CycleAdministrationPanel({
           <button
             className="button"
             type="button"
-            disabled={isLoading}
+            disabled={isLoading || isExtendingClosing}
             onClick={() => void loadData()}
           >
             <RefreshCw aria-hidden="true" size={17} strokeWidth={2} />
             Atualizar
           </button>
-          <button className="button button--primary" type="button" onClick={startNewCycle}>
+          <button
+            className="button button--primary"
+            type="button"
+            onClick={startNewCycle}
+            disabled={isExtendingClosing || isSaving || isTransitioning}
+          >
             <Plus aria-hidden="true" size={17} strokeWidth={2} />
             Novo ciclo
           </button>
@@ -523,8 +670,9 @@ export function CycleAdministrationPanel({
           <h3 id="cycle-list-title">Ciclos disponíveis</h3>
           <ContextHelp title="Quando consultar ou configurar um ciclo">
             <p>
-              Ciclos em rascunho podem ser configurados. Ciclos abertos ou encerrados ficam
-              disponíveis somente para consulta, preservando a regra aplicada às avaliações.
+              Ciclos em rascunho podem ser configurados. A configuração de ciclos abertos ou
+              encerrados pode ser consultada. Ciclos abertos também permitem prorrogar o
+              encerramento, com registro no histórico.
             </p>
           </ContextHelp>
         </div>
@@ -552,10 +700,16 @@ export function CycleAdministrationPanel({
                   <AdministrativeTable.Row key={cycle.id}>
                     <AdministrativeTable.Cell data-label="Ciclo">
                       {cycle.name}
+                      {cycle.openingAt || cycle.closingAt ? (
+                        <p className="field-hint">
+                          Abertura: {formatCycleInstant(cycle.openingAt)}. Encerramento:{' '}
+                          {formatCycleInstant(cycle.closingAt)} (Brasília).
+                        </p>
+                      ) : null}
                     </AdministrativeTable.Cell>
                     <AdministrativeTable.Cell data-label="Situação">
                       <span className={`status-badge status-badge--${cycle.status.toLowerCase()}`}>
-                        {formatCycleStatus(cycle.status)}
+                        {formatCycleStatus(cycle.status, cycle.windowStatus)}
                       </span>
                     </AdministrativeTable.Cell>
                     <AdministrativeTable.Cell data-label="Ação">
@@ -564,7 +718,7 @@ export function CycleAdministrationPanel({
                           className="button"
                           type="button"
                           onClick={() => void selectCycle(cycle)}
-                          disabled={isLoadingDraft}
+                          disabled={isSaving || isTransitioning || isExtendingClosing}
                         >
                           <Pencil aria-hidden="true" size={16} strokeWidth={2} />
                           {cycle.status === 'RASCUNHO' ? 'Configurar' : 'Consultar'}
@@ -578,7 +732,7 @@ export function CycleAdministrationPanel({
             <Pagination
               currentPage={cyclesPagination.currentPage}
               hasNextPage={cyclesPagination.hasNextPage}
-              isLoading={isLoading || isLoadingDraft}
+              isLoading={isLoading || isLoadingConfiguration}
               itemCountOnPage={cyclesPagination.items.length}
               itemLabel="ciclos"
               onNextPage={cyclesPagination.onNextPage}
@@ -597,7 +751,7 @@ export function CycleAdministrationPanel({
         }`}
         onSubmit={saveCycle}
         noValidate
-        aria-busy={isSaving}
+        aria-busy={isSaving || isLoadingConfiguration}
         ref={configurationPanelRef}
         tabIndex={-1}
       >
@@ -609,228 +763,263 @@ export function CycleAdministrationPanel({
               </h3>
               <ContextHelp title="O que pode ser configurado">
                 <p>
-                  Código, vigência, autoavaliação e questionários são definidos apenas no rascunho.
-                  Depois da abertura, a configuração é preservada para manter o histórico.
+                  Código, abertura, autoavaliação e questionários são definidos no rascunho. Depois
+                  da abertura, somente a ação de prorrogar pode ampliar o encerramento, com registro
+                  no histórico.
                 </p>
               </ContextHelp>
             </div>
             {selectedCycle && selectedCycle.status !== 'RASCUNHO' ? (
               <p className="muted">
-                Ciclos abertos ou encerrados são apenas consultáveis nesta tela.
+                A configuração deste ciclo é somente leitura.
+                {canExtendClosing ? ' Use a seção abaixo para prorrogar o encerramento.' : ''}
               </p>
             ) : (
               <p className="muted">Inclua ao menos uma combinação de questionário aprovada.</p>
             )}
           </div>
         </div>
-        {isLoadingDraft ? (
-          <FeedbackMessage kind="info">Carregando configuração do rascunho…</FeedbackMessage>
+        {isLoadingConfiguration ? (
+          <FeedbackMessage kind="info">Carregando configuração do ciclo…</FeedbackMessage>
         ) : null}
-        <div className="cycle-configuration-form__details-grid">
-          <div className={fieldClassName(codeId)}>
-            <label htmlFor={codeId}>Código do ciclo</label>
-            <input
-              id={codeId}
-              value={form.code}
-              maxLength={100}
-              aria-describedby={`${codeId}-hint`}
-              disabled={Boolean(selectedCycle) || isLoadingDraft || isSaving}
-              onChange={(event) => updateForm('code', event.currentTarget.value)}
-            />
-            <p className="field-hint" id={`${codeId}-hint`}>
-              Letras sem acentos, números, ponto, hífen ou sublinhado.
-            </p>
-          </div>
-          <div className={fieldClassName(nameId)}>
-            <label htmlFor={nameId}>Nome do ciclo</label>
-            <input
-              id={nameId}
-              value={form.name}
-              maxLength={200}
-              disabled={selectedCycle?.status !== undefined && selectedCycle.status !== 'RASCUNHO'}
-              onChange={(event) => updateForm('name', event.currentTarget.value)}
-            />
-          </div>
-          <div className={fieldClassName(timeZoneId)}>
-            <label htmlFor={timeZoneId}>Fuso horário</label>
-            <input
-              id={timeZoneId}
-              value={form.timeZone}
-              aria-describedby={`${timeZoneId}-hint`}
-              maxLength={100}
-              disabled={selectedCycle?.status !== undefined && selectedCycle.status !== 'RASCUNHO'}
-              onChange={(event) => updateForm('timeZone', event.currentTarget.value)}
-            />
-            <p className="field-hint" id={`${timeZoneId}-hint`}>
-              Fuso exigido: America/Sao_Paulo.
-            </p>
-          </div>
-          <div className={fieldClassName(openingId)}>
-            <label htmlFor={openingId}>Abertura</label>
-            <input
-              id={openingId}
-              type="datetime-local"
-              value={form.openingAtLocal}
-              aria-describedby={`${openingId}-hint`}
-              disabled={selectedCycle?.status !== undefined && selectedCycle.status !== 'RASCUNHO'}
-              onChange={(event) => updateForm('openingAtLocal', event.currentTarget.value)}
-            />
-            <p className="field-hint" id={`${openingId}-hint`}>
-              Data e horário de início do ciclo.
-            </p>
-          </div>
-          <div className={fieldClassName(closingId)}>
-            <label htmlFor={closingId}>Encerramento</label>
-            <input
-              id={closingId}
-              type="datetime-local"
-              value={form.closingAtLocal}
-              aria-describedby={`${closingId}-hint`}
-              disabled={selectedCycle?.status !== undefined && selectedCycle.status !== 'RASCUNHO'}
-              onChange={(event) => updateForm('closingAtLocal', event.currentTarget.value)}
-            />
-            <p className="field-hint" id={`${closingId}-hint`}>
-              Deve ser posterior à abertura; o prazo termina neste horário.
-            </p>
-          </div>
-          <label
-            className={inlineRevealClassName(selfAssessmentId, 'checkbox-field')}
-            htmlFor={selfAssessmentId}
-          >
-            <input
-              id={selfAssessmentId}
-              type="checkbox"
-              checked={form.selfAssessmentEnabled}
-              disabled={selectedCycle?.status !== undefined && selectedCycle.status !== 'RASCUNHO'}
-              onChange={(event) => updateForm('selfAssessmentEnabled', event.currentTarget.checked)}
-            />
-            Permitir autoavaliação neste ciclo
-          </label>
-        </div>
-
-        <fieldset
-          className={`filter-fieldset${
-            questionnairesAreHighlighted
-              ? ` fieldset--inline-reveal inline-reveal-pulse--${
-                  highlightPulse % 2 === 0 ? 'even' : 'odd'
-                }`
-              : ''
-          }`}
-          id={questionnairesFieldsetId}
-        >
-          <legend>Questionários aplicados</legend>
-          {isAvailable('versions') && versions.length === 0 ? (
-            <EmptyState className="empty-state--compact" title="Nenhuma versão aprovada">
-              Não há versões aprovadas disponíveis para aplicar a um ciclo. Aprove um questionário
-              antes de configurar este ciclo.
-            </EmptyState>
-          ) : isAvailable('versions') ? (
-            <div className="cycle-questionnaire-table">
-              <AdministrativeTable>
-                <caption className="visually-hidden">
-                  Questionários e configurações disponíveis para o ciclo
-                </caption>
-                <AdministrativeTable.Head>
-                  <AdministrativeTable.Row className="table-query-title-row">
-                    {versionsPagination.headings()}
-                  </AdministrativeTable.Row>
-                  <AdministrativeTable.Row className="table-query-filter-row">
-                    {versionsPagination.filterCells()}
-                  </AdministrativeTable.Row>
-                </AdministrativeTable.Head>
-                <AdministrativeTable.Body>
-                  {versionsPagination.emptyRow()}
-                  {versionsPagination.items.map((version) => {
-                    const isSelected = version.configurationOptions.some((option) =>
-                      selectedOptionKeys.includes(
-                        optionKey(version.questionnaireVersionId, option),
-                      ),
-                    )
-
-                    return (
-                      <AdministrativeTable.Row
-                        className={questionnaireRevealClassName(isSelected)}
-                        key={version.questionnaireVersionId}
-                      >
-                        <AdministrativeTable.Cell data-label="Questionário">
-                          <strong>{version.questionnaireName}</strong>
-                          <span className="cycle-questionnaire-table__title">{version.title}</span>
-                        </AdministrativeTable.Cell>
-                        <AdministrativeTable.Cell data-label="Versão">
-                          v{version.versionNumber}
-                        </AdministrativeTable.Cell>
-                        <AdministrativeTable.Cell data-label="Configuração">
-                          {version.configurationOptions.map((option) => (
-                            <span
-                              className="cycle-questionnaire-table__configuration"
-                              key={optionKey(version.questionnaireVersionId, option)}
-                            >
-                              {formatConfigurationOption(option)}
-                            </span>
-                          ))}
-                        </AdministrativeTable.Cell>
-                        <AdministrativeTable.Cell data-label="Aplicar">
-                          {version.configurationOptions.map((option) => {
-                            const key = optionKey(version.questionnaireVersionId, option)
-                            const configurationLabel = formatConfigurationOption(option)
-                            return (
-                              <label
-                                className="cycle-questionnaire-table__selection"
-                                htmlFor={key}
-                                key={key}
-                              >
-                                <input
-                                  aria-label={configurationLabel}
-                                  id={key}
-                                  type="checkbox"
-                                  disabled={
-                                    selectedCycle?.status !== undefined &&
-                                    selectedCycle.status !== 'RASCUNHO'
-                                  }
-                                  checked={selectedOptionKeys.includes(key)}
-                                  onChange={(event) =>
-                                    toggleQuestionnaireOption(key, event.target.checked)
-                                  }
-                                />
-                                <span>Aplicar</span>
-                              </label>
-                            )
-                          })}
-                        </AdministrativeTable.Cell>
-                      </AdministrativeTable.Row>
-                    )
-                  })}
-                </AdministrativeTable.Body>
-              </AdministrativeTable>
-              <Pagination
-                currentPage={versionsPagination.currentPage}
-                hasNextPage={versionsPagination.hasNextPage}
-                isLoading={isLoading || isLoadingDraft}
-                itemCountOnPage={versionsPagination.items.length}
-                itemLabel="questionários aprovados"
-                onNextPage={versionsPagination.onNextPage}
-                onPreviousPage={versionsPagination.onPreviousPage}
-                totalPages={versionsPagination.totalPages}
-              />
+        {cycleConfiguration && selectedCycle?.windowStatus ? (
+          <p className="muted">
+            {formatWindowStatus(selectedCycle.windowStatus)}. Abertura:{' '}
+            {formatLocalCycleDateTime(cycleConfiguration.openingAtLocal)}. Encerramento:{' '}
+            {formatLocalCycleDateTime(cycleConfiguration.closingAtLocal)} (Brasília).
+          </p>
+        ) : null}
+        {selectedCycle && !isLoadingConfiguration && !cycleConfiguration ? (
+          <p className="muted">
+            A configuração não foi carregada. Consulte o ciclo novamente para tentar recuperar os
+            dados.
+          </p>
+        ) : null}
+        {!selectedCycle || cycleConfiguration ? (
+          <>
+            <div className="cycle-configuration-form__details-grid">
+              <div className={fieldClassName(codeId)}>
+                <label htmlFor={codeId}>Código do ciclo</label>
+                <input
+                  id={codeId}
+                  value={form.code}
+                  maxLength={100}
+                  aria-describedby={`${codeId}-hint`}
+                  disabled={Boolean(selectedCycle) || isLoadingConfiguration || isSaving}
+                  onChange={(event) => updateForm('code', event.currentTarget.value)}
+                />
+                <p className="field-hint" id={`${codeId}-hint`}>
+                  Letras sem acentos, números, ponto, hífen ou sublinhado.
+                </p>
+              </div>
+              <div className={fieldClassName(nameId)}>
+                <label htmlFor={nameId}>Nome do ciclo</label>
+                <input
+                  id={nameId}
+                  value={form.name}
+                  maxLength={200}
+                  disabled={
+                    selectedCycle?.status !== undefined && selectedCycle.status !== 'RASCUNHO'
+                  }
+                  onChange={(event) => updateForm('name', event.currentTarget.value)}
+                />
+              </div>
+              <div className={fieldClassName(timeZoneId)}>
+                <label htmlFor={timeZoneId}>Fuso horário</label>
+                <input
+                  id={timeZoneId}
+                  value={form.timeZone}
+                  aria-describedby={`${timeZoneId}-hint`}
+                  maxLength={100}
+                  disabled={
+                    selectedCycle?.status !== undefined && selectedCycle.status !== 'RASCUNHO'
+                  }
+                  onChange={(event) => updateForm('timeZone', event.currentTarget.value)}
+                />
+                <p className="field-hint" id={`${timeZoneId}-hint`}>
+                  Fuso exigido: America/Sao_Paulo.
+                </p>
+              </div>
+              <div className={fieldClassName(openingId)}>
+                <label htmlFor={openingId}>Abertura</label>
+                <input
+                  id={openingId}
+                  type="datetime-local"
+                  value={form.openingAtLocal}
+                  aria-describedby={`${openingId}-hint`}
+                  disabled={
+                    selectedCycle?.status !== undefined && selectedCycle.status !== 'RASCUNHO'
+                  }
+                  onChange={(event) => updateForm('openingAtLocal', event.currentTarget.value)}
+                />
+                <p className="field-hint" id={`${openingId}-hint`}>
+                  Data e horário de início do ciclo.
+                </p>
+              </div>
+              <div className={fieldClassName(closingId)}>
+                <label htmlFor={closingId}>Encerramento</label>
+                <input
+                  id={closingId}
+                  type="datetime-local"
+                  value={form.closingAtLocal}
+                  aria-describedby={`${closingId}-hint`}
+                  disabled={
+                    selectedCycle?.status !== undefined && selectedCycle.status !== 'RASCUNHO'
+                  }
+                  onChange={(event) => updateForm('closingAtLocal', event.currentTarget.value)}
+                />
+                <p className="field-hint" id={`${closingId}-hint`}>
+                  Deve ser posterior à abertura; o prazo termina neste horário.
+                </p>
+              </div>
+              <label
+                className={inlineRevealClassName(selfAssessmentId, 'checkbox-field')}
+                htmlFor={selfAssessmentId}
+              >
+                <input
+                  id={selfAssessmentId}
+                  type="checkbox"
+                  checked={form.selfAssessmentEnabled}
+                  disabled={
+                    selectedCycle?.status !== undefined && selectedCycle.status !== 'RASCUNHO'
+                  }
+                  onChange={(event) =>
+                    updateForm('selfAssessmentEnabled', event.currentTarget.checked)
+                  }
+                />
+                Permitir autoavaliação neste ciclo
+              </label>
             </div>
-          ) : null}
-        </fieldset>
 
-        {selectedCycle?.status === 'RASCUNHO' || !selectedCycle ? (
-          <div className="action-row">
-            <button
-              className="button button--success"
-              type="submit"
-              disabled={isSaving || isLoadingDraft || isLoading || !isAvailable('versions')}
+            <fieldset
+              className={`filter-fieldset${
+                questionnairesAreHighlighted
+                  ? ` fieldset--inline-reveal inline-reveal-pulse--${
+                      highlightPulse % 2 === 0 ? 'even' : 'odd'
+                    }`
+                  : ''
+              }`}
+              id={questionnairesFieldsetId}
             >
-              <CheckCircle2 aria-hidden="true" size={17} strokeWidth={2} />
-              {isSaving ? 'Salvando…' : selectedCycle ? 'Salvar configuração' : 'Criar ciclo'}
-            </button>
-          </div>
+              <legend>Questionários aplicados</legend>
+              {isAvailable('versions') && versions.length === 0 ? (
+                <EmptyState className="empty-state--compact" title="Nenhuma versão aprovada">
+                  Não há versões aprovadas disponíveis para aplicar a um ciclo. Aprove um
+                  questionário antes de configurar este ciclo.
+                </EmptyState>
+              ) : isAvailable('versions') ? (
+                <div className="cycle-questionnaire-table">
+                  <AdministrativeTable>
+                    <caption className="visually-hidden">
+                      Questionários e configurações disponíveis para o ciclo
+                    </caption>
+                    <AdministrativeTable.Head>
+                      <AdministrativeTable.Row className="table-query-title-row">
+                        {versionsPagination.headings()}
+                      </AdministrativeTable.Row>
+                      <AdministrativeTable.Row className="table-query-filter-row">
+                        {versionsPagination.filterCells()}
+                      </AdministrativeTable.Row>
+                    </AdministrativeTable.Head>
+                    <AdministrativeTable.Body>
+                      {versionsPagination.emptyRow()}
+                      {versionsPagination.items.map((version) => {
+                        const isSelected = version.configurationOptions.some((option) =>
+                          selectedOptionKeys.includes(
+                            optionKey(version.questionnaireVersionId, option),
+                          ),
+                        )
+
+                        return (
+                          <AdministrativeTable.Row
+                            className={questionnaireRevealClassName(isSelected)}
+                            key={version.questionnaireVersionId}
+                          >
+                            <AdministrativeTable.Cell data-label="Questionário">
+                              <strong>{version.questionnaireName}</strong>
+                              <span className="cycle-questionnaire-table__title">
+                                {version.title}
+                              </span>
+                            </AdministrativeTable.Cell>
+                            <AdministrativeTable.Cell data-label="Versão">
+                              v{version.versionNumber}
+                            </AdministrativeTable.Cell>
+                            <AdministrativeTable.Cell data-label="Configuração">
+                              {version.configurationOptions.map((option) => (
+                                <span
+                                  className="cycle-questionnaire-table__configuration"
+                                  key={optionKey(version.questionnaireVersionId, option)}
+                                >
+                                  {formatConfigurationOption(option)}
+                                </span>
+                              ))}
+                            </AdministrativeTable.Cell>
+                            <AdministrativeTable.Cell data-label="Aplicar">
+                              {version.configurationOptions.map((option) => {
+                                const key = optionKey(version.questionnaireVersionId, option)
+                                const configurationLabel = formatConfigurationOption(option)
+                                return (
+                                  <label
+                                    className="cycle-questionnaire-table__selection"
+                                    htmlFor={key}
+                                    key={key}
+                                  >
+                                    <input
+                                      aria-label={configurationLabel}
+                                      id={key}
+                                      type="checkbox"
+                                      disabled={
+                                        selectedCycle?.status !== undefined &&
+                                        selectedCycle.status !== 'RASCUNHO'
+                                      }
+                                      checked={selectedOptionKeys.includes(key)}
+                                      onChange={(event) =>
+                                        toggleQuestionnaireOption(key, event.target.checked)
+                                      }
+                                    />
+                                    <span>Aplicar</span>
+                                  </label>
+                                )
+                              })}
+                            </AdministrativeTable.Cell>
+                          </AdministrativeTable.Row>
+                        )
+                      })}
+                    </AdministrativeTable.Body>
+                  </AdministrativeTable>
+                  <Pagination
+                    currentPage={versionsPagination.currentPage}
+                    hasNextPage={versionsPagination.hasNextPage}
+                    isLoading={isLoading || isLoadingConfiguration}
+                    itemCountOnPage={versionsPagination.items.length}
+                    itemLabel="questionários aprovados"
+                    onNextPage={versionsPagination.onNextPage}
+                    onPreviousPage={versionsPagination.onPreviousPage}
+                    totalPages={versionsPagination.totalPages}
+                  />
+                </div>
+              ) : null}
+            </fieldset>
+
+            {selectedCycle?.status === 'RASCUNHO' || !selectedCycle ? (
+              <div className="action-row">
+                <button
+                  className="button button--success"
+                  type="submit"
+                  disabled={
+                    isSaving || isLoadingConfiguration || isLoading || !isAvailable('versions')
+                  }
+                >
+                  <CheckCircle2 aria-hidden="true" size={17} strokeWidth={2} />
+                  {isSaving ? 'Salvando…' : selectedCycle ? 'Salvar configuração' : 'Criar ciclo'}
+                </button>
+              </div>
+            ) : null}
+          </>
         ) : null}
       </form>
 
-      {selectedCycle?.status === 'RASCUNHO' ? (
+      {cycleConfiguration && selectedCycle?.status === 'RASCUNHO' ? (
         <section className="card stack-form" aria-labelledby="cycle-transition-title">
           <div className="context-help__heading">
             <h3 id="cycle-transition-title">Abrir ciclo</h3>
@@ -859,7 +1048,75 @@ export function CycleAdministrationPanel({
           </div>
         </section>
       ) : null}
-      {selectedCycle?.status === 'ABERTO' ? (
+      {canExtendClosing ? (
+        <form
+          className="card stack-form"
+          aria-labelledby="cycle-extension-title"
+          aria-describedby={extensionError ? extensionErrorId : undefined}
+          aria-busy={isExtendingClosing}
+          onSubmit={extendClosing}
+          noValidate
+        >
+          <h3 id="cycle-extension-title">Prorrogar encerramento</h3>
+          <p className="muted">
+            A prorrogação amplia o prazo para criar avaliações. A alteração e o motivo ficam
+            registrados no histórico do ciclo.
+          </p>
+          <p>
+            Encerramento atual:{' '}
+            {formatLocalCycleDateTime(cycleConfiguration?.closingAtLocal ?? null)} (Brasília).
+          </p>
+          {extensionError ? (
+            <FeedbackMessage kind="error" id={extensionErrorId}>
+              {extensionError}
+            </FeedbackMessage>
+          ) : null}
+          <div className="field">
+            <label htmlFor={extensionClosingId}>Novo encerramento (Brasília)</label>
+            <input
+              id={extensionClosingId}
+              type="datetime-local"
+              value={extensionClosingAtLocal}
+              onChange={(event) => setExtensionClosingAtLocal(event.currentTarget.value)}
+              disabled={isExtendingClosing}
+              required
+              aria-describedby={`${extensionClosingId}-hint`}
+            />
+            <p className="field-hint" id={`${extensionClosingId}-hint`}>
+              Deve ser posterior ao prazo atual e ao horário atual de Brasília. O servidor valida a
+              nova data antes de salvar.
+            </p>
+          </div>
+          <div className="field">
+            <label htmlFor={extensionReasonId}>Motivo da prorrogação</label>
+            <textarea
+              id={extensionReasonId}
+              value={extensionReason}
+              onChange={(event) => setExtensionReason(event.currentTarget.value)}
+              disabled={isExtendingClosing}
+              minLength={10}
+              maxLength={500}
+              rows={3}
+              required
+              aria-describedby={`${extensionReasonId}-hint`}
+            />
+            <p className="field-hint" id={`${extensionReasonId}-hint`}>
+              Descreva o motivo em 10 a 500 caracteres.
+            </p>
+          </div>
+          {extensionClosingAtLocal ? (
+            <p>
+              Novo encerramento: {formatLocalCycleDateTime(extensionClosingAtLocal)} (Brasília).
+            </p>
+          ) : null}
+          <div className="action-row">
+            <button className="button button--primary" type="submit" disabled={isExtendingClosing}>
+              {isExtendingClosing ? 'Prorrogando…' : 'Prorrogar encerramento'}
+            </button>
+          </div>
+        </form>
+      ) : null}
+      {cycleConfiguration && selectedCycle?.status === 'ABERTO' ? (
         <section className="card stack-form" aria-labelledby="cycle-close-title">
           <div className="context-help__heading">
             <h3 id="cycle-close-title">Encerrar ciclo</h3>
@@ -878,7 +1135,7 @@ export function CycleAdministrationPanel({
             <button
               className="button button--danger"
               type="button"
-              disabled={isTransitioning}
+              disabled={isTransitioning || isExtendingClosing}
               onClick={() => void transitionCycle('close')}
             >
               <XCircle aria-hidden="true" size={17} strokeWidth={2} />
@@ -887,7 +1144,7 @@ export function CycleAdministrationPanel({
           </div>
         </section>
       ) : null}
-      {draft && selectedCycle ? (
+      {cycleConfiguration && selectedCycle ? (
         <section className="card stack-form" aria-labelledby="applied-questionnaire-title">
           <div className="card-title-row">
             <div>
@@ -901,13 +1158,13 @@ export function CycleAdministrationPanel({
                 </ContextHelp>
               </div>
               <p className="muted">
-                Consulte o conteúdo que ficará vinculado ao ciclo. Esta visualização não permite
-                alterar perguntas, opções ou regras de cálculo.
+                Consulte o conteúdo vinculado ao ciclo. Esta visualização não permite alterar
+                perguntas, opções ou regras de cálculo.
               </p>
             </div>
           </div>
           <div className="action-row">
-            {draft.questionnaires.map((questionnaire, index) => (
+            {cycleConfiguration.questionnaires.map((questionnaire, index) => (
               <button
                 className="button"
                 disabled={isLoadingAppliedQuestionnaire}
@@ -957,9 +1214,10 @@ export function CycleAdministrationPanel({
           ) : null}
         </section>
       ) : null}
-      {draft && selectedCycle?.status === 'RASCUNHO' ? (
+      {cycleConfiguration && selectedCycle?.status === 'RASCUNHO' ? (
         <p className="muted">
-          O rascunho selecionado contém {draft.questionnaires.length} questionário(s) aplicado(s).
+          O rascunho selecionado contém {cycleConfiguration.questionnaires.length} questionário(s)
+          aplicado(s).
         </p>
       ) : null}
     </section>
@@ -982,11 +1240,43 @@ function formatConfigurationOption(
   return `${option.calculationCode} v${option.calculationVersionNumber} · ${option.classificationMatrixCode} v${option.classificationMatrixVersionNumber}`
 }
 
-function formatCycleStatus(status: string): string {
+function formatCycleStatus(status: string, windowStatus?: EvaluationCycleWindowStatus): string {
+  if (status === 'ABERTO' && windowStatus === 'PRAZO_ENCERRADO') {
+    return 'Aberto — prazo encerrado'
+  }
   const labels: Record<string, string> = {
     RASCUNHO: 'Rascunho',
     ABERTO: 'Aberto',
     ENCERRADO: 'Encerrado',
   }
   return labels[status] ?? status
+}
+
+function formatWindowStatus(status: EvaluationCycleWindowStatus): string {
+  const labels: Record<EvaluationCycleWindowStatus, string> = {
+    AGUARDANDO_ABERTURA: 'Aguardando a data de abertura',
+    VIGENTE: 'Dentro do período configurado',
+    PRAZO_ENCERRADO: 'Prazo encerrado para criar avaliações',
+    SEM_JANELA: 'Período não configurado',
+  }
+  return labels[status]
+}
+
+function formatCycleInstant(instant?: string | null): string {
+  if (!instant) return 'Não configurada'
+  const date = new Date(instant)
+  if (Number.isNaN(date.getTime())) return 'Data indisponível'
+  return new Intl.DateTimeFormat('pt-BR', {
+    dateStyle: 'short',
+    timeStyle: 'short',
+    timeZone: 'America/Sao_Paulo',
+  }).format(date)
+}
+
+function formatLocalCycleDateTime(value: string | null): string {
+  if (!value) return 'Não configurada'
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(value)
+  return match
+    ? `${match[3]}/${match[2]}/${match[1]}, ${match[4]}:${match[5]}`
+    : 'Data indisponível'
 }

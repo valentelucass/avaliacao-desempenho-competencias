@@ -130,6 +130,23 @@ public final class AdministrativeReadResponseMapper {
     return source.stream().map(this::toApprovedQuestionnaireVersion).toList();
   }
 
+  public AdministrativeReadResponses.CycleConfiguration toCycleConfiguration(
+      AdministrativeReadService.CycleConfiguration source) {
+    var configuration = toDraftCycleConfiguration(source.configuration());
+    return new AdministrativeReadResponses.CycleConfiguration(
+        configuration.cycleId(),
+        configuration.code(),
+        configuration.name(),
+        configuration.openingAtLocal(),
+        configuration.closingAtLocal(),
+        configuration.timeZone(),
+        configuration.selfAssessmentEnabled(),
+        configuration.questionnaires(),
+        source.status().name(),
+        source.windowStatus().name(),
+        source.closingAt());
+  }
+
   public DraftCycleConfiguration toDraftCycleConfiguration(
       AdministrativeReadService.DraftCycleConfiguration source) {
     return new DraftCycleConfiguration(

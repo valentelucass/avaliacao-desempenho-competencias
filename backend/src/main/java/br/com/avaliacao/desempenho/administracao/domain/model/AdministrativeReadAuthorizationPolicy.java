@@ -37,6 +37,10 @@ public final class AdministrativeReadAuthorizationPolicy {
   }
 
   public boolean mayReadDraftCycleConfiguration(AdministrativeReadAccessContext actor) {
+    return mayReadCycleConfiguration(actor);
+  }
+
+  public boolean mayReadCycleConfiguration(AdministrativeReadAccessContext actor) {
     return has(actor, CYCLES_MANAGE);
   }
 

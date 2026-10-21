@@ -1,6 +1,7 @@
 // Painel real com leituras fictícias; nenhum arquivo pessoal ou API real.
 const assert = require('node:assert/strict')
 const fs = require('node:fs')
+const { browserArtifactPath } = require('./browser-artifacts.cjs')
 const path = require('node:path')
 
 const luminance = (color) => {
@@ -24,7 +25,10 @@ module.exports = async function checkSpreadsheetImport({ send, frameId, css }) {
       root: path.resolve(__dirname, '..'),
       plugins: [react()],
       resolve: { alias: { '@': path.resolve(__dirname, '../src') } },
-      define: { 'process.env.NODE_ENV': JSON.stringify('production') },
+      define: {
+        'process.env.NODE_ENV': JSON.stringify('production'),
+        'import.meta.env.VITE_API_BASE_URL': JSON.stringify('/api/v1'),
+      },
       logLevel: 'silent',
       build: {
         write: false,
@@ -138,7 +142,7 @@ module.exports = async function checkSpreadsheetImport({ send, frameId, css }) {
             `document.querySelectorAll('.spreadsheet-import')[${index}].scrollIntoView({block:'start',behavior:'instant'})`,
           )
           fs.writeFileSync(
-            `dist/import-preparation-${theme}-${width}.png`,
+            browserArtifactPath(`import-preparation-${theme}-${width}.png`),
             Buffer.from((await send('Page.captureScreenshot', { format: 'png' })).data, 'base64'),
           )
         }
@@ -249,7 +253,9 @@ module.exports = async function checkSpreadsheetImport({ send, frameId, css }) {
             `document.querySelectorAll('.spreadsheet-import__panel')[${index}].scrollIntoView({block:'start',behavior:'instant'})`,
           )
           fs.writeFileSync(
-            `dist/import-functional-${index === 1 ? 'allocations-' : index === 3 ? 'managers-' : ''}${theme}-${width}.png`,
+            browserArtifactPath(
+              `import-functional-${index === 1 ? 'allocations-' : index === 3 ? 'managers-' : ''}${theme}-${width}.png`,
+            ),
             Buffer.from((await send('Page.captureScreenshot', { format: 'png' })).data, 'base64'),
           )
         }

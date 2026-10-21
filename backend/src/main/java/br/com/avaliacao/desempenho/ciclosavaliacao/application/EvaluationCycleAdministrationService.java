@@ -2,6 +2,7 @@ package br.com.avaliacao.desempenho.ciclosavaliacao.application;
 
 import br.com.avaliacao.desempenho.ciclosavaliacao.application.EvaluationCycleAdministrationException.Reason;
 import br.com.avaliacao.desempenho.ciclosavaliacao.domain.model.CycleRuleViolation;
+import br.com.avaliacao.desempenho.ciclosavaliacao.domain.model.EvaluationCycleClosingExtension;
 import br.com.avaliacao.desempenho.ciclosavaliacao.domain.model.EvaluationCycleConfigurationDraft;
 import br.com.avaliacao.desempenho.ciclosavaliacao.domain.model.EvaluationCycleDraft;
 import br.com.avaliacao.desempenho.ciclosavaliacao.domain.model.EvaluationCycleLifecycle;
@@ -15,7 +16,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
-/** Administra rascunhos e transições imutáveis de ciclo, sempre com autoria registrada. */
+/** Administra rascunhos, transições e prorrogações de ciclo, sempre com autoria registrada. */
 @Service
 @ConditionalOnSqlServerPersistence
 public class EvaluationCycleAdministrationService {
@@ -96,6 +97,29 @@ public class EvaluationCycleAdministrationService {
 
   public void closeCycle(UUID cycleId, EvaluationCycleCommandContext context) {
     transition(cycleId, context, lifecycle::close, "CICLO.ENCERRAR");
+  }
+
+  public void extendClosing(
+      UUID cycleId,
+      EvaluationCycleClosingExtension extension,
+      EvaluationCycleCommandContext context) {
+    Objects.requireNonNull(cycleId, "ciclo não pode ser nulo");
+    Objects.requireNonNull(extension, "prorrogação não pode ser nula");
+    var command = context(context);
+    if (!command.permissions().contains("CICLOS.GERIR")) {
+      throw new EvaluationCycleAdministrationException(
+          Reason.FORBIDDEN, "Prorrogação não permitida.");
+    }
+    try {
+      transactionTemplate.executeWithoutResult(
+          ignored ->
+              repository.extendClosing(
+                  cycleId, extension, command.actorUserId(), command.requestId()));
+    } catch (EvaluationCycleAdministrationException exception) {
+      throw exception;
+    } catch (DataAccessException exception) {
+      throw unavailable();
+    }
   }
 
   private void transition(

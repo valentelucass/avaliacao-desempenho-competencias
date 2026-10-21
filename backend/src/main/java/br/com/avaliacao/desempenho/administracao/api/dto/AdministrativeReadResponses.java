@@ -103,6 +103,24 @@ public final class AdministrativeReadResponses {
       String classificationMatrixCode,
       int classificationMatrixVersionNumber) {}
 
+  public record CycleConfiguration(
+      UUID cycleId,
+      String code,
+      String name,
+      LocalDateTime openingAtLocal,
+      LocalDateTime closingAtLocal,
+      String timeZone,
+      boolean selfAssessmentEnabled,
+      List<AppliedQuestionnaire> questionnaires,
+      String status,
+      String windowStatus,
+      java.time.Instant closingAt) {
+
+    public CycleConfiguration {
+      questionnaires = List.copyOf(questionnaires);
+    }
+  }
+
   public record DraftCycleConfiguration(
       UUID cycleId,
       String code,

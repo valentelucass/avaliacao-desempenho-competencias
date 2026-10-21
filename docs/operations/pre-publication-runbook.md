@@ -69,12 +69,19 @@ O primeiro script verifica HTTP 200 nas novas portas, cadastra somente no loopba
 
 Quando as duas rotas remotas forem editadas diretamente para `38080`/`28081`, remover apenas as pontes criadas por este procedimento com `repair-public-route.ps1 -Remove`, depois de confirmar HTTP 200 nos hosts públicos. A ponte é uma etapa de recuperação e não substitui a atualização da configuração remota do túnel.
 
-## Verificações sem alteração
+## Gate de fonte e diagnósticos antes da publicação
 
-Execute na raiz antes de solicitar ou realizar uma publicação:
+O gate compila a SPA em uma candidata exclusiva sob `backend/target/frontend-staging/<id>/dist`; capturas ficam em `browser-checks` ao lado desse diretório. `frontend/dist` permanece servido sem alterações durante build, testes e auditorias, inclusive se uma etapa falhar. A base pública da API é injetada somente no subprocesso do build; os harnesses continuam com transporte fictício e rede externa bloqueada. Sem acesso autorizado ao banco, use `-SkipDatabase` e valide o alvo SQL separadamente pelo procedimento aprovado; essa opção não certifica o banco.
+
+O launcher promove somente a candidata com recibo de qualidade aprovado, inventário e hashes intactos. A promoção é serializada, preserva um backup completo e troca o index atomicamente após os assets. Falha na cópia ou validação aciona a restauração dos arquivos anteriores; se a recuperação também falhar, preserve o backup e revise o erro composto antes de repetir. Builds diretos por `npm run build` continuam usando o diretório padrão e exigem uma cópia isolada quando a instalação estiver servindo produção.
 
 ```powershell
 .\scripts\verify-quality.ps1
+```
+
+Na raiz da instalação, os diagnósticos abaixo não fazem build nem reiniciam a aplicação:
+
+```powershell
 .\scripts\check-operation.ps1
 ```
 
@@ -86,7 +93,7 @@ iniciar-prod.bat --check
 
 Esse diagnóstico lê os três ponteiros de ambiente diretamente ou do `.env` local ignorado pelo Git: `AVALIACAO_DESEMPENHO_PRODUCTION_CONFIG` aponta para um arquivo `.properties` externo ao repositório, `AVALIACAO_DESEMPENHO_PRODUCTION_API_BASE_URL=https://api-formulario.rodogarcia.com.br/api/v1` e `AVALIACAO_DESEMPENHO_PRODUCTION_LOG_DIRECTORY` aponta para um diretório externo existente. O `.env` contém apenas caminhos e a URL pública; os segredos ficam exclusivamente no `.properties` externo ou no mecanismo de segredos aprovado.
 
-O `--check` reúne os bloqueios locais sem executar a CLI PM2, iniciar daemon, consultar SQL Server, ler valores de credenciais do `.properties`, fazer build ou criar diretórios. Ele confere somente o marcador inicial de configuração incompleta. Exige acesso ao canal de um daemon PM2 existente e bloqueia qualquer listener em `28081`/`38080`, inclusive de uma instância saudável, porque não comprova sua propriedade. Não encerre processos por esse diagnóstico; confira a identidade do listener antes de publicar. O DEV atual usa `5180`/`5181`. Código zero comprova somente os pré-requisitos locais verificados, sem validar credenciais, TLS SQL, saúde HTTP, Cloudflare ou prontidão de produção. O gate completo acima inclui validação SQL; nesta demanda sem acesso ao banco, usar `verify-quality.ps1 -SkipDatabase` em cópia isolada, preservando o `frontend/dist` servido.
+O `--check` reúne os bloqueios locais sem executar a CLI PM2, iniciar daemon, consultar SQL Server, ler valores de credenciais do `.properties`, fazer build ou criar diretórios. Ele confere somente o marcador inicial de configuração incompleta. Exige acesso ao canal de um daemon PM2 existente e bloqueia qualquer listener em `28081`/`38080`, inclusive de uma instância saudável, porque não comprova sua propriedade. Não encerre processos por esse diagnóstico; confira a identidade do listener antes de publicar. O DEV atual usa `5180`/`5181`. Código zero comprova somente os pré-requisitos locais verificados, sem validar credenciais, TLS SQL, saúde HTTP, Cloudflare ou prontidão de produção. O gate completo inclui a validação SQL quando executado sem `-SkipDatabase` e com o alvo autorizado disponível.
 
 O preflight de Java também pode ser chamado diretamente sem iniciar processo:
 
@@ -94,7 +101,7 @@ O preflight de Java também pode ser chamado diretamente sem iniciar processo:
 .\scripts\run-backend.ps1 -ValidateOnly
 ```
 
-`iniciar-dev.bat` não tem modo `--check`: ele é exclusivamente o launcher de desenvolvimento local com HTTPS. Nenhum dos comandos acima inicia ou reinicia processos. Se um deles falhar, interrompa a preparação e corrija a causa antes de qualquer publicação.
+`iniciar-dev.bat` não tem modo `--check`: ele é exclusivamente o launcher de desenvolvimento local com HTTPS. Os diagnósticos da instalação acima não iniciam nem reiniciam a aplicação. Se uma verificação falhar, interrompa a preparação e corrija a causa antes de qualquer publicação.
 
 ## Itens obrigatórios antes de uma nova publicação ou alteração operacional
 
@@ -133,7 +140,7 @@ Não executar `iniciar-prod.bat` sem argumentos nesta etapa: o fluxo normal faz 
 Somente depois de autorização explícita para o alvo correto:
 
 1. Registrar o responsável, horário, versão/artefato e forma de retorno.
-2. Executar novamente as verificações sem alteração.
+2. Executar novamente o gate de fonte na cópia isolada e os diagnósticos da instalação, conforme a seção anterior.
 3. Preparar a troca coordenada das duas rotas externas na Cloudflare, com retorno às portas anteriores caso a nova origem falhe. Não presumir que a configuração remota já usa as novas portas.
 4. Iniciar ou atualizar somente os processos `avaliacao-api-28081` e `avaliacao-front-38080` pelo script do repositório. O launcher remove os nomes anteriores `avaliacao-api-18081` e `avaliacao-front-18080` durante a migração; há uma janela de indisponibilidade até as rotas externas apontarem para as novas portas. O `pm2 save` do launcher só grava o novo snapshot após os dois listeners responderem.
 5. Confirmar que cada processo escuta exclusivamente em loopback, que os hosts externos retornam o serviço esperado e que não há rota cruzada entre front-end e API.
@@ -146,7 +153,15 @@ Somente depois de autorização explícita para o alvo correto:
 6. Confirmar no endereço final HSTS/CSP/headers defensivos e, no Cloudflare, redirecionamento HTTP→HTTPS, WAF/bot protection e limite de borda conforme a decisão aprovada.
 7. Salvar a evidência do teste, registrar a versão em operação e configurar/testar a restauração após reinício da VM.
 
-O script `iniciar-prod.bat` não configura Cloudflare, firewall, TLS de SQL Server, backup, política de logs, PM2 após reinício ou rollback automático.
+O script `iniciar-prod.bat` não configura Cloudflare, firewall, TLS de SQL Server, backups do banco, política de logs ou PM2 após reinício. A recuperação automática da promoção cobre os arquivos estáticos do frontend; retorno da API, banco ou processos após falha posterior exige o procedimento operacional correspondente.
+
+### Publicação da prorrogação de ciclos
+
+A ação de prorrogar encerramento depende da migration `V0016`. No alvo explicitamente autorizado, identifique a versão anterior, confirme recuperação e execute o runner de migrations aprovado antes de ativar a nova API. Valide o histórico e os controles da migration; depois execute o launcher aprovado. Ele promove a SPA validada antes de reiniciar a API e, em seguida, o processo frontend; confirme a compatibilidade das versões durante esse intervalo. Não altere migrations já aplicadas nem desabilite gatilhos para contornar a proteção da janela.
+
+Os ensaios de interface devem usar o servidor fictício de `frontend/scripts/check-cycle-configuration.cjs`, com build em memória e navegador exclusivo. `ADC_CYCLE_SCREENSHOT_DIRECTORY` seleciona uma pasta nova para capturas e relatório; preserve as evidências de rodadas anteriores. Esses ensaios não consultam nem prorrogam ciclos reais. Testes de integração com escrita ficam restritos ao ambiente de teste autorizado e não substituem a validação de schema no alvo.
+
+Depois da publicação, confirme por leitura a versão instalada, a configuração consultável e as permissões; uma prorrogação real exige decisão e motivo próprios. Para retornar à versão anterior da aplicação, preserve `V0016`, o encerramento novo e os eventos de auditoria. O aplicativo anterior pode continuar usando o prazo persistido, mas não oferece a nova ação de prorrogação. Não execute migration inversa, apague eventos ou restaure a data antiga como parte do rollback de binários.
 
 ## Parada e retorno
 
