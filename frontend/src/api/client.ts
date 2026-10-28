@@ -67,6 +67,7 @@ export class ApiError extends Error {
   readonly code?: string
   readonly reasonCode?: string
   readonly requestId?: string
+  readonly retryAt?: string
   readonly fieldErrors: readonly {
     field: string
     code: string
@@ -79,6 +80,7 @@ export class ApiError extends Error {
     this.code = problem.code
     this.reasonCode = problem.reasonCode
     this.requestId = problem.requestId
+    this.retryAt = problem.retryAt
     this.fieldErrors = problem.errors ?? []
   }
 }
@@ -1199,6 +1201,7 @@ async function toApiError(response: Response): Promise<ApiError> {
     code: typeof problem.code === 'string' ? problem.code : undefined,
     reasonCode: typeof problem.reasonCode === 'string' ? problem.reasonCode : undefined,
     requestId: typeof problem.requestId === 'string' ? problem.requestId : undefined,
+    retryAt: typeof problem.retryAt === 'string' ? problem.retryAt : undefined,
     errors: Array.isArray(problem.errors) ? problem.errors : undefined,
   })
 }

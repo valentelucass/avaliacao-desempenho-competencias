@@ -2,6 +2,27 @@ import { expect, it } from 'vitest'
 import { ApiError } from '../api/client'
 import { safeErrorMessage, safeLoadErrorMessage } from './safeErrorMessage'
 
+it('explica bloqueio temporário com o prazo em Brasília sem expor detalhes internos', () => {
+  const message = safeErrorMessage(
+    new ApiError({
+      status: 409,
+      code: 'PASSWORD_RESET_TEMPORARILY_BLOCKED',
+      retryAt: '2026-10-23T15:00:00Z',
+      requestId: 'lock-test',
+    }),
+  )
+  expect(message).toContain('temporariamente bloqueada por tentativas de login')
+  expect(message).toContain('12:00:00')
+  expect(message).toContain('Brasília')
+  expect(message).toContain('Referência: lock-test.')
+  expect(message).not.toContain('não possui acesso')
+  expect(
+    safeErrorMessage(
+      new ApiError({ status: 409, code: 'PASSWORD_RESET_TEMPORARILY_BLOCKED', retryAt: 'invalid' }),
+    ),
+  ).not.toContain('Invalid Date')
+})
+
 it.each([403, 409, 422])('preserva a referência segura no erro %s', (status) => {
   expect(safeErrorMessage(new ApiError({ status, requestId: 'safe.ref-1' }))).toContain(
     'Referência: safe.ref-1.',

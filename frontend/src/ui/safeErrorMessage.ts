@@ -46,6 +46,14 @@ function errorMessage(error: unknown): string {
       return 'Você não possui acesso a esta operação.'
     }
     if (error.status === 409) {
+      if (error.code === 'PASSWORD_RESET_TEMPORARILY_BLOCKED') {
+        const retryAt = error.retryAt ? new Date(error.retryAt) : undefined
+        const when =
+          retryAt && Number.isFinite(retryAt.getTime())
+            ? ` até ${retryAt.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })} (Brasília)`
+            : ''
+        return `A conta está temporariamente bloqueada por tentativas de login${when}. Aguarde o fim do bloqueio e tente novamente. Sua permissão de atendimento não foi alterada.`
+      }
       if (error.reasonCode === 'CYCLE_EXTENSION_CONFLICT')
         return 'O ciclo foi alterado ou não está mais aberto. Consulte-o novamente antes de prorrogar o prazo.'
       if (error.reasonCode === 'CYCLE_EXTENSION_NOT_FUTURE')

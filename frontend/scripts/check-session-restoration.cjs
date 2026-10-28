@@ -273,6 +273,7 @@ async function main() {
     )
     await evaluate(`document.querySelector('input[type=password]').form.requestSubmit()`)
     await ready("document.body.textContent.includes('Não foi possível autenticar')")
+    assert.equal(await evaluate("document.body.textContent.includes('aguarde 15 minutos')"), true)
     assert.equal(calls.filter((call) => call.route === '/api/v1/auth/sessions').length, 1)
     console.log(JSON.stringify({ scenario: 'invalid-login', status: 401, feedbackVisible: true }))
   } finally {

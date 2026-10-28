@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { ApiError } from '../../api/client'
 import type { ApiClient } from '../../api/client'
 import type { GeneratedTemporaryPassword } from '../../api/contracts'
 import { TemporaryPasswordReset } from './TemporaryPasswordReset'
@@ -13,6 +14,70 @@ const result = () => {
 }
 
 describe('Senha temporária em memória', () => {
+  afterEach(() => vi.useRealTimers())
+
+  it('informa bloqueio, impede envio durante o prazo e permite redefinir quando termina', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-10-23T15:00:00Z'))
+    const api = {
+      generateTemporaryPassword: vi.fn().mockResolvedValue(result()),
+    } as unknown as ApiClient
+    const onReset = vi.fn()
+    render(
+      <TemporaryPasswordReset
+        api={api}
+        userId="fixture"
+        onReset={onReset}
+        onSessionExpired={vi.fn()}
+        temporaryBlockedUntil="2026-10-23T15:00:02Z"
+      />,
+    )
+    const button = screen.getByRole('button', { name: 'Gerar senha temporária e redefinir' })
+    expect(button).toBeDisabled()
+    expect(screen.getByText(/temporariamente bloqueada por tentativas de login/)).toBeVisible()
+    fireEvent.click(button)
+    expect(api.generateTemporaryPassword).not.toHaveBeenCalled()
+    act(() => vi.advanceTimersByTime(2000))
+    expect(button).toBeEnabled()
+    expect(
+      screen.queryByText(/temporariamente bloqueada por tentativas de login/),
+    ).not.toBeInTheDocument()
+    await act(async () => {
+      fireEvent.click(button)
+    })
+    expect(onReset).toHaveBeenCalledTimes(1)
+    expect(screen.getByText(/Senha redefinida/)).toBeVisible()
+  })
+
+  it('atualiza o bloqueio quando ele surge depois de abrir o detalhe', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-10-23T15:00:00Z'))
+    const api = {
+      generateTemporaryPassword: vi.fn().mockRejectedValue(
+        new ApiError({
+          status: 409,
+          code: 'PASSWORD_RESET_TEMPORARILY_BLOCKED',
+          retryAt: '2026-10-23T15:00:02Z',
+        }),
+      ),
+    } as unknown as ApiClient
+    render(
+      <TemporaryPasswordReset
+        api={api}
+        userId="fixture"
+        onReset={vi.fn()}
+        onSessionExpired={vi.fn()}
+      />,
+    )
+    const button = screen.getByRole('button', { name: 'Gerar senha temporária e redefinir' })
+    await act(async () => {
+      fireEvent.click(button)
+    })
+    expect(button).toBeDisabled()
+    expect(screen.getByText(/temporariamente bloqueada por tentativas de login/)).toBeVisible()
+    act(() => vi.advanceTimersByTime(2000))
+    expect(button).toBeEnabled()
+  })
   it('descarta resposta recebida depois de sair da tela, sem callbacks nem exposição', async () => {
     let resolve!: (value: GeneratedTemporaryPassword) => void
     const api = {

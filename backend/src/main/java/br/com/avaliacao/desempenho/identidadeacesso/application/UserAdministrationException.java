@@ -7,17 +7,28 @@ public final class UserAdministrationException extends RuntimeException {
     INVALID_INPUT,
     USER_NOT_FOUND,
     CONFLICT,
-    FORBIDDEN
+    FORBIDDEN,
+    TEMPORARILY_BLOCKED
   }
 
   private final Reason reason;
+  private final java.time.Instant retryAt;
 
   public UserAdministrationException(Reason reason, String message) {
+    this(reason, message, null);
+  }
+
+  public UserAdministrationException(Reason reason, String message, java.time.Instant retryAt) {
     super(message);
     this.reason = reason;
+    this.retryAt = retryAt;
   }
 
   public Reason reason() {
     return reason;
+  }
+
+  public java.time.Instant retryAt() {
+    return retryAt;
   }
 }

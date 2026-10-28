@@ -114,12 +114,14 @@ class PasswordResetReadOnlySqlTests {
   }
 
   @Test
-  void individualTargetLookupExcludesAllIneligibleStatesAndAllowsExpiredTemporaryBlock() {
+  void individualTargetLookupExcludesIneligibleStatesAndReportsTemporaryBlockToTheService() {
     var users = new SqlUserAdministrationRepository(fixtureJdbc());
-    for (int n : List.of(1, 6, 7, 8, 9, 10, 11, 16, 18))
+    for (int n : List.of(1, 6, 7, 8, 9, 10, 16, 18))
       assertThat(users.lockPasswordResetTarget(id(n))).as("target %s", n).isEmpty();
-    for (int n : List.of(2, 3, 4, 5, 12, 13, 14, 15, 17))
+    for (int n : List.of(2, 3, 4, 5, 11, 12, 13, 14, 15, 17))
       assertThat(users.lockPasswordResetTarget(id(n))).as("target %s", n).isPresent();
+    assertThat(users.lockPasswordResetTarget(id(11)).orElseThrow().temporaryBlockedUntil())
+        .isAfter(java.time.Instant.now());
   }
 
   @Test

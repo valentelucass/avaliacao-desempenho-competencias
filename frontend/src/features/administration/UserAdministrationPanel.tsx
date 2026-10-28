@@ -914,6 +914,7 @@ export function UserAdministrationPanel({
               {canResetSelectedUserPassword ? (
                 <TemporaryPasswordReset
                   key={selectedUser.id}
+                  temporaryBlockedUntil={selectedUser.temporaryBlockedUntil}
                   api={api}
                   userId={selectedUser.id}
                   disabled={

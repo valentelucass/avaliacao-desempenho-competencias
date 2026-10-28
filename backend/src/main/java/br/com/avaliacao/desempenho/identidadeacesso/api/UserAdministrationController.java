@@ -278,7 +278,8 @@ public class UserAdministrationController {
       boolean passwordChangeRequired,
       Set<String> roles,
       List<PermissionGrantResponse> individualPermissions,
-      java.time.Instant updatedAt) {
+      java.time.Instant updatedAt,
+      java.time.Instant temporaryBlockedUntil) {
     static UserResponse from(UserAdministrationRepository.UserView source) {
       return new UserResponse(
           source.id().toString(),
@@ -290,7 +291,8 @@ public class UserAdministrationController {
           source.passwordChangeRequired(),
           source.roles(),
           source.individualPermissions().stream().map(PermissionGrantResponse::from).toList(),
-          source.updatedAt());
+          source.updatedAt(),
+          source.temporaryBlockedUntil());
     }
   }
 

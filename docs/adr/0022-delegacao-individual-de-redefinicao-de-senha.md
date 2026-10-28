@@ -27,6 +27,8 @@ Revisão ADC-COR-026, autorizada em 21/09/2026: nenhuma conta, inclusive o supre
 
 ## Verificação
 
+Revisão de apresentação de 23/10/2026, autorizada para correção e publicação condicionada a teste real: o bloqueio temporário não é removido pela recuperação. Operador com escopo pode consultar o alvo e seu prazo, mas recebe conflito específico com horário ao tentar redefinir ou alterar delegação antes da liberação. A consulta deixa de ocultar somente essa condição temporária; alvos técnicos, protegidos, inativos, excluídos e fora do escopo continuam restritos. O login público continua uniforme e recebe apenas orientação geral de espera. Sem migration, nova concessão ou mudança da duração do bloqueio.
+
 Os testes de domínio cobrem administrador supremo, operador delegado, conta delegadora, autoatendimento e alvos técnicos. Os testes de serviço, HTTP/CSRF, interface e a validação estática da migration estão registrados em `STATES.md` ao final da tarefa.
 
 A matriz completa, os defeitos reproduzidos, a compatibilidade restritiva de v1 e os limites de evidência estão na [revisão ADC-COR-026](../security/revisao-senhas-adc-cor-026.md). A V0015 permanece intacta e não aplicada.

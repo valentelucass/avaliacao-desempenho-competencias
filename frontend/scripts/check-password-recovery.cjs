@@ -124,9 +124,29 @@ module.exports = async function checkPasswordRecovery({ send, frameId, css }) {
           Buffer.from(screenshot.data, 'base64'),
         )
       }
+      await evaluate('window.recoveryFixture.blockFirst(3000)')
       await click('Atender solicitação')
       await ready("document.querySelector('[role=dialog]')")
       await assertDialog()
+      assert.equal(
+        await evaluate(`(${button('Gerar senha temporária e redefinir')}).disabled`),
+        true,
+      )
+      assert.equal(
+        await evaluate(
+          "document.querySelector('[role=dialog] .feedback--warning')?.textContent.includes('temporariamente bloqueada')",
+        ),
+        true,
+      )
+      assert.equal(await evaluate("window.recoveryFixture.calls.filter(c=>c==='reset').length"), 0)
+      if (width === 320 || width === 1440) {
+        const screenshot = await send('Page.captureScreenshot', { format: 'png' })
+        fs.writeFileSync(
+          browserArtifactPath(`password-block-${width}-${theme}.png`),
+          Buffer.from(screenshot.data, 'base64'),
+        )
+      }
+      await ready(`!(${button('Gerar senha temporária e redefinir')}).disabled`)
       assert.equal(
         await evaluate(
           `(()=>{const d=document.querySelector('.password-request-dialog');return d.getBoundingClientRect().width<=576&&d.scrollWidth<=d.clientWidth+1&&!!d.querySelector('.password-request-dialog__edit input')})()`,

@@ -19,6 +19,7 @@ public interface UserAdministrationRepository {
   /** Revalida conta e concessões individuais; deve ser usado dentro de transação. */
   Optional<PasswordResetAuthorizationPolicy.Actor> lockPasswordResetActor(UUID actorUserId);
 
+  /** Alvo estruturalmente elegível; o caso de uso valida o bloqueio temporário após o escopo. */
   Optional<UserView> lockPasswordResetTarget(UUID userId);
 
   /** Uso exclusivo do caso de uso, após bloquear e autorizar o alvo; nunca retornar pela API. */
@@ -83,5 +84,31 @@ public interface UserAdministrationRepository {
       boolean passwordChangeRequired,
       Set<String> roles,
       List<IndividualPermission> individualPermissions,
-      Instant updatedAt) {}
+      Instant updatedAt,
+      Instant temporaryBlockedUntil) {
+    public UserView(
+        UUID id,
+        String login,
+        String displayName,
+        AccountStatus status,
+        boolean protectedFromNormalFlow,
+        boolean logicallyDeleted,
+        boolean passwordChangeRequired,
+        Set<String> roles,
+        List<IndividualPermission> individualPermissions,
+        Instant updatedAt) {
+      this(
+          id,
+          login,
+          displayName,
+          status,
+          protectedFromNormalFlow,
+          logicallyDeleted,
+          passwordChangeRequired,
+          roles,
+          individualPermissions,
+          updatedAt,
+          null);
+    }
+  }
 }

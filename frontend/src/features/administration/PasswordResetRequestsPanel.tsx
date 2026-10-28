@@ -279,6 +279,7 @@ export function PasswordResetRequestsPanel({
             ) : null}
             <TemporaryPasswordReset
               key={user.id}
+              temporaryBlockedUntil={user.temporaryBlockedUntil}
               api={api}
               userId={user.id}
               disabled={busy}

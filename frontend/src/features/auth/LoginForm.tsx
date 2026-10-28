@@ -99,7 +99,7 @@ export function LoginForm({
     } catch (requestError) {
       setError(
         isAuthenticationError(requestError)
-          ? 'Não foi possível autenticar. Revise o login e a senha e tente novamente.'
+          ? 'Não foi possível autenticar. Revise o login e a senha. Após várias tentativas incorretas, aguarde 15 minutos antes de tentar novamente ou peça ajuda à administração.'
           : safeErrorMessage(requestError),
       )
     } finally {

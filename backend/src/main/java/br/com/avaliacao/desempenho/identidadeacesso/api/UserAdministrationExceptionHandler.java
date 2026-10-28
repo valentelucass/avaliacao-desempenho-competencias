@@ -32,7 +32,8 @@ public class UserAdministrationExceptionHandler {
   @ExceptionHandler(UserAdministrationException.class)
   ResponseEntity<ProblemDetail> handle(
       UserAdministrationException exception, HttpServletRequest request) {
-    if (exception.reason() == UserAdministrationException.Reason.FORBIDDEN) {
+    if (exception.reason() == UserAdministrationException.Reason.FORBIDDEN
+        || exception.reason() == UserAdministrationException.Reason.TEMPORARILY_BLOCKED) {
       var authentication = SecurityContextHolder.getContext().getAuthentication();
       var repository = auditRepository.getIfAvailable();
       if (repository != null
@@ -57,7 +58,7 @@ public class UserAdministrationExceptionHandler {
         switch (exception.reason()) {
           case INVALID_INPUT -> HttpStatus.UNPROCESSABLE_CONTENT;
           case USER_NOT_FOUND -> HttpStatus.NOT_FOUND;
-          case CONFLICT -> HttpStatus.CONFLICT;
+          case CONFLICT, TEMPORARILY_BLOCKED -> HttpStatus.CONFLICT;
           case FORBIDDEN -> HttpStatus.FORBIDDEN;
         };
     String code =
@@ -66,6 +67,7 @@ public class UserAdministrationExceptionHandler {
           case USER_NOT_FOUND -> "RESOURCE_NOT_FOUND";
           case CONFLICT -> "CONFLICT";
           case FORBIDDEN -> "ACCESS_DENIED";
+          case TEMPORARILY_BLOCKED -> "PASSWORD_RESET_TEMPORARILY_BLOCKED";
         };
     ProblemDetail problem = ProblemDetail.forStatusAndDetail(status, exception.getMessage());
     problem.setType(URI.create(PROBLEM_BASE + code.toLowerCase().replace('_', '-')));
@@ -75,6 +77,9 @@ public class UserAdministrationExceptionHandler {
             : status == HttpStatus.FORBIDDEN ? "Acesso negado" : "Solicitação inválida");
     problem.setProperty("code", code);
     problem.setProperty("requestId", RequestCorrelationFilter.getRequestId(request));
+    if (exception.retryAt() != null) {
+      problem.setProperty("retryAt", exception.retryAt());
+    }
     return ResponseEntity.status(status)
         .contentType(MediaType.APPLICATION_PROBLEM_JSON)
         .body(problem);

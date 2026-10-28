@@ -110,5 +110,11 @@ function showChange() {
     />,
   )
 }
-Object.assign(window, { recoveryFixture: { calls, show, showChange } })
+function blockFirst(milliseconds: number) {
+  users[0] = {
+    ...users[0],
+    temporaryBlockedUntil: new Date(Date.now() + milliseconds).toISOString(),
+  }
+}
+Object.assign(window, { recoveryFixture: { calls, show, showChange, blockFirst } })
 show(false)

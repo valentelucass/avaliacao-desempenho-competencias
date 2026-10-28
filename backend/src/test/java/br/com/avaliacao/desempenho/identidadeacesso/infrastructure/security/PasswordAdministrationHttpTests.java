@@ -124,6 +124,70 @@ class PasswordAdministrationHttpTests {
   }
 
   @Test
+  void authorizedBlockedTargetGetsRetryTimeButUnauthorizedCallerGetsNoAccountDetails()
+      throws Exception {
+    var until = Instant.parse("2099-01-01T12:00:00Z");
+    var blocked =
+        new UserAdministrationRepository.UserView(
+            target,
+            "fixture@example.invalid",
+            "Conta fictícia",
+            AccountStatus.ACTIVE,
+            false,
+            false,
+            false,
+            Set.of("GESTOR"),
+            List.of(),
+            Instant.EPOCH,
+            until);
+    when(repository.lockPasswordResetTarget(target)).thenReturn(Optional.of(blocked));
+    var operator = operator(true, Set.of("USUARIOS.ALTERAR"), "ADMINISTRADOR_PLATAFORMA");
+    mvc.perform(post(targetUrl() + "/temporary-password").with(operator).with(csrf()))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("PASSWORD_RESET_TEMPORARILY_BLOCKED"))
+        .andExpect(jsonPath("$.retryAt").value(until.toString()))
+        .andExpect(jsonPath("$.temporaryPassword").doesNotExist());
+    mvc.perform(
+            put(targetUrl() + "/password-reset-delegation")
+                .with(operator)
+                .with(csrf())
+                .contentType("application/json")
+                .content("{\"canResetPassword\":true,\"canDelegatePasswordReset\":false}"))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("PASSWORD_RESET_TEMPORARILY_BLOCKED"));
+    verify(repository, never()).resetOrdinaryUserPassword(any(), any(), any(), any(), anyBoolean());
+    verify(repository, never()).replacePasswordResetDelegation(any(), any(), any(), anyBoolean());
+    mvc.perform(
+            post(targetUrl() + "/temporary-password")
+                .with(operator(false, Set.of(), "GESTOR"))
+                .with(csrf()))
+        .andExpect(status().isForbidden())
+        .andExpect(jsonPath("$.retryAt").doesNotExist());
+    var privileged =
+        new UserAdministrationRepository.UserView(
+            target,
+            "fixture@example.invalid",
+            "Conta fictícia",
+            AccountStatus.ACTIVE,
+            false,
+            false,
+            false,
+            Set.of("GESTOR"),
+            List.of(
+                new UserAdministrationRepository.IndividualPermission(
+                    "SENHAS.DELEGAR_REDEFINICAO", PermissionEffect.ALLOW)),
+            Instant.EPOCH,
+            until);
+    when(repository.lockPasswordResetTarget(target)).thenReturn(Optional.of(privileged));
+    mvc.perform(
+            post(targetUrl() + "/temporary-password")
+                .with(operator(false, reset, "GESTOR"))
+                .with(csrf()))
+        .andExpect(status().isForbidden())
+        .andExpect(jsonPath("$.retryAt").doesNotExist());
+  }
+
+  @Test
   void generationRequiresCsrfAndReturnsOnceWithNoStoreThenRevokedOperatorIsDenied()
       throws Exception {
     var requestActor = operator(false, reset, "GESTOR");

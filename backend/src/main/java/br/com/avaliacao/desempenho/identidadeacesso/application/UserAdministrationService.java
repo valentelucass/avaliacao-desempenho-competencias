@@ -203,6 +203,7 @@ public class UserAdministrationService {
                   actor, passwordResetTarget(target))) {
                 throw passwordOperationDenied();
               }
+              requireTemporaryBlockExpired(target);
               String currentHash =
                   repository
                       .passwordHashForReset(targetUserId)
@@ -262,6 +263,7 @@ public class UserAdministrationService {
                   actor, passwordResetTarget(target), desired)) {
                 throw passwordOperationDenied();
               }
+              requireTemporaryBlockExpired(target);
               boolean actorIsSupremeAdministrator = actor.isSupreme();
               if (!repository.replacePasswordResetDelegation(
                   targetUserId,
@@ -277,6 +279,16 @@ public class UserAdministrationService {
                   actorId, "USUARIO.SENHA.DELEGACAO_ALTERAR", "USUARIO", targetUserId, requestId);
               return getUser(targetUserId);
             }));
+  }
+
+  private static void requireTemporaryBlockExpired(UserAdministrationRepository.UserView target) {
+    if (target.temporaryBlockedUntil() != null
+        && target.temporaryBlockedUntil().isAfter(java.time.Instant.now())) {
+      throw new UserAdministrationException(
+          Reason.TEMPORARILY_BLOCKED,
+          "A conta está temporariamente bloqueada por tentativas de login. Aguarde o prazo informado e tente novamente.",
+          target.temporaryBlockedUntil());
+    }
   }
 
   public UserAdministrationRepository.UserView updateUser(

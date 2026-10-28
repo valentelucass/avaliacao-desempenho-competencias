@@ -1,6 +1,6 @@
 import { useEffect, useEffectEvent, useId, useRef, useState } from 'react'
 import type { ApiClient } from '../../api/client'
-import { isAuthenticationError } from '../../api/client'
+import { ApiError, isAuthenticationError } from '../../api/client'
 import type { AdministrationUser } from '../../api/contracts'
 import { FeedbackMessage } from '../../ui/Feedback'
 import { KeyRound } from 'lucide-react'
@@ -17,6 +17,7 @@ function TemporaryPasswordResetSession({
   onSessionExpired,
   onBusyChange,
   disabled = false,
+  temporaryBlockedUntil,
 }: {
   api: ApiClient
   userId: string
@@ -24,6 +25,7 @@ function TemporaryPasswordResetSession({
   onSessionExpired: () => void
   onBusyChange?: (busy: boolean) => void
   disabled?: boolean
+  temporaryBlockedUntil?: string | null
 }) {
   const id = useId()
   const pending = useRef(false)
@@ -32,6 +34,20 @@ function TemporaryPasswordResetSession({
   const [busy, setBusy] = useState(false)
   const [temporary, setTemporary] = useState('')
   const [error, setError] = useState<string>()
+  const [retryFromResponse, setRetryFromResponse] = useState<string>()
+  const propDeadline = Date.parse(temporaryBlockedUntil ?? '')
+  const retryAt =
+    Number.isFinite(propDeadline) && propDeadline > Date.parse(retryFromResponse ?? '')
+      ? temporaryBlockedUntil
+      : (retryFromResponse ?? temporaryBlockedUntil)
+  const [now, setNow] = useState(() => Date.now())
+  const blocked = Boolean(retryAt && new Date(retryAt).getTime() > now)
+
+  useEffect(() => {
+    if (!blocked) return
+    const timer = window.setInterval(() => setNow(Date.now()), 1000)
+    return () => window.clearInterval(timer)
+  }, [blocked])
 
   useEffect(() => {
     const currentGeneration = generation
@@ -50,7 +66,7 @@ function TemporaryPasswordResetSession({
   }, [userId])
 
   async function reset() {
-    if (pending.current || disabled) return
+    if (pending.current || disabled || blocked) return
     pending.current = true
     setBusy(true)
     onBusyChange?.(true)
@@ -65,7 +81,18 @@ function TemporaryPasswordResetSession({
     } catch (failure) {
       if (current !== generation.current) return
       if (isAuthenticationError(failure)) onSessionExpired()
-      else setError(safeErrorMessage(failure))
+      else if (
+        failure instanceof ApiError &&
+        failure.code === 'PASSWORD_RESET_TEMPORARILY_BLOCKED'
+      ) {
+        setRetryFromResponse(failure.retryAt)
+        setNow(Date.now())
+        setError(
+          failure.retryAt && Date.parse(failure.retryAt) > Date.now()
+            ? undefined
+            : safeErrorMessage(failure),
+        )
+      } else setError(safeErrorMessage(failure))
     } finally {
       if (current === generation.current) {
         pending.current = false
@@ -86,6 +113,17 @@ function TemporaryPasswordResetSession({
         A senha temporária encerra as sessões atuais e exige uma nova senha pessoal no próximo
         acesso. Confirme a identidade da pessoa antes de continuar.
       </p>
+      {blocked ? (
+        <div className="feedback feedback--warning" role="status">
+          {safeErrorMessage(
+            new ApiError({
+              status: 409,
+              code: 'PASSWORD_RESET_TEMPORARILY_BLOCKED',
+              retryAt: retryAt ?? undefined,
+            }),
+          )}
+        </div>
+      ) : null}
       {error ? (
         <FeedbackMessage kind="error" onDismiss={() => setError(undefined)}>
           {error}
@@ -115,7 +153,7 @@ function TemporaryPasswordResetSession({
           className="button button--primary"
           type="button"
           onClick={() => void reset()}
-          disabled={busy || disabled}
+          disabled={busy || disabled || blocked}
         >
           <KeyRound aria-hidden="true" size={18} />
           {busy ? 'Redefinindo…' : 'Gerar senha temporária e redefinir'}

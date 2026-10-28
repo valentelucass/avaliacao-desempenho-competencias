@@ -34,6 +34,7 @@ export interface AdministrationUser {
   roles: readonly string[]
   individualPermissions: readonly AdministrationUserPermissionGrant[]
   updatedAt: string
+  temporaryBlockedUntil?: string | null
 }
 
 export interface CreateAdministrationUserInput {
@@ -324,6 +325,7 @@ export interface CreatedEvaluationCycle {
 }
 
 export interface ApiProblem {
+  retryAt?: string
   reasonCode?: string
   status: number
   code?: string

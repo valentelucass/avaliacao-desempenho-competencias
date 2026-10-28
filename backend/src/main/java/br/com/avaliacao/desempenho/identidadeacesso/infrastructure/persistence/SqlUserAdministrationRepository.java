@@ -38,7 +38,7 @@ public class SqlUserAdministrationRepository implements UserAdministrationReposi
             """
         SELECT u.usuario_id, u.login_normalizado, u.nome_exibicao, u.situacao,
                u.protegido_fluxo_normal, u.excluido_logicamente,
-               c.senha_deve_ser_trocada, u.atualizado_em_utc
+               c.senha_deve_ser_trocada, u.atualizado_em_utc, c.bloqueada_ate_utc
         FROM dbo.usuario AS u
         INNER JOIN dbo.credencial_local AS c ON c.usuario_id = u.usuario_id
         ORDER BY u.nome_exibicao, u.usuario_id
@@ -55,7 +55,7 @@ public class SqlUserAdministrationRepository implements UserAdministrationReposi
         """
         SELECT u.usuario_id, u.login_normalizado, u.nome_exibicao, u.situacao,
                u.protegido_fluxo_normal, u.excluido_logicamente,
-               c.senha_deve_ser_trocada, u.atualizado_em_utc
+               c.senha_deve_ser_trocada, u.atualizado_em_utc, c.bloqueada_ate_utc
         FROM dbo.usuario AS u
         INNER JOIN dbo.credencial_local AS c ON c.usuario_id = u.usuario_id
         WHERE u.usuario_id = ?
@@ -113,7 +113,7 @@ public class SqlUserAdministrationRepository implements UserAdministrationReposi
           ON credencial.usuario_id = usuario.usuario_id
         WHERE usuario.usuario_id = ? AND
         """
-                + PasswordResetSqlEligibility.TARGET,
+                + PasswordResetSqlEligibility.BASE_TARGET,
             rs -> {
               return rs.next();
             },
@@ -128,12 +128,12 @@ public class SqlUserAdministrationRepository implements UserAdministrationReposi
             """
         SELECT usuario.usuario_id, usuario.login_normalizado, usuario.nome_exibicao, usuario.situacao,
           usuario.protegido_fluxo_normal, usuario.excluido_logicamente,
-          credencial.senha_deve_ser_trocada, usuario.atualizado_em_utc
+          credencial.senha_deve_ser_trocada, usuario.atualizado_em_utc, credencial.bloqueada_ate_utc
         FROM dbo.usuario usuario JOIN dbo.credencial_local credencial
           ON credencial.usuario_id = usuario.usuario_id
         WHERE
         """
-                + PasswordResetSqlEligibility.TARGET
+                + PasswordResetSqlEligibility.BASE_TARGET
                 + PasswordResetSqlEligibility.OPERATOR_SCOPE
                 + " ORDER BY usuario.nome_exibicao, usuario.usuario_id",
             (rs, row) -> baseUser(rs),
@@ -257,6 +257,8 @@ public class SqlUserAdministrationRepository implements UserAdministrationReposi
       boolean actorIsSupremeAdministrator) {
     Optional<UserView> target = lockPasswordResetTarget(userId);
     if (target.isEmpty()
+        || (target.get().temporaryBlockedUntil() != null
+            && target.get().temporaryBlockedUntil().isAfter(Instant.now()))
         || userId.equals(actorUserId)
         || (!actorIsSupremeAdministrator
             && (delegation.canDelegatePasswordReset()
@@ -435,7 +437,8 @@ public class SqlUserAdministrationRepository implements UserAdministrationReposi
         resultSet.getBoolean("protegido_fluxo_normal"),
         resultSet.getBoolean("excluido_logicamente"),
         resultSet.getBoolean("senha_deve_ser_trocada"),
-        SqlServerUtcDateTime.read(resultSet, "atualizado_em_utc"));
+        SqlServerUtcDateTime.read(resultSet, "atualizado_em_utc"),
+        SqlServerUtcDateTime.read(resultSet, "bloqueada_ate_utc"));
   }
 
   private UserView hydrate(BaseUser user) {
@@ -449,7 +452,8 @@ public class SqlUserAdministrationRepository implements UserAdministrationReposi
         user.passwordChangeRequired(),
         activeRoles(user.id()),
         activeIndividualPermissions(user.id()),
-        user.updatedAt());
+        user.updatedAt(),
+        user.temporaryBlockedUntil());
   }
 
   private Set<String> activeRoles(UUID userId) {
@@ -579,5 +583,6 @@ public class SqlUserAdministrationRepository implements UserAdministrationReposi
       boolean protectedFromNormalFlow,
       boolean logicallyDeleted,
       boolean passwordChangeRequired,
-      Instant updatedAt) {}
+      Instant updatedAt,
+      Instant temporaryBlockedUntil) {}
 }
