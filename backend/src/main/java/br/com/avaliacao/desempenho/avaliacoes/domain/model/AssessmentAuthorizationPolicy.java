@@ -10,6 +10,14 @@ public final class AssessmentAuthorizationPolicy {
   public static final String EVALUATE_LINKED_MANAGERS = "AVALIACOES.AVALIAR_GERENCIAS_VINCULADAS";
   public static final String VIEW_OWN_RESPONSES = "AVALIACOES.VISUALIZAR_PROPRIAS_RESPOSTAS";
   public static final String VIEW_ALL = "AVALIACOES.VISUALIZAR_TODAS";
+
+  public boolean canExport(AssessmentAccessContext actor) {
+    return actor.has(VIEW_ALL)
+        && actor.has("DADOS.EXPORTAR")
+        && (actor.hasRole("GERENCIA_RH") || actor.hasRole("DIRETORIA"))
+        && !actor.hasRole("ADMINISTRADOR_PLATAFORMA");
+  }
+
   public static final String PUBLISH = "AVALIACOES.PUBLICAR";
   public static final String REOPEN = "AVALIACOES.REABRIR";
   public static final String RECORD_OWN_FEEDBACK = "AVALIACOES.REGISTRAR_FEEDBACK_PROPRIO";

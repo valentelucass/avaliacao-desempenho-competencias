@@ -20,6 +20,7 @@ import { safeErrorMessage, safeLoadErrorMessage } from '../../ui/safeErrorMessag
 import { AssessmentEditor } from './AssessmentEditor'
 import { IndividualAssessmentSummary } from './IndividualAssessmentSummary'
 import { AssessmentListFilters, type AssessmentFilters } from './AssessmentListFilters'
+import { AssessmentExportButton } from './AssessmentExportButton'
 
 type AssessmentsPanelProps = {
   api: ApiClient
@@ -32,6 +33,7 @@ type AssessmentsPanelProps = {
   canRecordFeedback: boolean
   isAdministrativeView: boolean
   canUseAdministrativeFilters: boolean
+  canExportAssessments?: boolean
   journey?: 'EQUIPE' | 'AUTOAVALIACAO'
   assessmentId?: string
   onExitEditor: () => void
@@ -90,6 +92,7 @@ export function AssessmentsPanel({
   canRecordFeedback,
   isAdministrativeView,
   canUseAdministrativeFilters,
+  canExportAssessments = false,
   journey,
   assessmentId,
   onExitEditor,
@@ -1168,7 +1171,24 @@ export function AssessmentsPanel({
         </div>
       ) : null}
 
-      <AssessmentListFilters onApply={setListFilters} appliedFilters={listFilters} />
+      <AssessmentListFilters
+        onApply={setListFilters}
+        appliedFilters={listFilters}
+        exportAction={
+          canExportAssessments ? (
+            <AssessmentExportButton
+              api={api}
+              filters={{
+                ...listFilters,
+                cycleId: administrativeCycleId || undefined,
+                collaboratorId: administrativeCollaboratorId || undefined,
+              }}
+              disabled={isLoading || !!error}
+              onSessionExpired={onSessionExpired}
+            />
+          ) : undefined
+        }
+      />
 
       {isLoading && assessmentPage.items.length === 0 ? (
         <FeedbackMessage kind="info">Carregando avaliações…</FeedbackMessage>

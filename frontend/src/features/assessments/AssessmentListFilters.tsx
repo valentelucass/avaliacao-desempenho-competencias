@@ -1,4 +1,5 @@
 import { useId, useState } from 'react'
+import type { ReactNode } from 'react'
 import { Filter, RotateCcw } from 'lucide-react'
 import type { AssessmentListRequest } from '../../api/contracts'
 import './assessment-list-filters.css'
@@ -11,9 +12,11 @@ export type AssessmentFilters = Pick<
 export function AssessmentListFilters({
   onApply,
   appliedFilters,
+  exportAction,
 }: {
   onApply: (filters: AssessmentFilters) => void
   appliedFilters: AssessmentFilters
+  exportAction?: ReactNode
 }) {
   const id = useId()
   const [draft, setDraft] = useState<AssessmentFilters>(appliedFilters)
@@ -114,6 +117,7 @@ export function AssessmentListFilters({
         >
           <RotateCcw aria-hidden="true" size={18} /> Limpar filtros
         </button>
+        {exportAction}
       </div>
     </form>
   )

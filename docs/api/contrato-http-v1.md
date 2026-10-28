@@ -225,6 +225,16 @@ A cópia individual é gerada exclusivamente pela caixa de impressão local do n
 
 ## Indicadores e exportação
 
+### Excel da listagem de avaliações individuais
+
+`POST /api/v1/assessments/exports` recebe JSON com os filtros opcionais `cycleId`, `collaboratorId`, `evaluatedName`, `managerName`, `status` e `feedbackStatus`, com os mesmos tipos, limites e semântica de `GET /assessments`. Não aceita cursor/limite ou autoridade enviados pelo cliente. Exige sessão, CSRF, permissões efetivas `AVALIACOES.VISUALIZAR_TODAS` e `DADOS.EXPORTAR`, papel `GERENCIA_RH` ou `DIRETORIA` e ausência do papel técnico `ADMINISTRADOR_PLATAFORMA`. Revalida a conta ativa e reutiliza o escopo SQL da lista. Não concede novas permissões.
+
+Retorna `.xlsx` com `Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`, `Content-Disposition: attachment; filename="avaliacoes-desempenho.xlsx"` e `Cache-Control: no-store`. Uma aba Avaliações, quatro colunas na ordem: Gestor, Colaborador avaliado, Status da Avaliação, Status do Feedback. Uma linha por avaliação, abrangendo todo o conjunto autorizado filtrado, e não somente a página visível; conjunto vazio gera somente cabeçalhos. Gestor é o avaliador responsável; autoavaliação exibe Não se aplica nessa coluna. Situações são Rascunho/Enviada/Publicada e Não aplicável/Pendente/Concluído, preservando o feedback da versão atual. Não inclui notas, respostas, comentários, login ou identificadores.
+
+Conteúdo textual é escrito como célula literal OOXML, com escaping XML, sem fórmulas, macros ou vínculos externos; cabeçalho fixo, autofiltro e larguras de leitura. Arquivo preparado em memória, sem persistência local no servidor. Há limite de 50.000 linhas por arquivo; acima dele responde `422/ASSESSMENT_EXPORT_TOO_LARGE`, sem arquivo parcial. Cada ator pode solicitar dez exportações por quinze minutos na instância; exceder responde `429/RATE_LIMITED`. Geração autorizada é auditada como `AVALIACOES.EXPORTAR`, sem conteúdo do arquivo ou nomes nos detalhes da auditoria. Falha de transporte após a geração pode impedir o download mesmo com evento SUCESSO; esse evento confirma a geração, não a gravação no computador do usuário.
+
+O botão Exportar Excel aparece para os perfis autorizados à direita das ações de filtro; em celular ocupa uma linha própria. Usa somente os filtros já aplicados e informa carregamento/erro sem repetir cliques durante a geração. API compatível deve preceder a SPA; reversão dos binários não exige alteração de banco. Esse relatório individual de situação é distinto dos indicadores agregados descritos abaixo, cujas regras de privacidade permanecem inalteradas.
+
 | Operação                                 | Regra                                                                                                                                                             |
 | ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `GET /indicators/options?cycleId={UUID}` | RH/Diretoria recebem `{ branches, areas, managers, competencies }`, cada item `{ id, label }`; cada lista omite opções abaixo de cinco colaboradores distintos.   |

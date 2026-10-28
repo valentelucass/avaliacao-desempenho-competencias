@@ -2,6 +2,7 @@ package br.com.avaliacao.desempenho.avaliacoes.infrastructure.persistence;
 
 import br.com.avaliacao.desempenho.avaliacoes.application.AssessmentConflictException;
 import br.com.avaliacao.desempenho.avaliacoes.application.AssessmentConflictException.Reason;
+import br.com.avaliacao.desempenho.avaliacoes.application.AssessmentExportRepository;
 import br.com.avaliacao.desempenho.avaliacoes.application.AssessmentForbiddenException;
 import br.com.avaliacao.desempenho.avaliacoes.application.AssessmentNotFoundException;
 import br.com.avaliacao.desempenho.avaliacoes.application.AssessmentRepository;
@@ -62,7 +63,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 @Repository
 @ConditionalOnSqlServerPersistence
 @ConditionalOnProperty(prefix = "app.assessments", name = "enabled", havingValue = "true")
-public class SqlServerAssessmentRepository implements AssessmentRepository {
+public class SqlServerAssessmentRepository
+    implements AssessmentRepository, AssessmentExportRepository {
 
   private static final String POLICY_VERSION = "2024.1";
   private static final int IDEMPOTENCY_KEY_MAXIMUM_LENGTH = 256;
@@ -513,8 +515,79 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
     if (!isActorActive(safeActor.userId())) {
       return new AssessmentPageView(List.of(), null);
     }
+    List<Object> parameters = listParameters(safeActor, safeFilter);
+    parameters.addFirst(limit + 1);
+    AssessmentTotals totals =
+        jdbcTemplate.queryForObject(
+            LIST_TOTALS_SQL,
+            (resultSet, rowNumber) ->
+                new AssessmentTotals(
+                    resultSet.getObject("total", Long.class),
+                    resultSet.getObject("drafts", Long.class),
+                    resultSet.getObject("submitted", Long.class),
+                    resultSet.getObject("published", Long.class)),
+            parameters.subList(1, parameters.size()).toArray());
+    Long totalItems =
+        jdbcTemplate.queryForObject(
+            LIST_TOTAL_ITEMS_SQL,
+            (resultSet, rowNumber) -> resultSet.getLong("total_items"),
+            parameters.subList(1, parameters.size()).toArray());
+    if (cursor != null) {
+      parameters.add(SqlServerUtcDateTime.forBinding(cursor.updatedAt()));
+      parameters.add(SqlServerUtcDateTime.forBinding(cursor.updatedAt()));
+      parameters.add(cursor.id());
+    }
+    List<AssessmentSummaryView> items =
+        new ArrayList<>(
+            jdbcTemplate.query(
+                cursor == null ? LIST_ACCESSIBLE_FIRST_PAGE_SQL : LIST_ACCESSIBLE_AFTER_CURSOR_SQL,
+                (resultSet, rowNumber) -> mapSummary(resultSet),
+                parameters.toArray()));
+    AssessmentCursor nextCursor = null;
+    if (items.size() > limit) {
+      items.removeLast();
+      AssessmentSummaryView last = items.getLast();
+      nextCursor = new AssessmentCursor(last.updatedAt(), last.id());
+    }
+    return new AssessmentPageView(
+        List.copyOf(items),
+        nextCursor,
+        totals,
+        totalPages(totalItems == null ? 0 : totalItems, limit));
+  }
+
+  @Override
+  public List<ExportRow> listForExport(
+      AssessmentAccessContext actor, AssessmentListFilter filter, int limit) {
+    if (!new AssessmentAuthorizationPolicy().canExport(actor) || !isActorActive(actor.userId())) {
+      throw new AssessmentForbiddenException();
+    }
+    if (limit < 1 || limit > 50_001)
+      throw new AssessmentValidationException("Limite de exportação inválido.");
+    var parameters = listParameters(actor, filter);
+    parameters.addFirst(limit);
+    return jdbcTemplate.query(
+        """
+        SELECT TOP (?)
+          CASE WHEN assessment.tipo_avaliacao = 'AUTOAVALIACAO' THEN NULL ELSE evaluator.nome_exibicao END AS manager_name,
+          collaborator.nome_exibicao AS evaluated_name,
+          assessment.situacao AS assessment_situation,
+          feedback_state.situation AS feedback_situation
+        """
+            + LIST_ACCESSIBLE_SCOPE_SQL
+            + " ORDER BY assessment.atualizada_em_utc DESC, assessment.avaliacao_id DESC",
+        (resultSet, rowNumber) ->
+            new ExportRow(
+                resultSet.getString("manager_name"),
+                resultSet.getString("evaluated_name"),
+                AssessmentStatus.valueOf(resultSet.getString("assessment_situation")),
+                FeedbackStatus.valueOf(resultSet.getString("feedback_situation"))),
+        parameters.toArray());
+  }
+
+  private static List<Object> listParameters(
+      AssessmentAccessContext safeActor, AssessmentListFilter safeFilter) {
     List<Object> parameters = new ArrayList<>();
-    parameters.add(limit + 1);
     parameters.add(safeActor.has("AVALIACOES.VISUALIZAR_TODAS") ? 1 : 0);
     parameters.add(safeActor.userId());
     parameters.add(safeActor.has("AVALIACOES.VISUALIZAR_PROPRIAS_RESPOSTAS") ? 1 : 0);
@@ -535,43 +608,7 @@ public class SqlServerAssessmentRepository implements AssessmentRepository {
       parameters.add(value);
       parameters.add(value);
     }
-    AssessmentTotals totals =
-        jdbcTemplate.queryForObject(
-            LIST_TOTALS_SQL,
-            (resultSet, rowNumber) ->
-                new AssessmentTotals(
-                    resultSet.getObject("total", Long.class),
-                        resultSet.getObject("drafts", Long.class),
-                    resultSet.getObject("submitted", Long.class),
-                        resultSet.getObject("published", Long.class)),
-            parameters.subList(1, parameters.size()).toArray());
-    Long totalItems =
-        jdbcTemplate.queryForObject(
-            LIST_TOTAL_ITEMS_SQL,
-            (resultSet, rowNumber) -> resultSet.getLong("total_items"),
-            parameters.subList(1, parameters.size()).toArray());
-    if (cursor != null) {
-      parameters.add(SqlServerUtcDateTime.forBinding(cursor.updatedAt()));
-      parameters.add(SqlServerUtcDateTime.forBinding(cursor.updatedAt()));
-      parameters.add(cursor.id());
-    }
-    List<AssessmentSummaryView> items =
-        new ArrayList<>(
-            jdbcTemplate.query(
-                cursor == null ? LIST_ACCESSIBLE_FIRST_PAGE_SQL : LIST_ACCESSIBLE_AFTER_CURSOR_SQL,
-                (resultSet, rowNumber) -> mapSummary(resultSet),
-                parameters.toArray()));
-    AssessmentCursor nextCursor = null;
-    if (items.size() > limit) {
-      items.remove(items.size() - 1);
-      AssessmentSummaryView last = items.get(items.size() - 1);
-      nextCursor = new AssessmentCursor(last.updatedAt(), last.id());
-    }
-    return new AssessmentPageView(
-        List.copyOf(items),
-        nextCursor,
-        totals,
-        totalPages(totalItems == null ? 0 : totalItems, limit));
+    return parameters;
   }
 
   private static long totalPages(long totalItems, int limit) {

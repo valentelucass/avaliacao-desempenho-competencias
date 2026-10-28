@@ -558,6 +558,13 @@ export interface IndicatorExport {
   content: Blob
 }
 
+export interface AssessmentExport {
+  filename: string
+  content: Blob
+}
+
+export type AssessmentExportRequest = Omit<AssessmentListRequest, 'limit' | 'cursor'>
+
 export interface AssessmentTotals {
   total: number | null
   drafts: number | null

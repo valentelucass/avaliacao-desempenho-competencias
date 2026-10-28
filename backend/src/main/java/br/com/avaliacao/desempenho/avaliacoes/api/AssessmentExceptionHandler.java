@@ -1,10 +1,12 @@
 package br.com.avaliacao.desempenho.avaliacoes.api;
 
 import br.com.avaliacao.desempenho.avaliacoes.application.AssessmentConflictException;
+import br.com.avaliacao.desempenho.avaliacoes.application.AssessmentExportTooLargeException;
 import br.com.avaliacao.desempenho.avaliacoes.application.AssessmentForbiddenException;
 import br.com.avaliacao.desempenho.avaliacoes.application.AssessmentNotFoundException;
 import br.com.avaliacao.desempenho.avaliacoes.application.AssessmentValidationException;
 import br.com.avaliacao.desempenho.avaliacoes.domain.model.AssessmentRuleViolation;
+import br.com.avaliacao.desempenho.identidadeacesso.application.RateLimitedException;
 import br.com.avaliacao.desempenho.identidadeacesso.infrastructure.security.RequestCorrelationFilter;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
@@ -24,6 +26,26 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 public class AssessmentExceptionHandler {
 
   private static final String PROBLEM_BASE = "https://api-formulario.rodogarcia.com.br/problems/";
+
+  @ExceptionHandler(AssessmentExportTooLargeException.class)
+  ResponseEntity<ProblemDetail> exportTooLarge(HttpServletRequest request) {
+    return problem(
+        request,
+        HttpStatus.UNPROCESSABLE_CONTENT,
+        "ASSESSMENT_EXPORT_TOO_LARGE",
+        "Exportação muito ampla",
+        "Aplique filtros para exportar até 50.000 avaliações por arquivo.");
+  }
+
+  @ExceptionHandler(RateLimitedException.class)
+  ResponseEntity<ProblemDetail> exportRateLimited(HttpServletRequest request) {
+    return problem(
+        request,
+        HttpStatus.TOO_MANY_REQUESTS,
+        "RATE_LIMITED",
+        "Aguarde para exportar novamente",
+        "Aguarde quinze minutos antes de exportar novamente.");
+  }
 
   @ExceptionHandler(AssessmentNotFoundException.class)
   ResponseEntity<ProblemDetail> notFound(HttpServletRequest request) {

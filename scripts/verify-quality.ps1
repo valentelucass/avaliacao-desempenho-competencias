@@ -167,6 +167,10 @@ try {
         & node (Join-Path $repositoryRoot 'frontend/scripts/check-session-restoration.cjs')
     }
 
+    Invoke-Validation 'Front-end: exportacao Excel de avaliacoes, filtros e download no Edge' {
+        & node --max-old-space-size=512 (Join-Path $repositoryRoot 'frontend/scripts/check-assessment-export.cjs')
+    }
+
     Invoke-Validation 'Front-end: publicacao pelo gestor no Edge com dados ficticios' {
         & node (Join-Path $repositoryRoot 'frontend/scripts/check-manager-publication.cjs')
     }

@@ -22,6 +22,9 @@ function withReference(message: string, error: unknown): string {
 function errorMessage(error: unknown): string {
   if (error instanceof ApiError) {
     const importErrors: Record<string, string> = {
+      ASSESSMENT_EXPORT_TOO_LARGE:
+        'Aplique filtros para exportar até 50.000 avaliações por arquivo.',
+      EXPORT_FAILED: 'Não foi possível preparar a planilha. Tente novamente.',
       MASTER_DATA_DELETE_BLOCKED:
         'Só é possível excluir um cadastro desativado e sem uso. Lotações, vínculos, atribuições e avaliações, inclusive históricos, impedem a exclusão. Edite ou reative o cadastro.',
       MASTER_DATA_DELETE_UNAVAILABLE:

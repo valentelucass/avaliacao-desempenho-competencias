@@ -348,6 +348,11 @@ function App({ api = defaultApiClient }: AppProps) {
   const canUseAdministrativeAssessmentFilters = hasAnyPermission(user, ['CADASTROS.GERIR'])
   const canViewIndicators = hasAnyPermission(user, ['INDICADORES.VISUALIZAR'])
   const canExportIndicators = hasAnyPermission(user, ['DADOS.EXPORTAR'])
+  const canExportAssessments =
+    canViewAllAssessments &&
+    canExportIndicators &&
+    (user.roles ?? []).some((role) => role === 'GERENCIA_RH' || role === 'DIRETORIA') &&
+    !(user.roles ?? []).includes('ADMINISTRADOR_PLATAFORMA')
   const canViewAdministration = hasAnyPermission(user, administrationPermissions)
   const administrationMenuItems = [
     {
@@ -635,6 +640,7 @@ function App({ api = defaultApiClient }: AppProps) {
                 canPublishAssessments={canPublishAssessments}
                 canReopenAssessments={canReopenAssessments}
                 canRecordFeedback={canRecordAssessmentFeedback}
+                canExportAssessments={canExportAssessments}
                 isAdministrativeView={canViewAdministration && canViewAllAssessments}
                 canUseAdministrativeFilters={
                   canViewAdministration &&

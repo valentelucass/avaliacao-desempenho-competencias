@@ -42,6 +42,8 @@ import type {
   EvaluationCycleAdministrationConfiguration,
   ExtendEvaluationCycleClosingInput,
   IndicatorExport,
+  AssessmentExport,
+  AssessmentExportRequest,
   IndicatorFilterOptions,
   IndicatorQuery,
   IndicatorResponse,
@@ -196,6 +198,7 @@ export interface ApiClient {
     input: ExtendEvaluationCycleClosingInput,
   ): Promise<void>
   listAssessments(request?: AssessmentListRequest): Promise<Page<AssessmentSummary>>
+  exportAssessments(request: AssessmentExportRequest): Promise<AssessmentExport>
   listAssessmentCreationCycleOptions(
     type: AssessmentCreationType,
   ): Promise<readonly AssessmentCreationCycleOption[]>
@@ -1037,6 +1040,24 @@ export class HttpApiClient implements ApiClient {
 
   getIndicators(query: IndicatorQuery): Promise<IndicatorResponse> {
     return this.request<IndicatorResponse>(`/indicators${indicatorQueryString(query)}`)
+  }
+
+  async exportAssessments(request: AssessmentExportRequest): Promise<AssessmentExport> {
+    const response = await this.sendWithRecovery('/assessments/exports', {
+      method: 'POST',
+      body: request,
+      requiresCsrf: true,
+      headers: { Accept: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' },
+    })
+    if (!response.ok) throw await toApiError(response)
+    if (
+      !response.headers
+        .get('content-type')
+        ?.startsWith('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    ) {
+      throw new ApiError({ status: 502, code: 'EXPORT_FAILED' })
+    }
+    return { filename: 'avaliacoes-desempenho.xlsx', content: await response.blob() }
   }
 
   async exportIndicators(query: IndicatorQuery): Promise<IndicatorExport | IndicatorResponse> {
