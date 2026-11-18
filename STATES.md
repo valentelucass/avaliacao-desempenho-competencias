@@ -38,6 +38,16 @@ Fontes conferidas: AssessmentListFilters.tsx, AssessmentsPanel.tsx, AssessmentCo
 
 Após pedido de foto antes de implementar, prévia visual isolada concluída com o componente real AssessmentsPanel, dados fictícios e botão provisório inserido somente no harness externo ao repositório. Proposta: Exportar Excel verde com ícone de planilha, à direita de Aplicar filtros/Limpar filtros na mesma faixa; em até 640 px, linha própria com largura disponível. Não realiza download. Edge real exclusivo aprovou capturas 1440×1000 e 390×1000, botão visível dentro dos filtros, altura mínima, ausência de overflow e de exceções JavaScript; imagens desktop/celular inspecionadas. Transporte somente GET de assets do servidor loopback próprio, sem API/produção/banco. Build em memória write:false, sem alteração em frontend/dist ou fontes do produto. Primeiro supervisor privado parou por retorno em array do build; corrigido somente o harness, repetição saída 0, pico 856 MiB sob quota 2 GiB (export-preview-memory-2.json). Evidência export-preview-evidence.json e fontes em work do chat; fotos previa-exportar-excel-desktop.png e previa-exportar-excel-celular.png em outputs. Posição permanece proposta aguardando a avaliação solicitada; implementação funcional e publicação não executadas.
 
+## Diagnóstico de acesso do Anderson — ADC-DIAG-ANDERSON-20261026
+
+Concluído em 26/10/2026 às 21:56 de Brasília, a pedido de investigar profundamente o acesso após redefinição. SELECTs parametrizados em AVALIACAO_PROD, confirmado por DB_NAME(), com credencial protegida e TLS validado, localizaram uma única conta correspondente ao nome informado. O login da captura contém o segmento operacionalspo2; o cadastro correspondente usa operacional2, sem sp. Tanto a transcrição com letra o quanto a variante com zero (sp02) retornaram zero contas; o login cadastrado retornou uma. Identificadores completos e evidências sanitizadas estão no relatório restrito do chat, sem reproduzir dados pessoais adicionais neste estado.
+
+Redefinições registradas com SUCESSO em 23/10 às 15:37:17 e 26/10 às 20:44:59 de Brasília. Conta ATIVO, não excluída/protegida, papel GESTOR vigente, credencial BCRYPT presente, troca obrigatória pendente, tentativas_falhas=0 e bloqueada_ate_utc=NULL. Histórico disponível não contém AUTENTICACAO.LOGIN nem troca pessoal vinculados a essa conta; não há sessões desde 19/10. O estado atual não sustenta diagnóstico de bloqueio temporário. O fonte confirma busca exata do login normalizado e falha genérica quando não existe; a mensagem de quinze minutos no login é comum aos 401 e não confirma bloqueio.
+
+Teste HTTP real na API pública em 26/10 às 21:55:52, usando a transcrição inexistente da captura e senha aleatória fictícia, recebeu 401/AUTHENTICATION_FAILED. Request a7f34c86-d5fa-42b9-b4e4-f0eb97e27aaa possui auditoria AUTENTICACAO.LOGIN/FALHA em PROD com ator NULL e sem recurso, confirmando ausência de conta identificada. Consulta após o teste preserva senha_alterada_em_utc, zero falhas e ausência de bloqueio da conta real. Não se usou nem redefiniu a senha do Anderson; não se declara login positivo com a temporária real, que não foi fornecida. Providência indicada: usar o login cadastrado com a temporária da última redefinição e concluir a troca pessoal exigida.
+
+Frontend/JS/CSRF públicos HTTP 200; bundle SHA-256 77037706927DBCC52C47A6393A7A7DE2200ED4BE8F8387F8135B8B2554EF8C98 coincide com o promovido em 23/10. Nenhuma alteração de código, configuração, conta, permissão, serviço ou nova publicação. Única escrita produtiva foi a auditoria normal da tentativa diagnóstica anônima. Sem necessidade de repetir build, suítes ou atualização estrutural do Graphify para este diagnóstico; mapa consultado com orçamento de 1.800 tokens, retorno truncado e conclusões conferidas no fonte e em SQL real, sem declarar medição de tokens de processamento. Relatório e evidências em outputs/diagnostico-anderson-20261026.txt e outputs/evidencias-anderson-20261026.json do chat de 23/10; arquivos intermediários separados em work, preservando as evidências anteriores.
+
 ## Correção das mensagens e publicação condicionada — ADC-COR-SENHA-20261023
 
 Correção publicada em 23/10/2026 às 13:56 de Brasília e verificada publicamente às 14:00, após autorização explícita para corrigir os dois lados e publicar somente com teste real aprovado. Alvos: frontend/API da Avaliação e somente processos avaliacao-api-28081/avaliacao-front-38080 pelo launcher existente. Bloqueio, autorização, credenciais e avaliações reais preservados. Escritas de teste restritas a fixtures próprias em AVALIACAO_DEV com rollback; leitura da conta indicada em PROD. A credencial da pessoa não foi redefinida para validar. Fontes e inventário anterior dos arquivos servidos em work/senha-fix-baseline do chat; publicação utilizou staging e backup existentes. Registros intermediários abaixo preservam a sequência de validação e suas limitações.
@@ -65,6 +75,14 @@ Causa histórica reconstituída: cinco falhas de login às 07:37:21, 07:37:44, 0
 Evidência real posterior já existente, não executada por esta investigação: redefinição SUCESSO às 10:36:34, login SUCESSO às 10:38:26 e troca pessoal SUCESSO às 10:39:36. Cinco novas falhas até 10:41 explicam o prazo posteriormente persistido de 10:56:01. Consulta das 12:45 encontrou esse bloqueio vencido e o alvo elegível. Teste no SQL Server real com o predicado TARGET lido do fonte e os mesmos dados da conta, substituindo somente o prazo dentro de SELECT/CTE: bloqueio vigente retornou zero elegíveis; vencido retornou um; ambos esperados e aprovados, sem DML/DDL. Nenhuma redefinição adicional, autenticação pela aplicação, permissão, migration, serviço ou publicação executados.
 
 Suíte Java adicional recusada antes de iniciar pelo guardião de memória: 2.283 MiB livres/91% comprometidos. Não foi contornada nem declarada executada. Evidências sanitizadas em `C:\Users\suporte\Documents\Codex\2026-10-23\lucas-estou-tentando-redefinir-a-senha\work\sql-readonly-evidence.json` e relatório entregue em `outputs\diagnostico-redefinicao-senha.txt` do mesmo chat. Tentativa somente leitura de conferir o JAR pelo processo não identificou seu caminho; não se declara comparação binária. Correção indicada para escopo futuro: comunicar bloqueio e prazo ao operador autorizado e adequar a disponibilidade do botão, preservando a regra atual. Alterações preexistentes de STATES.md e scripts/testar-frontend-staging.ps1 preservadas; nenhum código funcional modificado, sem necessidade de build, auditoria de dependências ou atualização estrutural do Graphify nesta tarefa.
+
+## Avisos do teste de staging — ADC-OPS-STAGING-LINT-20261021
+
+Concluído localmente em 21/10/2026 após os dois diagnósticos enviados pelo usuário. Removida somente a variável repository sem uso e renomeadas a definição e as quatro chamadas de Served-Manifest para Get-ServedManifest, com verbo aprovado. Comparação com o snapshot e revisão independente confirmaram que a lógica da fixture foi preservada, sem consumidores externos afetados.
+
+Evidências executadas: PSScriptAnalyzer 1.24.0 do VS Code sem ocorrências de PSUseDeclaredVarsMoreThanAssignments e PSUseApprovedVerbs; parser sem erros, UTF-8 válido, diff exato e scanner de segredos aprovados. Teste sintético de staging aprovou as 31 verificações, incluindo rejeição de candidatas inválidas, preservação dos arquivos servidos fictícios, restauração do ambiente e tratamento de falha de build. Recibo checks-memory.json com saída 0 em artifacts/lint-frontend-staging-20261021; snapshot, diagnósticos antes/depois e logs na mesma pasta.
+
+Análise completa caiu de dez para oito avisos: sete PSAvoidGlobalVars e um PSUseShouldProcessForStateChangingFunctions preexistentes e fora dos dois pontos solicitados. Graphify atualizado por graphify update ., com 5.336 nós, 14.599 relações e 352 comunidades; consulta posterior confirmou Get-ServedManifest e sua chamada. Não houve build real, PM2, SQL, publicação, alteração de dependências, contrato ou migration. Suítes Java/frontend e auditorias de dependências não foram repetidas para esta alteração restrita de nomes no script de teste.
 
 ## Publicação da própria autoavaliação — ADC-COR-AUTO-PUBLICACAO-20261021
 
@@ -442,11 +460,12 @@ Registro da preparação anterior à ativação: naquele momento o acesso ao PM2
 ## Tarefas pendentes reais
 
 - [x] **ADC-EXPORT-AVALIACOES-20261028** Excel implementado, validado localmente, commit 33f6e04 enviado e publicação padrão concluída às 15:40 de 28/10; arquivos ativos/publicação conferidos e fotos antes/depois entregues, preservando fontes preexistentes.
+
 - [x] **ADC-ANALISE-EXPORT-AVALIACOES-20261028** Conferir suficiência da demanda de Excel da listagem, fontes dos quatro campos, filtros/escopo e exceções de feedback/autoavaliação; análise concluída, sem implementação ou publicação.
+
 - [x] **ADC-PREVIA-EXPORT-AVALIACOES-20261028** Entregar fotos da posição proposta do botão Exportar Excel em desktop/celular antes de implementar; prévia isolada aprovada tecnicamente e entregue para avaliação visual do usuário, sem aceite presumido ou publicação.
 
-
-- [x] **ADC-COR-SENHA-20261023** Correção de bloqueio temporário e mensagens já publicada em 23/10, validada e registrada separadamente no histórico em 28/10.
+- [x] **ADC-DIAG-ANDERSON-20261026** Investigar acesso após redefinição, confirmar cadastro/auditoria e testar a recusa do login da captura na API pública; concluído com divergência de login comprovada e limite do teste positivo registrado. Sem alteração de credenciais ou publicação.
 
 - [ ] **ADC-UI-RADAR-ROTULOS-20261021** Investigar o recorte preexistente de rótulos longos no radar do resumo individual, observado com competências fictícias na QA. A tabela mantém os nomes completos; não é bloqueador da publicação própria corrigida. Delimitar ajuste sem alterar notas, permissões ou impressão.
 
@@ -1124,6 +1143,8 @@ O release produtivo e a infraestrutura existentes não foram modificados nem tiv
 
 ## Registro de tarefas concluídas e substituídas
 
+- **ADC-OPS-STAGING-LINT-20261021:** removida variável sem uso e adotado Get-ServedManifest; duas regras citadas sem avisos, parser/scanner/diff aprovados e 31 verificações sintéticas de staging passaram. Revisão independente e Graphify concluídos; oito avisos anteriores de outras regras preservados. Sem build real, SQL ou publicação.
+
 - **ADC-COR-AUTO-PUBLICACAO-20261021:** publicação da própria autoavaliação corrigida e validada em DEV; 344 testes Java, 322 frontend, navegador em 1800/390/320 px, capturas antes/depois/sucesso, checks de segurança, build, revisão por agentes e mapa atualizados. Sem deploy ou SQL real; 17 testes SQL opt-in não executados. Evidências e limites na seção do topo.
 
 - **ADC-GESTOR-PUBLICAR-20261013:** ajuste funcional e capturas antes/depois entregues; implantado em ADC-PUBLISH-20261013 após correção da auditoria. Gate final com 302 testes Java aprovados/17 ignorados e 280 frontend aprovados. Aceite autenticado manual pendente; evidências da implantação na seção do topo.
@@ -1430,3 +1451,10 @@ Este registro conserva o resultado e os limites de cada entrega na data indicada
 
 Este registro trata somente das ferramentas dos agentes. Critérios e pendências de implementação deste projeto permanecem nas seções próprias acima.
 <!-- mcp-setup-evidence:end -->
+
+
+## GIT-DUPLO-HTTPS-20261102 — sincronização do Git em 02/11/2026
+
+Concluída a pedido expresso do responsável: main no commit 37e8757afe7cbcca60281aff5bcf38af1368caff conferido por HTTPS em valentelucass/avaliacao-desempenho-competencias e Dev-Rodogarcia/avaliacao-desempenho-competencias, com hashes idênticos. Nenhum commit novo criado nesta operação; alterações locais preexistentes preservadas.
+
+Cada commit futuro nesta máquina é enviado automaticamente para as duas contas por ../.runtime/git-sync, com regra permanente no AGENTS.md da pasta projetos e inclusão condicional do Git. Hooks originais preservados; 12 verificações isoladas aprovaram envio para ambos os destinos, branches novas, falhas independentes/recuperação e rejeição de commit por verificação existente. Novos repositórios ausentes são criados privados; visibilidade dos existentes preservada. Sem push forçado, implantação ou intervenção na aplicação/banco. Em erro de conexão/autenticação/divergência, o commit permanece local e o envio pendente deve ser refeito sem forçar histórico. Guia: ../.runtime/git-sync/LEIA-ME.txt.

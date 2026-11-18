@@ -1,6 +1,5 @@
 ﻿Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
-$repository = Split-Path -Parent $PSScriptRoot
 $fixture = Join-Path ([IO.Path]::GetTempPath()) ('adc-frontend-staging-' + [guid]::NewGuid().ToString('N'))
 $fixtureRepository = Join-Path $fixture 'repository with spaces'
 $fixtureScripts = Join-Path $fixtureRepository 'scripts'
@@ -17,7 +16,7 @@ function Assert-StagingCase {
     $script:cases++
 }
 
-function Served-Manifest {
+function Get-ServedManifest {
     return ((@(Get-ChildItem -LiteralPath $script:served -File -Recurse | Sort-Object FullName | ForEach-Object {
         $_.FullName.Substring($script:served.Length) + ':' + (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash
     })) -join "`n")
@@ -37,12 +36,12 @@ function New-Candidate {
 
 function Assert-PromotionRejected {
     param([string]$Directory)
-    $before = Served-Manifest
+    $before = Get-ServedManifest
     $failed = $false
     try { Publish-FrontendStage -Directory $Directory -ApiBaseUrl 'https://api.synthetic.invalid/api/v1' | Out-Null }
     catch { $failed = $true }
     Assert-StagingCase $failed 'Uma candidata inválida foi promovida.'
-    Assert-StagingCase ((Served-Manifest) -eq $before) 'A promoção recusada alterou o dist servido.'
+    Assert-StagingCase ((Get-ServedManifest) -eq $before) 'A promoção recusada alterou o dist servido.'
 }
 
 try {
@@ -61,7 +60,7 @@ try {
     [IO.File]::WriteAllText((Join-Path $served 'index.html'), '<script src="/assets/old.js"></script>')
     [IO.File]::WriteAllText((Join-Path $served 'assets\old.js'), 'approved-production-sentinel')
     [IO.File]::WriteAllText((Join-Path $served 'older.png'), 'existing-asset-sentinel')
-    $original = Served-Manifest
+    $original = Get-ServedManifest
     foreach ($forbidden in @($served, $fixtureRepository, (Join-Path $fixtureRepository 'backend\target'))) {
         $failed = $false
         try { Initialize-FrontendStage -Directory $forbidden | Out-Null } catch { $failed = $true }
@@ -130,7 +129,7 @@ try {
         $otherCalls = @($global:AdcStagingNpmCalls | Where-Object { -not ($_.arguments[0] -eq 'run' -and $_.arguments[1] -eq 'build') })
         Assert-StagingCase ($buildCalls.Count -eq 1 -and $buildCalls[0].api -eq 'https://api.synthetic.invalid/api/v1') 'A base pública não ficou restrita ao build candidato.'
         Assert-StagingCase (@($otherCalls | Where-Object { $_.api }).Count -eq 0) 'Uma validação recebeu a base pública de Vite.'
-        Assert-StagingCase ((Served-Manifest) -eq $original) 'verify alterou arquivos servidos.'
+        Assert-StagingCase ((Get-ServedManifest) -eq $original) 'verify alterou arquivos servidos.'
         Assert-PromotionRejected $verified.BuildDirectory
         $global:AdcStagingFailBuild = $true
         $failed = $false
