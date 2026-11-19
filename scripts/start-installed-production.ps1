@@ -22,6 +22,8 @@ try{
     Assert-PrivateAcl $private
     $baseline=Get-Content -Raw -LiteralPath (Join-Path $private 'dependencies.json')|ConvertFrom-Json
     foreach($file in $baseline.files){
+        # The PM2 helper verifies the selected application JAR against its own release receipt.
+        if ([IO.Path]::GetFileName($file.path) -like 'avaliacao-desempenho-api-*.jar') { continue }
         Assert-NoReparsePoint $file.path
         if((Get-FileHash -LiteralPath $file.path).Hash -ine $file.sha256){throw 'INSTALLED_ARTIFACT_CHANGED'}
     }
@@ -57,7 +59,15 @@ try{
         $sql=Get-CimInstance Win32_Service -Filter "Name='MSSQLSERVER'"
         $proc=Get-CimInstance Win32_Process -Filter ('ProcessId='+$sql.ProcessId)
         Save-AdcRecoveryJson $statePath @{sqlPID=[int]$sql.ProcessId;sqlStartedUTC=$proc.CreationDate.ToUniversalTime().ToString('o');configSHA256=(Get-FileHash -LiteralPath $config).Hash.ToLowerInvariant();requiresReview=$false}
-        Save-AdcRecoveryJson (Join-Path $private 'start-result.json') @{status='AVALIACAO_READY';observedAtUTC=[DateTime]::UtcNow.ToString('o');databaseConnected=$true;tlsValidated=$true;runtime=($raw -join [Environment]::NewLine|ConvertFrom-Json)}
+        $verifiedRaw=& $node $ensure
+        if($LASTEXITCODE -ne 0){throw 'APPLICATION_VERIFICATION_FAILED'}
+        $verified=($verifiedRaw -join [Environment]::NewLine)|ConvertFrom-Json
+        $apiPid=($verified.processes | Where-Object name -eq 'avaliacao-api-28081').pid
+        $frontPid=($verified.processes | Where-Object name -eq 'avaliacao-front-38080').pid
+        $bridgeRaw=& (Join-Path $PSScriptRoot 'manage-formulario-loopback-bridges.ps1') -Mode Start -ExpectedFrontPid $frontPid -ExpectedApiPid $apiPid
+        $bridge=($bridgeRaw -join [Environment]::NewLine)|ConvertFrom-Json
+        if(!$bridge.ListenersVerified){throw 'PUBLIC_BRIDGE_NOT_READY'}
+        Save-AdcRecoveryJson (Join-Path $private 'start-result.json') @{status='AVALIACAO_READY';observedAtUTC=[DateTime]::UtcNow.ToString('o');databaseConnected=$true;tlsValidated=$true;bridgeListenersVerified=$true;runtime=($raw -join [Environment]::NewLine|ConvertFrom-Json)}
         Write-Host 'Avaliacao pronta: https://formulario.rodogarcia.com.br/'
     }finally{$lock.Dispose()}
     exit 0

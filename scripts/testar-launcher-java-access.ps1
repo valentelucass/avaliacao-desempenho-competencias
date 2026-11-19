@@ -175,6 +175,38 @@ function Invoke-ProductionElevation { param($CallerSid); Write-Host 'ELEVATION_S
     $gateOutput = & powershell.exe -NoProfile -NonInteractive -Command "`$env:ADC_DB_USER='fixture_login'; `$env:SQLCMDPASSWORD=`$null; & '$(Join-Path $fixture 'scripts\verify-production-quality.ps1')' -BackendBuildDirectory target/fixture; exit `$LASTEXITCODE" | Out-String
     Assert-LauncherCase ($LASTEXITCODE -eq 29 -and $gateOutput.Contains('GATE_WITHOUT_PROMPT:target/fixture')) 'SQL user without password never triggers prompt in publication wrapper'
 
+    # Exercise the release receipt through the real publication gate wrapper.
+    & {
+        . (Join-Path $PSScriptRoot 'prepare-production-config.ps1')
+        foreach ($name in @('prepare-production-config.ps1', 'register-production-release.ps1')) {
+            Copy-Item -LiteralPath (Join-Path $PSScriptRoot $name) -Destination (Join-Path $fixture 'scripts')
+        }
+        $releaseId = [Guid]::NewGuid().ToString('N')
+        $buildDirectory = 'target\releases\' + $releaseId
+        $jarDirectory = [IO.Directory]::CreateDirectory((Join-Path ($fixture + '\backend') $buildDirectory))
+        $jar = Join-Path $jarDirectory.FullName 'avaliacao-desempenho-api-1.0.jar'
+        [IO.File]::WriteAllText($jar, 'reviewed fixture')
+        $privateDirectory = Join-Path $fixture 'production'
+        New-PrivateDirectory $privateDirectory
+        $receipt = Join-Path $privateDirectory ('release-hashes\' + $releaseId + '.sha256')
+        $previousConfig = $env:AVALIACAO_DESEMPENHO_PRODUCTION_CONFIG
+        try {
+            $env:AVALIACAO_DESEMPENHO_PRODUCTION_CONFIG = Join-Path $privateDirectory 'fixture.properties'
+            $gate = Join-Path $fixture 'scripts\verify-production-quality.ps1'
+            & powershell.exe -NoProfile -NonInteractive -File $gate -BackendBuildDirectory $buildDirectory | Out-Null
+            Assert-LauncherCase ($LASTEXITCODE -eq 29 -and !(Test-Path $receipt)) 'failed gate cannot register a release'
+            [IO.File]::WriteAllText((Join-Path $fixture 'scripts\verify-quality.ps1'), 'param($BackendBuildDirectory); exit 0')
+            & powershell.exe -NoProfile -NonInteractive -File $gate -BackendBuildDirectory $buildDirectory
+            $hash = (Get-FileHash -LiteralPath $jar).Hash.ToLowerInvariant()
+            Assert-LauncherCase ($LASTEXITCODE -eq 0 -and [IO.File]::ReadAllText($receipt) -ceq $hash) 'passed gate records the exact JAR'
+            & powershell.exe -NoProfile -NonInteractive -File $gate -BackendBuildDirectory $buildDirectory
+            Assert-LauncherCase ($LASTEXITCODE -eq 0) 'same release receipt is idempotent'
+            [IO.File]::AppendAllText($jar, 'changed')
+            $rejected = Start-Process -FilePath powershell.exe -WindowStyle Hidden -Wait -PassThru -ArgumentList ('-NoProfile -NonInteractive -File "' + $gate + '" -BackendBuildDirectory ' + $buildDirectory)
+            Assert-LauncherCase ($rejected.ExitCode -ne 0 -and [IO.File]::ReadAllText($receipt) -ceq $hash) 'a modified JAR cannot replace the approved digest'
+        } finally { $env:AVALIACAO_DESEMPENHO_PRODUCTION_CONFIG = $previousConfig }
+    }
+
     # Check the actual elevated payload and forwarding without requesting UAC.
     $script:cancelElevation = $false
     $script:elevationLogDirectories = @()

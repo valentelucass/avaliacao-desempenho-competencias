@@ -1,5 +1,17 @@
 # Estado atual — Avaliação de Desempenho e Competências
 
+## Recuperação do formulário em produção em 18/11/2026
+
+Às 22h52 de Brasília o domínio público retornava HTTP 502. O frontend respondia na porta 38080. A API reiniciava porque o cliente JDBC rejeitava a assinatura do certificado atual do SQL Server. As pontes locais usadas pelo túnel também estavam paradas.
+
+A rotina instalada de renovação de confiança verificou a identidade do SQL Server local, atualizou a configuração TLS privada da Avaliação e validou a conexão com a conta da aplicação. O PM2 recuperou a API do release publicado em 28/10. O gerenciador de pontes do projeto restabeleceu as portas 18080 e 18081. Às 22h56, a verificação pública confirmou HTTP 200 na página, no JavaScript e no endpoint CSRF, CORS da origem de produção aceito e HTTP 401 na consulta de sessão anônima. A sonda JDBC confirmou a conexão com certificado validado e zero consultas. A revisão da recuperação parcial de 17/11 foi concluída sob a trava do monitor, que voltou a reconhecer o estado normal.
+
+O validador anterior de `iniciar-prod.bat --subir` recusava a publicação de 28/10 por esperar os caminhos da instalação migrada. Correção instalada e exercitada em produção às 23h31 e 23h34 de Brasília. O comando confere a definição persistida e a definição ativa do PM2, o diretório do release e o SHA-256 do JAR aprovado. A publicação registra o hash por release após o gate. A instalação migrada conserva sua validação própria. O comando reaproveita a tentativa já agendada pelo PM2 quando a API aguarda reinício e chama o gerenciador das pontes após confirmar a disponibilidade local.
+
+O teste real das 23h34 retornou `AVALIACAO_READY`, com banco, TLS e pontes validados, zero processos reiniciados, API PID 7456 (5.343 reinícios acumulados) e frontend PID 4232. Página, JavaScript e CSRF públicos retornaram 200 e sessão anônima retornou 401. A seleção da versão publicada, a recusa de definições divergentes e o registro do hash após o gate foram testados com processos e arquivos fictícios, inclusive a rejeição de um JAR alterado sob o mesmo identificador. As cópias anteriores do auxiliar e do manifesto de dependências foram preservadas na pasta privada de recuperação.
+
+A validação geral em build isolado terminou com saída 0. Foram executados 353 testes Java (21 optativos ignorados) e 330 testes da interface, além dos ensaios de navegador, regressões operacionais, scanner de segredos e auditorias de dependências Java/npm. A validação de schema foi omitida nesta execução por se tratar de uma mudança no comando de recuperação. A conexão efetiva com o banco foi confirmada pelo teste do comando em produção.
+
 ## Exportação Excel das avaliações — ADC-EXPORT-AVALIACOES-20261028
 
 Concluída e publicada em 28/10/2026 às 15:40 de Brasília, com verificação pública às 15:41, após testes locais, commit e push aprovados. Código da exportação no commit 33f6e04; correção de senha já publicada registrada separadamente em 84dd033. Launcher padrão --publicar concluiu com saída 0, gate obrigatório e validação SQL PROD, sem migration ou grants novos. Recibo export-publish-memory.json: 673 arquivos de fonte conferidos, pico 1.963 MiB sob quota 2.048 MiB. API PID 72340 e frontend PID 47852 online, release backend/target/releases/b3ffa328918b402683a1eed0a487f26f. Cinco classes principais da API ativa conferem por SHA-256 com o build testado.

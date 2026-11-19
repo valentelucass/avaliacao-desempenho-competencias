@@ -16,7 +16,7 @@ Não é necessário parar a Avaliação no PM2 antes. Se o gerenciador existente
 
 A publicação não solicita login ou senha SQL. A validação do banco usa a credencial DPAPI apontada por `ADC_DATABASE_CREDENTIAL_FILE` no arquivo local de produção (ou autenticação já configurada no processo). Credencial ausente ou inválida encerra com erro, sem prompt. A identidade operacional do runner é independente da conta da API; senhas não ficam no BAT nem no Git.
 
-Para iniciar somente a versão já instalada, use `iniciar-prod.bat --subir` e confirme o UAC do Windows, quando solicitado. Esse modo confere o banco, renova a confiança TLS privada quando o certificado local muda e inicia somente os processos da Avaliação que estiverem parados; processos saudáveis são preservados.
+Para iniciar a versão já instalada, use `iniciar-prod.bat --subir` e confirme o UAC do Windows, quando solicitado. O comando confere a definição salva no PM2 e o hash SHA-256 do arquivo da API registrado na publicação. Ele verifica a conexão com o banco, atualiza a confiança TLS se o certificado local mudou e recupera os processos da Avaliação e as duas pontes de acesso público conforme necessário.
 
 Na VM atual, a tarefa `Rodogarcia-Avaliacao-SQL-Recovery` verifica mudanças do processo SQL a cada minuto e recupera a conexão da API. Ela aguarda o banco voltar e não reinicia o SQL. Se a API foi parada pelo operador, use `iniciar-prod.bat --subir` para subi-la sem publicar código novo. Recibos ficam em `C:\ProgramData\Rodogarcia\AvaliacaoDesempenho\production\sql-recovery`; `REVIEW_PARTIAL_RECOVERY` exige revisão do recibo antes de outra recuperação automática.
 
