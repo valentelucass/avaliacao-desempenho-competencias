@@ -163,6 +163,14 @@ Os ensaios de interface devem usar o servidor fictício de `frontend/scripts/che
 
 Depois da publicação, confirme por leitura a versão instalada, a configuração consultável e as permissões; uma prorrogação real exige decisão e motivo próprios. Para retornar à versão anterior da aplicação, preserve `V0016`, o encerramento novo e os eventos de auditoria. O aplicativo anterior pode continuar usando o prazo persistido, mas não oferece a nova ação de prorrogação. Não execute migration inversa, apague eventos ou restaure a data antiga como parte do rollback de binários.
 
+## Como avaliar uma demora no primeiro acesso ao SQL
+
+Confirmar o banco e a identidade de aplicação previstos no perfil. Anotar horário e duração desde a abertura da conexão até receber a primeira resposta. Com essa conexão ainda aberta, abrir uma segunda pela mesma conta e repetir a mesma leitura. No SQL Server, conferir se ocorreu uma inicialização do banco entre o início e o fim da primeira conexão. O evento 17137 identifica essa abertura. Anotar o nome do banco e o custo de conexão separadamente do tempo da API e da tela.
+
+Para uma leitura de negócio agregada, consultar `SELECT COUNT_BIG(*) AS respostas FROM dbo.resposta_avaliacao;` e registrar o total e o horário. Conferir também a saúde da API e o acesso à interface. No ensaio de 20/11/2026, o banco respondeu com 21.938 registros. O número pode mudar com as avaliações. Dados de colaboradores e conteúdo das respostas ficam fora do recibo de desempenho.
+
+Na Avaliação, oito de oito primeiras conexões acompanhadas coincidiram com uma inicialização. As medianas foram 1.323,32195 ms na primeira conexão e 1.311,3147 ms na segunda. O ensaio sustentou manter a configuração de fechamento automático naquele ambiente. Se a demora reaparecer, repetir a comparação nas condições da ocorrência.
+
 ## Parada e retorno
 
 Interrompa a publicação se houver falha de validação, rota externa inesperada, escuta fora do loopback, ausência de backup/restauração comprovada, erro de autorização ou ausência do artefato anterior.
