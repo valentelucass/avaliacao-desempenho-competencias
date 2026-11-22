@@ -22,6 +22,9 @@ async function main() {
     build: { write: false },
   })
   const files = new Map(bundle.output.map((file) => [file.fileName, file.code ?? file.source]))
+  for (const name of ['rodogarcia-marca.png', 'favicon.svg']) {
+    files.set(name, fs.readFileSync(path.join(root, 'public', name)))
+  }
   let mode = 'anonymous'
   let calls = []
   const server = http.createServer((request, response) => {
@@ -143,7 +146,10 @@ async function main() {
         if (message.error) operation.reject(new Error(message.error.message))
         else operation.resolve(message.result)
       }
-      if (message.method === 'Runtime.exceptionThrown') errors.push('JavaScript exception')
+      if (message.method === 'Runtime.exceptionThrown')
+        errors.push(
+          message.params.exceptionDetails.exception?.description ?? 'JavaScript exception',
+        )
       if (message.method === 'Log.entryAdded' && message.params.entry.level === 'error')
         errors.push(message.params.entry.text)
       if (message.method === 'Runtime.consoleAPICalled' && message.params.type === 'error')
@@ -183,8 +189,26 @@ async function main() {
         errors.length = 0
         await send('Page.navigate', { url: origin })
         const expected =
-          scenario === 'authenticated' ? 'Sessão fictícia retomada' : 'Acesso à plataforma'
-        await ready(`document.body.textContent.includes(${JSON.stringify(expected)})`)
+          scenario === 'authenticated' ? 'Nenhum módulo disponível' : 'Acesso à plataforma'
+        try {
+          await ready(
+            `[...document.querySelectorAll('h1,h2')].some(h=>h.textContent.trim()===${JSON.stringify(expected)})`,
+          )
+        } catch (error) {
+          const titles = await evaluate(
+            "[...document.querySelectorAll('h1,h2')].map(h=>h.textContent.trim())",
+          )
+          throw new Error(
+            JSON.stringify({
+              scenario,
+              width,
+              titles,
+              errors,
+              routes: calls.map((call) => call.route),
+            }),
+            { cause: error },
+          )
+        }
         assert.deepEqual(
           calls.map((call) => call.route),
           scenario === 'authenticated'
@@ -193,6 +217,15 @@ async function main() {
         )
         if (scenario === 'unavailable') {
           await ready('document.querySelector("[role=alert]") !== null')
+          const position = await evaluate(`(() => {
+            const banner = document.querySelector('[role=alert]').closest('.astryx-banner[data-status=error]');
+            if (!banner) return null;
+            const rect = banner.getBoundingClientRect();
+            return {top:rect.top, center:rect.left + rect.width / 2, viewport:document.documentElement.clientWidth};
+          })()`)
+          assert.ok(position, 'O erro deve usar o Banner do dashboard')
+          assert.ok(Math.abs(position.center - position.viewport / 2) <= 1)
+          assert.equal(position.top, 16)
         } else {
           assert.deepEqual(errors, [], 'Abertura normal não deve gerar erros no console')
           assert.equal(await evaluate('document.querySelector("[role=alert]") !== null'), false)
@@ -201,34 +234,46 @@ async function main() {
           await evaluate(
             'new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))',
           )
-          await evaluate(`document.querySelector('[aria-label="Abrir menu"]').click()`)
-          await ready(
-            "document.querySelector('.workspace-sidebar').getAttribute('aria-hidden') === 'false'",
-          )
-          await evaluate(
-            'new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))',
+          if (width < 1024) {
+            await evaluate(`document.querySelector('[aria-label="Abrir menu"]').click()`)
+            await ready("document.querySelector('dialog[open] .ev-nav-footer') !== null")
+          } else {
+            await ready("document.querySelector('.ev-rail .ev-nav-footer') !== null")
+          }
+          const scope = width < 1024 ? 'dialog[open] .ev-nav-footer' : '.ev-rail .ev-nav-footer'
+          assert.equal(
+            await evaluate(
+              `document.querySelector(${JSON.stringify(scope)}).textContent.includes('Sessão fictícia retomada')`,
+            ),
+            true,
           )
           for (const theme of ['light', 'dark']) {
             await evaluate(`document.documentElement.dataset.theme=${JSON.stringify(theme)}`)
-            const footer = await evaluate(`(()=>{
-              const buttons=[...document.querySelectorAll('.workspace-sidebar__footer > button')];
-              const [password,exit]=buttons.map(button=>button.getBoundingClientRect());
-              const bounds=document.querySelector('.workspace-sidebar__footer').getBoundingClientRect();
-              return {count:buttons.length,gap:exit.top-password.bottom,aligned:Math.abs(password.left-exit.left)<1&&Math.abs(password.width-exit.width)<1,
-                colors:buttons.map(button=>getComputedStyle(button).backgroundColor),
-                icons:buttons.every(button=>button.querySelector('svg')),
-                clip:{x:bounds.x,y:bounds.y,width:bounds.width,height:bounds.height,scale:1}};
+            const footer = await evaluate(`(() => {
+              const area = document.querySelector(${JSON.stringify(scope)});
+              const buttons = [...area.querySelectorAll(':scope > button')].filter(b => ['Alterar minha senha', 'Sair da conta'].includes(b.textContent.trim()));
+              buttons[0].scrollIntoView({block:'nearest'});
+              const [password, exit] = buttons.map(button => button.getBoundingClientRect());
+              const r = area.getBoundingClientRect();
+              return {
+                count:buttons.length, gap:exit.top - password.bottom,
+                aligned:Math.abs(password.left - exit.left) < 1 && Math.abs(password.width - exit.width) < 1,
+                height:Math.min(password.height,exit.height),
+                icons:buttons.every(button => button.querySelector('svg')),
+                variants:buttons.map(button => button.dataset.variant),
+                clip:{x:r.x,y:r.y,width:r.width,height:r.height,scale:1}
+              };
             })()`)
             assert.equal(footer.count, 2)
-            assert.ok(footer.gap >= 10, 'Ações pessoais precisam de separação visível')
-            assert.equal(footer.aligned, true, 'Botões pessoais devem ter a mesma largura')
+            assert.ok(
+              footer.gap >= 2 && footer.height >= 34,
+              'Ações pessoais devem ter alvos separados',
+            )
+            assert.equal(footer.aligned, true)
             assert.equal(footer.icons, true)
-            assert.deepEqual(footer.colors, ['rgb(37, 85, 164)', 'rgb(220, 48, 56)'])
-            await evaluate("document.querySelector('.workspace-sidebar__password').focus()")
-            console.log(
-              await evaluate(
-                `JSON.stringify({menu:document.querySelector('.workspace-sidebar').className,inert:document.querySelector('.workspace-sidebar').inert,visible:getComputedStyle(document.querySelector('.workspace-sidebar')).visibility,focused:document.activeElement.className})`,
-              ),
+            assert.deepEqual(footer.variants, ['ghost', 'ghost'])
+            await evaluate(
+              `[...document.querySelector(${JSON.stringify(scope)}).querySelectorAll('button')].find(b=>b.textContent.trim()==='Alterar minha senha').focus()`,
             )
             await send('Input.dispatchKeyEvent', {
               type: 'keyDown',
@@ -237,9 +282,7 @@ async function main() {
               windowsVirtualKeyCode: 9,
             })
             assert.equal(
-              await evaluate(
-                "document.activeElement.classList.contains('workspace-sidebar__sign-out')",
-              ),
+              await evaluate("document.activeElement.textContent.trim() === 'Sair da conta'"),
               true,
             )
             if (width === 1440) {

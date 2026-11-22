@@ -1,3 +1,6 @@
+import { Badge } from '@astryxdesign/core/Badge'
+import { WorkspacePageHeader } from '../../ui/WorkspacePageHeader'
+import { ActionButton } from '../../ui/ActionButton'
 import { TemporaryPasswordReset } from './TemporaryPasswordReset'
 import { PasswordResetRequestsPanel } from './PasswordResetRequestsPanel'
 import { AdministrativeTable } from '@/components/ui/administrative-table'
@@ -556,42 +559,47 @@ export function UserAdministrationPanel({
 
   return (
     <section aria-labelledby="user-administration-title" className="user-administration">
-      <div className="section-heading">
-        <div>
-          <p className="eyebrow">Administração de acesso</p>
-          <div className="context-help__heading">
-            <h2 id="user-administration-title">Contas e concessões</h2>
-            <ContextHelp title="Perfil, concessões e acesso efetivo">
-              <p>
-                Cada conta recebe um perfil de negócio. Ele orienta as ações disponíveis, mas não
-                substitui as validações de vínculo, escopo e segregação feitas pelo servidor.
-              </p>
-              <p className="context-help__note">
-                Alterar uma conta não dá acesso retroativo a avaliações nem revela dados fora do
-                escopo autorizado.
-              </p>
-            </ContextHelp>
-          </div>
-          <p className="muted">
-            Cada conta recebe exatamente um perfil. A autorização efetiva e a segregação de funções
-            são sempre verificadas no servidor.
-          </p>
-        </div>
-        {canReadUsers ? (
-          <button
-            className="button"
-            type="button"
-            onClick={() => {
-              setSelectedUser(undefined)
-              void loadUsers()
-            }}
-            disabled={isLoadingUsers || isResettingPassword || isSavingPasswordDelegation}
-          >
-            <RefreshCw aria-hidden="true" size={17} strokeWidth={2} />
-            {isLoadingUsers ? 'Atualizando…' : 'Atualizar contas'}
-          </button>
-        ) : null}
-      </div>
+      <WorkspacePageHeader
+        id="user-administration-title"
+        title="Contas e concessões"
+        group="Administração de acesso"
+        help={
+          <ContextHelp title="Perfil, concessões e acesso efetivo">
+            <p>
+              Cada conta recebe um perfil de negócio. Ele orienta as ações disponíveis, mas não
+              substitui as validações de vínculo, escopo e segregação feitas pelo servidor.
+            </p>
+            <p className="context-help__note">
+              Alterar uma conta não dá acesso retroativo a avaliações nem revela dados fora do
+              escopo autorizado.
+            </p>
+          </ContextHelp>
+        }
+        actions={
+          <>
+            {' '}
+            {canReadUsers ? (
+              <ActionButton
+                size="sm"
+                variant="secondary"
+                label={isLoadingUsers ? 'Atualizando…' : 'Atualizar contas'}
+                icon={<RefreshCw aria-hidden="true" size={17} strokeWidth={2} />}
+                type="button"
+                onClick={() => {
+                  setSelectedUser(undefined)
+                  void loadUsers()
+                }}
+                disabled={isLoadingUsers || isResettingPassword || isSavingPasswordDelegation}
+              />
+            ) : null}{' '}
+          </>
+        }
+      >
+        <p className="ev-page-description">
+          Cada conta recebe exatamente um perfil. A autorização efetiva e a segregação de funções
+          são sempre verificadas no servidor.
+        </p>
+      </WorkspacePageHeader>
 
       {notice && (!selectedUser || isLoadingDetail) ? (
         <FeedbackMessage kind="status" onDismiss={() => setNotice(undefined)}>
@@ -707,10 +715,14 @@ export function UserAdministrationPanel({
               <p className="field-hint">{selectedInitialProfile?.hint}</p>
             </div>
             <div className="action-row">
-              <button className="button button--success" type="submit" disabled={isCreating}>
-                <Plus aria-hidden="true" size={17} strokeWidth={2} />
-                {isCreating ? 'Criando…' : 'Criar conta'}
-              </button>
+              <ActionButton
+                size="sm"
+                variant="primary"
+                label={isCreating ? 'Criando…' : 'Criar conta'}
+                icon={<Plus aria-hidden="true" size={17} strokeWidth={2} />}
+                type="submit"
+                disabled={isCreating}
+              />
             </div>
           </form>
         </section>
@@ -789,9 +801,11 @@ export function UserAdministrationPanel({
                         {user.login}
                       </AdministrativeTable.Cell>
                       <AdministrativeTable.Cell data-label="Situação">
-                        <span className={`status-badge status-badge--${user.status.toLowerCase()}`}>
-                          {formatAccountStatus(user)}
-                        </span>
+                        <Badge
+                          className="dashboard-status-badge"
+                          label={formatAccountStatus(user)}
+                          variant={user.logicallyDeleted ? 'neutral' : accountTones[user.status]}
+                        />
                       </AdministrativeTable.Cell>
                       <AdministrativeTable.Cell data-label="Ação">
                         <AccountActions
@@ -854,9 +868,13 @@ export function UserAdministrationPanel({
                 <h3 id="selected-user-title">Detalhes de {selectedUser.displayName}</h3>
               </div>
               <div className="account-dialog__header-actions">
-                <span className={`status-badge status-badge--${selectedUser.status.toLowerCase()}`}>
-                  {formatAccountStatus(selectedUser)}
-                </span>
+                <Badge
+                  className="dashboard-status-badge"
+                  label={formatAccountStatus(selectedUser)}
+                  variant={
+                    selectedUser.logicallyDeleted ? 'neutral' : accountTones[selectedUser.status]
+                  }
+                />
                 <button
                   aria-label="Fechar detalhes da conta"
                   disabled={isResettingPassword || isSavingPasswordDelegation}
@@ -979,14 +997,16 @@ export function UserAdministrationPanel({
                     ) : null}
                   </fieldset>
                   <div className="action-row">
-                    <button
-                      className="button button--success"
+                    <ActionButton
+                      size="sm"
+                      variant="primary"
+                      label={
+                        isSavingPasswordDelegation ? 'Salvando delegação…' : 'Salvar capacidades'
+                      }
+                      icon={<ShieldCheck aria-hidden="true" size={17} strokeWidth={2} />}
                       type="submit"
                       disabled={isSavingPasswordDelegation || isResettingPassword}
-                    >
-                      <ShieldCheck aria-hidden="true" size={17} strokeWidth={2} />
-                      {isSavingPasswordDelegation ? 'Salvando delegação…' : 'Salvar capacidades'}
-                    </button>
+                    />
                   </div>
                 </form>
               ) : null}
@@ -1037,26 +1057,26 @@ export function UserAdministrationPanel({
                     </select>
                   </div>
                   <div className="action-row">
-                    <button
-                      className="button button--success"
+                    <ActionButton
+                      size="sm"
+                      variant="primary"
+                      label={isUpdating ? 'Salvando…' : 'Salvar dados da conta'}
+                      icon={<Save aria-hidden="true" size={17} strokeWidth={2} />}
                       type="submit"
                       disabled={isUpdating || isResettingPassword}
-                    >
-                      <Save aria-hidden="true" size={17} strokeWidth={2} />
-                      {isUpdating ? 'Salvando…' : 'Salvar dados da conta'}
-                    </button>
+                    />
                     {!selectedUser.protectedFromNormalFlow &&
                     !selectedUser.logicallyDeleted &&
                     selectedUser.id !== currentUserId ? (
-                      <button
-                        className="button button--danger"
+                      <ActionButton
+                        size="sm"
+                        variant="destructive"
+                        label={isDeleting ? 'Excluindo…' : 'Excluir logicamente'}
+                        icon={<Trash2 aria-hidden="true" size={17} strokeWidth={2} />}
                         type="button"
                         onClick={() => void logicallyDeleteUser(selectedUser)}
                         disabled={isUpdating || isDeleting || isResettingPassword}
-                      >
-                        <Trash2 aria-hidden="true" size={17} strokeWidth={2} />
-                        {isDeleting ? 'Excluindo…' : 'Excluir logicamente'}
-                      </button>
+                      />
                     ) : null}
                   </div>
                 </form>
@@ -1120,14 +1140,14 @@ export function UserAdministrationPanel({
                   </fieldset>
 
                   <div className="action-row">
-                    <button
-                      className="button button--success"
+                    <ActionButton
+                      size="sm"
+                      variant="primary"
+                      label={isSavingAccess ? 'Salvando acessos…' : 'Salvar acessos'}
+                      icon={<ShieldCheck aria-hidden="true" size={17} strokeWidth={2} />}
                       type="submit"
                       disabled={isSavingAccess || isResettingPassword}
-                    >
-                      <ShieldCheck aria-hidden="true" size={17} strokeWidth={2} />
-                      {isSavingAccess ? 'Salvando acessos…' : 'Salvar acessos'}
-                    </button>
+                    />
                   </div>
                 </form>
               ) : null}
@@ -1240,6 +1260,8 @@ function formatCatalogItem(catalog: readonly AccessCatalogItem[], code: string):
 function formatPermissionEffect(effect: PermissionGrantEffect): string {
   return effect === 'ALLOW' ? 'Permitir' : 'Negar'
 }
+
+const accountTones = { ACTIVE: 'success', BLOCKED: 'warning', DISABLED: 'neutral' } as const
 
 function formatAccountStatus(user: AdministrationUser): string {
   if (user.logicallyDeleted) {

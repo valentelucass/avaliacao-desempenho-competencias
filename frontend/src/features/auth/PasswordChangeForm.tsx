@@ -1,3 +1,5 @@
+import { Card } from '@astryxdesign/core/Card'
+import { ActionButton } from '../../ui/ActionButton'
 import { useEffect, useId, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { isAuthenticationError } from '../../api/client'
@@ -86,7 +88,8 @@ export function PasswordChangeForm({
 
   return (
     <AuthPageFrame labelledBy="password-change-title" onToggleTheme={onToggleTheme} theme={theme}>
-      <section
+      <Card
+        padding={4}
         className="card login-card"
         onKeyDown={(event) => {
           if (event.key === 'Escape' && onCancel && !isSubmitting) {
@@ -167,16 +170,25 @@ export function PasswordChangeForm({
             />
           </div>
 
-          <button className="button button--success" type="submit" disabled={isSubmitting}>
-            {isSubmitting ? 'Alterando…' : 'Alterar senha'}
-          </button>
+          <ActionButton
+            size="sm"
+            variant="primary"
+            label={isSubmitting ? 'Alterando…' : 'Alterar senha'}
+            type="submit"
+            disabled={isSubmitting}
+          />
           {onCancel ? (
-            <button className="button" type="button" disabled={isSubmitting} onClick={onCancel}>
-              Cancelar
-            </button>
+            <ActionButton
+              size="sm"
+              variant="secondary"
+              label="Cancelar"
+              type="button"
+              disabled={isSubmitting}
+              onClick={onCancel}
+            />
           ) : null}
         </form>
-      </section>
+      </Card>
     </AuthPageFrame>
   )
 }

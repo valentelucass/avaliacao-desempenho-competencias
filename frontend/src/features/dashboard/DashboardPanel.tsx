@@ -1,3 +1,5 @@
+import { Card } from '@astryxdesign/core/Card'
+import { WorkspacePageHeader } from '../../ui/WorkspacePageHeader'
 import { ClipboardCheck, UsersRound } from 'lucide-react'
 import { ContextHelp } from '../../ui/ContextHelp'
 import { EmptyState } from '../../ui/EmptyState'
@@ -18,28 +20,30 @@ export function DashboardPanel({
 
   return (
     <section aria-labelledby="dashboard-title">
-      <div className="section-heading">
-        <div>
-          <p className="eyebrow">Página inicial</p>
-          <div className="context-help__heading">
-            <h2 id="dashboard-title">Avaliações de desempenho</h2>
-            <ContextHelp title="Como as jornadas são liberadas">
-              <p>
-                Os atalhos exibidos dependem do perfil da conta. Ao iniciar uma jornada, o servidor
-                ainda confirma vínculo, ciclo aberto e questionário atribuído.
-              </p>
-              <p className="context-help__note">
-                Escolher uma opção nesta página não concede acesso nem altera permissões.
-              </p>
-            </ContextHelp>
-          </div>
-          <p className="muted">
-            Escolha a jornada para começar. O formulário aplicável é confirmado pelo servidor.
-          </p>
-        </div>
-      </div>
+      <WorkspacePageHeader
+        id="dashboard-title"
+        title="Avaliações de desempenho"
+        group="Página inicial"
+        help={
+          <ContextHelp title="Como as jornadas são liberadas">
+            <p>
+              Os atalhos exibidos dependem do perfil da conta. Ao iniciar uma jornada, o servidor
+              ainda confirma vínculo, ciclo aberto e questionário atribuído.
+            </p>
+            <p className="context-help__note">
+              Escolher uma opção nesta página não concede acesso nem altera permissões.
+            </p>
+          </ContextHelp>
+        }
+      >
+        <p className="ev-page-description">
+          Escolha a jornada para começar. O formulário aplicável é confirmado pelo servidor.
+        </p>
+      </WorkspacePageHeader>
 
-      <section
+      <Card
+        padding={4}
+        role="region"
         className={`dashboard-hero card${hasAvailableJourney ? '' : ' dashboard-hero--empty'}`}
         aria-labelledby="assessment-kind-title"
       >
@@ -98,9 +102,14 @@ export function DashboardPanel({
             </EmptyState>
           )}
         </div>
-      </section>
+      </Card>
 
-      <section className="card dashboard-info" aria-labelledby="storage-title">
+      <Card
+        padding={4}
+        role="region"
+        className="card dashboard-info"
+        aria-labelledby="storage-title"
+      >
         <div className="context-help__heading">
           <h3 id="storage-title">Dados protegidos</h3>
           <ContextHelp title="Como a plataforma protege este registro">
@@ -114,7 +123,7 @@ export function DashboardPanel({
           Rascunhos e respostas são salvos no banco interno pela API. A nota e a classificação são
           calculadas exclusivamente no servidor.
         </p>
-      </section>
+      </Card>
     </section>
   )
 }

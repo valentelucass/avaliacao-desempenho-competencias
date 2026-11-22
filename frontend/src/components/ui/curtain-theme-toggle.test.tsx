@@ -79,7 +79,7 @@ describe('ThemeToggle com cortina', () => {
     act(() => vi.runAllTimers())
     expect(onThemeChange).toHaveBeenCalledTimes(1)
     expect(curtain()).toBeNull()
-    expect(button).toHaveAttribute('aria-disabled', 'false')
+    expect(button).not.toHaveAttribute('aria-disabled', 'true')
     expect(button).toHaveFocus()
   })
 
@@ -121,8 +121,9 @@ describe('ThemeToggle com cortina', () => {
       media.dispatchEvent(new Event('change'))
     })
     expect(curtain()).toBeNull()
+    act(() => vi.runAllTimers())
+    expect(curtain()).toBeNull()
     expect(onThemeChange).toHaveBeenCalledExactlyOnceWith('dark')
-    expect(vi.getTimerCount()).toBe(0)
   })
 
   it('finaliza antes da impressão sem deixar sobreposição ou callback duplicado', () => {

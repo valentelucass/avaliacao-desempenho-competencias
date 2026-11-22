@@ -4,8 +4,8 @@ const { browserArtifactPath } = require('./browser-artifacts.cjs')
 
 module.exports = async function checkRelationshipTable({ send, evaluate, ready, load }) {
   const root = '[data-relationship-regression]'
-  const metrics = `(() => [...document.querySelectorAll('${root} tbody .button')].map(b => {
-    const range=document.createRange(); const text=[...b.childNodes].find(n=>n.nodeType===Node.TEXT_NODE&&n.textContent.trim());
+  const metrics = `(() => [...document.querySelectorAll('${root} tbody .table-actions button')].map(b => {
+    const range=document.createRange(); const walker=document.createTreeWalker(b,NodeFilter.SHOW_TEXT,{acceptNode:n=>n.textContent.trim()==='Encerrar'?NodeFilter.FILTER_ACCEPT:NodeFilter.FILTER_SKIP}); const text=walker.nextNode();
     range.selectNodeContents(text); const r=b.getBoundingClientRect(),td=b.closest('td').getBoundingClientRect();
     return {height:r.height,width:r.width,lines:range.getClientRects().length,icon:b.querySelector('svg').getBoundingClientRect().width,
       cellRight:td.right,right:r.right,tableRight:b.closest('table').getBoundingClientRect().right,rowHeight:b.closest('tr').getBoundingClientRect().height};}))()`
@@ -24,7 +24,7 @@ module.exports = async function checkRelationshipTable({ send, evaluate, ready, 
   )) {
     await load(width, true)
     if (theme === 'dark') {
-      await evaluate("document.querySelector('.adc-curtain-toggle').click()")
+      await evaluate("document.querySelector('.astryx-button[aria-pressed]').click()")
       await ready("document.documentElement.dataset.theme==='dark'")
     }
     await send('Emulation.setDeviceMetricsOverride', {
@@ -33,7 +33,7 @@ module.exports = async function checkRelationshipTable({ send, evaluate, ready, 
       deviceScaleFactor: scale,
       mobile: false,
     })
-    await ready(`document.querySelectorAll('${root} tbody .button').length===5`)
+    await ready(`document.querySelectorAll('${root} tbody .table-actions button').length===5`)
     await evaluate(`document.querySelector('${root} table').scrollIntoView({block:'start'})`)
     await evaluate(
       'document.fonts.ready.then(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))))',
@@ -67,7 +67,7 @@ module.exports = async function checkRelationshipTable({ send, evaluate, ready, 
         `Encerrar quebrou em letras/linhas (${width}px, DPR ${scale}, ${theme})`,
       )
       assert.ok(button.height >= 36 && button.height <= 40, `Botão vertical/alto (${width}px)`)
-      assert.equal(button.icon, 18)
+      assert.ok(button.icon >= 16 && button.icon <= 18)
       assert.ok(
         button.right <= button.cellRight + 1 && button.tableRight <= width + 1,
         'Botão/tabela fora da célula ou viewport',
@@ -89,7 +89,10 @@ module.exports = async function checkRelationshipTable({ send, evaluate, ready, 
       // Teste de sensibilidade: a folha regressiva deve reproduzir a captura do usuário.
       await evaluate(`(() => {
         const styles=document.createElement('style');styles.id='reproduce-broken-button';
-        styles.textContent=':root .button{overflow-wrap:anywhere;word-break:normal} :root .administration-users .table-actions .button{flex-shrink:1;min-width:0;max-width:100%;white-space:normal}';
+        for (const el of document.querySelectorAll('${root} tbody .table-actions button span')) {
+          if (!el.children.length && el.textContent.trim()==='Encerrar') el.dataset.regressionLabel='';
+        }
+        styles.textContent='${root} .table-actions button{height:auto;min-width:0} ${root} [data-regression-label]{display:block;inline-size:1ch;white-space:normal;overflow-wrap:anywhere;overflow:visible}';
         document.head.append(styles);
       })()`)
       const broken = await evaluate(metrics)
@@ -99,7 +102,7 @@ module.exports = async function checkRelationshipTable({ send, evaluate, ready, 
       )
       await evaluate("document.getElementById('reproduce-broken-button').remove()")
       // A ação continua apenas abrindo a confirmação; nenhuma escrita é chamada.
-      await evaluate(`document.querySelector('${root} tbody .button').click()`)
+      await evaluate(`document.querySelector('${root} tbody .table-actions button').click()`)
       await ready("document.getElementById('close-relationship-title')")
       assert.equal(
         await evaluate("document.getElementById('close-relationship-title').textContent"),
@@ -111,7 +114,7 @@ module.exports = async function checkRelationshipTable({ send, evaluate, ready, 
       await ready("!document.getElementById('close-relationship-title')")
       const next = `${root} button[aria-label='Próxima página']`
       await evaluate(`document.querySelector("${next}").click()`)
-      await ready(`document.querySelectorAll('${root} tbody .button').length===2`)
+      await ready(`document.querySelectorAll('${root} tbody .table-actions button').length===2`)
       assert.ok(
         (await evaluate(metrics)).every((button) => button.lines === 1 && button.height <= 40),
       )

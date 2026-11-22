@@ -1,3 +1,4 @@
+import { ActionButton } from '../../ui/ActionButton'
 import { useTableQuery, type TableColumn } from '../../ui/useTableQuery'
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { ChevronDown, FileSpreadsheet } from 'lucide-react'
@@ -350,9 +351,14 @@ export function SpreadsheetImportPanel({
               }}
             />
           </div>
-          <button type="button" className="button" disabled={blocked || !ready} onClick={review}>
-            {busy ? 'Aguarde…' : 'Conferir planilha'}
-          </button>
+          <ActionButton
+            size="sm"
+            variant="secondary"
+            label={busy ? 'Aguarde…' : 'Conferir planilha'}
+            type="button"
+            disabled={blocked || !ready}
+            onClick={review}
+          />
         </div>
         {error && (
           <FeedbackMessage kind="error" onDismiss={() => setError(undefined)}>
@@ -457,33 +463,35 @@ export function SpreadsheetImportPanel({
               onPreviousPage={previewTable.onPreviousPage}
             />
             <div className="spreadsheet-import__actions">
-              <button
+              <ActionButton
+                size="sm"
+                variant="secondary"
+                label="Descartar conferência"
                 type="button"
-                className="button"
                 disabled={blocked}
                 onClick={() => {
                   invalidate()
                   setFile(undefined)
                   if (input.current) input.current.value = ''
                 }}
-              >
-                Descartar conferência
-              </button>
-              <button
+              />
+              <ActionButton
+                size="sm"
+                variant="primary"
+                label={
+                  preview.errors > 0
+                    ? `Confirmar importação — ${preview.errors} pendência(s)`
+                    : completed
+                      ? 'Importação concluída'
+                      : preview.creates === 0
+                        ? 'Nenhum registro novo para importar'
+                        : `Confirmar importação de ${preview.creates} registro(s)`
+                }
                 type="button"
-                className="button button--primary"
                 disabled={blocked || completed || preview.errors > 0 || preview.creates === 0}
                 aria-describedby={`${id}-confirmation-help`}
                 onClick={confirm}
-              >
-                {preview.errors > 0
-                  ? `Confirmar importação — ${preview.errors} pendência(s)`
-                  : completed
-                    ? 'Importação concluída'
-                    : preview.creates === 0
-                      ? 'Nenhum registro novo para importar'
-                      : `Confirmar importação de ${preview.creates} registro(s)`}
-              </button>
+              />
             </div>
           </>
         )}

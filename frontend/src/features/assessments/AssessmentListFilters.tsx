@@ -1,6 +1,11 @@
+import { Button } from '@astryxdesign/core/Button'
+import { Card } from '@astryxdesign/core/Card'
+import { Heading } from '@astryxdesign/core/Heading'
+import { Selector } from '@astryxdesign/core/Selector'
+import { TextInput } from '@astryxdesign/core/TextInput'
 import { useId, useState } from 'react'
 import type { ReactNode } from 'react'
-import { Filter, RotateCcw } from 'lucide-react'
+import { Filter, RotateCcw, Search } from 'lucide-react'
 import type { AssessmentListRequest } from '../../api/contracts'
 import './assessment-list-filters.css'
 
@@ -8,6 +13,10 @@ export type AssessmentFilters = Pick<
   AssessmentListRequest,
   'evaluatedName' | 'managerName' | 'status' | 'feedbackStatus'
 >
+
+function setNameLimit(input: HTMLInputElement | null) {
+  if (input) input.maxLength = 160
+}
 
 export function AssessmentListFilters({
   onApply,
@@ -23,7 +32,7 @@ export function AssessmentListFilters({
 
   return (
     <form
-      className="card assessment-list-filters"
+      className="ev-filter-form"
       aria-labelledby={`${id}-title`}
       onSubmit={(event) => {
         event.preventDefault()
@@ -36,89 +45,100 @@ export function AssessmentListFilters({
         onApply(filters)
       }}
     >
-      <h3 id={`${id}-title`}>Filtrar avaliações</h3>
-      <p className="muted" id={`${id}-help`}>
-        Combine os filtros para pesquisar em todas as páginas autorizadas. O gestor é o avaliador
-        responsável; autoavaliações não têm gestor avaliador.
-      </p>
-      <div className="assessment-list-filters__grid">
-        <div className="field">
-          <label htmlFor={`${id}-evaluated`}>Nome do Colaborador Avaliado</label>
-          <input
-            id={`${id}-evaluated`}
-            type="search"
-            maxLength={160}
-            placeholder="Digite parte do nome"
-            value={draft.evaluatedName ?? ''}
-            onChange={(event) => setDraft({ ...draft, evaluatedName: event.target.value })}
-          />
+      <Card padding={4} className="ev-filter-card">
+        <div className="ev-filter-heading">
+          <Filter size={17} aria-hidden="true" />
+          <Heading level={3} id={`${id}-title`}>
+            Filtrar avaliações
+          </Heading>
         </div>
-        <div className="field">
-          <label htmlFor={`${id}-manager`}>Nome do Gestor Responsável</label>
-          <input
-            id={`${id}-manager`}
+        <p className="ev-hint" id={`${id}-help`}>
+          Combine os filtros para pesquisar em todas as páginas autorizadas. O gestor é o avaliador
+          responsável; autoavaliações não têm gestor avaliador.
+        </p>
+        <div className="ev-filter-fields">
+          <TextInput
+            label="Nome do Colaborador Avaliado"
             type="search"
-            maxLength={160}
+            ref={setNameLimit}
             aria-describedby={`${id}-help`}
             placeholder="Digite parte do nome"
-            value={draft.managerName ?? ''}
-            onChange={(event) => setDraft({ ...draft, managerName: event.target.value })}
+            startIcon={<Search size={15} />}
+            width="100%"
+            value={draft.evaluatedName ?? ''}
+            onChange={(value) => setDraft({ ...draft, evaluatedName: value })}
           />
-        </div>
-        <div className="field">
-          <label htmlFor={`${id}-status`}>Status da Avaliação</label>
-          <select
-            id={`${id}-status`}
-            value={draft.status ?? ''}
-            onChange={(event) =>
+          <TextInput
+            label="Nome do Gestor Responsável"
+            type="search"
+            ref={setNameLimit}
+            aria-describedby={`${id}-help`}
+            placeholder="Digite parte do nome"
+            startIcon={<Search size={15} />}
+            width="100%"
+            value={draft.managerName ?? ''}
+            onChange={(value) => setDraft({ ...draft, managerName: value })}
+          />
+          <Selector
+            label="Status da Avaliação"
+            width="100%"
+            value={draft.status ?? 'TODOS'}
+            options={assessmentStatuses}
+            onChange={(value) =>
               setDraft({
                 ...draft,
-                status: (event.target.value as AssessmentFilters['status']) || undefined,
+                status: value === 'TODOS' ? undefined : (value as AssessmentFilters['status']),
               })
             }
-          >
-            <option value="">Todos</option>
-            <option value="RASCUNHO">Rascunho</option>
-            <option value="ENVIADA">Enviada</option>
-            <option value="PUBLICADA">Publicada</option>
-          </select>
-        </div>
-        <div className="field">
-          <label htmlFor={`${id}-feedback`}>Status do Feedback</label>
-          <select
-            id={`${id}-feedback`}
-            value={draft.feedbackStatus ?? ''}
-            onChange={(event) =>
+          />
+          <Selector
+            label="Status do Feedback"
+            width="100%"
+            value={draft.feedbackStatus ?? 'TODOS'}
+            options={feedbackStatuses}
+            onChange={(value) =>
               setDraft({
                 ...draft,
                 feedbackStatus:
-                  (event.target.value as AssessmentFilters['feedbackStatus']) || undefined,
+                  value === 'TODOS' ? undefined : (value as AssessmentFilters['feedbackStatus']),
               })
             }
-          >
-            <option value="">Todos</option>
-            <option value="PENDENTE">Pendente</option>
-            <option value="CONCLUIDO">Concluído</option>
-            <option value="NAO_APLICAVEL">Não aplicável</option>
-          </select>
+          />
         </div>
-      </div>
-      <div className="assessment-list-filters__actions">
-        <button className="button button--primary" type="submit">
-          <Filter aria-hidden="true" size={18} /> Aplicar filtros
-        </button>
-        <button
-          className="button"
-          type="button"
-          onClick={() => {
-            setDraft({})
-            onApply({})
-          }}
-        >
-          <RotateCcw aria-hidden="true" size={18} /> Limpar filtros
-        </button>
-        {exportAction}
-      </div>
+        <div className="ev-filter-actions">
+          <Button
+            variant="primary"
+            size="sm"
+            type="submit"
+            label="Aplicar filtros"
+            icon={<Filter size={16} />}
+          />
+          <Button
+            variant="secondary"
+            size="sm"
+            label="Limpar filtros"
+            icon={<RotateCcw size={16} />}
+            onClick={() => {
+              setDraft({})
+              onApply({})
+            }}
+          />
+          {exportAction}
+        </div>
+      </Card>
     </form>
   )
 }
+
+const assessmentStatuses = [
+  { value: 'TODOS', label: 'Todos' },
+  { value: 'RASCUNHO', label: 'Rascunho' },
+  { value: 'ENVIADA', label: 'Enviada' },
+  { value: 'PUBLICADA', label: 'Publicada' },
+]
+const feedbackStatuses = [
+  { value: 'TODOS', label: 'Todos' },
+  { value: 'PENDENTE', label: 'Pendente' },
+  { value: 'CONCLUIDO', label: 'Concluído' },
+  { value: 'NAO_APLICAVEL', label: 'Não aplicável' },
+]

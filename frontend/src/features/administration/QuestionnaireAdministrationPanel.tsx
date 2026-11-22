@@ -1,3 +1,5 @@
+import { WorkspacePageHeader } from '../../ui/WorkspacePageHeader'
+import { ActionButton } from '../../ui/ActionButton'
 import { AdministrativeTable } from '@/components/ui/administrative-table'
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
@@ -225,39 +227,44 @@ export function QuestionnaireAdministrationPanel({
       aria-labelledby="questionnaire-administration-title"
       className="questionnaire-administration"
     >
-      <div className="section-heading">
-        <div>
-          <p className="eyebrow">Administração de conteúdo</p>
-          <div className="context-help__heading">
-            <h2 id="questionnaire-administration-title">Questionários</h2>
-            <ContextHelp title="Por que as versões são imutáveis">
-              <p>
-                Ao aprovar uma versão, o conteúdo, as competências e a escala daquela versão ficam
-                preservados para os ciclos que a utilizarem.
-              </p>
-              <p className="context-help__note">
-                Uma versão nova não reinterpreta nem recalcula avaliações que já usam uma versão
-                anterior.
-              </p>
-            </ContextHelp>
-          </div>
-          <p className="muted">
-            Escolha um modelo, confira cada competência e crie uma versão imutável. A resposta e a
-            nota de cada avaliação continuam validadas pelo servidor.
-          </p>
-        </div>
-        {canManageQuestionnaires ? (
-          <button
-            className="button"
-            type="button"
-            onClick={() => void loadApprovedVersions()}
-            disabled={isLoadingVersions || isCreating}
-          >
-            <RefreshCw aria-hidden="true" size={17} strokeWidth={2} />
-            {isLoadingVersions ? 'Atualizando…' : 'Atualizar versões'}
-          </button>
-        ) : null}
-      </div>
+      <WorkspacePageHeader
+        id="questionnaire-administration-title"
+        title="Questionários"
+        group="Administração de conteúdo"
+        help={
+          <ContextHelp title="Por que as versões são imutáveis">
+            <p>
+              Ao aprovar uma versão, o conteúdo, as competências e a escala daquela versão ficam
+              preservados para os ciclos que a utilizarem.
+            </p>
+            <p className="context-help__note">
+              Uma versão nova não reinterpreta nem recalcula avaliações que já usam uma versão
+              anterior.
+            </p>
+          </ContextHelp>
+        }
+        actions={
+          <>
+            {' '}
+            {canManageQuestionnaires ? (
+              <ActionButton
+                size="sm"
+                variant="secondary"
+                label={isLoadingVersions ? 'Atualizando…' : 'Atualizar versões'}
+                icon={<RefreshCw aria-hidden="true" size={17} strokeWidth={2} />}
+                type="button"
+                onClick={() => void loadApprovedVersions()}
+                disabled={isLoadingVersions || isCreating}
+              />
+            ) : null}{' '}
+          </>
+        }
+      >
+        <p className="ev-page-description">
+          Escolha um modelo, confira cada competência e crie uma versão imutável. A resposta e a
+          nota de cada avaliação continuam validadas pelo servidor.
+        </p>
+      </WorkspacePageHeader>
 
       {!canManageQuestionnaires ? (
         <FeedbackMessage kind="error">
@@ -498,40 +505,40 @@ export function QuestionnaireAdministrationPanel({
                             <strong>{competency.name || 'Selecione uma competência'}</strong>
                           </summary>
                           <div className="questionnaire-competency__actions">
-                            <button
-                              className="button button--quiet"
+                            <ActionButton
+                              size="sm"
+                              variant="ghost"
+                              label="Subir"
+                              icon={<ChevronUp aria-hidden="true" size={16} strokeWidth={2} />}
                               type="button"
                               onClick={() => moveCompetency(competencyIndex, -1)}
                               disabled={isFirstCompetency}
                               aria-label={
                                 'Mover competência ' + (competencyIndex + 1) + ' para cima'
                               }
-                            >
-                              <ChevronUp aria-hidden="true" size={16} strokeWidth={2} />
-                              Subir
-                            </button>
-                            <button
-                              className="button button--quiet"
+                            />
+                            <ActionButton
+                              size="sm"
+                              variant="ghost"
+                              label="Descer"
+                              icon={<ChevronDown aria-hidden="true" size={16} strokeWidth={2} />}
                               type="button"
                               onClick={() => moveCompetency(competencyIndex, 1)}
                               disabled={isLastCompetency}
                               aria-label={
                                 'Mover competência ' + (competencyIndex + 1) + ' para baixo'
                               }
-                            >
-                              <ChevronDown aria-hidden="true" size={16} strokeWidth={2} />
-                              Descer
-                            </button>
-                            <button
-                              className="button button--danger"
+                            />
+                            <ActionButton
+                              size="sm"
+                              variant="destructive"
+                              label="Remover"
+                              icon={<Trash2 aria-hidden="true" size={16} strokeWidth={2} />}
                               type="button"
                               onClick={() => removeCompetency(competencyIndex)}
                               disabled={draft.competencies.length === 1}
                               aria-label={'Remover competência ' + (competencyIndex + 1)}
-                            >
-                              <Trash2 aria-hidden="true" size={16} strokeWidth={2} />
-                              Remover
-                            </button>
+                            />
                           </div>
                           <div className="questionnaire-competency__content">
                             {!competency.catalogCode ? (
@@ -601,27 +608,27 @@ export function QuestionnaireAdministrationPanel({
                       )
                     })}
                   </div>
-                  <button
-                    className="button"
+                  <ActionButton
+                    size="sm"
+                    variant="secondary"
+                    label="Adicionar competência"
+                    icon={<Plus aria-hidden="true" size={17} strokeWidth={2} />}
                     type="button"
                     onClick={addCompetency}
                     disabled={draft.competencies.length >= 100}
-                  >
-                    <Plus aria-hidden="true" size={17} strokeWidth={2} />
-                    Adicionar competência
-                  </button>
+                  />
                 </fieldset>
               ) : null}
 
               <div className="action-row">
-                <button
-                  className="button button--success"
+                <ActionButton
+                  size="sm"
+                  variant="primary"
+                  label={isCreating ? 'Criando versão…' : 'Criar e aprovar versão'}
+                  icon={<Save aria-hidden="true" size={17} strokeWidth={2} />}
                   type="submit"
                   disabled={isCreating || !draft.templateId}
-                >
-                  <Save aria-hidden="true" size={17} strokeWidth={2} />
-                  {isCreating ? 'Criando versão…' : 'Criar e aprovar versão'}
-                </button>
+                />
               </div>
             </form>
           </section>

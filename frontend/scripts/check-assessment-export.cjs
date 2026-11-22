@@ -101,7 +101,7 @@ async function main() {
     .join('')
   files.set(
     'index.html',
-    `<!doctype html><html lang="pt-BR" data-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">${css}<link rel="icon" href="data:,"></head><body><div id="root"></div><script src="/${entry}"></script></body></html>`,
+    `<!doctype html><html lang="pt-BR" data-theme="dark" ${before ? '' : 'data-astryx-theme="neutral"'}><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">${css}<link rel="icon" href="data:,"></head><body><div id="root"></div><script src="/${entry}"></script></body></html>`,
   )
   files.set('logo.png', fs.readFileSync(path.join(frontend, 'public/logo.png')))
   const example = fs.readFileSync(path.join(__dirname, 'fixtures/assessment-export.xlsx'))
@@ -335,14 +335,14 @@ async function main() {
       await ready(
         before
           ? "document.querySelector('.assessment-list__item')"
-          : "document.querySelector('.assessment-export-button:not(:disabled)') && document.querySelector('.assessment-list__item')",
+          : "document.querySelector('.ev-export:not(:disabled)') && document.querySelector('.ev-table tbody tr')",
       )
       await evaluate(
         'document.fonts.ready.then(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))))',
       )
       if (width === 390)
         await evaluate(
-          "window.scrollTo(0,document.querySelector('.assessment-list-filters').getBoundingClientRect().top+scrollY-100)",
+          `window.scrollTo(0,document.querySelector('${before ? '.assessment-list-filters' : '.ev-filter-form'}').getBoundingClientRect().top+scrollY-100)`,
         )
       if (before) {
         assert.equal(
@@ -364,7 +364,7 @@ async function main() {
         continue
       }
       const metrics = await evaluate(
-        "(()=>{const b=document.querySelector('.assessment-export-button'),r=b.getBoundingClientRect();return {overflow:document.documentElement.scrollWidth>innerWidth+1,button:{left:r.left,right:r.right,top:r.top,bottom:r.bottom,height:r.height},label:b.textContent.trim()}})()",
+        "(()=>{const b=document.querySelector('.ev-export'),r=b.getBoundingClientRect();return {overflow:document.documentElement.scrollWidth>innerWidth+1,button:{left:r.left,right:r.right,top:r.top,bottom:r.bottom,height:r.height},label:b.textContent.trim()}})()",
       )
       assert.equal(metrics.overflow, false)
       assert.ok(
@@ -385,18 +385,28 @@ async function main() {
       )
       for (const filtered of [false, true]) {
         if (filtered) {
-          await evaluate(
-            `(()=>{for(const [suffix,value] of [['manager','João'],['status','PUBLICADA'],['feedback','PENDENTE']]){const field=document.querySelector('[id$="-'+suffix+'"]');Object.getOwnPropertyDescriptor(field instanceof HTMLInputElement?HTMLInputElement.prototype:HTMLSelectElement.prototype,'value').set.call(field,value);field.dispatchEvent(new Event(field instanceof HTMLInputElement?'input':'change',{bubbles:true}))}})()`,
-          )
+          await evaluate(`(() => {
+            const field = [...document.querySelectorAll('.ev-filter-fields input[type="search"]')][1];
+            Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(field, 'João');
+            field.dispatchEvent(new Event('input', {bubbles:true}));
+          })()`)
+          for (const [index, label] of ['Publicada', 'Pendente'].entries()) {
+            await evaluate(
+              `document.querySelectorAll('.ev-filter-fields [role=combobox]')[${index}].click()`,
+            )
+            const option = `[...document.querySelectorAll('[role=option]')].find(o=>o.textContent.trim()===${JSON.stringify(label)})`
+            await ready(option)
+            await evaluate(option + '.click()')
+          }
           await evaluate(
             "[...document.querySelectorAll('button')].find(b=>b.textContent.trim()==='Aplicar filtros').click()",
           )
           await ready(
-            "document.querySelector('.assessment-export-button:not(:disabled)') && document.querySelectorAll('.assessment-list__item').length === " +
+            "document.querySelector('.ev-export:not(:disabled)') && document.querySelectorAll('.ev-table tbody tr').length === " +
               (width === 1440 ? 3 : 2),
           )
         }
-        await evaluate("document.querySelector('.assessment-export-button').click()")
+        await evaluate("document.querySelector('.ev-export').click()")
         const file = path.join(downloads, 'avaliacoes-desempenho.xlsx'),
           end = Date.now() + 8000
         while (!fs.existsSync(file)) {

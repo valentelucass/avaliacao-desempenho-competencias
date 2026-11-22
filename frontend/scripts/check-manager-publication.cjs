@@ -37,6 +37,10 @@ async function main() {
   })
   const files = new Map(bundle.output.map((file) => [file.fileName, file.code ?? file.source]))
   files.set('logo.png', fs.readFileSync(path.join(root, 'public', 'logo.png')))
+  files.set(
+    'rodogarcia-marca.png',
+    fs.readFileSync(path.join(root, 'public', 'rodogarcia-marca.png')),
+  )
   files.set('favicon.svg', fs.readFileSync(path.join(root, 'public', 'favicon.svg')))
   const names = [
     'Aprendizagem',

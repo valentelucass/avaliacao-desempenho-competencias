@@ -1,3 +1,6 @@
+import { Badge } from '@astryxdesign/core/Badge'
+import { WorkspacePageHeader } from '../../ui/WorkspacePageHeader'
+import { ActionButton } from '../../ui/ActionButton'
 import { AdministrativeTable } from '@/components/ui/administrative-table'
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
@@ -594,57 +597,62 @@ export function CycleAdministrationPanel({
 
   return (
     <section aria-labelledby="cycle-administration-title" className="stack-form">
-      <div className="section-heading">
-        <div>
-          <p className="eyebrow">Administração de ciclos</p>
-          <div className="context-help__heading">
-            <h2 id="cycle-administration-title">Ciclos de avaliação</h2>
-            <ContextHelp title="Como funciona o ciclo">
-              <ul>
-                <li>
-                  <span>Rascunho: </span>
-                  permite revisar a janela e os questionários aplicados.
-                </li>
-                <li>
-                  <span>Aberto: </span>
-                  permite criar avaliações dentro da vigência configurada.
-                </li>
-                <li>
-                  <span>Encerrado: </span>
-                  impede novas avaliações para aquele ciclo.
-                </li>
-              </ul>
-              <p className="context-help__note">
-                Versões aprovadas de questionário ficam vinculadas ao ciclo e não são alteradas.
-              </p>
-            </ContextHelp>
-          </div>
-          <p className="muted">
-            Um ciclo usa versões aprovadas e imutáveis de questionário. A API valida o estado e
-            registra cada alteração administrativa.
-          </p>
-        </div>
-        <div className="action-row">
-          <button
-            className="button"
-            type="button"
-            disabled={isLoading || isExtendingClosing}
-            onClick={() => void loadData()}
-          >
-            <RefreshCw aria-hidden="true" size={17} strokeWidth={2} />
-            Atualizar
-          </button>
-          <button
-            className="button button--primary"
-            type="button"
-            onClick={startNewCycle}
-            disabled={isExtendingClosing || isSaving || isTransitioning}
-          >
-            <Plus aria-hidden="true" size={17} strokeWidth={2} />
-            Novo ciclo
-          </button>
-        </div>
-      </div>
+      <WorkspacePageHeader
+        id="cycle-administration-title"
+        title="Ciclos de avaliação"
+        group="Administração de ciclos"
+        help={
+          <ContextHelp title="Como funciona o ciclo">
+            <ul>
+              <li>
+                <span>Rascunho: </span>
+                permite revisar a janela e os questionários aplicados.
+              </li>
+              <li>
+                <span>Aberto: </span>
+                permite criar avaliações dentro da vigência configurada.
+              </li>
+              <li>
+                <span>Encerrado: </span>
+                impede novas avaliações para aquele ciclo.
+              </li>
+            </ul>
+            <p className="context-help__note">
+              Versões aprovadas de questionário ficam vinculadas ao ciclo e não são alteradas.
+            </p>
+          </ContextHelp>
+        }
+        actions={
+          <>
+            {' '}
+            <div className="action-row">
+              <ActionButton
+                size="sm"
+                variant="secondary"
+                label="Atualizar"
+                icon={<RefreshCw aria-hidden="true" size={17} strokeWidth={2} />}
+                type="button"
+                disabled={isLoading || isExtendingClosing}
+                onClick={() => void loadData()}
+              />
+              <ActionButton
+                size="sm"
+                variant="primary"
+                label="Novo ciclo"
+                icon={<Plus aria-hidden="true" size={17} strokeWidth={2} />}
+                type="button"
+                onClick={startNewCycle}
+                disabled={isExtendingClosing || isSaving || isTransitioning}
+              />
+            </div>{' '}
+          </>
+        }
+      >
+        <p className="ev-page-description">
+          Um ciclo usa versões aprovadas e imutáveis de questionário. A API valida o estado e
+          registra cada alteração administrativa.
+        </p>
+      </WorkspacePageHeader>
 
       {error ? (
         <FeedbackMessage kind="error" id={formErrorId} onDismiss={() => setError(undefined)}>
@@ -708,21 +716,29 @@ export function CycleAdministrationPanel({
                       ) : null}
                     </AdministrativeTable.Cell>
                     <AdministrativeTable.Cell data-label="Situação">
-                      <span className={`status-badge status-badge--${cycle.status.toLowerCase()}`}>
-                        {formatCycleStatus(cycle.status, cycle.windowStatus)}
-                      </span>
+                      <Badge
+                        className="dashboard-status-badge"
+                        label={formatCycleStatus(cycle.status, cycle.windowStatus)}
+                        variant={
+                          cycle.status === 'RASCUNHO'
+                            ? 'warning'
+                            : cycle.status === 'ABERTO'
+                              ? 'success'
+                              : 'neutral'
+                        }
+                      />
                     </AdministrativeTable.Cell>
                     <AdministrativeTable.Cell data-label="Ação">
                       <div className="table-actions">
-                        <button
-                          className="button"
+                        <ActionButton
+                          size="sm"
+                          variant="secondary"
+                          label={cycle.status === 'RASCUNHO' ? 'Configurar' : 'Consultar'}
+                          icon={<Pencil aria-hidden="true" size={16} strokeWidth={2} />}
                           type="button"
                           onClick={() => void selectCycle(cycle)}
                           disabled={isSaving || isTransitioning || isExtendingClosing}
-                        >
-                          <Pencil aria-hidden="true" size={16} strokeWidth={2} />
-                          {cycle.status === 'RASCUNHO' ? 'Configurar' : 'Consultar'}
-                        </button>
+                        />
                       </div>
                     </AdministrativeTable.Cell>
                   </AdministrativeTable.Row>
@@ -1003,16 +1019,18 @@ export function CycleAdministrationPanel({
 
             {selectedCycle?.status === 'RASCUNHO' || !selectedCycle ? (
               <div className="action-row">
-                <button
-                  className="button button--success"
+                <ActionButton
+                  size="sm"
+                  variant="primary"
+                  label={
+                    isSaving ? 'Salvando…' : selectedCycle ? 'Salvar configuração' : 'Criar ciclo'
+                  }
+                  icon={<CheckCircle2 aria-hidden="true" size={17} strokeWidth={2} />}
                   type="submit"
                   disabled={
                     isSaving || isLoadingConfiguration || isLoading || !isAvailable('versions')
                   }
-                >
-                  <CheckCircle2 aria-hidden="true" size={17} strokeWidth={2} />
-                  {isSaving ? 'Salvando…' : selectedCycle ? 'Salvar configuração' : 'Criar ciclo'}
-                </button>
+                />
               </div>
             ) : null}
           </>
@@ -1036,15 +1054,15 @@ export function CycleAdministrationPanel({
             de ser editável.
           </p>
           <div className="action-row">
-            <button
-              className="button button--success"
+            <ActionButton
+              size="sm"
+              variant="primary"
+              label={isTransitioning ? 'Processando…' : 'Abrir ciclo'}
+              icon={<CheckCircle2 aria-hidden="true" size={17} strokeWidth={2} />}
               type="button"
               disabled={isTransitioning}
               onClick={() => void transitionCycle('open')}
-            >
-              <CheckCircle2 aria-hidden="true" size={17} strokeWidth={2} />
-              {isTransitioning ? 'Processando…' : 'Abrir ciclo'}
-            </button>
+            />
           </div>
         </section>
       ) : null}
@@ -1110,9 +1128,13 @@ export function CycleAdministrationPanel({
             </p>
           ) : null}
           <div className="action-row">
-            <button className="button button--primary" type="submit" disabled={isExtendingClosing}>
-              {isExtendingClosing ? 'Prorrogando…' : 'Prorrogar encerramento'}
-            </button>
+            <ActionButton
+              size="sm"
+              variant="primary"
+              label={isExtendingClosing ? 'Prorrogando…' : 'Prorrogar encerramento'}
+              type="submit"
+              disabled={isExtendingClosing}
+            />
           </div>
         </form>
       ) : null}
@@ -1132,15 +1154,15 @@ export function CycleAdministrationPanel({
             fuso America/Sao_Paulo, e impede novas avaliações.
           </p>
           <div className="action-row">
-            <button
-              className="button button--danger"
+            <ActionButton
+              size="sm"
+              variant="destructive"
+              label={isTransitioning ? 'Processando…' : 'Encerrar ciclo'}
+              icon={<XCircle aria-hidden="true" size={17} strokeWidth={2} />}
               type="button"
               disabled={isTransitioning || isExtendingClosing}
               onClick={() => void transitionCycle('close')}
-            >
-              <XCircle aria-hidden="true" size={17} strokeWidth={2} />
-              {isTransitioning ? 'Processando…' : 'Encerrar ciclo'}
-            </button>
+            />
           </div>
         </section>
       ) : null}

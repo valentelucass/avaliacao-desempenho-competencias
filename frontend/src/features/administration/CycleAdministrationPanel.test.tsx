@@ -81,7 +81,9 @@ describe('CycleAdministrationPanel', () => {
       expect(screen.getByLabelText('Nome do ciclo')).toHaveValue(oldConfiguration.name)
       expect(screen.getByLabelText('Permitir autoavaliação neste ciclo')).toBeChecked()
       expect(screen.getByLabelText('Encerramento')).toBeDisabled()
-      expect(screen.getByText('Aberto', { selector: '.status-badge' })).toBeInTheDocument()
+      expect(
+        screen.getByText('Aberto', { selector: '.astryx-badge, .astryx-badge *' }),
+      ).toBeInTheDocument()
       expect(screen.getByLabelText('Novo encerramento (Brasília)')).toHaveValue('')
       expect(confirmation).not.toHaveBeenCalled()
       expect(api.replaceEvaluationCycle).not.toHaveBeenCalled()
@@ -293,7 +295,9 @@ describe('CycleAdministrationPanel', () => {
     )
 
     expect(
-      await screen.findByText('Aberto — prazo encerrado', { selector: '.status-badge' }),
+      await screen.findByText('Aberto — prazo encerrado', {
+        selector: '.astryx-badge, .astryx-badge *',
+      }),
     ).toBeInTheDocument()
     expect(screen.getByText(/Abertura: 16\/09\/2026, 14:00/)).toHaveTextContent(
       'Encerramento: 16/10/2026, 23:59 (Brasília).',
@@ -321,7 +325,9 @@ describe('CycleAdministrationPanel', () => {
           onSessionExpired={vi.fn()}
         />,
       )
-      expect(await screen.findByText('Aberto', { selector: '.status-badge' })).toBeInTheDocument()
+      expect(
+        await screen.findByText('Aberto', { selector: '.astryx-badge, .astryx-badge *' }),
+      ).toBeInTheDocument()
       expect(screen.queryByText('Aberto — prazo encerrado')).toBeNull()
     },
   )

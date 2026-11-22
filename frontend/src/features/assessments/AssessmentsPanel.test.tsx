@@ -1,3 +1,4 @@
+import { selectAssessmentFilter } from '../../test/selectAssessmentFilter'
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { axe } from 'vitest-axe'
@@ -57,18 +58,16 @@ const setName = (value: string) =>
   fireEvent.change(screen.getByLabelText('Nome do Colaborador Avaliado'), { target: { value } })
 
 describe('Filtros de avaliações autorizadas', () => {
-  it('organiza o cartão da avaliação em identificação, contexto e ação', async () => {
+  it('apresenta identificação, situação, contexto e ação na mesma linha da tabela', async () => {
     setup()
     const title = await screen.findByText('Registro inicial')
-    const card = title.closest('li')
-    expect(card).not.toBeNull()
-    expect(card?.querySelector('header.assessment-list__details')).not.toBeNull()
-    expect(card?.querySelector('.assessment-list__metadata')).not.toBeNull()
-    expect(card?.querySelector('footer.assessment-list__actions')).not.toBeNull()
-    expect(title).toHaveAttribute('title', 'Registro inicial')
-    expect(
-      within(card as HTMLElement).getByRole('button', { name: 'Abrir avaliação' }),
-    ).toBeVisible()
+    const row = title.closest('tr')
+    expect(row).not.toBeNull()
+    const table = screen.getByRole('table', { name: 'Lista de avaliações' })
+    expect(within(table).getByRole('columnheader', { name: 'Colaborador avaliado' })).toBeVisible()
+    expect(within(table).getByRole('columnheader', { name: 'Status da avaliação' })).toBeVisible()
+    expect(within(row!).getAllByRole('cell')).toHaveLength(5)
+    expect(within(row!).getByRole('button', { name: 'Abrir avaliação' })).toBeVisible()
   })
 
   it('mostra os quatro filtros sem consultar cadastros administrativos e sem violação axe', async () => {
@@ -90,10 +89,8 @@ describe('Filtros de avaliações autorizadas', () => {
     fireEvent.change(screen.getByLabelText('Nome do Gestor Responsável'), {
       target: { value: ' José ' },
     })
-    fireEvent.change(screen.getByLabelText('Status da Avaliação'), {
-      target: { value: 'PUBLICADA' },
-    })
-    fireEvent.change(screen.getByLabelText('Status do Feedback'), { target: { value: 'PENDENTE' } })
+    await selectAssessmentFilter('Status da Avaliação', 'PUBLICADA')
+    await selectAssessmentFilter('Status do Feedback', 'PENDENTE')
     expect(listAssessments).toHaveBeenCalledTimes(1)
     apply()
     await waitFor(() =>
@@ -122,7 +119,7 @@ describe('Filtros de avaliações autorizadas', () => {
   ])('envia %s = %s sem reinterpretar estados', async (label, value, key) => {
     const { listAssessments } = setup()
     await screen.findByText('Registro inicial')
-    fireEvent.change(screen.getByLabelText(label), { target: { value } })
+    await selectAssessmentFilter(label, value)
     apply()
     await waitFor(() =>
       expect(listAssessments).toHaveBeenLastCalledWith(expect.objectContaining({ [key]: value })),
@@ -208,10 +205,8 @@ describe('Filtros de avaliações autorizadas', () => {
     fireEvent.change(screen.getByLabelText('Nome do Gestor Responsável'), {
       target: { value: 'João' },
     })
-    fireEvent.change(screen.getByLabelText('Status da Avaliação'), {
-      target: { value: 'PUBLICADA' },
-    })
-    fireEvent.change(screen.getByLabelText('Status do Feedback'), { target: { value: 'PENDENTE' } })
+    await selectAssessmentFilter('Status da Avaliação', 'PUBLICADA')
+    await selectAssessmentFilter('Status do Feedback', 'PENDENTE')
     apply()
     await waitFor(() => expect(listAssessments).toHaveBeenCalledTimes(2))
     rerender(<AssessmentsPanel {...props} assessmentId="assessment-ficticia" />)
@@ -220,8 +215,12 @@ describe('Filtros de avaliações autorizadas', () => {
     rerender(<AssessmentsPanel {...props} />)
     expect(screen.getByLabelText('Nome do Colaborador Avaliado')).toHaveValue('Ana')
     expect(screen.getByLabelText('Nome do Gestor Responsável')).toHaveValue('João')
-    expect(screen.getByLabelText('Status da Avaliação')).toHaveValue('PUBLICADA')
-    expect(screen.getByLabelText('Status do Feedback')).toHaveValue('PENDENTE')
+    expect(screen.getByRole('combobox', { name: 'Status da Avaliação' })).toHaveTextContent(
+      'Publicada',
+    )
+    expect(screen.getByRole('combobox', { name: 'Status do Feedback' })).toHaveTextContent(
+      'Pendente',
+    )
   })
 
   it('limpa os quatro filtros e recupera resultados após busca vazia', async () => {
@@ -300,7 +299,7 @@ describe('Totais globais enviados pelo servidor', () => {
     setup(list)
     await screen.findByText('Página um')
     const values = () =>
-      Array.from(document.querySelectorAll('.kpi-grid--summary dd')).map((item) => item.textContent)
+      Array.from(document.querySelectorAll('.ev-metrics dd')).map((item) => item.textContent)
     expect(values()).toEqual(['37', '17', '12', '8'])
     fireEvent.click(screen.getByRole('button', { name: 'Próxima página' }))
     await screen.findByText('Página dois')
@@ -320,9 +319,7 @@ describe('Totais globais enviados pelo servidor', () => {
     await screen.findByText('Registro')
     expect(screen.getByText(/Não há dados suficientes para preservar/)).toBeVisible()
     expect(
-      Array.from(document.querySelectorAll('.kpi-grid--summary dd')).map(
-        (item) => item.textContent,
-      ),
+      Array.from(document.querySelectorAll('.ev-metrics dd')).map((item) => item.textContent),
     ).toEqual(['—', '—', '—', '—'])
   })
 })

@@ -1,3 +1,17 @@
+import { ActionButton } from '../../ui/ActionButton'
+import { createPortal } from 'react-dom'
+import { Badge, type BadgeVariant } from '@astryxdesign/core/Badge'
+import { Button } from '@astryxdesign/core/Button'
+import { Card } from '@astryxdesign/core/Card'
+import { Heading } from '@astryxdesign/core/Heading'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHeader,
+  TableHeaderCell,
+  TableRow,
+} from '@astryxdesign/core/Table'
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { CheckCircle2, ClipboardList, Plus, RefreshCw, Send } from 'lucide-react'
 import type { FormEvent, ReactNode } from 'react'
@@ -24,6 +38,7 @@ import { AssessmentExportButton } from './AssessmentExportButton'
 
 type AssessmentsPanelProps = {
   api: ApiClient
+  headerHost?: HTMLElement | null
   canCreateManagerAssessment: boolean
   canCreateDirectorAssessment: boolean
   canCreateSelfAssessment: boolean
@@ -83,6 +98,7 @@ function useAssessmentGridPageSize(): number {
 
 export function AssessmentsPanel({
   api,
+  headerHost,
   canCreateManagerAssessment,
   canCreateDirectorAssessment,
   canCreateSelfAssessment,
@@ -671,51 +687,57 @@ export function AssessmentsPanel({
     )
   }
 
-  return (
-    <section aria-labelledby="assessments-title">
-      <div className="section-heading">
-        <div>
-          <p className="eyebrow">{isAdministrativeView ? 'Administração' : 'Minhas avaliações'}</p>
-          <div className="context-help__heading">
-            <h2 id="assessments-title">
-              {isAdministrativeView ? 'Avaliações individuais' : 'Avaliações autorizadas'}
-            </h2>
-            <ContextHelp title="Entenda a situação das avaliações">
-              <ul>
-                <li>
-                  <span>Rascunho: </span>
-                  permanece em preenchimento pelo responsável.
-                </li>
-                <li>
-                  <span>Enviada: </span>
-                  aguarda a decisão de publicação dentro do escopo autorizado.
-                </li>
-                <li>
-                  <span>Publicada: </span>
-                  mantém o resultado disponível; qualquer reabertura é registrada.
-                </li>
-              </ul>
-              <p className="context-help__note">
-                A lista e as ações possíveis são definidas pelo seu perfil, vínculos e ciclo.
-              </p>
-            </ContextHelp>
-          </div>
-          <p className="muted">
-            {isAdministrativeView
-              ? canUseAdministrativeFilters
-                ? 'Selecione o ciclo e o colaborador para pré-visualizar o resumo individual; a lista continua disponível para abrir o formulário completo.'
-                : 'A lista é definida pelo servidor conforme seu escopo de supervisão, vínculos e permissões.'
-              : 'A lista é definida pelo servidor conforme seu vínculo e suas permissões.'}
-          </p>
+  const heading = (
+    <div className="ev-page-head">
+      <div className="ev-header-title">
+        <span>{isAdministrativeView ? 'Administração' : 'Minhas avaliações'}</span>
+        <div className="ev-heading-help">
+          <Heading level={headerHost ? 1 : 2} id="assessments-title">
+            {isAdministrativeView ? 'Avaliações individuais' : 'Avaliações autorizadas'}
+          </Heading>
+          <ContextHelp title="Entenda a situação das avaliações">
+            <ul>
+              <li>
+                <span>Rascunho: </span>permanece em preenchimento pelo responsável.
+              </li>
+              <li>
+                <span>Enviada: </span>aguarda a decisão de publicação dentro do escopo autorizado.
+              </li>
+              <li>
+                <span>Publicada: </span>mantém o resultado disponível; qualquer reabertura é
+                registrada.
+              </li>
+            </ul>
+            <p className="context-help__note">
+              A lista e as ações possíveis são definidas pelo seu perfil, vínculos e ciclo.
+            </p>
+            <p>
+              {isAdministrativeView
+                ? canUseAdministrativeFilters
+                  ? 'Selecione o ciclo e o colaborador para pré-visualizar o resumo individual; a lista continua disponível para abrir o formulário completo.'
+                  : 'A lista é definida pelo servidor conforme seu escopo de supervisão, vínculos e permissões.'
+                : 'A lista é definida pelo servidor conforme seu vínculo e suas permissões.'}
+            </p>
+          </ContextHelp>
         </div>
-        <button className="button" type="button" onClick={refreshAssessments} disabled={isLoading}>
-          <RefreshCw aria-hidden="true" size={17} strokeWidth={2} />
-          Atualizar
-        </button>
       </div>
+      <Button
+        label="Atualizar"
+        size="sm"
+        variant="secondary"
+        className="ev-refresh"
+        icon={<RefreshCw size={16} aria-hidden="true" />}
+        isDisabled={isLoading}
+        onClick={refreshAssessments}
+      />
+    </div>
+  )
+  return (
+    <section aria-labelledby="assessments-title" className="ev-assessments">
+      {headerHost ? createPortal(heading, headerHost) : heading}
 
       {(!isLoading || assessmentPage.items.length > 0) && !error ? (
-        <dl className="kpi-grid kpi-grid--summary" aria-label="Resumo de avaliações">
+        <dl className="ev-metrics" aria-label="Resumo de avaliações">
           <Metric
             label="Total"
             value={assessmentMetrics?.total ?? '—'}
@@ -749,67 +771,66 @@ export function AssessmentsPanel({
         </p>
       ) : null}
       {canUseAdministrativeFilters ? (
-        <section
-          className="card assessment-creation-card"
-          aria-labelledby="individual-filter-title"
-        >
-          <div className="assessment-creation-card__header">
-            <div className="context-help__heading">
-              <h3 id="individual-filter-title">Localizar avaliação</h3>
-              <ContextHelp title="Como funcionam estes filtros">
-                <p>
-                  Os filtros reduzem somente a lista visualizada. Eles não ampliam seu acesso e são
-                  reaplicados pelo servidor a cada consulta.
-                </p>
-              </ContextHelp>
+        <section className="ev-create-region" aria-labelledby="individual-filter-title">
+          <Card padding={4} className="ev-create-card">
+            <div className="assessment-creation-card__header">
+              <div className="context-help__heading">
+                <h3 id="individual-filter-title">Localizar avaliação</h3>
+                <ContextHelp title="Como funcionam estes filtros">
+                  <p>
+                    Os filtros reduzem somente a lista visualizada. Eles não ampliam seu acesso e
+                    são reaplicados pelo servidor a cada consulta.
+                  </p>
+                </ContextHelp>
+              </div>
+              <p className="muted">
+                Selecione o ciclo, o colaborador ou ambos. O servidor só devolve avaliações dentro
+                do seu escopo autorizado.
+              </p>
             </div>
-            <p className="muted">
-              Selecione o ciclo, o colaborador ou ambos. O servidor só devolve avaliações dentro do
-              seu escopo autorizado.
-            </p>
-          </div>
-          <div className="stack-form assessment-creation-form assessment-creation-form--manager">
-            <div className="field">
-              <label htmlFor="individual-assessment-cycle">Ciclo</label>
-              <select
-                id="individual-assessment-cycle"
-                value={administrativeCycleId}
-                onChange={(event) => {
-                  setAdministrativeCycleId(event.target.value)
-                  setPreviewedAssessmentId(undefined)
-                  setPreviewAssessment(undefined)
-                  setPreviewError(undefined)
-                }}
-              >
-                <option value="">Todos os ciclos</option>
-                {administrativeCycles.map((cycle) => (
-                  <option key={cycle.id} value={cycle.id}>
-                    {cycle.name}
-                  </option>
-                ))}
-              </select>
+            <div className="stack-form assessment-creation-form assessment-creation-form--manager">
+              <div className="field">
+                <label htmlFor="individual-assessment-cycle">Ciclo</label>
+                <select
+                  id="individual-assessment-cycle"
+                  value={administrativeCycleId}
+                  onChange={(event) => {
+                    setAdministrativeCycleId(event.target.value)
+                    setPreviewedAssessmentId(undefined)
+                    setPreviewAssessment(undefined)
+                    setPreviewError(undefined)
+                  }}
+                >
+                  <option value="">Todos os ciclos</option>
+                  {administrativeCycles.map((cycle) => (
+                    <option key={cycle.id} value={cycle.id}>
+                      {cycle.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="field">
+                <label htmlFor="individual-assessment-collaborator">Colaborador</label>
+                <select
+                  id="individual-assessment-collaborator"
+                  value={administrativeCollaboratorId}
+                  onChange={(event) => {
+                    setAdministrativeCollaboratorId(event.target.value)
+                    setPreviewedAssessmentId(undefined)
+                    setPreviewAssessment(undefined)
+                    setPreviewError(undefined)
+                  }}
+                >
+                  <option value="">Todos os colaboradores</option>
+                  {administrativeCollaborators.map((collaborator) => (
+                    <option key={collaborator.id} value={collaborator.id}>
+                      {collaborator.displayName}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
-            <div className="field">
-              <label htmlFor="individual-assessment-collaborator">Colaborador</label>
-              <select
-                id="individual-assessment-collaborator"
-                value={administrativeCollaboratorId}
-                onChange={(event) => {
-                  setAdministrativeCollaboratorId(event.target.value)
-                  setPreviewedAssessmentId(undefined)
-                  setPreviewAssessment(undefined)
-                  setPreviewError(undefined)
-                }}
-              >
-                <option value="">Todos os colaboradores</option>
-                {administrativeCollaborators.map((collaborator) => (
-                  <option key={collaborator.id} value={collaborator.id}>
-                    {collaborator.displayName}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
+          </Card>
         </section>
       ) : null}
 
@@ -857,315 +878,335 @@ export function AssessmentsPanel({
         <div className="assessment-creation-grid">
           {canCreateManagerAssessment ? (
             <section
-              className="card assessment-creation-card"
+              className="ev-create-region"
               aria-labelledby="create-manager-assessment-title"
               ref={managerCreationCardRef}
               tabIndex={-1}
             >
-              <div className="assessment-creation-card__header">
-                <div className="context-help__heading">
-                  <h3 id="create-manager-assessment-title">Criar avaliação de gestor</h3>
-                  <ContextHelp title="Quem pode ser avaliado">
-                    <p>
-                      A lista contém apenas colaboradores com vínculo ativo à sua gestão e
-                      questionário atribuído ao ciclo selecionado.
-                    </p>
-                  </ContextHelp>
+              <Card padding={4} className="ev-create-card">
+                <div className="assessment-creation-card__header">
+                  <div className="context-help__heading">
+                    <h3 id="create-manager-assessment-title">Criar avaliação de gestor</h3>
+                    <ContextHelp title="Quem pode ser avaliado">
+                      <p>
+                        A lista contém apenas colaboradores com vínculo ativo à sua gestão e
+                        questionário atribuído ao ciclo selecionado.
+                      </p>
+                    </ContextHelp>
+                  </div>
+                  <p className="muted">
+                    {journey === 'EQUIPE' ? (
+                      <span className="assessment-creation-card__journey">Jornada: Equipe</span>
+                    ) : null}{' '}
+                    O servidor confirma o questionário pela atribuição ativa e apresenta somente
+                    colaboradores com vínculo ativo e questionário atribuído no ciclo selecionado.
+                  </p>
                 </div>
-                <p className="muted">
-                  {journey === 'EQUIPE' ? (
-                    <span className="assessment-creation-card__journey">Jornada: Equipe</span>
-                  ) : null}{' '}
-                  O servidor confirma o questionário pela atribuição ativa e apresenta somente
-                  colaboradores com vínculo ativo e questionário atribuído no ciclo selecionado.
-                </p>
-              </div>
-              <form
-                className="stack-form assessment-creation-form assessment-creation-form--manager"
-                onSubmit={createManagerAssessment}
-                noValidate
-                aria-busy={isCreatingManagerAssessment}
-              >
-                {managerCreationError ? (
-                  <FeedbackMessage
-                    kind="error"
-                    onDismiss={() => setManagerCreationError(undefined)}
-                  >
-                    {managerCreationError}
-                  </FeedbackMessage>
-                ) : null}
-                {isLoadingCycles ? (
-                  <p className="field-hint">Verificando ciclos elegíveis…</p>
-                ) : null}
-                {!isLoadingCycles && !creationCyclesError && managerCreationCycles.length === 0 ? (
-                  <FeedbackMessage kind="info">
-                    Não há ciclos disponíveis para uma nova avaliação de gestor. Quando houver um
-                    vínculo ativo, questionário atribuído e ciclo vigente, ele aparecerá aqui.
-                  </FeedbackMessage>
-                ) : null}
-                {managerCreationCycles.length > 0 ? (
-                  <>
-                    <div className="field">
-                      <label htmlFor={managerCycleId}>Ciclo para avaliação de gestor</label>
-                      <select
-                        id={managerCycleId}
-                        value={selectedManagerCycleId}
-                        onChange={(event) => selectManagerCycle(event.target.value)}
-                        disabled={isLoadingCycles || isCreatingManagerAssessment}
-                        required
-                      >
-                        <option value="">Selecione um ciclo</option>
-                        {managerCreationCycles.map((cycle) => (
-                          <option key={cycle.id} value={cycle.id}>
-                            {cycle.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="field">
-                      <label htmlFor={managerCollaboratorId}>Colaborador autorizado</label>
-                      <select
-                        id={managerCollaboratorId}
-                        value={selectedManagerCollaboratorId}
-                        onChange={(event) => setSelectedManagerCollaboratorId(event.target.value)}
-                        disabled={
-                          !selectedManagerCycleId ||
-                          isLoadingManagerCollaborators ||
-                          isCreatingManagerAssessment
-                        }
-                        required
-                      >
-                        <option value="">Selecione um colaborador</option>
-                        {managerCollaborators.map((collaborator) => (
-                          <option key={collaborator.id} value={collaborator.id}>
-                            {collaborator.displayName}
-                          </option>
-                        ))}
-                      </select>
-                      {isLoadingManagerCollaborators ? (
-                        <p className="field-hint">Carregando colaboradores autorizados…</p>
-                      ) : null}
-                      {selectedManagerCycleId &&
-                      !isLoadingManagerCollaborators &&
-                      managerCollaborators.length === 0 ? (
-                        <p className="field-hint">
-                          As opções mudaram. Escolha outro ciclo elegível para continuar.
-                        </p>
-                      ) : null}
-                    </div>
-                    <div className="action-row">
-                      <button
-                        className="button button--success"
-                        type="submit"
-                        disabled={
-                          !selectedManagerCycleId ||
-                          !selectedManagerCollaboratorId ||
-                          isLoadingCycles ||
-                          isLoadingManagerCollaborators ||
-                          isCreatingManagerAssessment
-                        }
-                      >
-                        <Plus aria-hidden="true" size={17} strokeWidth={2} />
-                        {isCreatingManagerAssessment ? 'Criando…' : 'Criar avaliação de gestor'}
-                      </button>
-                    </div>
-                  </>
-                ) : null}
-              </form>
+                <form
+                  className="stack-form assessment-creation-form assessment-creation-form--manager"
+                  onSubmit={createManagerAssessment}
+                  noValidate
+                  aria-busy={isCreatingManagerAssessment}
+                >
+                  {managerCreationError ? (
+                    <FeedbackMessage
+                      kind="error"
+                      onDismiss={() => setManagerCreationError(undefined)}
+                    >
+                      {managerCreationError}
+                    </FeedbackMessage>
+                  ) : null}
+                  {isLoadingCycles ? (
+                    <p className="field-hint">Verificando ciclos elegíveis…</p>
+                  ) : null}
+                  {!isLoadingCycles &&
+                  !creationCyclesError &&
+                  managerCreationCycles.length === 0 ? (
+                    <FeedbackMessage kind="info">
+                      Não há ciclos disponíveis para uma nova avaliação de gestor. Quando houver um
+                      vínculo ativo, questionário atribuído e ciclo vigente, ele aparecerá aqui.
+                    </FeedbackMessage>
+                  ) : null}
+                  {managerCreationCycles.length > 0 ? (
+                    <>
+                      <div className="field">
+                        <label htmlFor={managerCycleId}>Ciclo para avaliação de gestor</label>
+                        <select
+                          id={managerCycleId}
+                          value={selectedManagerCycleId}
+                          onChange={(event) => selectManagerCycle(event.target.value)}
+                          disabled={isLoadingCycles || isCreatingManagerAssessment}
+                          required
+                        >
+                          <option value="">Selecione um ciclo</option>
+                          {managerCreationCycles.map((cycle) => (
+                            <option key={cycle.id} value={cycle.id}>
+                              {cycle.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="field">
+                        <label htmlFor={managerCollaboratorId}>Colaborador autorizado</label>
+                        <select
+                          id={managerCollaboratorId}
+                          value={selectedManagerCollaboratorId}
+                          onChange={(event) => setSelectedManagerCollaboratorId(event.target.value)}
+                          disabled={
+                            !selectedManagerCycleId ||
+                            isLoadingManagerCollaborators ||
+                            isCreatingManagerAssessment
+                          }
+                          required
+                        >
+                          <option value="">Selecione um colaborador</option>
+                          {managerCollaborators.map((collaborator) => (
+                            <option key={collaborator.id} value={collaborator.id}>
+                              {collaborator.displayName}
+                            </option>
+                          ))}
+                        </select>
+                        {isLoadingManagerCollaborators ? (
+                          <p className="field-hint">Carregando colaboradores autorizados…</p>
+                        ) : null}
+                        {selectedManagerCycleId &&
+                        !isLoadingManagerCollaborators &&
+                        managerCollaborators.length === 0 ? (
+                          <p className="field-hint">
+                            As opções mudaram. Escolha outro ciclo elegível para continuar.
+                          </p>
+                        ) : null}
+                      </div>
+                      <div className="action-row">
+                        <ActionButton
+                          size="sm"
+                          variant="primary"
+                          label={
+                            isCreatingManagerAssessment ? 'Criando…' : 'Criar avaliação de gestor'
+                          }
+                          icon={<Plus aria-hidden="true" size={17} strokeWidth={2} />}
+                          type="submit"
+                          disabled={
+                            !selectedManagerCycleId ||
+                            !selectedManagerCollaboratorId ||
+                            isLoadingCycles ||
+                            isLoadingManagerCollaborators ||
+                            isCreatingManagerAssessment
+                          }
+                        />
+                      </div>
+                    </>
+                  ) : null}
+                </form>
+              </Card>
             </section>
           ) : null}
 
           {canCreateDirectorAssessment ? (
             <section
-              className="card assessment-creation-card"
+              className="ev-create-region"
               aria-labelledby="create-director-assessment-title"
             >
-              <div className="assessment-creation-card__header">
-                <div className="context-help__heading">
-                  <h3 id="create-director-assessment-title">Criar avaliação de Diretoria</h3>
-                  <ContextHelp title="Como a Diretoria escolhe uma gerência">
-                    <p>
-                      A plataforma mostra somente as gerências vinculadas à Diretoria ativa e
-                      elegíveis no ciclo. Essa relação é validada pelo servidor.
-                    </p>
-                  </ContextHelp>
+              <Card padding={4} className="ev-create-card">
+                <div className="assessment-creation-card__header">
+                  <div className="context-help__heading">
+                    <h3 id="create-director-assessment-title">Criar avaliação de Diretoria</h3>
+                    <ContextHelp title="Como a Diretoria escolhe uma gerência">
+                      <p>
+                        A plataforma mostra somente as gerências vinculadas à Diretoria ativa e
+                        elegíveis no ciclo. Essa relação é validada pelo servidor.
+                      </p>
+                    </ContextHelp>
+                  </div>
+                  <p className="muted">
+                    O servidor mostra somente gerências vinculadas à sua Diretoria, com questionário
+                    atribuído e vigência ativa no ciclo escolhido.
+                  </p>
                 </div>
-                <p className="muted">
-                  O servidor mostra somente gerências vinculadas à sua Diretoria, com questionário
-                  atribuído e vigência ativa no ciclo escolhido.
-                </p>
-              </div>
-              <form
-                className="stack-form assessment-creation-form assessment-creation-form--manager"
-                onSubmit={createDirectorAssessment}
-                noValidate
-                aria-busy={isCreatingDirectorAssessment}
-              >
-                {directorCreationError ? (
-                  <FeedbackMessage
-                    kind="error"
-                    onDismiss={() => setDirectorCreationError(undefined)}
-                  >
-                    {directorCreationError}
-                  </FeedbackMessage>
-                ) : null}
-                {isLoadingCycles ? (
-                  <p className="field-hint">Verificando ciclos elegíveis…</p>
-                ) : null}
-                {!isLoadingCycles && !creationCyclesError && directorCreationCycles.length === 0 ? (
-                  <FeedbackMessage kind="info">
-                    Não há ciclos disponíveis para uma nova avaliação de Diretoria. Quando houver
-                    uma gerência vinculada, questionário atribuído e ciclo vigente, ele aparecerá
-                    aqui.
-                  </FeedbackMessage>
-                ) : null}
-                {directorCreationCycles.length > 0 ? (
-                  <>
-                    <div className="field">
-                      <label htmlFor={directorCycleId}>Ciclo para avaliação de Diretoria</label>
-                      <select
-                        id={directorCycleId}
-                        value={selectedDirectorCycleId}
-                        onChange={(event) => selectDirectorCycle(event.target.value)}
-                        disabled={isLoadingCycles || isCreatingDirectorAssessment}
-                        required
-                      >
-                        <option value="">Selecione um ciclo</option>
-                        {directorCreationCycles.map((cycle) => (
-                          <option key={cycle.id} value={cycle.id}>
-                            {cycle.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="field">
-                      <label htmlFor={directorCollaboratorId}>Gerência autorizada</label>
-                      <select
-                        id={directorCollaboratorId}
-                        value={selectedDirectorCollaboratorId}
-                        onChange={(event) => setSelectedDirectorCollaboratorId(event.target.value)}
-                        disabled={
-                          !selectedDirectorCycleId ||
-                          isLoadingDirectorCollaborators ||
-                          isCreatingDirectorAssessment
-                        }
-                        required
-                      >
-                        <option value="">Selecione uma gerência</option>
-                        {directorCollaborators.map((collaborator) => (
-                          <option key={collaborator.id} value={collaborator.id}>
-                            {collaborator.displayName}
-                          </option>
-                        ))}
-                      </select>
-                      {isLoadingDirectorCollaborators ? (
-                        <p className="field-hint">Carregando gerências autorizadas…</p>
-                      ) : null}
-                      {selectedDirectorCycleId &&
-                      !isLoadingDirectorCollaborators &&
-                      directorCollaborators.length === 0 ? (
-                        <p className="field-hint">
-                          As opções mudaram. Escolha outro ciclo elegível para continuar.
-                        </p>
-                      ) : null}
-                    </div>
-                    <div className="action-row">
-                      <button
-                        className="button button--success"
-                        type="submit"
-                        disabled={
-                          !selectedDirectorCycleId ||
-                          !selectedDirectorCollaboratorId ||
-                          isLoadingCycles ||
-                          isLoadingDirectorCollaborators ||
-                          isCreatingDirectorAssessment
-                        }
-                      >
-                        <Plus aria-hidden="true" size={17} strokeWidth={2} />
-                        {isCreatingDirectorAssessment ? 'Criando…' : 'Criar avaliação de Diretoria'}
-                      </button>
-                    </div>
-                  </>
-                ) : null}
-              </form>
+                <form
+                  className="stack-form assessment-creation-form assessment-creation-form--manager"
+                  onSubmit={createDirectorAssessment}
+                  noValidate
+                  aria-busy={isCreatingDirectorAssessment}
+                >
+                  {directorCreationError ? (
+                    <FeedbackMessage
+                      kind="error"
+                      onDismiss={() => setDirectorCreationError(undefined)}
+                    >
+                      {directorCreationError}
+                    </FeedbackMessage>
+                  ) : null}
+                  {isLoadingCycles ? (
+                    <p className="field-hint">Verificando ciclos elegíveis…</p>
+                  ) : null}
+                  {!isLoadingCycles &&
+                  !creationCyclesError &&
+                  directorCreationCycles.length === 0 ? (
+                    <FeedbackMessage kind="info">
+                      Não há ciclos disponíveis para uma nova avaliação de Diretoria. Quando houver
+                      uma gerência vinculada, questionário atribuído e ciclo vigente, ele aparecerá
+                      aqui.
+                    </FeedbackMessage>
+                  ) : null}
+                  {directorCreationCycles.length > 0 ? (
+                    <>
+                      <div className="field">
+                        <label htmlFor={directorCycleId}>Ciclo para avaliação de Diretoria</label>
+                        <select
+                          id={directorCycleId}
+                          value={selectedDirectorCycleId}
+                          onChange={(event) => selectDirectorCycle(event.target.value)}
+                          disabled={isLoadingCycles || isCreatingDirectorAssessment}
+                          required
+                        >
+                          <option value="">Selecione um ciclo</option>
+                          {directorCreationCycles.map((cycle) => (
+                            <option key={cycle.id} value={cycle.id}>
+                              {cycle.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="field">
+                        <label htmlFor={directorCollaboratorId}>Gerência autorizada</label>
+                        <select
+                          id={directorCollaboratorId}
+                          value={selectedDirectorCollaboratorId}
+                          onChange={(event) =>
+                            setSelectedDirectorCollaboratorId(event.target.value)
+                          }
+                          disabled={
+                            !selectedDirectorCycleId ||
+                            isLoadingDirectorCollaborators ||
+                            isCreatingDirectorAssessment
+                          }
+                          required
+                        >
+                          <option value="">Selecione uma gerência</option>
+                          {directorCollaborators.map((collaborator) => (
+                            <option key={collaborator.id} value={collaborator.id}>
+                              {collaborator.displayName}
+                            </option>
+                          ))}
+                        </select>
+                        {isLoadingDirectorCollaborators ? (
+                          <p className="field-hint">Carregando gerências autorizadas…</p>
+                        ) : null}
+                        {selectedDirectorCycleId &&
+                        !isLoadingDirectorCollaborators &&
+                        directorCollaborators.length === 0 ? (
+                          <p className="field-hint">
+                            As opções mudaram. Escolha outro ciclo elegível para continuar.
+                          </p>
+                        ) : null}
+                      </div>
+                      <div className="action-row">
+                        <ActionButton
+                          size="sm"
+                          variant="primary"
+                          label={
+                            isCreatingDirectorAssessment
+                              ? 'Criando…'
+                              : 'Criar avaliação de Diretoria'
+                          }
+                          icon={<Plus aria-hidden="true" size={17} strokeWidth={2} />}
+                          type="submit"
+                          disabled={
+                            !selectedDirectorCycleId ||
+                            !selectedDirectorCollaboratorId ||
+                            isLoadingCycles ||
+                            isLoadingDirectorCollaborators ||
+                            isCreatingDirectorAssessment
+                          }
+                        />
+                      </div>
+                    </>
+                  ) : null}
+                </form>
+              </Card>
             </section>
           ) : null}
 
           {canCreateSelfAssessment ? (
             <section
-              className="card assessment-creation-card"
+              className="ev-create-region"
               aria-labelledby="create-self-assessment-title"
               ref={selfCreationCardRef}
               tabIndex={-1}
             >
-              <div className="assessment-creation-card__header">
-                <div className="context-help__heading">
-                  <h3 id="create-self-assessment-title">Criar autoavaliação</h3>
-                  <ContextHelp title="Quando a autoavaliação fica disponível">
-                    <p>
-                      Ela depende de o ciclo permitir autoavaliação e de haver questionário
-                      atribuído à sua conta. A criação começa sempre em rascunho.
-                    </p>
-                  </ContextHelp>
+              <Card padding={4} className="ev-create-card">
+                <div className="assessment-creation-card__header">
+                  <div className="context-help__heading">
+                    <h3 id="create-self-assessment-title">Criar autoavaliação</h3>
+                    <ContextHelp title="Quando a autoavaliação fica disponível">
+                      <p>
+                        Ela depende de o ciclo permitir autoavaliação e de haver questionário
+                        atribuído à sua conta. A criação começa sempre em rascunho.
+                      </p>
+                    </ContextHelp>
+                  </div>
+                  <p className="muted">
+                    Escolha um ciclo autorizado. Sua avaliação será criada em rascunho para
+                    preenchimento.
+                  </p>
                 </div>
-                <p className="muted">
-                  Escolha um ciclo autorizado. Sua avaliação será criada em rascunho para
-                  preenchimento.
-                </p>
-              </div>
-              <form
-                className="stack-form"
-                onSubmit={createSelfAssessment}
-                noValidate
-                aria-busy={isCreating}
-              >
-                {creationError ? (
-                  <FeedbackMessage kind="error" onDismiss={() => setCreationError(undefined)}>
-                    {creationError}
-                  </FeedbackMessage>
-                ) : null}
-                {isLoadingCycles ? (
-                  <p className="field-hint">Verificando ciclos elegíveis…</p>
-                ) : null}
-                {!isLoadingCycles && !creationCyclesError && selfCreationCycles.length === 0 ? (
-                  <FeedbackMessage kind="info">
-                    Não há ciclos disponíveis para sua autoavaliação. Ela aparece quando sua conta
-                    possui vínculo ativo, questionário atribuído e autoavaliação habilitada em um
-                    ciclo vigente.
-                  </FeedbackMessage>
-                ) : null}
-                {selfCreationCycles.length > 0 ? (
-                  <>
-                    <div className="field">
-                      <label htmlFor={selfCycleId}>Ciclo para autoavaliação</label>
-                      <select
-                        id={selfCycleId}
-                        value={selectedCycleId}
-                        onChange={(event) => setSelectedCycleId(event.target.value)}
-                        disabled={isLoadingCycles || isCreating}
-                        required
-                      >
-                        <option value="">Selecione um ciclo</option>
-                        {selfCreationCycles.map((cycle) => (
-                          <option key={cycle.id} value={cycle.id}>
-                            {cycle.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="action-row">
-                      <button
-                        className="button button--success"
-                        type="submit"
-                        disabled={isLoadingCycles || isCreating || selfCreationCycles.length === 0}
-                      >
-                        <Plus aria-hidden="true" size={17} strokeWidth={2} />
-                        {isCreating ? 'Criando…' : 'Criar autoavaliação'}
-                      </button>
-                    </div>
-                  </>
-                ) : null}
-              </form>
+                <form
+                  className="stack-form"
+                  onSubmit={createSelfAssessment}
+                  noValidate
+                  aria-busy={isCreating}
+                >
+                  {creationError ? (
+                    <FeedbackMessage kind="error" onDismiss={() => setCreationError(undefined)}>
+                      {creationError}
+                    </FeedbackMessage>
+                  ) : null}
+                  {isLoadingCycles ? (
+                    <p className="field-hint">Verificando ciclos elegíveis…</p>
+                  ) : null}
+                  {!isLoadingCycles && !creationCyclesError && selfCreationCycles.length === 0 ? (
+                    <FeedbackMessage kind="info">
+                      Não há ciclos disponíveis para sua autoavaliação. Ela aparece quando sua conta
+                      possui vínculo ativo, questionário atribuído e autoavaliação habilitada em um
+                      ciclo vigente.
+                    </FeedbackMessage>
+                  ) : null}
+                  {selfCreationCycles.length > 0 ? (
+                    <>
+                      <div className="field">
+                        <label htmlFor={selfCycleId}>Ciclo para autoavaliação</label>
+                        <select
+                          id={selfCycleId}
+                          value={selectedCycleId}
+                          onChange={(event) => setSelectedCycleId(event.target.value)}
+                          disabled={isLoadingCycles || isCreating}
+                          required
+                        >
+                          <option value="">Selecione um ciclo</option>
+                          {selfCreationCycles.map((cycle) => (
+                            <option key={cycle.id} value={cycle.id}>
+                              {cycle.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="action-row">
+                        <ActionButton
+                          size="sm"
+                          variant="primary"
+                          label={isCreating ? 'Criando…' : 'Criar autoavaliação'}
+                          icon={<Plus aria-hidden="true" size={17} strokeWidth={2} />}
+                          type="submit"
+                          disabled={
+                            isLoadingCycles || isCreating || selfCreationCycles.length === 0
+                          }
+                        />
+                      </div>
+                    </>
+                  ) : null}
+                </form>
+              </Card>
             </section>
           ) : null}
         </div>
@@ -1209,63 +1250,73 @@ export function AssessmentsPanel({
         </EmptyState>
       ) : null}
 
-      <ul
-        className={`assessment-list${isLoading ? ' assessment-list--loading' : ''}`}
-        aria-busy={isLoading}
-      >
-        {assessmentPage.items.map((assessment) => (
-          <li className="card assessment-list__item" key={assessment.id}>
-            <header className="assessment-list__details">
-              <div className="assessment-list__title">
-                <h3 title={assessment.evaluated.displayName}>{assessment.evaluated.displayName}</h3>
-                <span
-                  aria-label={`Situação: ${formatAssessmentStatus(assessment.status)}`}
-                  className={`status-badge status-badge--${assessment.status.toLowerCase()}`}
-                >
-                  {formatAssessmentStatus(assessment.status)}
-                </span>
-              </div>
-              <div className="assessment-list__metadata">
-                <p className="assessment-list__type">{formatAssessmentType(assessment.type)}</p>
-                {assessment.feedbackStatus !== 'NAO_APLICAVEL' ? (
-                  <p className="assessment-list__feedback-status">
-                    Feedback {formatFeedbackStatus(assessment.feedbackStatus)}
-                  </p>
-                ) : null}
-              </div>
-              <span className="visually-hidden" id={`assessment-${assessment.id}-summary`}>
-                {`${formatAssessmentType(assessment.type)}. Situação: ${formatAssessmentStatus(assessment.status)}.${
-                  assessment.feedbackStatus === 'NAO_APLICAVEL'
-                    ? ''
-                    : ` Feedback ${formatFeedbackStatus(assessment.feedbackStatus)}.`
-                }`}
-              </span>
-            </header>
-            <footer className="assessment-list__actions">
-              <button
-                className="button button--primary"
-                type="button"
-                aria-describedby={`assessment-${assessment.id}-summary`}
-                onClick={() => onSelectAssessment(assessment.id)}
-              >
-                Abrir avaliação
-              </button>
-              {canUseAdministrativeFilters &&
-              administrativeCycleId &&
-              administrativeCollaboratorId &&
-              (assessment.status === 'ENVIADA' || assessment.status === 'PUBLICADA') ? (
-                <button
-                  className="button"
-                  type="button"
-                  onClick={() => setPreviewedAssessmentId(assessment.id)}
-                >
-                  Pré-visualizar
-                </button>
-              ) : null}
-            </footer>
-          </li>
-        ))}
-      </ul>
+      {assessmentPage.items.length > 0 && (
+        <Card padding={0} className="ev-table-card">
+          <Table aria-label="Lista de avaliações" className="ev-table" aria-busy={isLoading}>
+            <TableHeader>
+              <TableRow isHeaderRow>
+                <TableHeaderCell scope="col">Colaborador avaliado</TableHeaderCell>
+                <TableHeaderCell scope="col">Status da avaliação</TableHeaderCell>
+                <TableHeaderCell scope="col">Tipo</TableHeaderCell>
+                <TableHeaderCell scope="col">Feedback</TableHeaderCell>
+                <TableHeaderCell scope="col">
+                  <span className="visually-hidden">Ações</span>
+                </TableHeaderCell>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {assessmentPage.items.map((assessment) => (
+                <TableRow key={assessment.id}>
+                  <TableCell className="ev-person">
+                    <strong title={assessment.evaluated.displayName}>
+                      {assessment.evaluated.displayName}
+                    </strong>
+                    <span className="visually-hidden" id={`assessment-${assessment.id}-summary`}>
+                      {`${formatAssessmentType(assessment.type)}. Situação: ${formatAssessmentStatus(assessment.status)}.${assessment.feedbackStatus === 'NAO_APLICAVEL' ? '' : ` Feedback ${formatFeedbackStatus(assessment.feedbackStatus)}.`}`}
+                    </span>
+                  </TableCell>
+                  <TableCell className="ev-status">
+                    <Badge
+                      label={formatAssessmentStatus(assessment.status)}
+                      aria-label={`Situação: ${formatAssessmentStatus(assessment.status)}`}
+                      variant={assessmentTone[assessment.status] ?? 'neutral'}
+                      className="dashboard-status-badge"
+                    />
+                  </TableCell>
+                  <TableCell className="ev-type">{formatAssessmentType(assessment.type)}</TableCell>
+                  <TableCell className="ev-feedback">
+                    {assessment.feedbackStatus === 'NAO_APLICAVEL'
+                      ? 'Não aplicável'
+                      : assessment.feedbackStatus === 'CONCLUIDO'
+                        ? 'Concluído'
+                        : 'Pendente'}
+                  </TableCell>
+                  <TableCell className="ev-row-actions">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      label="Abrir avaliação"
+                      aria-describedby={`assessment-${assessment.id}-summary`}
+                      onClick={() => onSelectAssessment(assessment.id)}
+                    />
+                    {canUseAdministrativeFilters &&
+                      administrativeCycleId &&
+                      administrativeCollaboratorId &&
+                      (assessment.status === 'ENVIADA' || assessment.status === 'PUBLICADA') && (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          label="Pré-visualizar"
+                          onClick={() => setPreviewedAssessmentId(assessment.id)}
+                        />
+                      )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Card>
+      )}
       <Pagination
         currentPage={pageNumber}
         hasNextPage={assessmentPage.page.nextCursor !== null}
@@ -1293,9 +1344,9 @@ function Metric({
   help: string
 }) {
   return (
-    <div className="kpi-card">
+    <Card padding={4} className="ev-metric">
       <dt>
-        <span className="kpi-card__label">
+        <span className="ev-metric-label">
           {label}
           <ContextHelp title={`O que representa ${label}`}>
             <p>{help}</p>
@@ -1303,11 +1354,17 @@ function Metric({
         </span>
       </dt>
       <dd>{value}</dd>
-      <span aria-hidden="true" className="kpi-card__icon">
+      <span aria-hidden="true" className="ev-metric-icon">
         {icon}
       </span>
-    </div>
+    </Card>
   )
+}
+
+const assessmentTone: Record<string, BadgeVariant> = {
+  PUBLICADA: 'success',
+  ENVIADA: 'info',
+  RASCUNHO: 'warning',
 }
 
 function formatAssessmentStatus(status: string): string {

@@ -97,7 +97,7 @@ module.exports = async function checkSpreadsheetImport({ send, frameId, css }) {
       )
       // Fechar os avisos da base vazia antes de inspecionar a área de preparação.
       await evaluate(
-        "document.querySelectorAll('.feedback__dismiss').forEach(button=>button.click())",
+        `document.querySelectorAll('.feedback-viewport button[aria-label="Fechar aviso"]').forEach(button=>button.click())`,
       )
       await ready("!document.querySelector('.feedback--floating')")
       await evaluate(
@@ -278,7 +278,7 @@ module.exports = async function checkSpreadsheetImport({ send, frameId, css }) {
           true,
         )
         await evaluate(
-          "document.querySelectorAll('.feedback__dismiss').forEach(button=>button.click())",
+          `document.querySelectorAll('.feedback-viewport button[aria-label="Fechar aviso"]').forEach(button=>button.click())`,
         )
       }
       cases.push({

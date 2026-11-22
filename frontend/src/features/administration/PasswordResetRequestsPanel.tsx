@@ -1,3 +1,4 @@
+import { ActionButton } from '../../ui/ActionButton'
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { KeyRound, RefreshCw, Save, UserRound, X } from 'lucide-react'
 import { isAuthenticationError, type ApiClient } from '../../api/client'
@@ -148,19 +149,19 @@ export function PasswordResetRequestsPanel({
           <KeyRound aria-hidden="true" size={18} />
           Solicitações de redefinição de senha {loaded ? `(${requests.length})` : ''}
         </h4>
-        <button
+        <ActionButton
+          size="sm"
+          variant="secondary"
+          label="Atualizar solicitações"
+          icon={<RefreshCw aria-hidden="true" size={18} />}
           type="button"
-          className="button"
           disabled={loading || busy}
           onClick={() => {
             setUser(undefined)
             setNotice(undefined)
             void load()
           }}
-        >
-          <RefreshCw aria-hidden="true" size={18} />
-          Atualizar solicitações
-        </button>
+        />
       </div>
       {error && !user ? (
         <FeedbackMessage kind="error" onDismiss={() => setError(undefined)}>
@@ -190,15 +191,15 @@ export function PasswordResetRequestsPanel({
                     {new Date(item.requestedAt).toLocaleString('pt-BR')}
                   </td>
                   <td data-label="Ação" className="password-reset-requests__action">
-                    <button
+                    <ActionButton
+                      size="sm"
+                      variant="primary"
+                      label="Atender solicitação"
+                      icon={<KeyRound aria-hidden="true" size={18} />}
                       type="button"
-                      className="button button--primary"
                       disabled={busy}
                       onClick={() => void open(item.userId)}
-                    >
-                      <KeyRound aria-hidden="true" size={18} />
-                      Atender solicitação
-                    </button>
+                    />
                   </td>
                 </tr>
               ))}
@@ -222,8 +223,12 @@ export function PasswordResetRequestsPanel({
                 <KeyRound aria-hidden="true" size={20} />
                 Atender solicitação de senha
               </h3>
-              <button
-                className="button button--icon"
+              <ActionButton
+                size="sm"
+                variant="ghost"
+                label="Fechar"
+                icon={<X aria-hidden="true" size={18} />}
+                isIconOnly
                 type="button"
                 aria-label="Fechar"
                 disabled={busy}
@@ -231,9 +236,7 @@ export function PasswordResetRequestsPanel({
                   setUser(undefined)
                   setError(undefined)
                 }}
-              >
-                <X aria-hidden="true" size={18} />
-              </button>
+              />
             </div>
             <div className="password-request-dialog__identity">
               <UserRound aria-hidden="true" size={20} />
@@ -265,15 +268,15 @@ export function PasswordResetRequestsPanel({
                   />
                 </div>
                 <div className="action-row">
-                  <button
-                    className="button button--success"
+                  <ActionButton
+                    size="sm"
+                    variant="primary"
+                    label="Salvar nome"
+                    icon={<Save aria-hidden="true" size={18} />}
                     type="button"
                     disabled={busy || !name.trim()}
                     onClick={() => void edit()}
-                  >
-                    <Save aria-hidden="true" size={18} />
-                    Salvar nome
-                  </button>
+                  />
                 </div>
               </div>
             ) : null}

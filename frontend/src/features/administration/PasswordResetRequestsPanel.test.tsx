@@ -79,7 +79,7 @@ describe('Atendimento de solicitações de senha', () => {
     expect(
       screen.getByRole('heading', { name: 'Solicitações de redefinição de senha (5)' }),
     ).toBeVisible()
-    expect(screen.getByRole('status')).toHaveTextContent('Nenhum registro corresponde')
+    expect(screen.getByText(/Nenhum registro corresponde/).closest('[role="status"]')).toBeVisible()
   })
 
   it('não apresenta lista vazia como sucesso quando a consulta falha e permite repetir', async () => {

@@ -1,0 +1,806 @@
+/* Astryx Neutral provides the controls and status variants. These tokens brand the shell. */
+html[data-astryx-theme='neutral'],
+html[data-astryx-theme='neutral'][data-theme] {
+  --ev-brand: light-dark(#146640, #89d9a9);
+  --ev-secondary: light-dark(#316756, #a1cdb9);
+  --ev-inset: light-dark(#edf3ee, #212d26);
+  --ev-line: light-dark(#dedede, #373737);
+  --ev-canvas: light-dark(#f5f5f5, #151515);
+  --ev-card: light-dark(#fff, #202020);
+  --ev-muted: light-dark(#5b5b5b, #b8b8b8);
+  --font-family-body: 'Figtree Variable', Figtree, system-ui, sans-serif;
+  --font-family-heading: var(--font-family-body);
+  --sans: var(--font-family-body);
+  --display: var(--font-family-heading);
+  --color-background-body: var(--ev-canvas);
+  --color-background-surface: var(--ev-card);
+  --color-background-card: var(--ev-card);
+  --color-background-popover: var(--ev-card);
+  --color-accent: var(--ev-brand);
+  --color-on-accent: light-dark(#fff, #0e2c1c);
+  --color-text-accent: var(--ev-brand);
+  --color-info: light-dark(#256957, #a1cdb9);
+  --color-on-info: light-dark(#fff, #152c23);
+  --color-text-info: var(--ev-secondary);
+  --color-icon-accent: var(--ev-brand);
+  --color-text-primary: light-dark(#202020, #f2f2f2);
+  --color-text-secondary: var(--ev-muted);
+  --page-bg: var(--ev-canvas);
+  --surface: var(--ev-card);
+  --surface-muted: var(--ev-canvas);
+  --surface-subtle: light-dark(#fafafa, #292929);
+  --table-header: light-dark(#e8efe9, #27382d);
+  --table-stripe: light-dark(#f5f8f5, #202a24);
+  --border: var(--ev-line);
+  --border-strong: light-dark(#b8b8b8, #575757);
+  --primary: var(--ev-brand);
+  --primary-strong: light-dark(#0e5030, #a3e2bc);
+  --on-primary: var(--color-on-accent);
+  --primary-soft: var(--surface-subtle);
+  --visual-shell-background: var(--ev-canvas);
+  --visual-auth-background: var(--ev-canvas);
+  --visual-card-background: var(--ev-card);
+  --visual-muted-background: var(--surface-subtle);
+  --visual-card-border: var(--ev-line);
+  --visual-control-border: var(--border-strong);
+  --visual-radius-card: 12px;
+  --visual-radius-control: 8px;
+  --visual-card-shadow: none;
+  --visual-primary-shadow: none;
+  --visual-raised-shadow: 0 8px 24px rgb(0 0 0 / 12%);
+  --visual-table-heading: var(--ev-canvas);
+  --visual-active-background: var(--ev-canvas);
+  --visual-help-background: var(--ev-card);
+  --visual-help-border: var(--ev-line);
+  --visual-help-icon-background: var(--surface-subtle);
+  --visual-help-shadow: var(--visual-raised-shadow);
+  --shadow-card: none;
+  --focus: var(--ev-secondary);
+  --text: var(--color-text-primary);
+  --text-h: var(--color-text-primary);
+  --muted: var(--ev-muted);
+  font-family: var(--font-family-body);
+  background: var(--ev-canvas);
+}
+html[data-astryx-theme='neutral'][data-theme='dark'] {
+  color-scheme: dark;
+}
+html[data-astryx-theme='neutral'][data-theme='light'] {
+  color-scheme: light;
+}
+
+@media screen {
+  .ev-shell {
+    display: flex;
+    min-width: 0;
+    min-height: 100dvh;
+    align-items: flex-start;
+    background: var(--ev-canvas);
+    color: var(--color-text-primary);
+    font-family: var(--font-family-body);
+    --ev-gutter: clamp(16px, 2.2vw, 36px);
+  }
+  .ev-stage {
+    min-width: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-self: stretch;
+  }
+  .ev-rail {
+    position: sticky;
+    top: 0;
+    flex: none;
+    height: 100dvh;
+    background: var(--ev-card);
+    border-inline-end: 1px solid var(--ev-line);
+  }
+  .ev-side-nav {
+    height: 100%;
+    max-width: none;
+    background: transparent;
+  }
+  .ev-brand {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 58px;
+    padding: 8px;
+    text-decoration: none;
+    background: transparent;
+  }
+  .ev-brand img {
+    display: block;
+    width: 204px;
+    max-width: 100%;
+    height: auto;
+  }
+  .ev-brand-mark {
+    display: block;
+    flex: none;
+    width: 34px;
+    height: 34px;
+    background-color: var(--ev-brand);
+    mask: url('/favicon.svg?v=2') center / contain no-repeat;
+  }
+  .ev-rail[data-collapsed='true'] .ev-brand {
+    padding-inline: 0;
+  }
+  html[data-theme='dark'] .ev-brand img {
+    filter: brightness(0) invert(1);
+  }
+  .ev-side-nav [role='group'],
+  .ev-mobile-nav [role='group'] {
+    padding-inline: 0.375rem;
+  }
+  :is(.ev-side-nav, .ev-mobile-nav) [role='group'] [id$='-title'] {
+    margin: 15px 9px 4px;
+    font-size: 11.5px;
+    color: var(--ev-muted);
+    font-weight: 650;
+  }
+  :is(.ev-side-nav, .ev-mobile-nav) [role='group'] a {
+    min-height: 38px;
+    margin-block: 2px;
+    padding-inline: 9px;
+    gap: 10px;
+    text-decoration: none;
+  }
+  :is(.ev-side-nav, .ev-mobile-nav) [aria-current='page'] {
+    background: var(--ev-canvas);
+    color: var(--color-text-primary);
+    box-shadow: none;
+    border-inline-start: 0;
+    font-weight: 650;
+  }
+  :is(.ev-side-nav, .ev-mobile-nav) [aria-current='page'] svg {
+    color: var(--ev-brand);
+  }
+  .ev-rail[data-collapsed='true'] [role='group'] a {
+    width: 38px;
+    height: 38px;
+    margin-inline: auto;
+    padding-inline: 0;
+    justify-content: center;
+    border-radius: 8px;
+  }
+  .ev-nav-footer {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 7px 8px;
+  }
+  .ev-nav-footer > button {
+    justify-content: flex-start;
+    min-height: 34px;
+    gap: 8px;
+  }
+  .ev-nav-footer[data-compact='true'] {
+    align-items: center;
+    padding-inline: 3px;
+  }
+  .ev-nav-footer[data-compact='true'] > button {
+    justify-content: center;
+  }
+  .ev-profile {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 12px 4px 3px;
+    margin-top: 5px;
+    border-top: 1px solid var(--ev-line);
+  }
+  .ev-profile > div {
+    min-width: 0;
+  }
+  .ev-profile strong,
+  .ev-profile small {
+    display: block;
+    line-height: 1.35;
+  }
+  .ev-profile strong {
+    font-size: 13px;
+    color: var(--text-h);
+  }
+  .ev-profile small {
+    font-size: 11.5px;
+    color: var(--ev-muted);
+  }
+  .ev-profile .context-help {
+    vertical-align: middle;
+  }
+  .ev-mobile-body {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 100%;
+    gap: 12px;
+  }
+  .ev-mobile-nav :has(> .ev-brand) {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ev-mobile-nav .ev-brand {
+    min-height: 46px;
+    padding: 6px 32px;
+  }
+  .ev-mobile-nav .ev-brand + button {
+    position: absolute;
+    inset-inline-end: 8px;
+  }
+  .ev-header {
+    position: sticky;
+    top: 0;
+    z-index: 8;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px var(--ev-gutter);
+    min-height: 72px;
+    border-bottom: 1px solid var(--ev-line);
+    background: var(--ev-card);
+  }
+  .ev-header-slot {
+    min-width: 0;
+    flex: 1;
+  }
+  .ev-page-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    min-width: 0;
+  }
+  .ev-header-title {
+    min-width: 0;
+    display: grid;
+    align-content: center;
+    gap: 2px;
+  }
+  .ev-header-title > span {
+    color: var(--ev-brand);
+    font-size: 11px;
+    font-weight: 670;
+    line-height: 1.2;
+  }
+  .ev-heading-help {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .ev-header-title .astryx-heading {
+    margin: 0;
+    color: var(--text-h);
+    font-size: clamp(19px, 2vw, 27px);
+    line-height: 1.18;
+    letter-spacing: -0.034em;
+    font-weight: 670;
+  }
+  .ev-heading-help .context-help__button,
+  .ev-metric .context-help__button {
+    background: transparent;
+    box-shadow: none;
+    border: 0;
+    color: var(--ev-muted);
+  }
+  .ev-header button.ev-refresh,
+  .ev-filter-actions .astryx-button,
+  .ev-row-actions .astryx-button {
+    min-height: 36px;
+    gap: 0.45rem;
+    padding-inline: 0.75rem;
+  }
+  .ev-header .ev-refresh {
+    flex: none;
+  }
+  .ev-header .ev-theme-trigger,
+  .ev-header .ev-menu-trigger {
+    height: 36px;
+    width: 36px;
+    min-width: 36px;
+  }
+  .ev-shell .ev-workspace {
+    flex: 1;
+    display: block;
+    min-width: 0;
+    width: 100%;
+    max-width: 1640px;
+    padding: 20px var(--ev-gutter) 12px;
+    margin: 0 auto;
+    outline-offset: -4px;
+  }
+  .ev-shell .workspace__content {
+    width: 100%;
+    min-width: 0;
+  }
+  .ev-page-description {
+    margin: 0 0 14px;
+    color: var(--ev-muted);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  .ev-page-head .action-row {
+    margin: 0;
+    justify-content: flex-end;
+    gap: 6px;
+  }
+  .ev-shell .workspace__content > :not(.ev-assessments) {
+    min-width: 0;
+  }
+  html[data-astryx-theme]
+    :is(.card, .competency-card, .auth-about-panel, .account-dialog, .confirmation-dialog) {
+    background: var(--ev-card);
+    border-color: var(--ev-line);
+    border-radius: var(--visual-radius-card);
+    box-shadow: none;
+  }
+  html[data-astryx-theme]
+    :is(
+      .assessment-kind-card,
+      .empty-state,
+      .auth-about-panel__highlights > div,
+      .auth-about-panel__icon,
+      .kpi-card,
+      .metric-list > div,
+      .definition-list > div,
+      .filter-fieldset,
+      .import-dialog__summary
+    ) {
+    background: var(--surface-subtle);
+    border-color: var(--ev-line);
+    box-shadow: none;
+  }
+  html[data-astryx-theme][data-theme] :is(.assessment-kind-card, .empty-state) {
+    color: var(--text);
+    background: var(--ev-inset);
+    border-color: var(--ev-line);
+    box-shadow: none;
+  }
+  html[data-astryx-theme][data-theme] .assessment-kind-card:hover {
+    background: var(--table-header);
+    border-color: var(--ev-secondary);
+  }
+  html[data-astryx-theme]
+    :is(.assessment-kind-card, .auth-about-panel__icon, .empty-state__icon)
+    > svg {
+    color: var(--ev-brand);
+  }
+  html[data-astryx-theme] .auth-page {
+    background: var(--ev-canvas);
+  }
+  html[data-astryx-theme] .auth-page__header {
+    background: var(--ev-card);
+    border-color: var(--ev-line);
+    box-shadow: none;
+  }
+  html[data-astryx-theme] .auth-page .auth-page__logo {
+    width: 176px;
+    height: auto;
+  }
+  html[data-theme='dark'] .auth-page__logo {
+    filter: brightness(0) invert(1);
+  }
+  html[data-astryx-theme]
+    :is(.login-card, .filter-panel, .dashboard-hero, .dashboard-info, .indicator-results)
+    .astryx-button {
+    min-height: 36px;
+  }
+  html[data-astryx-theme] .login-card .stack-form > .astryx-button {
+    width: 100%;
+  }
+  html[data-astryx-theme] .ev-workspace :is(table, table tr, table td, table th) {
+    border-color: var(--ev-line);
+  }
+  html[data-astryx-theme] .ev-workspace table thead th {
+    background: var(--table-header);
+  }
+  html[data-astryx-theme] .ev-workspace table tbody tr {
+    background: var(--ev-card);
+  }
+  html[data-astryx-theme] .ev-workspace table tbody tr:nth-child(even) {
+    background: var(--table-stripe);
+  }
+  html[data-astryx-theme] .ev-workspace table td:not(:last-child),
+  html[data-astryx-theme] .ev-workspace table th:not(:last-child) {
+    border-inline-end: 0;
+  }
+  html[data-astryx-theme] .auth-page :is(input, select, textarea),
+  .ev-workspace .field > :is(input, select, textarea) {
+    color: var(--text);
+    background: var(--ev-card);
+    box-shadow: none;
+  }
+  .ev-shell .workspace__content > .ev-assessments {
+    display: grid;
+    gap: 14px;
+    align-content: start;
+    min-width: 0;
+  }
+  .ev-metrics {
+    margin: 0;
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .ev-metrics .ev-metric {
+    position: relative;
+    min-width: 0;
+    min-height: 90px;
+    border-color: var(--ev-line);
+  }
+  .ev-metrics .ev-metric,
+  .ev-create-card,
+  .ev-filter-card,
+  .ev-table-card {
+    background: var(--ev-card);
+  }
+  .ev-metric dt {
+    color: var(--ev-muted);
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .ev-metric-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+  }
+  .ev-metric dd {
+    margin: 5px 0 0;
+    color: var(--text-h);
+    font-size: 32px;
+    font-weight: 650;
+    letter-spacing: -0.045em;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .ev-metric:first-child dd,
+  .ev-metric:first-child dt {
+    color: var(--ev-brand);
+  }
+  .ev-metric-icon {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    color: var(--ev-brand);
+  }
+  .ev-metric:nth-child(2) .ev-metric-icon {
+    color: var(--ev-muted);
+  }
+  .ev-metric:nth-child(3) .ev-metric-icon {
+    color: var(--ev-secondary);
+  }
+  .ev-metric-icon svg {
+    width: 18px;
+    height: 18px;
+    stroke-width: 1.8;
+  }
+  .ev-assessments .assessment-creation-grid {
+    margin: 0;
+    gap: 12px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .ev-create-region {
+    min-width: 0;
+  }
+  .ev-create-card {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    height: 100%;
+    border-color: var(--ev-line);
+  }
+  .ev-create-card .assessment-creation-card__header {
+    gap: 3px;
+  }
+  .ev-create-card h3 {
+    margin: 0;
+    font-size: 16px;
+    line-height: 1.3;
+    letter-spacing: -0.015em;
+    color: var(--text-h);
+  }
+  .ev-create-card .muted,
+  .ev-hint {
+    margin: 0;
+    color: var(--ev-muted);
+    font: 400 13px/1.45 var(--font-family-body);
+  }
+  .ev-create-card .stack-form {
+    margin: auto 0 0;
+  }
+  .ev-create-card .feedback--info {
+    margin: 0;
+    padding: 8px 10px;
+    border: 0;
+    border-radius: 6px;
+    box-shadow: none;
+    background: var(--surface-subtle);
+    color: var(--ev-muted);
+    font-size: 12.5px;
+    line-height: 1.46;
+  }
+  .ev-filter-card,
+  .ev-table-card {
+    border-color: var(--ev-line);
+  }
+  .ev-filter-heading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--ev-brand);
+  }
+  .ev-filter-heading h3 {
+    margin: 0;
+    font-size: 17px;
+    letter-spacing: -0.02em;
+  }
+  .ev-filter-form .ev-hint {
+    margin-top: 4px;
+  }
+  html[data-astryx-theme] .administration-users .table-actions > .astryx-button {
+    min-height: 36px;
+    min-width: max-content;
+    flex-shrink: 0;
+  }
+  .ev-filter-fields {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 15px;
+  }
+  .ev-filter-fields > *,
+  .ev-filter-fields .astryx-field {
+    min-width: 0;
+  }
+  .ev-filter-fields .astryx-selector {
+    width: 100%;
+  }
+  .ev-filter-fields .astryx-text-input input {
+    height: 100%;
+    min-height: 0;
+    min-width: 0;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    outline: none;
+    box-shadow: none;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+  }
+  .ev-filter-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 15px;
+  }
+  .ev-filter-actions .ev-export {
+    margin-inline-start: auto;
+    color: var(--ev-brand);
+    background: var(--ev-canvas);
+  }
+  .ev-table-card {
+    min-width: 0;
+    overflow: clip;
+  }
+  .ev-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .ev-table thead {
+    background: var(--ev-canvas);
+  }
+  .ev-table th,
+  .ev-table td {
+    text-align: start;
+    padding: 10px 13px;
+  }
+  .ev-table th {
+    font-size: 12px;
+    font-weight: 650;
+    color: var(--ev-muted);
+  }
+  .ev-table td {
+    font-size: 13px;
+    line-height: 1.4;
+    border-block-start: 1px solid var(--ev-line);
+  }
+  .ev-table thead th {
+    background: transparent;
+    border-color: var(--ev-line);
+  }
+  .ev-table,
+  .ev-table tbody,
+  .ev-table tbody tr {
+    background: var(--ev-card);
+  }
+  .ev-table tbody td {
+    background: transparent;
+    border-color: var(--ev-line);
+  }
+  .ev-table td:not(:last-child),
+  .ev-table th:not(:last-child) {
+    border-inline-end: 0;
+  }
+  .ev-table tbody tr:nth-child(even) {
+    background: color-mix(in srgb, var(--ev-canvas) 45%, var(--ev-card));
+  }
+  .ev-table .ev-person strong {
+    color: var(--text-h);
+    font-weight: 650;
+  }
+  .ev-table .ev-row-actions {
+    text-align: end;
+    white-space: nowrap;
+  }
+  .ev-table .ev-row-actions button {
+    color: var(--ev-secondary);
+  }
+  /* Same size and spacing as the dashboard; colors, outline and shape belong to Badge. */
+  .ev-shell .astryx-badge {
+    min-block-size: 24px;
+    max-inline-size: 100%;
+    padding-inline: 0.625rem;
+    gap: 0.25rem;
+  }
+  .ev-shell .application-footer--workspace {
+    width: 100%;
+    background: var(--ev-card);
+    border-top: 1px solid var(--ev-line);
+    margin: 12px 0 0;
+    padding: 12px var(--ev-gutter);
+  }
+  .ev-shell :where(a, button):focus-visible {
+    outline: 2px solid var(--ev-secondary);
+    outline-offset: 2px;
+  }
+}
+@media screen and (min-width: 1024px) {
+  .ev-header .ev-menu-trigger {
+    display: none;
+  }
+}
+@media screen and (max-width: 1150px) {
+  .ev-filter-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media screen and (max-width: 740px) {
+  .ev-shell {
+    --ev-gutter: 12px;
+  }
+  .ev-header {
+    padding-block: 6px;
+    min-height: 62px;
+    gap: 3px;
+  }
+  .ev-header .ev-heading-help {
+    gap: 0;
+  }
+  .ev-header .ev-page-head:has(.action-row) {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .ev-header .ev-page-head .action-row {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+  .ev-header-title > span {
+    font-size: 10px;
+  }
+  .ev-header button.ev-refresh {
+    min-height: 36px;
+    padding-inline: 0.5rem;
+  }
+  .ev-workspace .ev-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .ev-metrics .ev-metric {
+    min-height: 78px;
+    padding: 12px;
+  }
+  .ev-metric-icon {
+    top: 12px;
+    right: 12px;
+  }
+  .ev-metric dd {
+    font-size: 28px;
+  }
+  .ev-assessments .assessment-creation-grid,
+  .ev-filter-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ev-shell .ev-workspace {
+    padding-top: 12px;
+  }
+  .ev-shell .workspace__content > .ev-assessments {
+    gap: 10px;
+  }
+  .ev-filter-actions .ev-export {
+    margin-inline-start: 0;
+  }
+  .ev-filter-actions .astryx-button {
+    min-height: 42px;
+  }
+  .ev-table,
+  .ev-table tbody {
+    display: block;
+    min-width: 0;
+  }
+  .ev-table thead {
+    position: absolute;
+    clip-path: inset(50%);
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+  }
+  .ev-table tbody tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 5px 10px;
+    padding: 12px;
+    border-top: 1px solid var(--ev-line);
+  }
+  .ev-table tbody tr:first-child {
+    border-top: 0;
+  }
+  .ev-table tbody td {
+    border: 0;
+    padding: 0;
+  }
+  .ev-status {
+    justify-self: end;
+  }
+  .ev-feedback {
+    justify-self: end;
+  }
+  .ev-type,
+  .ev-feedback {
+    color: var(--ev-muted);
+    font-size: 12px;
+  }
+  .ev-row-actions {
+    grid-column: 1 / -1;
+  }
+}
+@media screen and (max-width: 410px) {
+  .ev-header .ev-refresh {
+    width: 36px;
+    overflow: hidden;
+  }
+  .ev-header .ev-refresh > :not(:has(svg)):not(svg) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+}
+@media print {
+  .ev-rail,
+  .ev-header button,
+  .ev-header .action-row,
+  .ev-mobile-nav,
+  .ev-shell .application-footer--workspace {
+    display: none !important;
+  }
+  .ev-header {
+    display: block;
+    position: static;
+    border: 0;
+    color: black;
+    background: white;
+  }
+  .ev-workspace {
+    width: 100%;
+    padding: 0;
+    margin: 0;
+  }
+}

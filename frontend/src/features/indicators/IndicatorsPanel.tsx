@@ -1,3 +1,6 @@
+import { Card } from '@astryxdesign/core/Card'
+import { WorkspacePageHeader } from '../../ui/WorkspacePageHeader'
+import { ActionButton } from '../../ui/ActionButton'
 import { useEffect, useId, useState } from 'react'
 import type { CSSProperties, FormEvent } from 'react'
 import { BarChart3, Download, Filter } from 'lucide-react'
@@ -250,27 +253,27 @@ export function IndicatorsPanel({ api, canExport, onSessionExpired }: Indicators
 
   return (
     <section aria-labelledby="indicators-title">
-      <div className="section-heading">
-        <div>
-          <p className="eyebrow">Dados agregados</p>
-          <div className="context-help__heading">
-            <h2 id="indicators-title">Indicadores de avaliação</h2>
-            <ContextHelp title="Por que alguns indicadores não aparecem">
-              <p>
-                Para preservar a confidencialidade, a plataforma só exibe um indicador quando o
-                grupo filtrado reúne pelo menos cinco colaboradores distintos.
-              </p>
-              <p className="context-help__note">
-                A mesma proteção vale para médias, totais, classificações, gráficos e exportações.
-              </p>
-            </ContextHelp>
-          </div>
-          <p className="muted">
-            Somente grupos confidenciais são exibidos. Nenhuma contagem ou resultado individual é
-            apresentado.
-          </p>
-        </div>
-      </div>
+      <WorkspacePageHeader
+        id="indicators-title"
+        title="Indicadores de avaliação"
+        group="Dados agregados"
+        help={
+          <ContextHelp title="Por que alguns indicadores não aparecem">
+            <p>
+              Para preservar a confidencialidade, a plataforma só exibe um indicador quando o grupo
+              filtrado reúne pelo menos cinco colaboradores distintos.
+            </p>
+            <p className="context-help__note">
+              A mesma proteção vale para médias, totais, classificações, gráficos e exportações.
+            </p>
+          </ContextHelp>
+        }
+      >
+        <p className="ev-page-description">
+          Somente grupos confidenciais são exibidos. Nenhuma contagem ou resultado individual é
+          apresentado.
+        </p>
+      </WorkspacePageHeader>
 
       <form
         className="card filter-panel stack-form"
@@ -470,24 +473,24 @@ export function IndicatorsPanel({ api, canExport, onSessionExpired }: Indicators
         ) : null}
 
         <div className="action-row">
-          <button
-            className="button button--primary"
+          <ActionButton
+            size="sm"
+            variant="primary"
+            label={isLoading ? 'Consultando…' : 'Consultar indicadores'}
+            icon={<BarChart3 aria-hidden="true" size={17} strokeWidth={2} />}
             type="submit"
             disabled={isLoading || isLoadingCycles || isLoadingFilterOptions}
-          >
-            <BarChart3 aria-hidden="true" size={17} strokeWidth={2} />
-            {isLoading ? 'Consultando…' : 'Consultar indicadores'}
-          </button>
+          />
           {canExportCsv ? (
-            <button
-              className="button"
+            <ActionButton
+              size="sm"
+              variant="secondary"
+              label={isExporting ? 'Preparando CSV…' : 'Exportar CSV agregado'}
+              icon={<Download aria-hidden="true" size={17} strokeWidth={2} />}
               type="button"
               onClick={() => void exportCsv()}
               disabled={isExporting || isLoading}
-            >
-              <Download aria-hidden="true" size={17} strokeWidth={2} />
-              {isExporting ? 'Preparando CSV…' : 'Exportar CSV agregado'}
-            </button>
+            />
           ) : null}
         </div>
       </form>
@@ -508,7 +511,9 @@ function AvailableIndicators({ indicator }: { indicator: AvailableIndicatorRespo
       : 'Média da nota final'
 
   return (
-    <section
+    <Card
+      padding={4}
+      role="region"
       className="card indicator-results indicator-results--metric"
       aria-labelledby="indicator-results-title"
     >
@@ -535,7 +540,7 @@ function AvailableIndicators({ indicator }: { indicator: AvailableIndicatorRespo
           <dd className="metric-list__value">{formatDecimal(indicator.averageScore)}</dd>
         </div>
       </dl>
-    </section>
+    </Card>
   )
 }
 
@@ -556,7 +561,12 @@ function ClassificationDistribution({
   )
 
   return (
-    <section className="card indicator-results" aria-labelledby="indicator-results-title">
+    <Card
+      padding={4}
+      role="region"
+      className="card indicator-results"
+      aria-labelledby="indicator-results-title"
+    >
       <div className="card-title-row">
         <div className="context-help__heading">
           <h3 id="indicator-results-title">Resultado agregado</h3>
@@ -603,7 +613,7 @@ function ClassificationDistribution({
         onPreviousPage={pagination.onPreviousPage}
         totalPages={pagination.totalPages}
       />
-    </section>
+    </Card>
   )
 }
 

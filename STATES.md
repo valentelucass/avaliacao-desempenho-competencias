@@ -1,5 +1,17 @@
 # Estado atual — Avaliação de Desempenho e Competências
 
+## Prévia do redesign da Avaliação em 22/11/2026
+
+A branch local `design/astryx-avaliacao` aplica a versão do Astryx usada pelo Dashboard à navegação, aos cabeçalhos, à lista de avaliações e aos controles das telas de autenticação, indicadores e administração. Os fundos gerais são neutros. Os filtros, estados vazios e linhas alternadas usam detalhes verdes. O menu recolhido conserva a marca compacta. O comando Atualizar fica no cabeçalho.
+
+Os erros usam o `Banner` do Dashboard. Com duas respostas HTTP 503 simuladas, o Edge mostrou os dois avisos a partir de 16 px do topo. Em uma tela de 1440 px, cada aviso ocupou 384 px com margens de 528 px. Em 390 px, as margens foram de 16 px. Fechar o primeiro conservou o segundo. A prévia usa dados fictícios e os mesmos componentes da aplicação.
+
+Nos ensaios locais passaram os 330 testes da interface e os 15 cenários do Edge, entre eles filtros, download real do Excel, criação, publicação, restauração de sessão e recuperação de ciclos. O ensaio de impressão A4 preservou as 21 competências em uma página. O Maven registrou 374 testes, com 21 ignorados e zero falhas ou erros.
+
+O gate completo `verify-quality.ps1 -SkipDatabase` aprovou a candidata isolada, incluindo compilação, formatação, lint, scanner local de segredos, SBOM e auditorias de dependências Java e npm. A auditoria npm retornou zero vulnerabilidades.
+
+Em 22/11, às 13h03min23s de Brasília, um build local gravou por engano no diretório estático servido pelo frontend de produção. Às 13h06min04s foram restaurados os arquivos do release aprovado em 28/10, identificado por `b3ffa328918b402683a1eed0a487f26f`. A conferência incluiu os 92 arquivos do diretório restaurado e o SHA-256 do HTML e do JavaScript `index-2YORMfj6.js` entregues pela porta 38080 e pelo domínio público. A verificação final usou um checkout independente, com a saída da compilação em staging. A API e os dados de produção ficaram fora da operação de restauração.
+
 ## Recuperação do formulário em produção em 18/11/2026
 
 Às 22h52 de Brasília o domínio público retornava HTTP 502. O frontend respondia na porta 38080. A API reiniciava porque o cliente JDBC rejeitava a assinatura do certificado atual do SQL Server. As pontes locais usadas pelo túnel também estavam paradas.

@@ -1,3 +1,4 @@
+import { ActionButton } from '../../ui/ActionButton'
 import { useState } from 'react'
 import { FileSpreadsheet } from 'lucide-react'
 import type { ApiClient } from '../../api/client'
@@ -49,17 +50,18 @@ export function AssessmentExportButton({
   }
   return (
     <>
-      <button
-        className="button button--success assessment-export-button"
+      <ActionButton
+        size="sm"
+        variant="secondary"
+        className="ev-export"
         type="button"
         onClick={exportFile}
         disabled={disabled || isExporting}
         aria-busy={isExporting}
-        title="Exportar todas as avaliações autorizadas que atendem aos filtros aplicados"
-      >
-        <FileSpreadsheet size={18} aria-hidden="true" />
-        {isExporting ? 'Exportando…' : 'Exportar Excel'}
-      </button>
+        tooltip="Exportar todas as avaliações autorizadas que atendem aos filtros aplicados"
+        icon={<FileSpreadsheet size={16} aria-hidden="true" />}
+        label={isExporting ? 'Exportando…' : 'Exportar Excel'}
+      />
       {error ? (
         <div className="assessment-export-message">
           <FeedbackMessage kind="error" onDismiss={() => setError(undefined)}>

@@ -70,12 +70,15 @@ require.cache[require.resolve('../src/api/client.ts')] = {
 const { JSDOM } = require('jsdom')
 const dom = new JSDOM('<!doctype html><html><body><div id="mount"></div></body></html>', {
   url: 'http://localhost',
+  pretendToBeVisual: true,
 })
 global.window = dom.window
 global.document = dom.window.document
 Object.defineProperty(global, 'navigator', { value: dom.window.navigator, configurable: true })
 global.HTMLElement = dom.window.HTMLElement
-global.requestAnimationFrame = (cb) => setTimeout(cb, 0)
+global.getComputedStyle = dom.window.getComputedStyle.bind(dom.window)
+global.requestAnimationFrame = dom.window.requestAnimationFrame.bind(dom.window)
+global.cancelAnimationFrame = dom.window.cancelAnimationFrame.bind(dom.window)
 global.IS_REACT_ACT_ENVIRONMENT = true
 const React = require('react')
 const { createRoot } = require('react-dom/client')

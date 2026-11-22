@@ -1,3 +1,5 @@
+import { Card } from '@astryxdesign/core/Card'
+import { ActionButton } from '../../ui/ActionButton'
 import { useEffect, useId, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Eye, EyeOff, ShieldCheck } from 'lucide-react'
@@ -116,7 +118,7 @@ export function LoginForm({
       onToggleTheme={onToggleTheme}
       theme={theme}
     >
-      <section className="card login-card">
+      <Card padding={4} className="card login-card">
         {recoveryOpen ? (
           <div
             id={recoveryId}
@@ -166,9 +168,13 @@ export function LoginForm({
                   onChange={(event) => setRecoveryLogin(event.currentTarget.value)}
                 />
               </div>
-              <button className="button button--primary" type="submit" disabled={isSubmitting}>
-                {isSubmitting ? 'Solicitando…' : 'Enviar solicitação'}
-              </button>
+              <ActionButton
+                size="sm"
+                variant="primary"
+                label={isSubmitting ? 'Solicitando…' : 'Enviar solicitação'}
+                type="submit"
+                disabled={isSubmitting}
+              />
               {recoveryNotice ? <p role="status">{recoveryNotice}</p> : null}
             </form>
           </div>
@@ -233,13 +239,13 @@ export function LoginForm({
                 </div>
               </div>
 
-              <button
-                className="button button--primary"
+              <ActionButton
+                size="sm"
+                variant="primary"
+                label={isSubmitting ? 'Entrando…' : 'Acessar plataforma'}
                 type="submit"
                 disabled={isSubmitting || isRestoringSession}
-              >
-                {isSubmitting ? 'Entrando…' : 'Acessar plataforma'}
-              </button>
+              />
             </form>
             <button
               className="login-card__recovery-trigger"
@@ -262,7 +268,7 @@ export function LoginForm({
           <ShieldCheck aria-hidden="true" size={16} strokeWidth={2} />
           <span>Acesso restrito à plataforma.</span>
         </p>
-      </section>
+      </Card>
 
       <aside className="auth-about-panel" aria-label="Sobre esta página">
         <div className="auth-about-panel__heading">

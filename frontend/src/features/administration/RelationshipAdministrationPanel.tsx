@@ -1,3 +1,5 @@
+import { WorkspacePageHeader } from '../../ui/WorkspacePageHeader'
+import { ActionButton } from '../../ui/ActionButton'
 import { administrativeRead, useAdministrativeLoad } from './useAdministrativeLoad'
 import { SpreadsheetImportPanel } from './SpreadsheetImportPanel'
 import { AdministrativeTable } from '@/components/ui/administrative-table'
@@ -383,37 +385,42 @@ export function RelationshipAdministrationPanel({
 
   return (
     <section aria-labelledby="relationship-administration-title" className="stack-form">
-      <div className="section-heading">
-        <div>
-          <p className="eyebrow">Administração de vínculos</p>
-          <div className="context-help__heading">
-            <h2 id="relationship-administration-title">Gestão e identidade dos colaboradores</h2>
-            <ContextHelp title="Como os vínculos definem o escopo">
-              <p>
-                O vínculo gestor-colaborador define quem o gestor pode avaliar. O vínculo entre
-                Diretoria e Gerência aplica a mesma regra para avaliações de gerência.
-              </p>
-              <p className="context-help__note">
-                Encerrar um vínculo preserva o histórico; não exclui avaliações nem registros
-                anteriores.
-              </p>
-            </ContextHelp>
-          </div>
-          <p className="muted">
-            Vínculos determinam escopo de acesso. Encerrar mantém o histórico e é validado pelo
-            servidor em cada operação.
-          </p>
-        </div>
-        <button
-          className="button"
-          type="button"
-          disabled={isLoading}
-          onClick={() => void loadRelationships()}
-        >
-          <RefreshCw aria-hidden="true" size={17} strokeWidth={2} />
-          {isLoading ? 'Atualizando…' : 'Atualizar vínculos'}
-        </button>
-      </div>
+      <WorkspacePageHeader
+        id="relationship-administration-title"
+        title="Gestão e identidade dos colaboradores"
+        group="Administração de vínculos"
+        help={
+          <ContextHelp title="Como os vínculos definem o escopo">
+            <p>
+              O vínculo gestor-colaborador define quem o gestor pode avaliar. O vínculo entre
+              Diretoria e Gerência aplica a mesma regra para avaliações de gerência.
+            </p>
+            <p className="context-help__note">
+              Encerrar um vínculo preserva o histórico; não exclui avaliações nem registros
+              anteriores.
+            </p>
+          </ContextHelp>
+        }
+        actions={
+          <>
+            {' '}
+            <ActionButton
+              size="sm"
+              variant="secondary"
+              label={isLoading ? 'Atualizando…' : 'Atualizar vínculos'}
+              icon={<RefreshCw aria-hidden="true" size={17} strokeWidth={2} />}
+              type="button"
+              disabled={isLoading}
+              onClick={() => void loadRelationships()}
+            />{' '}
+          </>
+        }
+      >
+        <p className="ev-page-description">
+          Vínculos determinam escopo de acesso. Encerrar mantém o histórico e é validado pelo
+          servidor em cada operação.
+        </p>
+      </WorkspacePageHeader>
 
       {error && !closeTarget ? (
         <FeedbackMessage kind="error" onDismiss={() => setError(undefined)}>
@@ -513,14 +520,14 @@ export function RelationshipAdministrationPanel({
               </div>
             </div>
             <div className="action-row">
-              <button
-                className="button button--success"
+              <ActionButton
+                size="sm"
+                variant="primary"
+                label="Criar vínculo de gestão"
+                icon={<Link2 aria-hidden="true" size={17} strokeWidth={2} />}
                 type="submit"
                 disabled={!hasManagerSelectionOptions || isSaving}
-              >
-                <Link2 aria-hidden="true" size={17} strokeWidth={2} />
-                Criar vínculo de gestão
-              </button>
+              />
               <SpreadsheetImportPanel
                 kind="manager-assignments"
                 api={api}
@@ -625,14 +632,14 @@ export function RelationshipAdministrationPanel({
               </div>
             </div>
             <div className="action-row">
-              <button
-                className="button button--success"
+              <ActionButton
+                size="sm"
+                variant="primary"
+                label="Criar vínculo de Diretoria"
+                icon={<Link2 aria-hidden="true" size={17} strokeWidth={2} />}
                 type="submit"
                 disabled={!hasDirectorManagerSelectionOptions || isSaving}
-              >
-                <Link2 aria-hidden="true" size={17} strokeWidth={2} />
-                Criar vínculo de Diretoria
-              </button>
+              />
             </div>
           </form>
 
@@ -728,14 +735,14 @@ export function RelationshipAdministrationPanel({
               </div>
             </div>
             <div className="action-row">
-              <button
-                className="button button--success"
+              <ActionButton
+                size="sm"
+                variant="primary"
+                label="Vincular conta ao colaborador"
+                icon={<Link2 aria-hidden="true" size={17} strokeWidth={2} />}
                 type="submit"
                 disabled={!hasUserLinkSelectionOptions || isSaving}
-              >
-                <Link2 aria-hidden="true" size={17} strokeWidth={2} />
-                Vincular conta ao colaborador
-              </button>
+              />
             </div>
           </form>
 
@@ -810,18 +817,22 @@ export function RelationshipAdministrationPanel({
                 />
               </div>
               <div className="action-row">
-                <button
-                  className="button"
+                <ActionButton
+                  size="sm"
+                  variant="secondary"
+                  label="Cancelar"
                   type="button"
                   disabled={isSaving}
                   onClick={dismissClosing}
-                >
-                  Cancelar
-                </button>
-                <button className="button button--danger" type="submit" disabled={isSaving}>
-                  <Unlink aria-hidden="true" size={17} strokeWidth={2} />
-                  Confirmar encerramento
-                </button>
+                />
+                <ActionButton
+                  size="sm"
+                  variant="destructive"
+                  label="Confirmar encerramento"
+                  icon={<Unlink aria-hidden="true" size={17} strokeWidth={2} />}
+                  type="submit"
+                  disabled={isSaving}
+                />
               </div>
             </form>
           </section>
@@ -893,14 +904,14 @@ function RelationshipTable<Entry extends { id: string; startsOn: string | null }
               </AdministrativeTable.Cell>
               <AdministrativeTable.Cell data-label="Ação">
                 <div className="table-actions">
-                  <button
-                    className="button button--danger"
+                  <ActionButton
+                    size="sm"
+                    variant="destructive"
+                    label="Encerrar"
+                    icon={<Unlink aria-hidden="true" size={16} strokeWidth={2} />}
                     type="button"
                     onClick={() => onClose(entry)}
-                  >
-                    <Unlink aria-hidden="true" size={16} strokeWidth={2} />
-                    Encerrar
-                  </button>
+                  />
                 </div>
               </AdministrativeTable.Cell>
             </AdministrativeTable.Row>

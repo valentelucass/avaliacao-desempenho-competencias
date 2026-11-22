@@ -22,3 +22,18 @@ Object.defineProperty(window, 'matchMedia', {
 afterEach(() => {
   cleanup()
 })
+
+// A posição real dos elementos é verificada no navegador; o jsdom não implementa rolagem.
+if (!HTMLElement.prototype.scrollIntoView) HTMLElement.prototype.scrollIntoView = () => {}
+
+// O diálogo modal é nativo no navegador. No jsdom, simulamos somente o seu ciclo de abertura.
+if (!HTMLDialogElement.prototype.showModal) {
+  HTMLDialogElement.prototype.showModal = function () {
+    this.open = true
+    this.querySelector<HTMLElement>('[autofocus],button:not(:disabled),a[href]')?.focus()
+  }
+  HTMLDialogElement.prototype.close = function () {
+    this.open = false
+    this.dispatchEvent(new Event('close'))
+  }
+}

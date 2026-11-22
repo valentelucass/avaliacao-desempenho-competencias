@@ -105,7 +105,9 @@ module.exports = async function checkMasterDataMaintenance({ send, frameId, css 
           Buffer.from((await send('Page.captureScreenshot', { format: 'png' })).data, 'base64'),
         )
       }
-      await evaluate('document.querySelectorAll(".feedback__dismiss").forEach(b=>b.click())')
+      await evaluate(
+        `document.querySelectorAll('.feedback-viewport button[aria-label="Fechar aviso"]').forEach(b=>b.click())`,
+      )
       for (const item of [
         {
           type: 'área',
@@ -178,7 +180,9 @@ module.exports = async function checkMasterDataMaintenance({ send, frameId, css 
           false,
         )
       }
-      await evaluate('document.querySelectorAll(".feedback__dismiss").forEach(b=>b.click())')
+      await evaluate(
+        `document.querySelectorAll('.feedback-viewport button[aria-label="Fechar aviso"]').forEach(b=>b.click())`,
+      )
       assert.equal(
         await evaluate('document.documentElement.scrollWidth<=innerWidth+1'),
         true,

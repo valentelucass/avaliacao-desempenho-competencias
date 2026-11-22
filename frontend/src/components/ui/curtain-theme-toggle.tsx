@@ -1,5 +1,6 @@
 'use client'
 
+import { Button } from '@astryxdesign/core/Button'
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { Moon, Search, Sun, UserRound } from 'lucide-react'
@@ -130,23 +131,24 @@ export function ThemeToggle({
   }
 
   const button = (
-    <button
-      type="button"
-      className={['adc-curtain-toggle', className || 'adc-curtain-toggle--standalone']
-        .filter(Boolean)
-        .join(' ')}
+    <Button
+      label={theme === 'light' ? 'Ativar modo escuro' : 'Ativar modo claro'}
+      variant="ghost"
+      size="sm"
+      isIconOnly
+      className={className}
       style={buttonSize === undefined ? undefined : { width: buttonSize, height: buttonSize }}
       onClick={toggle}
-      aria-label={theme === 'light' ? 'Ativar modo escuro' : 'Ativar modo claro'}
       aria-pressed={theme === 'dark'}
       aria-disabled={phase !== 'idle'}
-    >
-      {theme === 'light' ? (
-        <Moon aria-hidden="true" size={17} strokeWidth={2} />
-      ) : (
-        <Sun aria-hidden="true" size={17} strokeWidth={2} />
-      )}
-    </button>
+      icon={
+        theme === 'light' ? (
+          <Moon size={17} aria-hidden="true" />
+        ) : (
+          <Sun size={17} aria-hidden="true" />
+        )
+      }
+    />
   )
 
   const curtain =

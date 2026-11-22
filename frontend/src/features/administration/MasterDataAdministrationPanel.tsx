@@ -1,3 +1,6 @@
+import { Badge } from '@astryxdesign/core/Badge'
+import { WorkspacePageHeader } from '../../ui/WorkspacePageHeader'
+import { ActionButton } from '../../ui/ActionButton'
 import { administrativeRead, useAdministrativeLoad } from './useAdministrativeLoad'
 import { SpreadsheetImportPanel } from './SpreadsheetImportPanel'
 import { AdministrativeTable } from '@/components/ui/administrative-table'
@@ -471,12 +474,11 @@ export function MasterDataAdministrationPanel({
         className="master-data-administration"
         aria-labelledby="master-data-administration-title"
       >
-        <div className="section-heading">
-          <div>
-            <p className="eyebrow">Administração de cadastros</p>
-            <h2 id="master-data-administration-title">Cadastros e atribuições</h2>
-          </div>
-        </div>
+        <WorkspacePageHeader
+          id="master-data-administration-title"
+          title="Cadastros e atribuições"
+          group="Administração de cadastros"
+        />
         <FeedbackMessage kind="error">
           Você não possui permissão para consultar ou gerir os cadastros de apoio.
         </FeedbackMessage>
@@ -489,36 +491,41 @@ export function MasterDataAdministrationPanel({
       className="master-data-administration"
       aria-labelledby="master-data-administration-title"
     >
-      <div className="section-heading">
-        <div>
-          <p className="eyebrow">Administração de cadastros</p>
-          <div className="context-help__heading">
-            <h2 id="master-data-administration-title">Cadastros e atribuições</h2>
-            <ContextHelp title="Cadastros não concedem acesso por si só">
-              <p>
-                Filiais, áreas, colaboradores e lotações organizam a base. O acesso às avaliações
-                depende também dos vínculos de gestão e da identidade da conta.
-              </p>
-              <p className="context-help__note">
-                O servidor valida vigência, integridade e duplicidade antes de gravar mudanças.
-              </p>
-            </ContextHelp>
-          </div>
-          <p className="muted">
-            Use os nomes disponíveis nas listas. O servidor valida permissão, vigência, duplicidade
-            e integridade antes de gravar cada alteração.
-          </p>
-        </div>
-        <button
-          className="button"
-          type="button"
-          onClick={() => void loadMasterData()}
-          disabled={isLoading || isWriting}
-        >
-          <RefreshCw aria-hidden="true" size={17} strokeWidth={2} />
-          {isLoading ? 'Atualizando…' : 'Atualizar cadastros'}
-        </button>
-      </div>
+      <WorkspacePageHeader
+        id="master-data-administration-title"
+        title="Cadastros e atribuições"
+        group="Administração de cadastros"
+        help={
+          <ContextHelp title="Cadastros não concedem acesso por si só">
+            <p>
+              Filiais, áreas, colaboradores e lotações organizam a base. O acesso às avaliações
+              depende também dos vínculos de gestão e da identidade da conta.
+            </p>
+            <p className="context-help__note">
+              O servidor valida vigência, integridade e duplicidade antes de gravar mudanças.
+            </p>
+          </ContextHelp>
+        }
+        actions={
+          <>
+            {' '}
+            <ActionButton
+              size="sm"
+              variant="secondary"
+              label={isLoading ? 'Atualizando…' : 'Atualizar cadastros'}
+              icon={<RefreshCw aria-hidden="true" size={17} strokeWidth={2} />}
+              type="button"
+              onClick={() => void loadMasterData()}
+              disabled={isLoading || isWriting}
+            />{' '}
+          </>
+        }
+      >
+        <p className="ev-page-description">
+          Use os nomes disponíveis nas listas. O servidor valida permissão, vigência, duplicidade e
+          integridade antes de gravar cada alteração.
+        </p>
+      </WorkspacePageHeader>
 
       {notice ? (
         <FeedbackMessage kind="status" onDismiss={() => setNotice(undefined)}>
@@ -571,14 +578,14 @@ export function MasterDataAdministrationPanel({
               />
             </div>
             <div className="action-row">
-              <button
-                className="button button--success"
+              <ActionButton
+                size="sm"
+                variant="primary"
+                label="Criar filial"
+                icon={<Plus aria-hidden="true" size={17} strokeWidth={2} />}
                 type="submit"
                 disabled={isLoading || loadErrors.length > 0 || isWriting}
-              >
-                <Plus aria-hidden="true" size={17} strokeWidth={2} />
-                Criar filial
-              </button>
+              />
             </div>
           </form>
           {isAvailable('branches') ? (
@@ -651,14 +658,14 @@ export function MasterDataAdministrationPanel({
               />
             </div>
             <div className="action-row">
-              <button
-                className="button button--success"
+              <ActionButton
+                size="sm"
+                variant="primary"
+                label="Criar área"
+                icon={<Plus aria-hidden="true" size={17} strokeWidth={2} />}
                 type="submit"
                 disabled={isLoading || loadErrors.length > 0 || isWriting}
-              >
-                <Plus aria-hidden="true" size={17} strokeWidth={2} />
-                Criar área
-              </button>
+              />
             </div>
           </form>
           {isAvailable('areas') ? (
@@ -720,14 +727,14 @@ export function MasterDataAdministrationPanel({
             />
           </div>
           <div className="action-row">
-            <button
-              className="button button--success"
+            <ActionButton
+              size="sm"
+              variant="primary"
+              label="Criar colaborador"
+              icon={<Plus aria-hidden="true" size={17} strokeWidth={2} />}
               type="submit"
               disabled={isLoading || loadErrors.length > 0 || isWriting}
-            >
-              <Plus aria-hidden="true" size={17} strokeWidth={2} />
-              Criar colaborador
-            </button>
+            />
             <SpreadsheetImportPanel
               kind="collaborators"
               api={api}
@@ -869,14 +876,14 @@ export function MasterDataAdministrationPanel({
             />
           </div>
           <div className="action-row">
-            <button
-              className="button button--success"
+            <ActionButton
+              size="sm"
+              variant="primary"
+              label="Criar lotação"
+              icon={<Plus aria-hidden="true" size={17} strokeWidth={2} />}
               type="submit"
               disabled={isLoading || loadErrors.length > 0 || isWriting}
-            >
-              <Plus aria-hidden="true" size={17} strokeWidth={2} />
-              Criar lotação
-            </button>
+            />
             <SpreadsheetImportPanel
               kind="allocations"
               api={api}
@@ -998,16 +1005,16 @@ export function MasterDataAdministrationPanel({
             </select>
           </div>
           <div className="action-row">
-            <button
-              className="button button--success"
+            <ActionButton
+              size="sm"
+              variant="primary"
+              label="Criar atribuição"
+              icon={<Plus aria-hidden="true" size={17} strokeWidth={2} />}
               type="submit"
               disabled={
                 isLoading || loadErrors.length > 0 || isWriting || assignmentOptions.length === 0
               }
-            >
-              <Plus aria-hidden="true" size={17} strokeWidth={2} />
-              Criar atribuição
-            </button>
+            />
             <SpreadsheetImportPanel
               kind="assignments"
               api={api}
@@ -1140,8 +1147,10 @@ export function MasterDataAdministrationPanel({
                 </FeedbackMessage>
               ) : null}
               <div className="action-row">
-                <button
-                  className="button"
+                <ActionButton
+                  size="sm"
+                  variant="secondary"
+                  label="Cancelar"
                   data-dialog-initial-focus={
                     !('name' in pendingAction) &&
                     pendingAction.kind !== 'CLOSE_ALLOCATION' &&
@@ -1152,9 +1161,7 @@ export function MasterDataAdministrationPanel({
                   type="button"
                   onClick={cancelConfirmation}
                   disabled={isWriting}
-                >
-                  Cancelar
-                </button>
+                />
                 <button
                   className={
                     pendingAction.kind.startsWith('EDIT_') ||
@@ -1242,13 +1249,11 @@ function NamedResourcesTable({
             <AdministrativeTable.Row key={resource.id}>
               <AdministrativeTable.Cell data-label="Nome">{resource.name}</AdministrativeTable.Cell>
               <AdministrativeTable.Cell data-label="Situação">
-                <span
-                  className={`status-badge ${
-                    resource.active ? 'status-badge--active' : 'status-badge--disabled'
-                  }`}
-                >
-                  {resource.active ? 'Ativa' : 'Desativada'}
-                </span>
+                <Badge
+                  className="dashboard-status-badge"
+                  label={resource.active ? 'Ativa' : 'Desativada'}
+                  variant={resource.active ? 'success' : 'neutral'}
+                />
               </AdministrativeTable.Cell>
               <AdministrativeTable.Cell data-label="Ação">
                 <div
@@ -1256,51 +1261,63 @@ function NamedResourcesTable({
                   aria-label={`Ações da ${resourceLabel} ${resource.name}`}
                 >
                   {onEdit && (
-                    <button
-                      className="button button--quiet master-data-action-button"
+                    <ActionButton
+                      className="master-data-action-button"
+                      size="sm"
+                      variant="ghost"
+                      label={'Editar ' + resourceLabel + ' ' + resource.name}
+                      icon={<Pencil aria-hidden="true" size={16} />}
+                      isIconOnly
                       type="button"
                       disabled={isBusy}
                       onClick={() => onEdit(resource)}
                       aria-label={'Editar ' + resourceLabel + ' ' + resource.name}
                       title={'Editar ' + resourceLabel}
-                    >
-                      <Pencil aria-hidden="true" size={16} />
-                    </button>
+                    />
                   )}
                   {!resource.active && onReactivate && (
-                    <button
-                      className="button button--success button--quiet master-data-action-button"
+                    <ActionButton
+                      className="master-data-action-button"
+                      size="sm"
+                      variant="primary"
+                      label={'Reativar ' + resourceLabel + ' ' + resource.name}
+                      icon={<Power aria-hidden="true" size={16} />}
+                      isIconOnly
                       type="button"
                       disabled={isBusy}
                       onClick={() => onReactivate(resource)}
                       aria-label={'Reativar ' + resourceLabel + ' ' + resource.name}
                       title={'Reativar ' + resourceLabel}
-                    >
-                      <Power aria-hidden="true" size={16} />
-                    </button>
+                    />
                   )}
                   {resource.active ? (
-                    <button
+                    <ActionButton
+                      className="master-data-action-button"
+                      size="sm"
+                      variant="destructive"
+                      label={`Desativar ${resourceLabel} ${resource.name}`}
+                      icon={<Power aria-hidden="true" size={16} strokeWidth={2} />}
+                      isIconOnly
                       aria-label={`Desativar ${resourceLabel} ${resource.name}`}
-                      className="button button--danger button--quiet master-data-action-button"
                       type="button"
                       onClick={() => onDeactivate(resource)}
                       disabled={isBusy}
                       title={'Desativar ' + resourceLabel}
-                    >
-                      <Power aria-hidden="true" size={16} strokeWidth={2} />
-                    </button>
+                    />
                   ) : onDeleteInactive ? (
-                    <button
+                    <ActionButton
+                      className="master-data-action-button"
+                      size="sm"
+                      variant="destructive"
+                      label={`Excluir ${resourceLabel} ${resource.name}`}
+                      icon={<Trash2 aria-hidden="true" size={16} strokeWidth={2} />}
+                      isIconOnly
                       aria-label={`Excluir ${resourceLabel} ${resource.name}`}
-                      className="button button--danger master-data-action-button"
                       type="button"
                       onClick={() => onDeleteInactive(resource)}
                       disabled={isBusy}
                       title={'Excluir ' + resourceLabel}
-                    >
-                      <Trash2 aria-hidden="true" size={16} strokeWidth={2} />
-                    </button>
+                    />
                   ) : (
                     <span className="field-hint">Sem ação disponível</span>
                   )}
@@ -1391,62 +1408,60 @@ function CollaboratorsTable({
                 {collaborator.displayName}
               </AdministrativeTable.Cell>
               <AdministrativeTable.Cell data-label="Situação">
-                <span
-                  className={`status-badge ${
-                    collaborator.active ? 'status-badge--active' : 'status-badge--disabled'
-                  }`}
-                >
-                  {collaborator.active ? 'Ativo' : 'Desativado'}
-                </span>
+                <Badge
+                  className="dashboard-status-badge"
+                  label={collaborator.active ? 'Ativo' : 'Desativado'}
+                  variant={collaborator.active ? 'success' : 'neutral'}
+                />
               </AdministrativeTable.Cell>
               <AdministrativeTable.Cell data-label="Ação">
                 <div
                   className="table-actions"
                   aria-label={`Ações do colaborador ${collaborator.displayName}`}
                 >
-                  <button
-                    className="button button--quiet"
+                  <ActionButton
+                    size="sm"
+                    variant="ghost"
+                    label="Editar"
+                    icon={<Pencil aria-hidden="true" size={16} />}
                     type="button"
                     disabled={isBusy}
                     onClick={() => onEdit(collaborator)}
                     aria-label={'Editar colaborador ' + collaborator.displayName}
-                  >
-                    <Pencil aria-hidden="true" size={16} />
-                    Editar
-                  </button>
+                  />
                   {collaborator.active ? (
-                    <button
+                    <ActionButton
+                      size="sm"
+                      variant="destructive"
+                      label="Desativar"
+                      icon={<Power aria-hidden="true" size={16} strokeWidth={2} />}
                       aria-label={`Desativar colaborador ${collaborator.displayName}`}
-                      className="button button--danger button--quiet"
                       type="button"
                       onClick={() => onDeactivate(collaborator)}
                       disabled={isBusy}
-                    >
-                      <Power aria-hidden="true" size={16} strokeWidth={2} />
-                      Desativar
-                    </button>
+                    />
                   ) : (
                     <>
-                      <button
-                        className="button button--success button--quiet"
+                      <ActionButton
+                        size="sm"
+                        variant="primary"
+                        label="Reativar"
+                        icon={<Power aria-hidden="true" size={16} />}
                         type="button"
                         disabled={isBusy}
                         onClick={() => onReactivate(collaborator)}
                         aria-label={'Reativar colaborador ' + collaborator.displayName}
-                      >
-                        <Power aria-hidden="true" size={16} />
-                        Reativar
-                      </button>
-                      <button
-                        className="button button--danger"
+                      />
+                      <ActionButton
+                        size="sm"
+                        variant="destructive"
+                        label="Excluir"
+                        icon={<Trash2 aria-hidden="true" size={16} />}
                         type="button"
                         disabled={isBusy}
                         onClick={() => onDeleteInactive(collaborator)}
                         aria-label={'Excluir colaborador ' + collaborator.displayName}
-                      >
-                        <Trash2 aria-hidden="true" size={16} />
-                        Excluir
-                      </button>
+                      />
                     </>
                   )}
                 </div>
@@ -1553,17 +1568,18 @@ function AllocationsTable({
                 </AdministrativeTable.Cell>
                 <AdministrativeTable.Cell data-label="Ação">
                   <div className="table-actions">
-                    <button
+                    <ActionButton
+                      className="table-action-button"
+                      size="sm"
+                      variant="destructive"
+                      label="Encerrar"
+                      icon={<Archive aria-hidden="true" size={16} strokeWidth={2} />}
                       aria-label={`Encerrar lotação de ${collaborator}`}
-                      className="button button--danger button--quiet table-action-button"
                       title={`Encerrar lotação de ${collaborator}`}
                       type="button"
                       onClick={() => onClose(allocation)}
                       disabled={isBusy}
-                    >
-                      <Archive aria-hidden="true" size={16} strokeWidth={2} />
-                      Encerrar
-                    </button>
+                    />
                   </div>
                 </AdministrativeTable.Cell>
               </AdministrativeTable.Row>
@@ -1648,17 +1664,18 @@ function QuestionnaireAssignmentsTable({
                 </AdministrativeTable.Cell>
                 <AdministrativeTable.Cell data-label="Ação">
                   <div className="table-actions">
-                    <button
+                    <ActionButton
+                      className="table-action-button"
+                      size="sm"
+                      variant="destructive"
+                      label="Revogar"
+                      icon={<Archive aria-hidden="true" size={16} strokeWidth={2} />}
                       aria-label={`Revogar atribuição de ${subject}`}
-                      className="button button--danger button--quiet table-action-button"
                       title="Revogar atribuição"
                       type="button"
                       onClick={() => onRevoke(assignment)}
                       disabled={isBusy}
-                    >
-                      <Archive aria-hidden="true" size={16} strokeWidth={2} />
-                      Revogar
-                    </button>
+                    />
                   </div>
                 </AdministrativeTable.Cell>
               </AdministrativeTable.Row>

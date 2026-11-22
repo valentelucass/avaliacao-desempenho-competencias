@@ -71,17 +71,17 @@ module.exports = async function checkCurtainThemeToggle({ send, frameId, css }) 
     await send('Page.setDocumentContent', {
       frameId,
       html:
-        '<!doctype html><html data-theme="light"><head><style>' +
+        '<!doctype html><html data-theme="light" data-astryx-theme="neutral"><head><style>' +
         css +
         '</style></head><body><div id="root"></div></body></html>',
     })
     await evaluate(code)
     await ready(
-      "document.querySelector('.adc-curtain-toggle') && document.querySelector('[data-rs-theme]')",
+      "document.querySelector('.astryx-button[aria-pressed]') && document.querySelector('[data-rs-theme]')",
     )
   }
   const sample = `(() => {
-    const e=document.querySelector('.adc-theme-curtain'), b=document.querySelector('.adc-curtain-toggle');
+    const e=document.querySelector('.adc-theme-curtain'), b=document.querySelector('.astryx-button[aria-pressed]');
     const r=e?.getBoundingClientRect(), s=e?getComputedStyle(e):null;
     return {theme:document.documentElement.dataset.theme, phase:e?.dataset.phase, height:r?.height,
       viewport:innerHeight, left:r?.left, width:r?.width, viewportWidth:document.documentElement.clientWidth, animation:s?.animationName,
@@ -92,7 +92,7 @@ module.exports = async function checkCurtainThemeToggle({ send, frameId, css }) 
   const summaries = []
   for (const width of [375, 1440]) {
     await load(width)
-    await evaluate("document.querySelector('.adc-curtain-toggle').focus()")
+    await evaluate("document.querySelector('.astryx-button[aria-pressed]').focus()")
     await send('Input.dispatchKeyEvent', {
       type: 'keyDown',
       key: 'Enter',
@@ -139,7 +139,7 @@ module.exports = async function checkCurtainThemeToggle({ send, frameId, css }) 
       Buffer.from(screenshot.data, 'base64'),
     )
 
-    await evaluate("document.querySelector('.adc-curtain-toggle').click()")
+    await evaluate("document.querySelector('.astryx-button[aria-pressed]').click()")
     await ready(
       "!document.querySelector('.adc-theme-curtain') && document.documentElement.dataset.theme==='light'",
     )
@@ -153,13 +153,13 @@ module.exports = async function checkCurtainThemeToggle({ send, frameId, css }) 
   }
 
   await load(375, true)
-  await evaluate("document.querySelector('.adc-curtain-toggle').click()")
+  await evaluate("document.querySelector('.astryx-button[aria-pressed]').click()")
   await ready("document.documentElement.dataset.theme==='dark'")
   assert.equal(await evaluate("document.querySelector('.adc-theme-curtain')===null"), true)
   assert.equal((await evaluate(sample)).count, '1')
 
   await load(1440)
-  await evaluate("document.querySelector('.adc-curtain-toggle').click()")
+  await evaluate("document.querySelector('.astryx-button[aria-pressed]').click()")
   await ready("document.querySelector('.adc-theme-curtain')?.dataset.phase==='falling'")
   await send('Emulation.setEmulatedMedia', { media: 'print' })
   // A troca de mídia pode encerrar a animação antes da próxima chamada CDP.
@@ -176,9 +176,9 @@ module.exports = async function checkCurtainThemeToggle({ send, frameId, css }) 
 
   await load(1440)
   await evaluate(
-    "document.querySelector('.adc-curtain-toggle').click(); document.getElementById('unmount-toggle').click()",
+    "document.querySelector('.astryx-button[aria-pressed]').click(); document.getElementById('unmount-toggle').click()",
   )
-  await ready("document.querySelector('.adc-curtain-toggle')===null")
+  await ready("document.querySelector('.astryx-button[aria-pressed]')===null")
   await evaluate('new Promise(resolve => setTimeout(resolve, 900))')
   assert.equal((await evaluate(sample)).count, '0')
   assert.equal(await evaluate("document.querySelector('.adc-theme-curtain')===null"), true)

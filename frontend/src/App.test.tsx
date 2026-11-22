@@ -230,7 +230,13 @@ describe('App', () => {
         <App api={api} />
       </StrictMode>,
     )
-    expect(await screen.findByText('Sessão fictícia retomada')).toBeInTheDocument()
+    fireEvent.click(await screen.findByRole('button', { name: 'Abrir menu' }))
+    expect(
+      await within(screen.getByRole('dialog', { name: 'Menu de módulos' })).findByText(
+        'Sessão fictícia retomada',
+        { selector: 'strong' },
+      ),
+    ).toBeVisible()
     expect(api.restoreSession).toHaveBeenCalledTimes(1)
     expect(api.currentUser).not.toHaveBeenCalled()
     expect(api.refreshSession).not.toHaveBeenCalled()
@@ -283,13 +289,21 @@ describe('App', () => {
 
     render(<App api={api} />)
 
-    expect(screen.getByRole('status')).toHaveTextContent('Restaurando sua sessão')
+    expect(
+      screen.getByRole('heading', { name: 'Restaurando sua sessão' }).closest('[role=status]'),
+    ).not.toBeNull()
     expect(screen.queryByRole('heading', { name: 'Acesso à plataforma' })).not.toBeInTheDocument()
 
     await waitFor(() => expect(api.currentUser).toHaveBeenCalledTimes(1))
     resolveCurrentUser({ id: 'user-1', displayName: 'Sessão preservada', permissions: [] })
 
-    expect(await screen.findByText('Sessão preservada')).toBeInTheDocument()
+    fireEvent.click(await screen.findByRole('button', { name: 'Abrir menu' }))
+    expect(
+      await within(screen.getByRole('dialog', { name: 'Menu de módulos' })).findByText(
+        'Sessão preservada',
+        { selector: 'strong' },
+      ),
+    ).toBeVisible()
     expect(screen.queryByText('Restaurando sua sessão')).not.toBeInTheDocument()
   })
 
@@ -358,7 +372,13 @@ describe('App', () => {
 
     render(<App api={api} />)
 
-    expect(await screen.findByText('Sessão retomada')).toBeInTheDocument()
+    fireEvent.click(await screen.findByRole('button', { name: 'Abrir menu' }))
+    expect(
+      await within(screen.getByRole('dialog', { name: 'Menu de módulos' })).findByText(
+        'Sessão retomada',
+        { selector: 'strong' },
+      ),
+    ).toBeVisible()
     expect(api.refreshSession).toHaveBeenCalledTimes(1)
     expect(api.currentUser).toHaveBeenCalledTimes(1)
   })
@@ -374,7 +394,13 @@ describe('App', () => {
 
     render(<App api={api} />)
 
-    expect(await screen.findByText('Sessão preservada')).toBeInTheDocument()
+    fireEvent.click(await screen.findByRole('button', { name: 'Abrir menu' }))
+    expect(
+      await within(screen.getByRole('dialog', { name: 'Menu de módulos' })).findByText(
+        'Sessão preservada',
+        { selector: 'strong' },
+      ),
+    ).toBeVisible()
     expect(api.currentUser).toHaveBeenCalledTimes(1)
     expect(api.refreshSession).not.toHaveBeenCalled()
   })
@@ -412,7 +438,8 @@ describe('App', () => {
 
     renderWithExistingSession(api, '/indicadores')
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Ir para o início' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Abrir menu' }))
+    fireEvent.click(await screen.findByRole('link', { name: 'Rodogarcia, ir para o início' }))
 
     await waitFor(() => expect(window.location.pathname).toBe('/'))
     expect(screen.getByRole('heading', { name: 'Avaliações de desempenho' })).toBeInTheDocument()
@@ -521,7 +548,10 @@ describe('App', () => {
       'Dados insuficientes para preservar a confidencialidade.',
     )
     expect(insufficientDataMessage).toBeInTheDocument()
-    expect(insufficientDataMessage.closest('[role="status"]')).toHaveClass('feedback--warning')
+    expect(insufficientDataMessage.closest('.astryx-banner')).toHaveAttribute(
+      'data-status',
+      'warning',
+    )
     expect(screen.queryByRole('heading', { name: 'Resultado agregado' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Exportar CSV agregado' })).not.toBeInTheDocument()
     expect(api.getIndicators).toHaveBeenCalledWith({
@@ -594,7 +624,8 @@ describe('App', () => {
 
     renderWithExistingSession(api, '/avaliacoes')
 
-    const assessment = await screen.findByRole('listitem')
+    const table = await screen.findByRole('table', { name: 'Lista de avaliações' })
+    const assessment = within(table).getAllByRole('row')[1]
     expect(screen.queryByText('Ciclo de avaliação')).not.toBeInTheDocument()
     expect(within(assessment).getByLabelText('Situação: Publicada')).toBeInTheDocument()
     expect(within(assessment).getByText('Avaliação de gestor')).toBeInTheDocument()
@@ -827,7 +858,7 @@ describe('App', () => {
     await screen.findByRole('heading', { name: 'Avaliações autorizadas' })
     fireEvent.click(screen.getByRole('button', { name: 'Abrir menu' }))
 
-    expect(screen.getByRole('button', { name: 'Minhas avaliações' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Minhas avaliações' })).toHaveAttribute(
       'aria-current',
       'page',
     )
@@ -1379,7 +1410,7 @@ describe('App', () => {
 
     expect(await screen.findByRole('heading', { name: 'Contas locais' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Abrir menu' }))
-    expect(screen.getByRole('button', { name: 'Contas e acessos' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Contas e acessos' })).toHaveAttribute(
       'aria-current',
       'page',
     )
@@ -1442,18 +1473,18 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Abrir menu' }))
     const drawer = await screen.findByRole('dialog', { name: 'Menu de módulos' })
     expect(within(drawer).getByText('Administração')).toBeInTheDocument()
-    fireEvent.click(within(drawer).getByRole('button', { name: 'Questionários' }))
+    fireEvent.click(within(drawer).getByRole('link', { name: 'Questionários' }))
 
     expect(await screen.findByRole('heading', { name: 'Questionários' })).toBeInTheDocument()
     expect(window.location.pathname).toBe('/administracao/questionarios')
     fireEvent.click(screen.getByRole('button', { name: 'Abrir menu' }))
     const reopenedDrawer = await screen.findByRole('dialog', { name: 'Menu de módulos' })
-    expect(within(reopenedDrawer).getByRole('button', { name: 'Questionários' })).toHaveAttribute(
+    expect(within(reopenedDrawer).getByRole('link', { name: 'Questionários' })).toHaveAttribute(
       'aria-current',
       'page',
     )
     expect(
-      within(reopenedDrawer).queryByRole('button', { name: 'Contas e acessos' }),
+      within(reopenedDrawer).queryByRole('link', { name: 'Contas e acessos' }),
     ).not.toBeInTheDocument()
   })
 
@@ -1473,14 +1504,13 @@ describe('App', () => {
     fireEvent.click(menuButton)
 
     const drawer = await screen.findByRole('dialog', { name: 'Menu de módulos' })
-    const closeButton = within(drawer).getByRole('button', { name: 'Fechar menu' })
-    await waitFor(() => expect(closeButton).toHaveFocus())
+    expect(within(drawer).getByRole('button', { name: 'Fechar navegação' })).toBeVisible()
+    await waitFor(() => expect(drawer.contains(document.activeElement)).toBe(true))
 
-    fireEvent.keyDown(document, { key: 'Escape' })
-
-    expect(menuButton).toHaveFocus()
+    fireEvent(drawer, new Event('cancel', { cancelable: true }))
+    await waitFor(() => expect(menuButton).toHaveFocus())
     expect(menuButton).toHaveAttribute('aria-expanded', 'false')
-    expect(drawer).toHaveAttribute('aria-hidden', 'true')
+    expect(drawer).not.toHaveAttribute('open')
   })
 
   it('bloqueia a rolagem global enquanto o drawer está aberto', async () => {
@@ -1497,10 +1527,10 @@ describe('App', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Abrir menu' }))
     const drawer = await screen.findByRole('dialog', { name: 'Menu de módulos' })
 
-    expect(document.documentElement.style.overflow).toBe('hidden')
-    expect(document.body.style.overflow).toBe('hidden')
+    const scrollingRoot = document.scrollingElement ?? document.documentElement
+    expect(getComputedStyle(scrollingRoot).overflow).toBe('hidden')
 
-    fireEvent.click(within(drawer).getByRole('button', { name: 'Fechar menu' }))
+    fireEvent.click(within(drawer).getByRole('button', { name: 'Fechar navegação' }))
 
     await waitFor(() => expect(document.documentElement.style.overflow).toBe(''))
     expect(document.body.style.overflow).toBe('')
@@ -1619,7 +1649,9 @@ describe('App', () => {
       'href',
       'https://www.linkedin.com/in/dev-lucasandrade/',
     )
-    expect(screen.getByRole('banner').firstElementChild).toHaveClass('application-header__content')
+    expect(
+      within(screen.getByRole('banner')).getByRole('button', { name: 'Ativar modo escuro' }),
+    ).toBeVisible()
     expect(screen.queryByRole('region', { name: 'Conta ativa' })).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Abrir menu' }))
     const drawer = await screen.findByRole('dialog', { name: 'Menu de módulos' })

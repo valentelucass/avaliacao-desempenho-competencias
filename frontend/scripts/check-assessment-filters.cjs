@@ -31,7 +31,7 @@ module.exports = async function checkAssessmentFilters({ send, frameId, css }) {
                   evaluated: { displayName: name },
                   cycle: { id: 'cycle', name: 'Ciclo fictício' },
                   type: 'GESTOR',
-                  status: ['RASCUNHO', 'ENVIADA', 'PUBLICADA'][index],
+                  status: ['RASCUNHO', 'ENVIADA', 'PUBLICADA'][index % 3],
                   feedbackStatus: index === 0 ? 'PENDENTE' : 'NAO_APLICAVEL',
                 })),
               page: { limit, nextCursor: null },
@@ -81,69 +81,69 @@ module.exports = async function checkAssessmentFilters({ send, frameId, css }) {
       await send('Emulation.setEmulatedMedia', { media: 'screen' })
       await send('Page.setDocumentContent', {
         frameId,
-        html: `<!doctype html><html data-theme="${theme}"><head><style>${css}</style></head><body><div id="root"><main class="application-shell">${markup}</main></div></body></html>`,
+        html: `<!doctype html><html data-astryx-theme="neutral" data-theme="${theme}"><head><style>${css}</style></head><body><div id="root"><div class="application-shell ev-shell"><div class="ev-stage"><main class="workspace ev-workspace"><div class="workspace__content">${markup}</div></main></div></div></div></body></html>`,
       })
       await evaluate(
         'document.fonts.ready.then(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))))',
       )
       const metrics = await evaluate(`(() => {
-      const form=document.querySelector('.assessment-list-filters');
-      const cards=[...document.querySelectorAll('.assessment-list__item')].map(card => {
-        const header=card.querySelector('.assessment-list__details'), metadata=card.querySelector('.assessment-list__metadata'), footer=card.querySelector('.assessment-list__actions');
-        const cardRect=card.getBoundingClientRect(), footerRect=footer.getBoundingClientRect(), button=footer.querySelector('button').getBoundingClientRect(), title=header.querySelector('h3'), titleStyle=getComputedStyle(title);
-        return {hasHeader:!!header,hasMetadata:!!metadata,hasFooter:!!footer,footerTop:footerRect.top,cardBottom:cardRect.bottom,cardTop:cardRect.top,buttonLeft:button.left,buttonRight:button.right,buttonTop:button.top,buttonBottom:button.bottom,buttonHeight:button.height,title:{full:title.title,clientWidth:title.clientWidth,scrollWidth:title.scrollWidth,whiteSpace:titleStyle.whiteSpace,textOverflow:titleStyle.textOverflow}};
-      });
-      return {fields:[...form.querySelectorAll('.field')].map(e=>({top:e.getBoundingClientRect().top})),
-        controls:[...form.querySelectorAll('input,select,button')].map(e=>({left:e.getBoundingClientRect().left,right:e.getBoundingClientRect().right,height:e.getBoundingClientRect().height})),
-        labels:[...form.querySelectorAll('label')].every(e=>!!document.getElementById(e.htmlFor)), cards, listAlignment:getComputedStyle(document.querySelector('.assessment-list')).alignItems, columns:getComputedStyle(document.querySelector('.assessment-list')).gridTemplateColumns.trim().split(/\\s+/).length,
-        overflow:document.documentElement.scrollWidth>innerWidth+1};})()`)
-      assert.equal(metrics.fields.length, 4)
-      assert.equal(metrics.cards.length, 2)
-      assert.equal(metrics.listAlignment, 'stretch')
-      assert.equal(metrics.columns, width >= 1280 ? 3 : width >= 769 ? 2 : 1)
-      assert.equal(metrics.labels, true)
-      assert.equal(metrics.overflow, false)
+        const fields = document.querySelector('.ev-filter-fields');
+        const table = document.querySelector('table[aria-label="Lista de avaliações"]');
+        const measured = el => {
+          const r = el.getBoundingClientRect();
+          return {left:r.left, right:r.right, top:r.top, height:r.height};
+        };
+        const controls = [...fields.querySelectorAll('input[type=search], [role=combobox]')];
+        return {
+          fieldTops: [...fields.children].map(el => Math.round(el.getBoundingClientRect().top)),
+          labels: controls.map(el => (el.getAttribute('aria-labelledby') || '').split(' ').map(id=>document.getElementById(id)?.textContent || '').join(' ').trim() || el.labels?.[0]?.textContent || el.getAttribute('aria-label')),
+          controls: controls.map(el => measured(el.closest('.astryx-text-input, .astryx-selector') || el)),
+          headers: [...table.querySelectorAll('thead th')].map(el => el.textContent.trim()),
+          rows: [...table.tBodies[0].rows].map(row => ({
+            cells: row.cells.length,
+            name: row.querySelector('.ev-person strong').textContent,
+            title: row.querySelector('.ev-person strong').title,
+            badge: row.querySelector('.astryx-badge').textContent,
+            action: measured(row.querySelector('button')),
+            summary: document.getElementById(row.querySelector('button').getAttribute('aria-describedby'))?.textContent,
+          })),
+          overflow: document.documentElement.scrollWidth > innerWidth + 1,
+        };
+      })()`)
+      assert.equal(metrics.overflow, false, `Contêiner excedeu a largura em ${theme}/${width}`)
+      assert.deepEqual(metrics.headers, [
+        'Colaborador avaliado',
+        'Status da avaliação',
+        'Tipo',
+        'Feedback',
+        'Ações',
+      ])
+      assert.equal(metrics.fieldTops.length, 4)
+      assert.equal(new Set(metrics.fieldTops).size, width > 1150 ? 1 : width > 740 ? 2 : 4)
+      for (const [i, label] of [
+        'Colaborador Avaliado',
+        'Gestor Responsável',
+        'Status da Avaliação',
+        'Status do Feedback',
+      ].entries())
+        assert.ok(metrics.labels[i]?.includes(label), `Rótulo ausente: ${label}`)
+      for (const rect of metrics.controls)
+        assert.ok(
+          rect.left >= 0 && rect.right <= width + 1 && rect.height >= 32,
+          `Controle fora dos limites em ${theme}/${width}: ${JSON.stringify(rect)}`,
+        )
+      assert.equal(metrics.rows.length, 2)
       assert.equal(
-        new Set(metrics.fields.map((e) => Math.round(e.top))).size,
-        width > 1024 ? 1 : width > 640 ? 2 : 4,
-      )
-      for (const control of metrics.controls)
-        assert.ok(control.left >= 0 && control.right <= width + 1 && control.height >= 36)
-      for (const card of metrics.cards) {
-        assert.equal(card.hasHeader, true)
-        assert.equal(card.hasMetadata, true)
-        assert.equal(card.hasFooter, true)
-        assert.ok(card.footerTop < card.cardBottom)
-        assert.ok(card.buttonLeft >= 0 && card.buttonRight <= width + 1 && card.buttonHeight >= 36)
-        assert.equal(card.title.whiteSpace, 'nowrap')
-        assert.equal(card.title.textOverflow, 'ellipsis')
-      }
-      assert.equal(
-        metrics.cards[0].title.full,
+        metrics.rows[0].name,
         'Pessoa fictícia com identificação muito extensa para validar o título truncado',
       )
-      if (width >= 769) {
-        assert.equal(new Set(metrics.cards.map((card) => Math.round(card.cardBottom))).size, 1)
-        assert.equal(new Set(metrics.cards.map((card) => Math.round(card.buttonBottom))).size, 1)
+      for (const row of metrics.rows) {
+        assert.equal(row.title, row.name)
+        assert.equal(row.cells, 5)
+        assert.ok(row.summary?.includes(row.badge))
+        assert.ok(row.action.left >= 0 && row.action.right <= width + 1 && row.action.height >= 32)
       }
-      if (width >= 768) {
-        const before = await evaluate(
-          `(() => { const e=document.querySelector('.assessment-list__item'); const r=e.getBoundingClientRect(),s=getComputedStyle(e); return {x:r.x+r.width/2,y:r.y+r.height/2,background:s.backgroundColor,shadow:s.boxShadow,transform:s.transform}; })()`,
-        )
-        await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: before.x, y: before.y })
-        await evaluate('new Promise(resolve=>setTimeout(resolve,180))')
-        const after = await evaluate(
-          `(() => { const e=document.querySelector('.assessment-list__item'),s=getComputedStyle(e); return {hover:e.matches(':hover'),background:s.backgroundColor,shadow:s.boxShadow,transform:s.transform,cursor:s.cursor}; })()`,
-        )
-        assert.equal(after.hover, true)
-        assert.equal(after.cursor, 'auto')
-        assert.deepEqual(
-          { background: after.background, shadow: after.shadow, transform: after.transform },
-          { background: before.background, shadow: before.shadow, transform: before.transform },
-          `Cartão de avaliação estático reagiu ao mouse em ${theme}/${width}px`,
-        )
-      }
-      await evaluate("document.querySelector('.assessment-list-filters input').focus()")
+      await evaluate("document.querySelector('.ev-filter-fields input').focus()")
       await send('Input.dispatchKeyEvent', {
         type: 'keyDown',
         key: 'Tab',
@@ -158,18 +158,13 @@ module.exports = async function checkAssessmentFilters({ send, frameId, css }) {
       })
       assert.equal(
         await evaluate(
-          "document.activeElement===document.querySelectorAll('.assessment-list-filters input')[1]",
+          "document.activeElement===document.querySelectorAll('.ev-filter-fields input')[1]",
         ),
         true,
       )
-      assert.notEqual(
-        await evaluate('getComputedStyle(document.activeElement).outlineStyle'),
-        'none',
-      )
+      assert.equal(await evaluate("document.activeElement.matches(':focus-visible')"), true)
       if (width === 375 || width === 1440) {
-        await evaluate(
-          "document.querySelector('.assessment-list-filters').scrollIntoView({block:'start'})",
-        )
+        await evaluate("document.querySelector('.ev-filter-form').scrollIntoView({block:'start'})")
         const screenshot = await send('Page.captureScreenshot', { format: 'png' })
         fs.writeFileSync(
           browserArtifactPath(`assessment-filters-${theme}-${width}.png`),
@@ -177,10 +172,10 @@ module.exports = async function checkAssessmentFilters({ send, frameId, css }) {
         )
       }
       if (width === 1440) {
-        await evaluate("document.querySelector('.assessment-list').scrollIntoView({block:'start'})")
+        await evaluate("document.querySelector('.ev-table').scrollIntoView({block:'start'})")
         const screenshot = await send('Page.captureScreenshot', { format: 'png' })
         fs.writeFileSync(
-          browserArtifactPath(`assessment-cards-${theme}-${width}.png`),
+          browserArtifactPath(`assessment-table-${theme}-${width}.png`),
           Buffer.from(screenshot.data, 'base64'),
         )
       }

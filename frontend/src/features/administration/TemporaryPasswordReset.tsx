@@ -1,3 +1,4 @@
+import { ActionButton } from '../../ui/ActionButton'
 import { useEffect, useEffectEvent, useId, useRef, useState } from 'react'
 import type { ApiClient } from '../../api/client'
 import { ApiError, isAuthenticationError } from '../../api/client'
@@ -149,15 +150,15 @@ function TemporaryPasswordResetSession({
           <p role="status">Senha redefinida. Troca obrigatória no próximo acesso.</p>
         </div>
       ) : (
-        <button
-          className="button button--primary"
+        <ActionButton
+          size="sm"
+          variant="primary"
+          label={busy ? 'Redefinindo…' : 'Gerar senha temporária e redefinir'}
+          icon={<KeyRound aria-hidden="true" size={18} />}
           type="button"
           onClick={() => void reset()}
           disabled={busy || disabled || blocked}
-        >
-          <KeyRound aria-hidden="true" size={18} />
-          {busy ? 'Redefinindo…' : 'Gerar senha temporária e redefinir'}
-        </button>
+        />
       )}
     </section>
   )

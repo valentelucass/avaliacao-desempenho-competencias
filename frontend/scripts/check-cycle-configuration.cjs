@@ -670,7 +670,7 @@ async function main() {
         configuration.status = 'ENCERRADO'
         await send('Page.navigate', { url: origin + '/' })
         await ready(
-          `document.querySelector('[aria-labelledby="cycle-list-title"] .status-badge')?.textContent.trim()==='Encerrado'`,
+          `document.querySelector('[aria-labelledby="cycle-list-title"] .astryx-badge')?.textContent.trim()==='Encerrado'`,
         )
         await click('Consultar')
         await ready(`document.querySelector('form input')?.value==='DEMO-2026'`)

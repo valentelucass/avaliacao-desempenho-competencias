@@ -1,29 +1,17 @@
-import {
-  type ReactNode,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  useSyncExternalStore,
-} from 'react'
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import {
   BarChart3,
   BookOpenCheck,
   BriefcaseBusiness,
-  ChevronDown,
-  ChevronUp,
   ClipboardCheck,
   FileQuestion,
   LayoutDashboard,
-  KeyRound,
   Link2,
   LoaderCircle,
-  LogOut,
   Menu,
   ShieldCheck,
   ShieldAlert,
   UsersRound,
-  X,
 } from 'lucide-react'
 import type { ApiClient } from './api/client'
 import { BuildStamp } from './ui/BuildStamp'
@@ -39,7 +27,12 @@ import {
 import { AssessmentsPanel } from './features/assessments/AssessmentsPanel'
 import { IndicatorsPanel } from './features/indicators/IndicatorsPanel'
 import { DashboardPanel } from './features/dashboard/DashboardPanel'
-import { BrandLogo } from './ui/BrandLogo'
+import { Button } from '@astryxdesign/core/Button'
+import { Heading } from '@astryxdesign/core/Heading'
+import { InternationalizationProvider } from '@astryxdesign/core/i18n'
+import ptBR from '@astryxdesign/core/locales/pt-BR.generated.js'
+import { EvaluationNavigation, type MenuGroup } from './ui/EvaluationNavigation'
+import { WorkspaceHeaderHost } from './ui/workspaceHeaderHost'
 import { ThemeToggle } from './components/ui/curtain-theme-toggle'
 import { ContextHelp } from './ui/ContextHelp'
 import { EmptyState } from './ui/EmptyState'
@@ -79,7 +72,7 @@ const profileLabels: Readonly<Record<string, string>> = {
   COLABORADOR: 'Colaborador',
 }
 
-function App({ api = defaultApiClient }: AppProps) {
+function WorkspaceApp({ api = defaultApiClient }: AppProps) {
   const [user, setUser] = useState<CurrentUser | null>(null)
   const [passwordChangeUsername, setPasswordChangeUsername] = useState<string>()
   const [voluntaryPasswordChange, setVoluntaryPasswordChange] = useState(false)
@@ -90,7 +83,7 @@ function App({ api = defaultApiClient }: AppProps) {
   const [isRestoringSession, setIsRestoringSession] = useState(true)
   const [theme, setTheme] = useState<Theme>(initialTheme)
   const menuButtonRef = useRef<HTMLButtonElement>(null)
-  const sidebarRef = useRef<HTMLDivElement>(null)
+  const [headerHost, setHeaderHost] = useState<HTMLDivElement | null>(null)
   const workspaceRef = useRef<HTMLElement>(null)
   const sessionRecoveryRef = useRef<Promise<CurrentUser | null> | null>(null)
   const location = useLocation()
@@ -99,70 +92,6 @@ function App({ api = defaultApiClient }: AppProps) {
       menuButtonRef.current?.focus({ preventScroll: true })
     }
     setIsSidebarOpen(false)
-  }, [isSidebarOpen])
-
-  useEffect(() => {
-    if (!isSidebarOpen) {
-      return undefined
-    }
-
-    const sidebar = sidebarRef.current
-    if (!sidebar) {
-      return undefined
-    }
-
-    const focusableSelector =
-      'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
-    const focusableElements = () =>
-      Array.from(sidebar.querySelectorAll<HTMLElement>(focusableSelector)).filter(
-        (element) => !element.hasAttribute('aria-hidden'),
-      )
-    const first = focusableElements()[0]
-    first?.focus()
-
-    function handleKeydown(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
-        event.preventDefault()
-        closeSidebar()
-        return
-      }
-      if (event.key !== 'Tab') {
-        return
-      }
-
-      const elements = focusableElements()
-      const firstElement = elements[0]
-      const lastElement = elements.at(-1)
-      if (!firstElement || !lastElement) {
-        return
-      }
-      if (event.shiftKey && document.activeElement === firstElement) {
-        event.preventDefault()
-        lastElement.focus()
-      } else if (!event.shiftKey && document.activeElement === lastElement) {
-        event.preventDefault()
-        firstElement.focus()
-      }
-    }
-
-    document.addEventListener('keydown', handleKeydown)
-    return () => document.removeEventListener('keydown', handleKeydown)
-  }, [closeSidebar, isSidebarOpen])
-
-  useEffect(() => {
-    if (!isSidebarOpen) {
-      return undefined
-    }
-
-    const previousDocumentOverflow = document.documentElement.style.overflow
-    const previousBodyOverflow = document.body.style.overflow
-    document.documentElement.style.overflow = 'hidden'
-    document.body.style.overflow = 'hidden'
-
-    return () => {
-      document.documentElement.style.overflow = previousDocumentOverflow
-      document.body.style.overflow = previousBodyOverflow
-    }
   }, [isSidebarOpen])
 
   useEffect(() => {
@@ -311,7 +240,11 @@ function App({ api = defaultApiClient }: AppProps) {
             ? undefined
             : () => {
                 setVoluntaryPasswordChange(false)
-                requestAnimationFrame(() => menuButtonRef.current?.focus())
+                requestAnimationFrame(() => {
+                  const trigger = menuButtonRef.current
+                  if (trigger?.getClientRects().length) trigger.focus()
+                  else workspaceRef.current?.focus({ preventScroll: true })
+                })
               }
         }
       />
@@ -431,268 +364,221 @@ function App({ api = defaultApiClient }: AppProps) {
     navigate('assessments', { journey })
   }
 
-  return (
-    <div className="application-shell">
-      <header className="application-header">
-        <div className="application-header__content">
-          <div className="brand-lockup">
-            <button
-              aria-label="Ir para o início"
-              className="brand-home-link"
-              onClick={() => navigate('dashboard')}
-              title="Ir para o início"
-              type="button"
-            >
-              <BrandLogo className="brand-logo" />
-            </button>
-            <span aria-hidden="true" className="brand-lockup__divider" />
-            <div className="application-header__title">
-              <p className="eyebrow">Painel interno</p>
-              <h1 id="page-title">Avaliação de desempenho</h1>
-            </div>
-          </div>
-          <div className="application-header__actions">
-            <ThemeToggle
-              variant="icon"
-              theme={theme}
-              className="icon-button theme-toggle"
-              onThemeChange={setTheme}
-            />
-            <button
-              aria-controls="workspace-sidebar"
-              aria-expanded={isSidebarOpen}
-              aria-label="Abrir menu"
-              className="icon-button application-header__menu"
-              onClick={() => setIsSidebarOpen((open) => !open)}
-              ref={menuButtonRef}
-              type="button"
-            >
-              <Menu aria-hidden="true" size={20} />
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {isSidebarOpen ? (
-        <button
-          aria-label="Fechar menu"
-          className="sidebar-backdrop"
-          onClick={closeSidebar}
-          type="button"
-        />
-      ) : null}
-      <div
-        aria-hidden={!isSidebarOpen}
-        aria-label="Menu de módulos"
-        aria-modal={isSidebarOpen || undefined}
-        className={`workspace-sidebar${isSidebarOpen ? ' workspace-sidebar--open' : ''}`}
-        inert={!isSidebarOpen}
-        ref={sidebarRef}
-        role="dialog"
-      >
-        <div className="workspace-sidebar__heading">
-          <span>Menu</span>
-          <button
-            aria-label="Fechar menu"
-            className="icon-button"
-            onClick={closeSidebar}
-            type="button"
-          >
-            <X aria-hidden="true" size={19} />
-          </button>
-        </div>
-        <section aria-label="Conta ativa" className="workspace-sidebar__account">
-          <span aria-hidden="true" className="user-chip__avatar">
-            {initials(user.displayName)}
-          </span>
-          <div>
-            <span className="workspace-sidebar__account-label">Conta ativa</span>
-            <strong title={user.displayName}>{user.displayName}</strong>
-            <div className="workspace-sidebar__profile-line">
-              <span className="workspace-sidebar__account-profile">{profileDescription(user)}</span>
-              {isSidebarOpen ? <ProfileAccessHelp user={user} /> : null}
-            </div>
-          </div>
-        </section>
-        <SidebarNavigation>
-          <div className="workspace-nav__section">
-            <p className="workspace-nav__label">Visão geral</p>
-            <button
-              className="workspace-nav__item"
-              type="button"
-              aria-current={activeWorkspace === 'dashboard' ? 'page' : undefined}
-              onClick={() => navigate('dashboard')}
-            >
-              <LayoutDashboard aria-hidden="true" size={17} strokeWidth={2} />
-              Início
-            </button>
-          </div>
-          {canViewAssessments ? (
-            <div className="workspace-nav__section">
-              <p className="workspace-nav__label">Avaliações</p>
-              <button
-                className="workspace-nav__item"
-                type="button"
-                aria-current={activeWorkspace === 'assessments' ? 'page' : undefined}
-                onClick={() => navigate('assessments')}
-              >
-                <ClipboardCheck aria-hidden="true" size={17} strokeWidth={2} />
-                {canViewAdministration && canViewAllAssessments
+  const groups: MenuGroup[] = [
+    {
+      title: 'Visão geral',
+      items: [
+        {
+          label: 'Início',
+          icon: <LayoutDashboard size={17} />,
+          href: workspacePath('dashboard'),
+          selected: activeWorkspace === 'dashboard',
+          select: () => navigate('dashboard'),
+        },
+      ],
+    },
+    {
+      title: 'Avaliações',
+      items: canViewAssessments
+        ? [
+            {
+              label:
+                canViewAdministration && canViewAllAssessments
                   ? 'Avaliações individuais'
-                  : 'Minhas avaliações'}
-              </button>
-            </div>
-          ) : null}
-          {canViewIndicators || canViewAdministration ? (
-            <div className="workspace-nav__section">
-              <p className="workspace-nav__label">Gestão</p>
-              {canViewIndicators ? (
-                <button
-                  className="workspace-nav__item"
-                  type="button"
-                  aria-current={activeWorkspace === 'indicators' ? 'page' : undefined}
-                  onClick={() => navigate('indicators')}
-                >
-                  <BarChart3 aria-hidden="true" size={17} strokeWidth={2} />
-                  Indicadores
-                </button>
-              ) : null}
-              {canViewAdministration ? (
-                <div className="workspace-nav__administration">
-                  <div className="workspace-nav__administration-heading">
-                    <ShieldCheck aria-hidden="true" size={17} strokeWidth={2} />
-                    Administração
-                  </div>
-                  <div className="workspace-nav__administration-items">
-                    {administrationMenuItems.map((item) => (
-                      <button
-                        aria-current={
-                          activeAdministrationSection === item.section ? 'page' : undefined
-                        }
-                        className="workspace-nav__item workspace-nav__item--nested"
-                        key={item.section}
-                        onClick={() => navigate('administration', { section: item.section })}
-                        type="button"
-                      >
-                        {item.icon}
-                        {item.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-        </SidebarNavigation>
-        <div className="workspace-sidebar__footer">
-          <button
-            className="button button--primary workspace-sidebar__password"
-            type="button"
-            disabled={isSigningOut}
-            onClick={() => {
-              closeSidebar()
-              setVoluntaryPasswordChange(true)
-            }}
-          >
-            <KeyRound aria-hidden="true" size={18} strokeWidth={2} />
-            Alterar minha senha
-          </button>
-          <button
-            className="button button--danger workspace-sidebar__sign-out"
-            disabled={isSigningOut}
-            onClick={() => void signOut()}
-            type="button"
-          >
-            <LogOut aria-hidden="true" size={17} strokeWidth={2} />
-            {isSigningOut ? 'Saindo…' : 'Sair da conta'}
-          </button>
-        </div>
-      </div>
+                  : 'Minhas avaliações',
+              icon: <ClipboardCheck size={17} />,
+              href: workspacePath('assessments'),
+              selected: activeWorkspace === 'assessments',
+              select: () => navigate('assessments'),
+            },
+          ]
+        : [],
+    },
+    {
+      title: 'Gestão',
+      items: canViewIndicators
+        ? [
+            {
+              label: 'Indicadores',
+              icon: <BarChart3 size={17} />,
+              href: workspacePath('indicators'),
+              selected: activeWorkspace === 'indicators',
+              select: () => navigate('indicators'),
+            },
+          ]
+        : [],
+    },
+    {
+      title: 'Administração',
+      items: canViewAdministration
+        ? administrationMenuItems.map((item) => ({
+            label: item.label,
+            icon: item.icon,
+            href: workspacePath('administration', { section: item.section }),
+            selected: activeAdministrationSection === item.section,
+            select: () => navigate('administration', { section: item.section }),
+          }))
+        : [],
+    },
+  ]
+  const listHeader = activeWorkspace === 'assessments' && !assessmentId && !routeState
+  const pageNames: Record<Workspace, string> = {
+    dashboard: 'Início',
+    assessments: 'Avaliações',
+    indicators: 'Indicadores',
+    administration:
+      administrationMenuItems.find((item) => item.section === activeAdministrationSection)?.label ??
+      'Administração',
+  }
+  const activeTitle = activeWorkspace ? pageNames[activeWorkspace] : 'Avaliação de desempenho'
 
-      <main className="workspace" aria-labelledby="page-title" ref={workspaceRef} tabIndex={-1}>
-        {routeState ? (
-          <WorkspaceRouteState kind={routeState} onGoToDashboard={() => navigate('dashboard')} />
-        ) : canViewAdministration || canViewAssessments || canViewIndicators ? (
-          <div className="workspace__content">
-            {activeWorkspace === 'dashboard' ? (
-              <DashboardPanel
-                canCreateAssessment={canCreateManagerAssessment || canCreateDirectorAssessment}
-                canCreateSelfAssessment={canCreateSelfAssessment}
-                onOpenAssessments={beginAssessment}
-              />
-            ) : null}
-            {activeWorkspace === 'administration' && canViewAdministration ? (
-              <AdministrationPanel
-                api={api}
-                currentUserId={user.id}
-                isSupremeAdministrator={user.supremeAdministrator === true}
-                permissions={user.permissions}
-                section={administrationSection}
-                onSessionExpired={handleSessionExpired}
-              />
-            ) : null}
-            {activeWorkspace === 'assessments' && canViewAssessments ? (
-              <AssessmentsPanel
-                api={api}
-                canCreateManagerAssessment={canCreateManagerAssessment}
-                canCreateDirectorAssessment={canCreateDirectorAssessment}
-                canCreateSelfAssessment={canCreateSelfAssessment}
-                canPublishAssessments={canPublishAssessments}
-                canReopenAssessments={canReopenAssessments}
-                canRecordFeedback={canRecordAssessmentFeedback}
-                canExportAssessments={canExportAssessments}
-                isAdministrativeView={canViewAdministration && canViewAllAssessments}
-                canUseAdministrativeFilters={
-                  canViewAdministration &&
-                  canViewAllAssessments &&
-                  canUseAdministrativeAssessmentFilters
-                }
-                journey={assessmentJourney}
-                assessmentId={assessmentId}
-                canSubmitSelfAssessment={canSubmitSelfAssessment}
-                onExitEditor={() => navigate('assessments')}
-                onSelectAssessment={(id) => navigate('assessments', { id })}
-                onSessionExpired={handleSessionExpired}
-              />
-            ) : null}
-            {activeWorkspace === 'indicators' && canViewIndicators ? (
-              <IndicatorsPanel
-                api={api}
-                canExport={canExportIndicators}
-                onSessionExpired={handleSessionExpired}
-              />
-            ) : null}
+  return (
+    <div className="ev-shell">
+      <EvaluationNavigation
+        groups={groups}
+        displayName={user.displayName}
+        profile={profileDescription(user)}
+        help={<ProfileAccessHelp user={user} />}
+        open={isSidebarOpen}
+        onOpenChange={setIsSidebarOpen}
+        onHome={() => navigate('dashboard')}
+        signingOut={isSigningOut}
+        onLogout={() => void signOut()}
+        onPassword={() => {
+          closeSidebar()
+          setVoluntaryPasswordChange(true)
+        }}
+      />
+      <div className="ev-stage">
+        <header className="ev-header">
+          <Button
+            label="Abrir menu"
+            isIconOnly
+            variant="ghost"
+            size="sm"
+            className="ev-menu-trigger"
+            icon={<Menu size={19} />}
+            aria-controls="workspace-sidebar"
+            aria-expanded={isSidebarOpen}
+            ref={menuButtonRef}
+            onClick={() => setIsSidebarOpen(true)}
+          />
+          <div className="ev-header-slot" ref={setHeaderHost}>
+            {(routeState ||
+              (!canViewAdministration && !canViewAssessments && !canViewIndicators)) && (
+              <div className="ev-header-title">
+                <span>Avaliação de desempenho</span>
+                <Heading level={1} id="page-title">
+                  {activeTitle}
+                </Heading>
+              </div>
+            )}
           </div>
-        ) : (
-          <EmptyState
-            className="card empty-state--route"
-            headingLevel={2}
-            title="Nenhum módulo disponível"
+          <ThemeToggle
+            theme={theme}
+            variant="icon"
+            className="ev-theme-trigger"
+            onThemeChange={setTheme}
+          />
+        </header>
+
+        <WorkspaceHeaderHost.Provider value={headerHost}>
+          <main
+            className="workspace ev-workspace"
+            aria-labelledby={listHeader ? 'assessments-title' : undefined}
+            aria-label={listHeader ? undefined : activeTitle}
+            ref={workspaceRef}
+            tabIndex={-1}
           >
-            Esta conta não possui permissões de negócio ativas. Solicite ao responsável o perfil
-            necessário para acessar um módulo.
-          </EmptyState>
-        )}
-      </main>
-      <footer className="application-footer application-footer--workspace">
-        <div className="application-footer__content">
-          <p className="application-footer__context">
-            <strong>Avaliação de Desempenho e Competências</strong>
-            <span>Ambiente interno</span>
-            <BuildStamp />
-          </p>
-          <p className="application-footer__credit">
-            Todos os direitos reservados à Rodogarcia. Desenvolvido por{' '}
-            <a
-              href="https://www.linkedin.com/in/dev-lucasandrade/"
-              target="_blank"
-              rel="noreferrer"
-            >
-              <strong>Lucas Andrade</strong>
-            </a>
-          </p>
-        </div>
-      </footer>
+            {routeState ? (
+              <WorkspaceRouteState
+                kind={routeState}
+                onGoToDashboard={() => navigate('dashboard')}
+              />
+            ) : canViewAdministration || canViewAssessments || canViewIndicators ? (
+              <div className="workspace__content">
+                {activeWorkspace === 'dashboard' ? (
+                  <DashboardPanel
+                    canCreateAssessment={canCreateManagerAssessment || canCreateDirectorAssessment}
+                    canCreateSelfAssessment={canCreateSelfAssessment}
+                    onOpenAssessments={beginAssessment}
+                  />
+                ) : null}
+                {activeWorkspace === 'administration' && canViewAdministration ? (
+                  <AdministrationPanel
+                    api={api}
+                    currentUserId={user.id}
+                    isSupremeAdministrator={user.supremeAdministrator === true}
+                    permissions={user.permissions}
+                    section={administrationSection}
+                    onSessionExpired={handleSessionExpired}
+                  />
+                ) : null}
+                {activeWorkspace === 'assessments' && canViewAssessments ? (
+                  <AssessmentsPanel
+                    headerHost={headerHost}
+                    api={api}
+                    canCreateManagerAssessment={canCreateManagerAssessment}
+                    canCreateDirectorAssessment={canCreateDirectorAssessment}
+                    canCreateSelfAssessment={canCreateSelfAssessment}
+                    canPublishAssessments={canPublishAssessments}
+                    canReopenAssessments={canReopenAssessments}
+                    canRecordFeedback={canRecordAssessmentFeedback}
+                    canExportAssessments={canExportAssessments}
+                    isAdministrativeView={canViewAdministration && canViewAllAssessments}
+                    canUseAdministrativeFilters={
+                      canViewAdministration &&
+                      canViewAllAssessments &&
+                      canUseAdministrativeAssessmentFilters
+                    }
+                    journey={assessmentJourney}
+                    assessmentId={assessmentId}
+                    canSubmitSelfAssessment={canSubmitSelfAssessment}
+                    onExitEditor={() => navigate('assessments')}
+                    onSelectAssessment={(id) => navigate('assessments', { id })}
+                    onSessionExpired={handleSessionExpired}
+                  />
+                ) : null}
+                {activeWorkspace === 'indicators' && canViewIndicators ? (
+                  <IndicatorsPanel
+                    api={api}
+                    canExport={canExportIndicators}
+                    onSessionExpired={handleSessionExpired}
+                  />
+                ) : null}
+              </div>
+            ) : (
+              <EmptyState
+                className="card empty-state--route"
+                headingLevel={2}
+                title="Nenhum módulo disponível"
+              >
+                Esta conta não possui permissões de negócio ativas. Solicite ao responsável o perfil
+                necessário para acessar um módulo.
+              </EmptyState>
+            )}
+          </main>
+        </WorkspaceHeaderHost.Provider>
+        <footer className="application-footer application-footer--workspace">
+          <div className="application-footer__content">
+            <p className="application-footer__context">
+              <strong>Avaliação de Desempenho e Competências</strong>
+              <span>Ambiente interno</span>
+              <BuildStamp />
+            </p>
+            <p className="application-footer__credit">
+              Todos os direitos reservados à Rodogarcia. Desenvolvido por{' '}
+              <a
+                href="https://www.linkedin.com/in/dev-lucasandrade/"
+                target="_blank"
+                rel="noreferrer"
+              >
+                <strong>Lucas Andrade</strong>
+              </a>
+            </p>
+          </div>
+        </footer>
+      </div>
     </div>
   )
 }
@@ -902,112 +788,6 @@ function profileCapabilities(user: CurrentUser): readonly ProfileCapability[] {
     : [{ label: 'Acesso disponível', description: 'usar somente a página inicial da plataforma.' }]
 }
 
-function SidebarNavigation({ children }: { children: ReactNode }) {
-  const navigationRef = useRef<HTMLElement>(null)
-  const [canScrollUp, setCanScrollUp] = useState(false)
-  const [canScrollDown, setCanScrollDown] = useState(false)
-
-  useEffect(() => {
-    const navigation = navigationRef.current
-    if (!navigation) {
-      return undefined
-    }
-
-    function syncScrollAffordances() {
-      const scrollableNavigation = navigationRef.current
-      if (!scrollableNavigation) {
-        return
-      }
-
-      const maximumScroll = scrollableNavigation.scrollHeight - scrollableNavigation.clientHeight
-      const nextCanScrollUp = scrollableNavigation.scrollTop > 1
-      const nextCanScrollDown = maximumScroll - scrollableNavigation.scrollTop > 1
-      setCanScrollUp((current) => (current === nextCanScrollUp ? current : nextCanScrollUp))
-      setCanScrollDown((current) => (current === nextCanScrollDown ? current : nextCanScrollDown))
-    }
-
-    syncScrollAffordances()
-    navigation.addEventListener('scroll', syncScrollAffordances, { passive: true })
-    window.addEventListener('resize', syncScrollAffordances)
-
-    const contentObserver = new MutationObserver(syncScrollAffordances)
-    contentObserver.observe(navigation, { childList: true, subtree: true })
-    const resizeObserver =
-      typeof ResizeObserver === 'undefined' ? undefined : new ResizeObserver(syncScrollAffordances)
-    resizeObserver?.observe(navigation)
-
-    return () => {
-      navigation.removeEventListener('scroll', syncScrollAffordances)
-      window.removeEventListener('resize', syncScrollAffordances)
-      contentObserver.disconnect()
-      resizeObserver?.disconnect()
-    }
-  }, [])
-
-  function scrollNavigation(direction: 'up' | 'down') {
-    const navigation = navigationRef.current
-    if (!navigation) {
-      return
-    }
-
-    const amount = Math.max(120, Math.round(navigation.clientHeight * 0.62))
-    const top = direction === 'up' ? -amount : amount
-    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
-    if (typeof navigation.scrollBy === 'function') {
-      navigation.scrollBy({ top, behavior: reduceMotion ? 'auto' : 'smooth' })
-      return
-    }
-    navigation.scrollTop += top
-  }
-
-  return (
-    <div
-      className="workspace-sidebar__navigation"
-      data-scroll-down={canScrollDown || undefined}
-      data-scroll-up={canScrollUp || undefined}
-    >
-      <div
-        aria-hidden="true"
-        className="workspace-sidebar__navigation-fade workspace-sidebar__navigation-fade--top"
-      />
-      {canScrollUp ? (
-        <button
-          aria-controls="workspace-sidebar"
-          aria-label="Subir no menu"
-          className="workspace-sidebar__navigation-control workspace-sidebar__navigation-control--up"
-          onClick={() => scrollNavigation('up')}
-          type="button"
-        >
-          <ChevronUp aria-hidden="true" size={18} strokeWidth={2} />
-        </button>
-      ) : null}
-      <nav
-        aria-label="Módulos disponíveis"
-        className="workspace-nav"
-        id="workspace-sidebar"
-        ref={navigationRef}
-      >
-        {children}
-      </nav>
-      <div
-        aria-hidden="true"
-        className="workspace-sidebar__navigation-fade workspace-sidebar__navigation-fade--bottom"
-      />
-      {canScrollDown ? (
-        <button
-          aria-controls="workspace-sidebar"
-          aria-label="Descer no menu"
-          className="workspace-sidebar__navigation-control workspace-sidebar__navigation-control--down"
-          onClick={() => scrollNavigation('down')}
-          type="button"
-        >
-          <ChevronDown aria-hidden="true" size={18} strokeWidth={2} />
-        </button>
-      ) : null}
-    </div>
-  )
-}
-
 function useLocation(): { pathname: string; search: string } {
   const locationKey = useSyncExternalStore(
     subscribeToLocation,
@@ -1117,16 +897,6 @@ function administrationSectionFromPath(pathname: string): AdministrationSection 
   return match?.[1] as AdministrationSection | undefined
 }
 
-function initials(displayName: string): string {
-  return displayName
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join('')
-    .toUpperCase()
-}
-
 function initialTheme(): Theme {
   try {
     const storedTheme = window.localStorage.getItem('adc-theme')
@@ -1140,4 +910,10 @@ function initialTheme(): Theme {
   return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
 }
 
-export default App
+export default function App(props: AppProps) {
+  return (
+    <InternationalizationProvider locale="pt-BR" messages={{ 'pt-BR': ptBR }}>
+      <WorkspaceApp {...props} />
+    </InternationalizationProvider>
+  )
+}

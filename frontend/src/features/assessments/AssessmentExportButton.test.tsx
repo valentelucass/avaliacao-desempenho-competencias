@@ -1,3 +1,4 @@
+import { selectAssessmentFilter } from '../../test/selectAssessmentFilter'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../../api/client'
@@ -51,9 +52,7 @@ describe('Exportar Excel da lista', () => {
     fireEvent.change(screen.getByLabelText('Nome do Gestor Responsável'), {
       target: { value: 'João' },
     })
-    fireEvent.change(screen.getByLabelText('Status da Avaliação'), {
-      target: { value: 'PUBLICADA' },
-    })
+    await selectAssessmentFilter('Status da Avaliação', 'PUBLICADA')
     fireEvent.click(screen.getByRole('button', { name: 'Aplicar filtros' }))
     await screen.findByText('Nenhuma avaliação encontrada')
     fireEvent.change(screen.getByLabelText('Nome do Gestor Responsável'), {

@@ -1,3 +1,5 @@
+import { WorkspacePageHeader } from '../../ui/WorkspacePageHeader'
+import { ActionButton } from '../../ui/ActionButton'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Printer } from 'lucide-react'
@@ -313,9 +315,13 @@ export function AssessmentEditor({
           </FeedbackMessage>
         ) : null}
         <div className="action-row print-hidden">
-          <button className="button" type="button" onClick={onBack}>
-            Voltar para a lista
-          </button>
+          <ActionButton
+            size="sm"
+            variant="secondary"
+            label="Voltar para a lista"
+            type="button"
+            onClick={onBack}
+          />
         </div>
       </section>
     )
@@ -323,35 +329,44 @@ export function AssessmentEditor({
 
   return (
     <section className="assessment-editor" aria-labelledby="assessment-title">
-      <div className="section-heading">
-        <div>
-          <p className="eyebrow">{assessment.type}</p>
-          <div className="context-help__heading">
-            <h2 id="assessment-title">Avaliação de {assessment.evaluated.displayName}</h2>
-            <ContextHelp title="Como preencher esta avaliação">
-              <p>
-                Salve o rascunho para continuar depois. A nota, a classificação e as permissões são
-                confirmadas pelo servidor quando a avaliação é enviada.
-              </p>
-            </ContextHelp>
-          </div>
-          <p className="muted">Ciclo: {assessment.cycle.name}</p>
-        </div>
-        <div className="action-row print-hidden">
-          <button
-            className="button"
-            type="button"
-            disabled={isPrinting || !hasPrintableSummary}
-            onClick={printAssessment}
-          >
-            <Printer aria-hidden="true" size={17} strokeWidth={2} />
-            {isPrinting ? 'Registrando impressão…' : 'Imprimir / PDF'}
-          </button>
-          <button className="button" type="button" onClick={onBack}>
-            Voltar para a lista
-          </button>
-        </div>
-      </div>
+      <WorkspacePageHeader
+        id="assessment-title"
+        title={<>Avaliação de {assessment.evaluated.displayName}</>}
+        group={<>{assessment.type}</>}
+        help={
+          <ContextHelp title="Como preencher esta avaliação">
+            <p>
+              Salve o rascunho para continuar depois. A nota, a classificação e as permissões são
+              confirmadas pelo servidor quando a avaliação é enviada.
+            </p>
+          </ContextHelp>
+        }
+        actions={
+          <>
+            {' '}
+            <div className="action-row print-hidden">
+              <ActionButton
+                size="sm"
+                variant="secondary"
+                label={isPrinting ? 'Registrando impressão…' : 'Imprimir / PDF'}
+                icon={<Printer aria-hidden="true" size={17} strokeWidth={2} />}
+                type="button"
+                disabled={isPrinting || !hasPrintableSummary}
+                onClick={printAssessment}
+              />
+              <ActionButton
+                size="sm"
+                variant="secondary"
+                label="Voltar para a lista"
+                type="button"
+                onClick={onBack}
+              />
+            </div>{' '}
+          </>
+        }
+      >
+        <p className="ev-page-description">Ciclo: {assessment.cycle.name}</p>
+      </WorkspacePageHeader>
 
       {!hasPrintableSummary ? (
         <p className="field-hint assessment-editor__print-hint">
@@ -483,33 +498,37 @@ export function AssessmentEditor({
         {canEditDraft || canSubmitDraft ? (
           <div className="action-row">
             {canEditDraft ? (
-              <button
-                className="button button--success"
+              <ActionButton
+                size="sm"
+                variant="primary"
+                label={isSaving ? 'Salvando…' : 'Salvar rascunho'}
                 type="button"
                 onClick={() => void saveDraft()}
                 disabled={isSaving}
-              >
-                {isSaving ? 'Salvando…' : 'Salvar rascunho'}
-              </button>
+              />
             ) : null}
             {canSubmitDraft ? (
-              <button className="button button--success" type="submit" disabled={isSaving}>
-                Enviar avaliação
-              </button>
+              <ActionButton
+                size="sm"
+                variant="primary"
+                label="Enviar avaliação"
+                type="submit"
+                disabled={isSaving}
+              />
             ) : null}
           </div>
         ) : null}
 
         {assessment.status === 'ENVIADA' && canPublishAssessment ? (
           <div className="action-row">
-            <button
-              className="button button--success"
+            <ActionButton
+              size="sm"
+              variant="primary"
+              label={isSaving ? 'Publicando…' : 'Publicar avaliação'}
               type="button"
               onClick={() => void publishAssessment()}
               disabled={isSaving}
-            >
-              {isSaving ? 'Publicando…' : 'Publicar avaliação'}
-            </button>
+            />
           </div>
         ) : null}
 
@@ -543,14 +562,14 @@ export function AssessmentEditor({
               />
             </div>
             <div className="action-row">
-              <button
-                className="button"
+              <ActionButton
+                size="sm"
+                variant="secondary"
+                label={isSaving ? 'Reabrindo…' : 'Reabrir avaliação'}
                 type="button"
                 onClick={() => void reopenAssessment()}
                 disabled={isSaving || !reopenReason.trim()}
-              >
-                {isSaving ? 'Reabrindo…' : 'Reabrir avaliação'}
-              </button>
+              />
             </div>
           </section>
         ) : null}
@@ -620,14 +639,14 @@ export function AssessmentEditor({
                   />
                 </div>
                 <div className="action-row">
-                  <button
-                    className="button button--success"
+                  <ActionButton
+                    size="sm"
+                    variant="primary"
+                    label={isSaving ? 'Salvando…' : 'Concluir feedback'}
                     type="button"
                     onClick={() => void completeFeedback()}
                     disabled={isSaving || !feedbackDate || !feedbackComment.trim()}
-                  >
-                    {isSaving ? 'Salvando…' : 'Concluir feedback'}
-                  </button>
+                  />
                 </div>
               </div>
             ) : null}

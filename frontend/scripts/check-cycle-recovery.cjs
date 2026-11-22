@@ -53,7 +53,7 @@ module.exports = async function checkCycleRecovery({ send, frameId, css }) {
     )
   const click = async (text) => {
     const coordinates = await evaluate(
-      `(()=>{const b=[...document.querySelectorAll('button')].find(b=>b.textContent.trim()===${JSON.stringify(text)});b.scrollIntoView({block:'center',behavior:'instant'});const r=b.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2}})()`,
+      `(()=>{const b=[...document.querySelectorAll('button')].find(b=>(b.getAttribute('aria-label') || b.textContent.trim())===${JSON.stringify(text)});b.scrollIntoView({block:'center',behavior:'instant'});const r=b.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2}})()`,
     )
     await send('Input.dispatchMouseEvent', {
       type: 'mousePressed',
@@ -115,6 +115,7 @@ module.exports = async function checkCycleRecovery({ send, frameId, css }) {
       await evaluate("document.querySelector('[role=alert]').textContent.includes('browser-read')"),
       true,
     )
+    await click('Fechar aviso')
     await click('Atualizar')
     await ready(
       "!document.querySelector('[role=alert]') && document.body.textContent.includes('Nenhum ciclo disponível')",
@@ -152,7 +153,7 @@ module.exports = async function checkCycleRecovery({ send, frameId, css }) {
     assert.equal(submitted.configuration.timeZone, 'America/Sao_Paulo')
     assert.equal(submitted.configuration.selfAssessmentEnabled, true)
     const successBounds = await evaluate(
-      "(()=>{const el=document.querySelector('.feedback--floating'); const r=el.getBoundingClientRect(); return {top:r.top,bottom:r.bottom,right:r.right,fixed:getComputedStyle(el.parentElement).position,insideContent:!!el.closest('.workspace')}})()",
+      "(()=>{const el=document.querySelector('.feedback-viewport .feedback-banner:has(.astryx-banner[data-status=success])'); const r=el.getBoundingClientRect(); return {top:r.top,bottom:r.bottom,right:r.right,fixed:getComputedStyle(el.parentElement).position,insideContent:!!el.closest('.workspace')}})()",
     )
     assert.equal(successBounds.fixed, 'fixed')
     assert.equal(successBounds.insideContent, false)
@@ -163,7 +164,10 @@ module.exports = async function checkCycleRecovery({ send, frameId, css }) {
       Buffer.from((await send('Page.captureScreenshot', { format: 'png' })).data, 'base64'),
     )
     if (width === 375)
-      await ready("!document.querySelector('.feedback--floating[role=status]')", 6500)
+      await ready(
+        "!document.querySelector('.feedback-viewport .feedback-banner:has(.astryx-banner[data-status=success])')",
+        6500,
+      )
     await evaluate('window.confirm = () => true')
     await click('Abrir ciclo')
     await ready(
@@ -185,9 +189,15 @@ module.exports = async function checkCycleRecovery({ send, frameId, css }) {
     )
     assert.equal(await evaluate("window.cycleRecovery.calls.filter(c=>c.method==='PUT').length"), 0)
     const errorBounds = await evaluate(
-      "(()=>{const r=document.querySelector('[role=alert]').getBoundingClientRect();return {top:r.top,bottom:r.bottom,right:r.right}})()",
+      `(() => {
+        const banner = document.querySelector('[role=alert]').closest('.feedback-banner');
+        const r = banner.getBoundingClientRect(), stack = banner.parentElement.getBoundingClientRect();
+        return {top:r.top, bottom:r.bottom, right:r.right, stackTop:stack.top, center:r.left + r.width / 2, viewport:document.documentElement.clientWidth};
+      })()`,
     )
-    assert.ok(errorBounds.top >= 0 && errorBounds.top <= 24)
+    assert.equal(errorBounds.stackTop, 16)
+    assert.ok(errorBounds.top >= errorBounds.stackTop)
+    assert.ok(Math.abs(errorBounds.center - errorBounds.viewport / 2) <= 1)
     assert.ok(errorBounds.bottom < 1000 && errorBounds.right <= width)
     assert.equal(await evaluate('document.documentElement.scrollWidth > innerWidth + 1'), false)
     await evaluate(
@@ -206,7 +216,7 @@ module.exports = async function checkCycleRecovery({ send, frameId, css }) {
       dialog.setAttribute('role',kind==='account'?'dialog':'alertdialog');dialog.setAttribute('aria-modal','true');
       dialog.style.minHeight='2000px';
       const viewport=document.createElement('div');viewport.className='feedback-viewport';
-      viewport.appendChild(document.querySelector('[role=alert]').cloneNode(true));
+      viewport.appendChild(document.querySelector('[role=alert]').closest('.feedback-banner').cloneNode(true));
       dialog.appendChild(viewport);backdrop.appendChild(dialog);document.body.appendChild(backdrop);
       backdrop.scrollTop=600;
       const r=viewport.getBoundingClientRect();const result={top:r.top,right:r.right,scroll:backdrop.scrollTop};
@@ -219,6 +229,7 @@ module.exports = async function checkCycleRecovery({ send, frameId, css }) {
       )
       assert.ok(modalBounds.right <= width)
     }
+    await click('Fechar aviso')
     await click('Novo ciclo')
     await fill('Código do ciclo', '2026')
     await fill('Nome do ciclo', 'Avaliação de Desempenho 2026')

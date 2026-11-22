@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useEffectEvent, useRef, useState } from 'react'
 import type { ReactNode, Ref } from 'react'
 import { createPortal } from 'react-dom'
-import { AlertCircle, CheckCircle2, TriangleAlert, X } from 'lucide-react'
+import { Banner } from '@astryxdesign/core/Banner'
 
 type FeedbackProps = {
   kind: 'error' | 'info' | 'status' | 'warning'
@@ -57,7 +57,8 @@ function FloatingFeedback({ kind, children, id, ref, tabIndex, onDismiss }: Feed
     if (!node) return
     // Dentro de um modal, manter os avisos na área acessível ao seu controle de foco.
     const parent =
-      node.closest<HTMLElement>('[role="dialog"], [role="alertdialog"]') ?? document.body
+      node.closest<HTMLElement>('dialog[open], [role="dialog"], [role="alertdialog"]') ??
+      document.body
     let entry = viewports.get(parent)
     if (!entry) {
       const element = document.createElement('div')
@@ -78,7 +79,6 @@ function FloatingFeedback({ kind, children, id, ref, tabIndex, onDismiss }: Feed
     }
   }, [])
 
-  const Icon = kind === 'error' ? AlertCircle : kind === 'warning' ? TriangleAlert : CheckCircle2
   return (
     <>
       <span ref={attachAnchor} hidden id={!visible ? id : undefined}>
@@ -86,11 +86,22 @@ function FloatingFeedback({ kind, children, id, ref, tabIndex, onDismiss }: Feed
       </span>
       {viewport && visible
         ? createPortal(
-            <div
-              className={`feedback feedback--${kind} feedback--floating`}
-              role={kind === 'error' ? 'alert' : 'status'}
-              aria-atomic="true"
-              id={id}
+            <Banner
+              className="feedback-banner"
+              status={kind === 'status' ? 'success' : kind}
+              title={
+                <span role={kind === 'error' ? 'alert' : 'status'} aria-atomic="true" id={id}>
+                  {children}
+                </span>
+              }
+              isDismissable
+              dismissLabel="Fechar aviso"
+              onDismiss={() => {
+                if (previousFocus.current?.isConnected)
+                  previousFocus.current.focus({ preventScroll: true })
+                setDismissed(children)
+                onDismiss?.()
+              }}
               ref={ref}
               tabIndex={tabIndex}
               onPointerEnter={() => setPointerInside(true)}
@@ -106,23 +117,7 @@ function FloatingFeedback({ kind, children, id, ref, tabIndex, onDismiss }: Feed
               onBlur={(event) => {
                 if (!event.currentTarget.contains(event.relatedTarget)) setFocusInside(false)
               }}
-            >
-              <Icon aria-hidden="true" size={21} />
-              <span className="feedback__message">{children}</span>
-              <button
-                type="button"
-                className="feedback__dismiss"
-                aria-label="Fechar aviso"
-                onClick={() => {
-                  if (previousFocus.current?.isConnected)
-                    previousFocus.current.focus({ preventScroll: true })
-                  setDismissed(children)
-                  onDismiss?.()
-                }}
-              >
-                <X aria-hidden="true" size={19} />
-              </button>
-            </div>,
+            />,
             viewport,
           )
         : null}

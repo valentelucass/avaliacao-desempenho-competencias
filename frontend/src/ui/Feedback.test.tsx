@@ -25,7 +25,9 @@ describe('FeedbackMessage', () => {
     )
     const role = kind === 'error' ? 'alert' : 'status'
     act(() => vi.advanceTimersByTime(delay - 1))
-    expect(screen.getByRole(role)).toBeInTheDocument()
+    expect(
+      screen.getByText('Resultado da operação.', { selector: `[role="${role}"]` }),
+    ).toBeInTheDocument()
     act(() => vi.advanceTimersByTime(1))
     expect(screen.queryByRole(role)).not.toBeInTheDocument()
     expect(dismiss).toHaveBeenCalledTimes(1)
@@ -61,11 +63,11 @@ describe('FeedbackMessage', () => {
     hidden.mockReturnValue(true)
     fireEvent(document, new Event('visibilitychange'))
     act(() => vi.advanceTimersByTime(20000))
-    expect(screen.getByRole('status')).toBeInTheDocument()
+    expect(screen.getByText('Salvo.', { selector: '[role="status"]' })).toBeInTheDocument()
     hidden.mockReturnValue(false)
     fireEvent(document, new Event('visibilitychange'))
     act(() => vi.advanceTimersByTime(4999))
-    expect(screen.getByRole('status')).toBeInTheDocument()
+    expect(screen.getByText('Salvo.', { selector: '[role="status"]' })).toBeInTheDocument()
     act(() => vi.advanceTimersByTime(1))
     expect(screen.queryByRole('status')).not.toBeInTheDocument()
   })
@@ -119,11 +121,16 @@ describe('FeedbackMessage', () => {
     expect(region.parentElement).toBe(document.body)
     expect(container).not.toContainElement(region)
     expect(within(region).getByRole('alert')).toHaveTextContent('Erro com referência segura.')
-    expect(within(region).getByRole('status')).toHaveTextContent('Operação concluída.')
+    expect(
+      within(region).getByText('Operação concluída.', { selector: '[role="status"]' }),
+    ).toBeVisible()
     expect(input).toHaveFocus()
-    fireEvent.click(within(screen.getByRole('alert')).getByRole('button', { name: 'Fechar aviso' }))
+    const errorBanner = within(region).getByRole('alert').closest<HTMLElement>('.astryx-banner')!
+    fireEvent.click(within(errorBanner).getByRole('button', { name: 'Fechar aviso' }))
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
-    expect(screen.getByRole('status')).toBeInTheDocument()
+    expect(
+      screen.getByText('Operação concluída.', { selector: '[role="status"]' }),
+    ).toBeInTheDocument()
     unmount()
     expect(screen.queryByRole('region', { name: 'Notificações' })).not.toBeInTheDocument()
     input.remove()
@@ -179,6 +186,8 @@ describe('FeedbackMessage', () => {
     rerender(<FeedbackMessage kind="warning">Confira o período.</FeedbackMessage>)
     fireEvent.click(screen.getByRole('button', { name: 'Fechar aviso' }))
     rerender(<FeedbackMessage kind="warning">Confira o questionário.</FeedbackMessage>)
-    expect(screen.getByRole('status')).toHaveTextContent('Confira o questionário.')
+    expect(
+      screen.getByText('Confira o questionário.', { selector: '[role="status"]' }),
+    ).toBeVisible()
   })
 })
