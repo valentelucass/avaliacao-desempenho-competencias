@@ -6,6 +6,12 @@ O responsável escolheu a proposta 05, aprovou a capa com competências e feedba
 
 O Edge conferiu a tela em oito larguras entre 320 e 1440 pixels. As treze animações pararam no ponto corrente após o clique. A digitação, a visibilidade da senha, o envio do acesso e a recuperação foram exercitados com a API simulada. A revisão das páginas percorreu 14 rotas e variações da sessão de demonstração, incluindo cinco seções administrativas, indicadores, lista e detalhe das avaliações. O teste confirmou o download de Excel com filtros e o alinhamento dos avisos. Evidências locais em `outputs/fichario-animado` e nos relatórios `filing-qa.json` e `rotas.json` da prévia.
 
+O código aprovado está na `main` dos dois repositórios no commit `d52d872`. A suíte executou 330 testes da interface e 353 testes Java, todos aprovados. O Maven registrou mais 21 integrações SQL de DEV como optativas. O Edge confirmou quatro downloads íntegros de Excel, a aplicação dos filtros e a impressão das 21 competências em uma página. As auditorias de dependências Java e npm passaram.
+
+Em 22/11, o publicador de produção compilou a mesma versão e interrompeu a promoção na validação de leitura do SQL Server. O Windows recusou a abertura da credencial DPAPI configurada para publicação, inclusive com a mesma conta elevada. O executor reconciliou o certificado público local com a identidade da instância e preservou o certificado anterior. A tentativa de autenticação integrada dessa conta recebeu recusa de login do SQL Server. A publicação depende de uma credencial operacional válida na VM.
+
+Às 15h39 de Brasília, o domínio público e a porta local serviam o HTML e o JavaScript do release anterior `b3ffa328918b402683a1eed0a487f26f`, conferidos por SHA-256. A API respondeu 200 à inicialização de segurança e 401 à consulta de sessão anônima. Os dois processos da Avaliação estavam online com os PIDs anteriores. A versão candidata `b78b049f9cb54951974683686921a535` ficou em `BUILD_COMPLETE`.
+
 ## Prévia do redesign da Avaliação em 22/11/2026
 
 A branch local `design/astryx-avaliacao` aplica a versão do Astryx usada pelo Dashboard à navegação, aos cabeçalhos, à lista de avaliações e aos controles das telas de autenticação, indicadores e administração. Os fundos gerais são neutros. Os filtros, estados vazios e linhas alternadas usam detalhes verdes. O menu recolhido conserva a marca compacta. O comando Atualizar fica no cabeçalho.
