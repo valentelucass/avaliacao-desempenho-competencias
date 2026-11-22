@@ -46,6 +46,10 @@ async function main() {
       } else if (route === '/api/v1/auth/sessions') {
         status = 401
         body = { code: 'AUTHENTICATION_FAILED' }
+      } else if (route === '/api/v1/auth/sessions/current' && mode === 'authenticated') {
+        assert.equal(request.method, 'DELETE')
+        assert.equal(request.headers['x-csrf-token'], 'csrf-synthetic-browser')
+        status = 204
       } else {
         status = 401
         body = { code: 'AUTHENTICATION_REQUIRED' }
@@ -247,34 +251,65 @@ async function main() {
             ),
             true,
           )
+          const footer = await evaluate(`(() => {
+            const area = document.querySelector(${JSON.stringify(scope)});
+            const buttons = [...area.querySelectorAll('button')];
+            const name = button => button.getAttribute('aria-label') || button.textContent.trim();
+            const password = buttons.find(button => name(button) === 'Alterar minha senha');
+            return {
+              passwordVisible: password?.getBoundingClientRect().height >= 34,
+              passwordIcon: Boolean(password?.querySelector('svg')),
+              passwordVariant: password?.dataset.variant,
+              containsLogout: buttons.some(button => ['Sair da conta', 'Sair'].includes(name(button)))
+            };
+          })()`)
+          assert.deepEqual(footer, {
+            passwordVisible: true,
+            passwordIcon: true,
+            passwordVariant: 'ghost',
+            containsLogout: false,
+          })
+          if (width < 1024) {
+            for (const type of ['keyDown', 'keyUp']) {
+              await send('Input.dispatchKeyEvent', {
+                type,
+                key: 'Escape',
+                code: 'Escape',
+                windowsVirtualKeyCode: 27,
+              })
+            }
+            await ready("document.querySelector('dialog[open]') === null")
+          }
           for (const theme of ['light', 'dark']) {
-            await evaluate(`document.documentElement.dataset.theme=${JSON.stringify(theme)}`)
-            const footer = await evaluate(`(() => {
-              const area = document.querySelector(${JSON.stringify(scope)});
-              const buttons = [...area.querySelectorAll(':scope > button')].filter(b => ['Alterar minha senha', 'Sair da conta'].includes(b.textContent.trim()));
-              buttons[0].scrollIntoView({block:'nearest'});
-              const [password, exit] = buttons.map(button => button.getBoundingClientRect());
-              const r = area.getBoundingClientRect();
+            await evaluate(`if (document.documentElement.dataset.theme !== ${JSON.stringify(theme)}) {
+              document.querySelector('.ev-header .ev-theme-trigger').click();
+            }`)
+            const header = await evaluate(`(() => {
+              const bar = document.querySelector('.ev-header');
+              const toggle = bar.querySelector('.ev-theme-trigger');
+              const exit = bar.querySelector('button[aria-label="Sair da conta"]');
+              toggle.focus();
+              const left = toggle.getBoundingClientRect(), right = exit.getBoundingClientRect();
+              const r = bar.getBoundingClientRect();
               return {
-                count:buttons.length, gap:exit.top - password.bottom,
-                aligned:Math.abs(password.left - exit.left) < 1 && Math.abs(password.width - exit.width) < 1,
-                height:Math.min(password.height,exit.height),
-                icons:buttons.every(button => button.querySelector('svg')),
-                variants:buttons.map(button => button.dataset.variant),
-                clip:{x:r.x,y:r.y,width:r.width,height:r.height,scale:1}
+                theme: document.documentElement.dataset.theme,
+                curtain: Boolean(document.querySelector('.adc-theme-curtain')),
+                gap: right.left - left.right,
+                aligned: Math.abs((left.top + left.bottom) - (right.top + right.bottom)) < 2,
+                height: right.height, icon: Boolean(exit.querySelector('svg')),
+                variant: exit.dataset.variant,
+                clip: {x:r.x,y:r.y,width:r.width,height:r.height,scale:1}
               };
             })()`)
-            assert.equal(footer.count, 2)
+            assert.equal(header.theme, theme)
+            assert.equal(header.curtain, false)
             assert.ok(
-              footer.gap >= 2 && footer.height >= 34,
-              'Ações pessoais devem ter alvos separados',
+              header.gap >= 2 && header.height >= 32,
+              `Ações do cabeçalho em ${width} px: espaço ${header.gap}, altura ${header.height}`,
             )
-            assert.equal(footer.aligned, true)
-            assert.equal(footer.icons, true)
-            assert.deepEqual(footer.variants, ['ghost', 'ghost'])
-            await evaluate(
-              `[...document.querySelector(${JSON.stringify(scope)}).querySelectorAll('button')].find(b=>b.textContent.trim()==='Alterar minha senha').focus()`,
-            )
+            assert.equal(header.aligned, true)
+            assert.equal(header.icon, true)
+            assert.equal(header.variant, 'ghost')
             await send('Input.dispatchKeyEvent', {
               type: 'keyDown',
               key: 'Tab',
@@ -282,20 +317,30 @@ async function main() {
               windowsVirtualKeyCode: 9,
             })
             assert.equal(
-              await evaluate("document.activeElement.textContent.trim() === 'Sair da conta'"),
+              await evaluate(
+                'document.activeElement.matches(\'.ev-header button[aria-label="Sair da conta"]\')',
+              ),
               true,
             )
             if (width === 1440) {
               const screenshot = await send('Page.captureScreenshot', {
                 format: 'png',
-                clip: footer.clip,
+                clip: header.clip,
               })
               fs.writeFileSync(
-                browserArtifactPath(`ui062-menu-${theme}.png`),
+                browserArtifactPath(`header-account-${theme}.png`),
                 Buffer.from(screenshot.data, 'base64'),
               )
             }
           }
+          await evaluate('document.activeElement.click()')
+          await ready('document.querySelector("input[autocomplete=username]") !== null')
+          assert.equal(
+            calls.filter(
+              (call) => call.route === '/api/v1/auth/sessions/current' && call.method === 'DELETE',
+            ).length,
+            1,
+          )
         }
         console.log(
           JSON.stringify({
