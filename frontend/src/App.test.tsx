@@ -333,7 +333,7 @@ describe('App', () => {
     expect(api.currentUser).toHaveBeenCalledTimes(2)
   })
 
-  it('preserva o campo de login ao animar o tema e restaura a preferência ao remontar', async () => {
+  it('troca o tema de imediato, preserva o login digitado e restaura a preferência ao remontar', async () => {
     window.localStorage.setItem('adc-theme', 'light')
     const api = createApi()
     try {
@@ -342,7 +342,8 @@ describe('App', () => {
         target: { value: 'conta-ficticia' },
       })
       fireEvent.click(screen.getByRole('button', { name: 'Ativar modo escuro' }))
-      await waitFor(() => expect(document.documentElement).toHaveAttribute('data-theme', 'dark'))
+      expect(document.documentElement).toHaveAttribute('data-theme', 'dark')
+      expect(document.querySelector('.adc-theme-curtain')).toBeNull()
       expect(screen.getByLabelText('E-mail ou login')).toHaveValue('conta-ficticia')
       expect(window.localStorage.getItem('adc-theme')).toBe('dark')
       expect(api.signIn).not.toHaveBeenCalled()
@@ -417,8 +418,9 @@ describe('App', () => {
 
     renderWithExistingSession(api)
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Abrir menu' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Sair da conta' }))
+    const signOut = await screen.findByRole('button', { name: 'Sair da conta' })
+    expect(screen.getByRole('banner')).toContainElement(signOut)
+    fireEvent.click(signOut)
 
     expect(await screen.findByLabelText('E-mail ou login')).toBeInTheDocument()
     expect(api.signOut).toHaveBeenCalledTimes(1)
@@ -1653,6 +1655,9 @@ describe('App', () => {
       within(screen.getByRole('banner')).getByRole('button', { name: 'Ativar modo escuro' }),
     ).toBeVisible()
     expect(screen.queryByRole('region', { name: 'Conta ativa' })).not.toBeInTheDocument()
+    expect(
+      within(screen.getByRole('banner')).getByRole('button', { name: 'Sair da conta' }),
+    ).toBeVisible()
     fireEvent.click(screen.getByRole('button', { name: 'Abrir menu' }))
     const drawer = await screen.findByRole('dialog', { name: 'Menu de módulos' })
     expect(within(drawer).getByLabelText('Conta ativa')).toHaveTextContent('Pessoa')
@@ -1672,7 +1677,7 @@ describe('App', () => {
     expect(await screen.findByRole('tooltip')).toHaveTextContent(
       'Vínculos, ciclo, questionário e escopo continuam validados pelo servidor.',
     )
-    expect(within(drawer).getByRole('button', { name: 'Sair da conta' })).toBeInTheDocument()
+    expect(within(drawer).queryByRole('button', { name: 'Sair da conta' })).not.toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Ativar modo escuro' }))
 

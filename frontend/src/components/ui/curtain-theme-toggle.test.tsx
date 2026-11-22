@@ -50,16 +50,18 @@ describe('ThemeToggle com cortina', () => {
 
   it('reutiliza data-theme existente no modo independente', () => {
     document.documentElement.dataset.theme = 'dark'
-    render(<ThemeToggle variant="icon" defaultTheme="light" duration={0} />)
+    motionPreference(false)
+    render(<ThemeToggle variant="icon" defaultTheme="light" />)
     fireEvent.click(screen.getByRole('button', { name: 'Ativar modo claro' }))
     expect(document.documentElement).toHaveAttribute('data-theme', 'light')
+    expect(curtain()).toBeNull()
     expect(document.documentElement).not.toHaveClass('dark')
   })
 
   it('cobre a página antes de mudar, trava repetição e notifica somente uma vez', () => {
     vi.useFakeTimers()
     const onThemeChange = vi.fn()
-    render(<ThemeToggle variant="icon" onThemeChange={onThemeChange} />)
+    render(<ThemeToggle variant="icon" onThemeChange={onThemeChange} duration={550} />)
     const button = screen.getByRole('button', { name: 'Ativar modo escuro' })
     button.focus()
     fireEvent.click(button)
@@ -104,7 +106,7 @@ describe('ThemeToggle com cortina', () => {
   it('troca imediatamente e sem cortina com movimento reduzido', () => {
     motionPreference(true)
     const onThemeChange = vi.fn()
-    render(<ThemeToggle variant="icon" onThemeChange={onThemeChange} />)
+    render(<ThemeToggle variant="icon" onThemeChange={onThemeChange} duration={550} />)
     fireEvent.click(screen.getByRole('button', { name: 'Ativar modo escuro' }))
     expect(onThemeChange).toHaveBeenCalledExactlyOnceWith('dark')
     expect(curtain()).toBeNull()
@@ -114,7 +116,7 @@ describe('ThemeToggle com cortina', () => {
     vi.useFakeTimers()
     const media = motionPreference(false)
     const onThemeChange = vi.fn()
-    render(<ThemeToggle variant="icon" onThemeChange={onThemeChange} />)
+    render(<ThemeToggle variant="icon" onThemeChange={onThemeChange} duration={550} />)
     fireEvent.click(screen.getByRole('button', { name: 'Ativar modo escuro' }))
     act(() => {
       media.matches = true
@@ -129,7 +131,7 @@ describe('ThemeToggle com cortina', () => {
   it('finaliza antes da impressão sem deixar sobreposição ou callback duplicado', () => {
     vi.useFakeTimers()
     const onThemeChange = vi.fn()
-    render(<ThemeToggle variant="icon" onThemeChange={onThemeChange} />)
+    render(<ThemeToggle variant="icon" onThemeChange={onThemeChange} duration={550} />)
     fireEvent.click(screen.getByRole('button', { name: 'Ativar modo escuro' }))
     fireEvent(window, new Event('beforeprint'))
     expect(curtain()).toBeNull()
@@ -140,7 +142,9 @@ describe('ThemeToggle com cortina', () => {
   it('cancela os timers ao desmontar, sem trocar o tema depois de sair da tela', () => {
     vi.useFakeTimers()
     const onThemeChange = vi.fn()
-    const { unmount } = render(<ThemeToggle variant="icon" onThemeChange={onThemeChange} />)
+    const { unmount } = render(
+      <ThemeToggle variant="icon" onThemeChange={onThemeChange} duration={550} />,
+    )
     fireEvent.click(screen.getByRole('button', { name: 'Ativar modo escuro' }))
     unmount()
     expect(curtain()).toBeNull()
@@ -149,10 +153,10 @@ describe('ThemeToggle com cortina', () => {
     expect(onThemeChange).not.toHaveBeenCalled()
   })
 
-  it('libera o controle mesmo sem animationend e normaliza duração inválida', () => {
+  it('libera o controle mesmo sem animationend quando a demonstração pede animação', () => {
     vi.useFakeTimers()
     const onThemeChange = vi.fn()
-    render(<ThemeToggle variant="icon" onThemeChange={onThemeChange} duration={Number.NaN} />)
+    render(<ThemeToggle variant="icon" onThemeChange={onThemeChange} duration={550} />)
     fireEvent.click(screen.getByRole('button', { name: 'Ativar modo escuro' }))
     act(() => vi.advanceTimersByTime(670))
     expect(curtain()).toHaveAttribute('data-phase', 'rising')

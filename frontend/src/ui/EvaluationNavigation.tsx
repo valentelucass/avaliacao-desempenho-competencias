@@ -2,7 +2,7 @@ import { Avatar } from '@astryxdesign/core/Avatar'
 import { Button } from '@astryxdesign/core/Button'
 import { MobileNav } from '@astryxdesign/core/MobileNav'
 import { SideNav, SideNavItem, SideNavSection } from '@astryxdesign/core/SideNav'
-import { KeyRound, LogOut, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+import { KeyRound, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { type ReactNode, useEffect, useState, useSyncExternalStore } from 'react'
 
 type MenuItem = {
@@ -40,7 +40,6 @@ export function EvaluationNavigation({
   onOpenChange,
   onHome,
   onPassword,
-  onLogout,
   signingOut,
 }: {
   groups: MenuGroup[]
@@ -51,7 +50,6 @@ export function EvaluationNavigation({
   onOpenChange: (open: boolean) => void
   onHome: () => void
   onPassword: () => void
-  onLogout: () => void
   signingOut: boolean
 }) {
   const desktop = useSyncExternalStore(subscribe, isDesktop, () => false)
@@ -117,15 +115,6 @@ export function EvaluationNavigation({
         icon={<KeyRound size={16} aria-hidden="true" />}
         isDisabled={signingOut}
         onClick={onPassword}
-      />
-      <Button
-        label={signingOut ? 'Saindo…' : 'Sair da conta'}
-        variant="ghost"
-        size="sm"
-        isIconOnly={compact}
-        icon={<LogOut size={16} aria-hidden="true" />}
-        isDisabled={signingOut}
-        onClick={onLogout}
       />
       {desktop && (
         <Button

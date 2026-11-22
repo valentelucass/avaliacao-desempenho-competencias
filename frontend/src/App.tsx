@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   Link2,
   LoaderCircle,
+  LogOut,
   Menu,
   ShieldCheck,
   ShieldAlert,
@@ -443,7 +444,6 @@ function WorkspaceApp({ api = defaultApiClient }: AppProps) {
         onOpenChange={setIsSidebarOpen}
         onHome={() => navigate('dashboard')}
         signingOut={isSigningOut}
-        onLogout={() => void signOut()}
         onPassword={() => {
           closeSidebar()
           setVoluntaryPasswordChange(true)
@@ -480,6 +480,16 @@ function WorkspaceApp({ api = defaultApiClient }: AppProps) {
             className="ev-theme-trigger"
             onThemeChange={setTheme}
           />
+          <Button
+            label={isSigningOut ? 'Saindo…' : 'Sair da conta'}
+            variant="ghost"
+            icon={<LogOut size={16} aria-hidden="true" />}
+            className="ev-sign-out"
+            isDisabled={isSigningOut}
+            onClick={() => void signOut()}
+          >
+            <span className="ev-sign-out-label">{isSigningOut ? 'Saindo…' : 'Sair'}</span>
+          </Button>
         </header>
 
         <WorkspaceHeaderHost.Provider value={headerHost}>

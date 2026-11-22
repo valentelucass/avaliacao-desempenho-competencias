@@ -1,4 +1,6 @@
-# Alternância de tema com cortina — ADC-UI-049
+# Alternância de tema
+
+Desde 22/11/2026, os cabeçalhos do login e da área autenticada aplicam a troca de tema imediatamente ao clique ou ao acionamento pelo teclado. A preferência continua em `adc-theme`. A demonstração isolada do componente solicita explicitamente uma duração positiva para exibir o efeito descrito abaixo.
 
 ## Integração localizada
 
@@ -6,7 +8,7 @@ O componente enviado pelo usuário foi adaptado em `frontend/src/components/ui/c
 
 O aplicativo continua responsável por `theme`, pelo atributo `data-theme` e pela preferência visual `adc-theme`. O componente controlado apenas chama `onThemeChange(next)`; não escreve em storage nem cria uma classe global `dark`. Não há qualquer mudança em cookies, credenciais, API, permissões ou dados de avaliação. Os CSS globais e as tabelas da tarefa anterior não foram modificados nesta integração.
 
-A cortina usa as cores-base atuais da plataforma (`#edf3f8`/`#0b1220`) e animação de escala vertical. A troca acontece ao fim da descida, com `animationend`, antes da subida. Um timeout de segurança evita prender a interface se o navegador não entregar o evento. Duração padrão de 550 ms por fase; `duration={0}` desativa a animação. A trava síncrona impede repetições durante o movimento.
+Na demonstração animada, a troca acontece ao fim da descida, com `animationend`, antes da subida. O componente usa duração zero por padrão. Com duração positiva, a trava síncrona impede repetições durante o movimento e o timeout libera a interface caso o navegador suprima o evento.
 
 Uma sobreposição temporária via portal no body evita recorte pelo cabeçalho. Ela é decorativa (`aria-hidden`) e intercepta o ponteiro enquanto cobre a página; não move foco nem interfere no conteúdo dos campos. O botão mantém foco por teclado e sinaliza indisponibilidade transitória com `aria-disabled`. Os timers/listeners são removidos ao desmontar; sair da tela antes da troca não dispara um callback atrasado.
 
@@ -33,7 +35,7 @@ import { ThemeToggle } from '@/components/ui/curtain-theme-toggle'
 
 ## Verificação e limites
 
-Testes unitários cobrem estado inicial/controlado, fases, repetição, foco preservado, callback único, preferência de movimento reduzido, impressão, desmontagem, fallback sem evento, pesquisa da variante appbar e axe. O teste existente de `App` aguarda a troca animada e ainda exige persistência em `adc-theme`; outra regressão confirma que o campo de login permanece preenchido e a preferência é restaurada ao remontar. Resultado final: 126 testes front-end em 14 arquivos aprovados, além do gate completo registrado no `STATES.md`.
+Os testes do componente cobrem o estado controlado e o independente, a acessibilidade e as fases da demonstração animada. No aplicativo, o teste de integração exige que o tema mude no mesmo clique e que o login digitado continue preenchido. Ao remontar, o aplicativo recupera a preferência salva em `adc-theme`.
 
 O ensaio `check-curtain-theme-toggle.cjs`, chamado pelo gate existente de impressão, compila em memória uma fixture React separada da SPA, sem API/storage/dados reais. Mede quadros intermediários da animação em Edge com 375/1440 px, acionamento por Enter, foco visível, troca nos dois sentidos, sincronização das tabelas Reshaped, preservação de campo, movimento reduzido, ocultação na impressão e desmontagem. Screenshots fictícios ficam em `frontend/dist/curtain-theme-toggle-375.png` e `curtain-theme-toggle-1440.png` (ignorados pelo Git).
 

@@ -25,7 +25,7 @@ export interface ThemeToggleProps {
   barHeight?: number
   buttonSize?: number
   duration?: number
-  /** Chamado uma vez, quando a cortina cobre a página e o tema pode mudar. */
+  /** Chamado quando a escolha de tema é aplicada. */
   onThemeChange?: (theme: Theme) => void
   children?: ReactNode
   /** Permite conservar o botão e suas dimensões atuais na integração. */
@@ -48,7 +48,7 @@ export function ThemeToggle({
   theme: controlledTheme,
   barHeight,
   buttonSize,
-  duration = 550,
+  duration = 0,
   onThemeChange,
   children,
   className,
@@ -61,7 +61,7 @@ export function ThemeToggle({
   const timers = useRef<number[]>([])
   const finishAnimation = useRef<(() => void) | null>(null)
   const advanceAnimation = useRef<(() => void) | null>(null)
-  const animationDuration = Number.isFinite(duration) ? Math.max(0, duration) : 550
+  const animationDuration = Number.isFinite(duration) ? Math.max(0, duration) : 0
 
   const clearTimers = useCallback(() => {
     timers.current.forEach(window.clearTimeout)

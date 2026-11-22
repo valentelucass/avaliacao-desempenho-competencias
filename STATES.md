@@ -1,5 +1,11 @@
 # Estado atual — Avaliação de Desempenho e Competências
 
+## Marca, tema e saída da conta em 22/11/2026
+
+O ajuste solicitado aplica preto à marca Rodogarcia no tema claro e troca o tema imediatamente. A ação Sair passou para a extremidade direita do cabeçalho autenticado, depois do seletor de tema, com o ícone e o botão discreto usados pelo Dashboard. O celular usa o ícone com nome acessível, seguindo o WMS. A ação continua ligada ao encerramento de sessão existente.
+
+Os 75 testes locais de aplicativo e de tema passaram. No Edge, o teste com sessão fictícia conferiu a marca preta no claro e branca no escuro, a ausência da cortina nos dois sentidos e a permanência da preferência após recarregar. O botão de saída estava no cabeçalho de 320 a 1440 px e encerrou a sessão com uma única chamada HTTP que retornou 204.
+
 ## Fichário de avaliações aprovado em 22/11/2026
 
 A versão aprovada entrou em produção em 22/11/2026 às 15h57 de Brasília pelo comando `iniciar-prod.bat --publicar`. O release `2a04b34e020148d2a792c5c133a45ea9` usa o código do commit `d52d872`. Os 30 arquivos da distribuição instalada conferem com os hashes aprovados. O domínio público e a porta local serviram o mesmo HTML, JavaScript, CSS e arquivos de marca. Os dois processos da Avaliação ficaram online, e o JAR ativo pertence ao release. A API respondeu 200 à inicialização de segurança e 401 à consulta anônima de sessão. O release anterior está preservado para recuperação.
