@@ -4,6 +4,8 @@ Aplicação interna para avaliações de colaboradores, com cálculo no servidor
 
 ## Publicar atualizações na VM
 
+Antes de publicar, a conta de operação pode conferir a credencial do SQL Server e a estrutura do `AVALIACAO_PROD` em modo de leitura. [Procedimento no manual do banco](database/README.md#conferir-a-credencial-antes-de-publicar-na-vm).
+
 Execute `iniciar-prod.bat` sem argumentos para validar, compilar e publicar as atualizações de código. O comando mostra as etapas no terminal e mantém o gate de qualidade antes da publicação. `--publicar` continua aceito como equivalente. Ao terminar com sucesso, acesse https://formulario.rodogarcia.com.br/.
 
 O frontend candidato e as capturas de teste ficam em `backend/target/frontend-staging/<id>/`, fora da pasta servida. A URL pública da API é aplicada somente ao build candidato; os testes de navegador usam dados fictícios e transporte isolado. Depois de todo o gate passar, o launcher confere os hashes aprovados, preserva um backup e promove os arquivos, com troca atômica do index por último. Falhas no gate preservam a tela em uso; erros durante a promoção acionam a recuperação dos arquivos anteriores antes de qualquer operação PM2.

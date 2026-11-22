@@ -117,6 +117,35 @@ O runner permanece restrito aos alvos locais, sem recriação ou exclusão de ba
 
 Se já existir um banco com o nome esperado, o runner exige o marcador interno deste projeto antes de criar qualquer tabela. Um banco sem marcador ou marcado por outro projeto é recusado, para evitar alterar uma base homônima por engano.
 
+## Conferir a credencial antes de publicar na VM
+
+Na VM da Avaliação, a variável de usuário `RODOGARCIA_SQL_ADMIN_CREDENTIAL_FILE` aponta para o arquivo protegido do login SQL de publicação. A senha permanece cifrada pelo Windows. Em `database/config.production.local.bat`, a linha abaixo usa a referência atual da VM. Ela deve ficar depois da configuração de `ADC_DATABASE_CREDENTIAL_FILE` para que uma cópia antiga tenha menor precedência.
+
+```bat
+if defined RODOGARCIA_SQL_ADMIN_CREDENTIAL_FILE set "ADC_DATABASE_CREDENTIAL_FILE=%RODOGARCIA_SQL_ADMIN_CREDENTIAL_FILE%"
+```
+
+Antes de iniciar uma publicação, abra o Windows PowerShell da conta que publica e execute a conferência abaixo na raiz do repositório. Ela verifica se o arquivo está disponível e consulta o `AVALIACAO_PROD` em modo de leitura. O próprio executor verifica o certificado da instância e pode atualizar o certificado público no disco local da VM.
+
+```powershell
+$arquivo = $env:RODOGARCIA_SQL_ADMIN_CREDENTIAL_FILE
+if ([string]::IsNullOrWhiteSpace($arquivo) -or !(Test-Path -LiteralPath $arquivo -PathType Leaf)) {
+    throw 'A referência da credencial de publicação está indisponível nesta sessão.'
+}
+$configAnterior = $env:ADC_DATABASE_CONFIG
+try {
+    $env:ADC_DATABASE_CONFIG = (Resolve-Path '.\database\config.production.local.bat').Path
+    & .\database\executar-database.bat --validate
+    if ($LASTEXITCODE -ne 0) { throw 'A validação de leitura do AVALIACAO_PROD falhou.' }
+} finally {
+    $env:ADC_DATABASE_CONFIG = $configAnterior
+}
+```
+
+A mensagem `[OK] Banco, migrations e validacoes somente leitura concluidos.` confirma que a credencial, o certificado e a estrutura do banco passaram pela conferência. O comando `iniciar-prod.bat --publicar` repete essa etapa antes de ativar a versão. Se aparecer `Credencial local protegida indisponivel para esta conta Windows`, confira a referência usada na configuração local e execute o teste na mesma VM e conta Windows que protegem o arquivo.
+
+Se a reconciliação do certificado for recusada em um shell iniciado por outra ferramenta, repita a conferência no Windows PowerShell nativo da VM. Na verificação de 22/11/2026, a mesma conta passou pelo teste ao carregar os módulos da edição nativa. A validação TLS permaneceu ativa.
+
 ## Renomeio único dos alvos existentes
 
 O launcher `renomear-bases.bat` migra somente os nomes antigos autorizados para `AVALIACAO_DEV` e `AVALIACAO_PROD`. Primeiro execute `database\renomear-bases.bat --check`; depois, quando as conexões afetadas estiverem autorizadas, execute `database\renomear-bases.bat --apply` e digite `RENOMEAR AVALIACAO_DEV E AVALIACAO_PROD`. O renomeio encerra conexões das duas bases com rollback imediato, rejeita destinos existentes e tenta reverter ambos os nomes se a segunda alteração falhar. Não o execute enquanto houver processo desconhecido conectado sem autorização explícita.
