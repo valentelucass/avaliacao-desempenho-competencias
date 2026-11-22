@@ -8,6 +8,10 @@ Os 75 testes locais de aplicativo e de tema passaram. No Edge, o teste com sess�
 
 O teste de restauração de sessão abre o menu no celular, confere a ação de senha e verifica que a tecla Tab leva do seletor de tema até Sair no cabeçalho. Em sessões restauradas a 375 e 1440 px, o teste acionou a saída e conferiu o retorno ao formulário de acesso.
 
+A publicação do commit `134e32f` foi conferida em produção às 16h40 de Brasília. Passaram 330 testes da interface e 353 do servidor. Outros 21 testes do servidor são opcionais e ficaram fora desta execução. A validação do SQL Server em produção foi somente leitura. Os 30 arquivos instalados conferem com o manifesto do release `195a160efe554d3c8f97d77c412de28c`. A API e o frontend ficaram online e a versão anterior foi preservada.
+
+No domínio público, o Edge confirmou a cor da marca nos dois temas e a troca imediata após recarregar o login. Com os mesmos arquivos publicados e uma sessão de demonstração, o botão Sair no celular encerrou a sessão em uma única chamada HTTP 204 e voltou ao login. As fotos comparativas da tela Contas e concessões estão em `outputs/cabecalho-tema` no espaço de trabalho da publicação.
+
 ## Fichário de avaliações aprovado em 22/11/2026
 
 A versão aprovada entrou em produção em 22/11/2026 às 15h57 de Brasília pelo comando `iniciar-prod.bat --publicar`. O release `2a04b34e020148d2a792c5c133a45ea9` usa o código do commit `d52d872`. Os 30 arquivos da distribuição instalada conferem com os hashes aprovados. O domínio público e a porta local serviram o mesmo HTML, JavaScript, CSS e arquivos de marca. Os dois processos da Avaliação ficaram online, e o JAR ativo pertence ao release. A API respondeu 200 à inicialização de segurança e 401 à consulta anônima de sessão. O release anterior está preservado para recuperação.
