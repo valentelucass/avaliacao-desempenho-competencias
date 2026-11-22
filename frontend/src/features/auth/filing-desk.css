@@ -1,0 +1,800 @@
+/* Cena exclusiva do acesso. A ficha interativa permanece fixa sobre as folhas. */
+.auth-page.application-shell--narrow:has(.filing-desk) {
+  --desk: light-dark(#eeece7, #1d1e1c);
+  --sheet: light-dark(#fffefa, #262724);
+  --hairline: light-dark(#cdcdc1, #464943);
+  --file-green: light-dark(#196144, #98ddaf);
+  --file-text: light-dark(#242921, #f1f1e9);
+  --file-muted: light-dark(#565c53, #bfc4ba);
+  width: 100%;
+  max-width: none;
+  min-height: 100svh;
+  grid-template-rows: auto 1fr auto;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+  gap: 0;
+  padding: 0;
+  background: var(--desk);
+  color: var(--file-text);
+}
+.auth-page:has(.filing-desk) .auth-page__header {
+  padding: 13px clamp(16px, 4vw, 76px);
+  min-height: 76px;
+  max-width: none;
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid var(--hairline);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.auth-page:has(.filing-desk) .auth-page__identity {
+  gap: 17px;
+}
+.auth-page:has(.filing-desk) .auth-page__logo {
+  width: clamp(112px, 12vw, 164px);
+}
+.auth-page:has(.filing-desk) .auth-page__product-name {
+  color: var(--file-muted);
+  border-left-color: var(--hairline);
+  padding-left: 16px;
+  font-size: 13px;
+  font-weight: 620;
+}
+.auth-page:has(.filing-desk) .auth-page__actions {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.filing-pause,
+.auth-page:has(.filing-desk) .theme-toggle {
+  height: 37px;
+  min-height: 37px;
+  border: 1px solid var(--hairline);
+  border-radius: 20px;
+  background: transparent;
+  color: var(--file-text);
+  box-shadow: none;
+}
+.auth-page:has(.filing-desk) .theme-toggle {
+  width: 37px;
+  min-width: 37px;
+}
+.filing-pause {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 11px;
+  font: 600 13px/1 var(--font-family-body);
+  cursor: pointer;
+}
+.filing-pause:hover:not([aria-disabled='true']) {
+  background: var(--sheet);
+}
+.filing-pause[aria-disabled='true'] {
+  color: var(--file-muted);
+  cursor: default;
+}
+.filing-pause:focus-visible,
+.filing-about summary:focus-visible {
+  outline: 2px solid var(--file-green);
+  outline-offset: 3px;
+}
+.auth-page .auth-layout.auth-layout--filing {
+  display: grid;
+  position: relative;
+  isolation: isolate;
+  min-width: 0;
+  place-items: center;
+  grid-template-columns: minmax(0, 1fr);
+  width: 100%;
+  max-width: none;
+  padding: 22px clamp(16px, 3.5vw, 60px);
+  margin: 0;
+}
+.auth-layout--filing::before,
+.auth-layout--filing::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+/* Granulação e luz no papel, com o centro livre para a ficha. */
+.auth-layout--filing::before {
+  --fiber: light-dark(#7975690b, #d5d3c60a);
+  --weave: light-dark(#faf8ed40, #f3f0df07);
+  background:
+    repeating-linear-gradient(
+      14deg,
+      transparent 0 2px,
+      var(--fiber) 2.4px 3px,
+      transparent 3.3px 7.6px
+    ),
+    repeating-linear-gradient(
+      96deg,
+      transparent 0 3px,
+      var(--weave) 3.3px 3.9px,
+      transparent 4.2px 9px
+    ),
+    radial-gradient(ellipse at 7% 13%, light-dark(#fffdf5b3, #73766a25), transparent 53%),
+    radial-gradient(ellipse at 99% 89%, light-dark(#b7b4a54a, #0608066b), transparent 50%);
+}
+.auth-layout--filing::after {
+  --etch: light-dark(#9f9e8c4a, #95998b38);
+  --glint: light-dark(#fffdf4d6, #bac2af23);
+  --groove:
+    transparent 57%, var(--etch) calc(57% + 1px), var(--glint) calc(57% + 2px),
+    transparent calc(57% + 3px) 65%, var(--etch) calc(65% + 1px), var(--glint) calc(65% + 2px),
+    transparent calc(65% + 3px);
+  background:
+    radial-gradient(
+      ellipse clamp(240px, 35vw, 600px) clamp(215px, 27vw, 470px) at -6% 96%,
+      var(--groove)
+    ),
+    radial-gradient(
+      ellipse clamp(230px, 34vw, 570px) clamp(185px, 24vw, 430px) at 103% -7%,
+      var(--groove)
+    );
+}
+.filing-desk {
+  --file-width: 36rem;
+  --motion: running;
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  justify-items: center;
+  align-items: center;
+  width: min(100%, 86rem);
+  min-width: 0;
+  padding: 10px 0 8px;
+}
+.filing-desk[data-paused='true'] {
+  --motion: paused;
+}
+.filing-folder {
+  position: relative;
+  isolation: isolate;
+  width: min(100%, var(--file-width));
+  padding-top: 63px;
+}
+.filing-back {
+  --folder-paper: light-dark(#d9dcd0, #494c43);
+  --tab-position: 5%;
+  --angle: 0deg;
+  --delay: 0s;
+  position: absolute;
+  top: 49px;
+  left: 1.5%;
+  right: 1.5%;
+  height: 66%;
+  border: 1px solid var(--hairline);
+  border-radius: 6px 7px 12px 12px;
+  background: var(--folder-paper);
+  transform-origin: 50% 100%;
+  animation: filing-sort 6.9s var(--delay) ease-in-out infinite both;
+  animation-play-state: var(--motion);
+  pointer-events: none;
+}
+.filing-back span {
+  position: absolute;
+  inset: auto auto 100% var(--tab-position);
+  height: 30px;
+  display: grid;
+  place-items: center;
+  padding: 0 clamp(10px, 1.5vw, 20px);
+  border: 1px solid var(--hairline);
+  border-bottom: 0;
+  border-radius: 8px 9px 0 0;
+  background: var(--folder-paper);
+  color: light-dark(#374136, #edf0e6);
+  font-size: 13px;
+  font-weight: 650;
+}
+.filing-back span::before {
+  content: '';
+  position: absolute;
+  top: 1px;
+  left: 8px;
+  right: 8px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--file-green);
+  animation: filing-tab-ink 6.9s var(--delay) ease-in-out infinite both;
+  animation-play-state: var(--motion);
+}
+.filing-back--team {
+  --folder-paper: light-dark(#bcd2c0, #465e4b);
+  --angle: -0.15deg;
+  --delay: -1.1s;
+  top: 54px;
+}
+.filing-back--self {
+  --tab-position: 38%;
+  --angle: -0.95deg;
+  --delay: -5.7s;
+  top: 40px;
+}
+.filing-back--feedback {
+  --folder-paper: light-dark(#cdd0c4, #42473e);
+  --tab-position: 74%;
+  --angle: 1.05deg;
+  --delay: -3.4s;
+  top: 29px;
+}
+@keyframes filing-sort {
+  0%,
+  48%,
+  100% {
+    transform: translateY(0) rotate(var(--angle));
+  }
+  18%,
+  27% {
+    transform: translateY(-13px) rotate(calc(var(--angle) + 0.35deg));
+  }
+}
+@keyframes filing-tab-ink {
+  0%,
+  48%,
+  100% {
+    opacity: 0.08;
+  }
+  18%,
+  27% {
+    opacity: 0.94;
+  }
+}
+.auth-page.application-shell--narrow .filing-folder .login-card {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: clamp(25px, 3.3vw, 44px) clamp(26px, 6.2vw, 86px) 25px;
+  border: 1px solid var(--hairline);
+  border-radius: 7px 7px 14px 14px;
+  background: var(--sheet);
+  box-shadow:
+    0 2px 0 light-dark(#c3c1b6, #3e423a),
+    0 12px 36px -18px #171c164a;
+}
+.filing-folder .login-card::before {
+  content: '';
+  position: absolute;
+  inset: 21px auto 21px 10px;
+  width: 4px;
+  background: radial-gradient(circle, var(--hairline) 1px, transparent 1.8px) center top / 4px 12px
+    repeat-y;
+  pointer-events: none;
+}
+.filing-caption {
+  display: block;
+  margin: 0 0 10px;
+  color: var(--file-green);
+  font-size: 13px;
+  font-weight: 700;
+}
+.auth-page .filing-folder h1 {
+  color: var(--file-text);
+  font-size: clamp(30px, 3vw, 42px);
+  font-weight: 650;
+  letter-spacing: -0.052em;
+  line-height: 1.07;
+}
+.auth-page .filing-folder .summary {
+  max-width: 37ch;
+  margin: 9px 0 21px;
+  color: var(--file-muted);
+  font-size: 15px;
+  line-height: 1.48;
+}
+.auth-page .filing-folder .stack-form {
+  gap: 14px;
+}
+.auth-page .filing-folder .field {
+  gap: 6px;
+}
+.auth-page .filing-folder label {
+  color: var(--file-text);
+  font-size: 14px;
+}
+.auth-page .filing-folder input {
+  min-height: 43px;
+  border-radius: 7px;
+}
+.auth-page .filing-folder .stack-form > .astryx-button {
+  min-height: 44px;
+  border-radius: 7px;
+  margin-top: 3px;
+}
+.auth-page .filing-folder .login-card__recovery-trigger,
+.filing-folder .login-card__back {
+  justify-self: start;
+  width: fit-content;
+  min-width: 0;
+  min-height: 30px;
+  margin: 11px 0 0;
+  padding: 3px 0;
+  border: 0;
+  background: transparent;
+  color: var(--file-green);
+  font-size: 14px;
+  font-weight: 650;
+  text-align: left;
+  box-shadow: none;
+}
+.filing-folder .login-card__back {
+  margin: 0 0 12px;
+}
+.filing-folder .login-card__security-note {
+  justify-content: flex-start;
+  margin: 14px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--hairline);
+  color: var(--file-muted);
+  font-size: 12px;
+}
+.filing-folder .login-card__security-note svg {
+  color: var(--file-green);
+}
+
+/* Cada folha pertence à mesma capa e encontra sua dobra por trás da ficha. */
+.filing-cover {
+  --board: light-dark(#d8d7c9, #3a3d35);
+  --board-edge: light-dark(#b8b9a8, #53574b);
+  --print: light-dark(#64705c, #a7b59a);
+  position: absolute;
+  inset: 18% 0 9%;
+  z-index: 0;
+  width: min(100%, 72rem);
+  margin-inline: auto;
+  pointer-events: none;
+  user-select: none;
+}
+.filing-cover::before {
+  content: '';
+  position: absolute;
+  inset: 3% 8%;
+  border: 1px solid var(--board-edge);
+  border-radius: 7px;
+  background: var(--board);
+}
+.filing-folder {
+  z-index: 1;
+}
+.filing-leaf {
+  --tilt: 2.55deg;
+  --loose: 0.75deg;
+  position: absolute;
+  top: 4%;
+  bottom: 4%;
+  width: calc((100% - var(--file-width)) / 2 + 38px);
+  min-width: 0;
+  border: 1px solid var(--board-edge);
+  border-radius: 9px 2px 2px 13px;
+  background:
+    linear-gradient(120deg, #ffffff16, transparent 50%),
+    repeating-linear-gradient(3deg, transparent 0 3px, #88876d0b 3px 4px), var(--board);
+  box-shadow:
+    -1px 2px 0 var(--board-edge),
+    0 10px 14px -11px #23271e61;
+  transform-origin: right center;
+  animation: filing-hinge 7.2s -0.9s ease-in-out infinite;
+  animation-play-state: var(--motion);
+}
+.filing-leaf::before {
+  content: '';
+  position: absolute;
+  inset: 9px;
+  border: 1px solid light-dark(#bcbfad, #4e5547);
+  border-radius: 4px;
+}
+.filing-leaf--skills {
+  left: 0;
+}
+.filing-leaf--feedback {
+  --tilt: -2.55deg;
+  --loose: -0.75deg;
+  right: 0;
+  border-radius: 2px 9px 13px 2px;
+  transform-origin: left center;
+  animation-delay: -3.5s;
+}
+@keyframes filing-hinge {
+  0%,
+  65%,
+  100% {
+    transform: rotate(var(--tilt));
+  }
+  28%,
+  38% {
+    transform: rotate(calc(var(--tilt) + var(--loose)));
+  }
+}
+.filing-pleats {
+  position: absolute;
+  top: 1px;
+  bottom: 1px;
+  width: clamp(62px, 6.5vw, 98px);
+  right: 0;
+  background: repeating-linear-gradient(
+    90deg,
+    light-dark(#d6d6c6, #3d4138) 0,
+    light-dark(#e2e1d3, #444a3e) 10px,
+    light-dark(#c2c4b2, #32382e) 11px,
+    light-dark(#d1d2bf, #414538) 18px
+  );
+  border-inline: 1px solid var(--board-edge);
+}
+.filing-leaf--feedback .filing-pleats {
+  left: 0;
+  right: auto;
+  transform: scaleX(-1);
+}
+.filing-imprint {
+  position: absolute;
+  top: 23%;
+  bottom: 22%;
+  inset-inline: 9% 36%;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 16px;
+  color: var(--print);
+}
+.filing-leaf--feedback .filing-imprint {
+  inset-inline: 35% 9%;
+}
+.filing-print-label {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: clamp(15px, 1.6vw, 24px);
+  font-style: italic;
+  letter-spacing: -0.04em;
+  line-height: 1.1;
+}
+.filing-compass {
+  position: relative;
+  display: block;
+  width: clamp(64px, 6.8vw, 100px);
+  aspect-ratio: 1;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  background: repeating-conic-gradient(from -1deg, currentColor 0 0.7deg, transparent 1deg 60deg);
+}
+.filing-compass::before {
+  content: '';
+  position: absolute;
+  inset: 12%;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  box-shadow: 0 0 0 5px var(--board);
+}
+.filing-compass::after {
+  content: '';
+  position: absolute;
+  inset: 22%;
+  animation: filing-bearings 7.2s -0.9s ease-in-out infinite;
+  animation-play-state: var(--motion);
+  background: light-dark(#487356, #9cbd9d);
+  clip-path: polygon(
+    50% 0,
+    62% 33%,
+    98% 20%,
+    75% 53%,
+    89% 84%,
+    57% 69%,
+    38% 100%,
+    35% 66%,
+    2% 70%,
+    28% 45%,
+    18% 14%,
+    44% 34%
+  );
+  opacity: 0.86;
+}
+.filing-annotation {
+  position: relative;
+  width: clamp(70px, 7vw, 105px);
+  height: 57px;
+  padding-top: 23px;
+  display: grid;
+  gap: 6px;
+}
+.filing-annotation::before {
+  content: '“';
+  position: absolute;
+  top: -14px;
+  left: 0;
+  font:
+    italic 52px/1 Georgia,
+    serif;
+  color: var(--print);
+}
+.filing-annotation i {
+  position: relative;
+  height: 1px;
+  width: 100%;
+  background: var(--print);
+  opacity: 0.64;
+  transform-origin: left center;
+  animation: filing-handwriting 7.2s -1.6s ease-in-out infinite;
+  animation-play-state: var(--motion);
+}
+.filing-annotation i:nth-child(2) {
+  width: 85%;
+  animation-delay: -1.1s;
+}
+.filing-annotation i:last-child {
+  width: 68%;
+  animation-delay: -0.6s;
+}
+@keyframes filing-handwriting {
+  0%,
+  100% {
+    transform: scaleX(0.22);
+    opacity: 0.24;
+  }
+  32%,
+  84% {
+    transform: scaleX(1);
+    opacity: 0.72;
+  }
+}
+@keyframes filing-bearings {
+  0%,
+  100% {
+    transform: rotate(-12deg);
+  }
+  36%,
+  48% {
+    transform: rotate(16deg);
+  }
+  68% {
+    transform: rotate(7deg);
+  }
+}
+.filing-annotation i:last-child::after {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 2px;
+  background: var(--file-green);
+  transform-origin: left center;
+  animation: filing-underline 7.2s -2s ease-in-out infinite;
+  animation-play-state: var(--motion);
+}
+@keyframes filing-underline {
+  0%,
+  12%,
+  100% {
+    transform: scaleX(0.12);
+  }
+  50%,
+  86% {
+    transform: scaleX(1);
+  }
+}
+
+.auth-page:has(.filing-desk) .auth-page__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 7px 18px;
+  width: calc(100% - clamp(32px, 8vw, 152px));
+  padding: 13px 0;
+  min-height: 49px;
+  border-top: 1px solid var(--hairline);
+  color: var(--file-muted);
+  font-size: 12px;
+}
+.filing-about {
+  position: relative;
+  text-align: start;
+}
+.filing-about summary {
+  width: fit-content;
+  color: var(--file-muted);
+  cursor: pointer;
+  font-size: 12px;
+}
+.filing-about__body {
+  position: absolute;
+  z-index: 3;
+  bottom: calc(100% + 10px);
+  inset-inline-start: 0;
+  width: min(320px, calc(100vw - 38px));
+  max-height: 55svh;
+  overflow: auto;
+  padding: 16px;
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  background: var(--sheet);
+  box-shadow: 0 8px 22px #161d1620;
+  color: var(--file-text);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.filing-about__body h2 {
+  margin: 0 0 6px;
+  font-size: 16px;
+}
+.filing-about__body :is(dl, p) {
+  margin: 8px 0 0;
+}
+.filing-about__body dt {
+  font-weight: 650;
+}
+.filing-about__body dd {
+  margin: 0 0 5px;
+}
+
+@media (min-width: 601px) and (max-width: 1100px) {
+  .filing-desk {
+    --file-width: clamp(325px, 53vw, 530px);
+  }
+  .filing-cover {
+    width: calc(100% - 16px);
+  }
+  .filing-leaf {
+    width: calc((100% - var(--file-width)) / 2 + 23px);
+  }
+  .filing-pleats {
+    width: clamp(42px, 6vw, 70px);
+  }
+  .filing-compass {
+    width: clamp(43px, 6vw, 66px);
+  }
+  .filing-annotation {
+    width: clamp(45px, 7vw, 78px);
+  }
+}
+@media (max-width: 600px) {
+  .filing-desk {
+    --file-width: calc(100% - 22px);
+    width: min(100%, 30rem);
+    padding: 16px 0 17px;
+  }
+  .filing-cover {
+    inset: 14px 0 8px;
+    width: 100%;
+  }
+  .filing-leaf {
+    width: 47%;
+    top: 5px;
+    bottom: 5px;
+    --tilt: 1.6deg;
+    --loose: 0.35deg;
+  }
+  .filing-leaf--feedback {
+    --tilt: -1.6deg;
+    --loose: -0.35deg;
+  }
+  .filing-leaf::before {
+    inset: 5px;
+  }
+  .filing-pleats {
+    width: 18px;
+    background-size: 12px 100%;
+  }
+  .filing-imprint,
+  .filing-leaf--feedback .filing-imprint {
+    inset: 11px 10% auto;
+    height: 25px;
+    display: flex;
+    gap: 5px;
+    align-items: center;
+    justify-content: flex-start;
+  }
+  .filing-leaf--feedback .filing-imprint {
+    justify-content: flex-end;
+  }
+  .filing-compass {
+    width: 21px;
+    flex: 0 0 auto;
+  }
+  .filing-compass::before {
+    box-shadow: none;
+  }
+  .filing-print-label {
+    font-size: 12px;
+  }
+  .filing-annotation {
+    width: 22px;
+    height: 16px;
+    padding: 2px 0 0;
+    gap: 2px;
+  }
+  .filing-annotation::before {
+    display: none;
+  }
+  .filing-folder {
+    margin-top: 31px;
+  }
+}
+@media (max-width: 600px) {
+  .auth-page:has(.filing-desk) .auth-page__header {
+    min-height: 61px;
+    padding: 8px 14px;
+    gap: 8px;
+  }
+  .auth-page:has(.filing-desk) .auth-page__identity {
+    gap: 8px;
+  }
+  html[data-astryx-theme] .auth-page:has(.filing-desk) .auth-page__logo {
+    width: clamp(94px, 29vw, 117px);
+  }
+  .auth-page:has(.filing-desk) .auth-page__product-name {
+    padding-left: 8px;
+    max-width: 86px;
+    font-size: 11px;
+  }
+  .auth-page:has(.filing-desk) .auth-page__actions {
+    gap: 4px;
+  }
+  .filing-pause,
+  .auth-page:has(.filing-desk) .theme-toggle {
+    height: 34px;
+    min-height: 34px;
+  }
+  .auth-page:has(.filing-desk) .theme-toggle {
+    width: 34px;
+    min-width: 34px;
+  }
+  .filing-pause {
+    padding-inline: 8px;
+  }
+  .auth-page .auth-layout.auth-layout--filing {
+    padding: 16px 14px 12px;
+  }
+  .filing-back span {
+    padding-inline: 9px;
+    height: 25px;
+    font-size: 11px;
+  }
+  .filing-back--feedback {
+    --tab-position: 70%;
+  }
+  .filing-back--self {
+    --tab-position: 33%;
+  }
+  .auth-page.application-shell--narrow .filing-folder .login-card {
+    padding: 23px 7% 18px;
+  }
+  .filing-folder .login-card::before {
+    left: 5px;
+  }
+  .auth-page .filing-folder .summary {
+    font-size: 14px;
+    margin-bottom: 17px;
+  }
+  .auth-page:has(.filing-desk) .auth-page__footer {
+    width: calc(100% - 28px);
+    font-size: 11px;
+  }
+}
+@media (max-width: 365px) {
+  .filing-pause span {
+    display: none;
+  }
+  .filing-pause {
+    width: 34px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .filing-back {
+    animation: none;
+    transform: rotate(var(--angle));
+  }
+  .filing-leaf {
+    animation: none;
+    transform: rotate(var(--tilt));
+  }
+  .filing-compass::after,
+  .filing-annotation i,
+  .filing-annotation i:last-child::after {
+    animation: none;
+  }
+}

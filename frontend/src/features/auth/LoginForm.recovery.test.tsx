@@ -22,12 +22,20 @@ describe('Solicitação de recuperação no login', () => {
     expect(password).toHaveAttribute('type', 'text')
     expect(screen.getByRole('button', { name: 'Ocultar senha' })).toBeInTheDocument()
     expect(screen.getByText('Acesso restrito à plataforma.')).toBeInTheDocument()
+    const pause = screen.getByRole('button', { name: 'Pausar animação' })
+    expect(pause).toHaveAttribute('aria-disabled', 'false')
+    fireEvent.click(pause)
+    expect(screen.getByRole('button', { name: 'Animação pausada' })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    )
     expect(screen.getByRole('complementary', { name: 'Sobre esta página' })).toHaveTextContent(
       'Avaliações de desempenho',
     )
 
     fireEvent.click(screen.getByRole('button', { name: 'Solicitar redefinição de senha' }))
     expect(screen.getByRole('heading', { level: 1, name: 'Solicitar redefinição' })).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Animação pausada' })).toBeInTheDocument()
     expect(screen.queryByLabelText('E-mail ou login')).not.toBeInTheDocument()
     expect(screen.getByLabelText('E-mail ou login para recuperação')).toHaveFocus()
     fireEvent.click(screen.getByRole('button', { name: 'Voltar ao acesso' }))

@@ -2,13 +2,13 @@ import { Card } from '@astryxdesign/core/Card'
 import { ActionButton } from '../../ui/ActionButton'
 import { useEffect, useId, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
-import { Eye, EyeOff, ShieldCheck } from 'lucide-react'
+import { ArrowRight, Eye, EyeOff, ShieldCheck } from 'lucide-react'
 import { isAuthenticationError } from '../../api/client'
 import type { ApiClient } from '../../api/client'
 import type { CurrentUser } from '../../api/contracts'
 import { FeedbackMessage } from '../../ui/Feedback'
 import { safeErrorMessage } from '../../ui/safeErrorMessage'
-import { AuthPageFrame } from './AuthPageFrame'
+import { FilingDesk } from './FilingDesk'
 
 type LoginFormProps = {
   api: ApiClient
@@ -112,13 +112,9 @@ export function LoginForm({
   }
 
   return (
-    <AuthPageFrame
-      contentClassName="auth-layout--with-about"
-      labelledBy="login-title"
-      onToggleTheme={onToggleTheme}
-      theme={theme}
-    >
+    <FilingDesk onToggleTheme={onToggleTheme} theme={theme}>
       <Card padding={4} className="card login-card">
+        <span className="filing-caption">Avaliações</span>
         {recoveryOpen ? (
           <div
             id={recoveryId}
@@ -231,9 +227,9 @@ export function LoginForm({
                     type="button"
                   >
                     {isPasswordVisible ? (
-                      <EyeOff aria-hidden="true" size={18} />
-                    ) : (
                       <Eye aria-hidden="true" size={18} />
+                    ) : (
+                      <EyeOff aria-hidden="true" size={18} />
                     )}
                   </button>
                 </div>
@@ -243,6 +239,7 @@ export function LoginForm({
                 size="sm"
                 variant="primary"
                 label={isSubmitting ? 'Entrando…' : 'Acessar plataforma'}
+                endContent={<ArrowRight aria-hidden="true" size={17} />}
                 type="submit"
                 disabled={isSubmitting || isRestoringSession}
               />
@@ -269,35 +266,6 @@ export function LoginForm({
           <span>Acesso restrito à plataforma.</span>
         </p>
       </Card>
-
-      <aside className="auth-about-panel" aria-label="Sobre esta página">
-        <div className="auth-about-panel__heading">
-          <span aria-hidden="true" className="auth-about-panel__icon">
-            <ShieldCheck size={21} strokeWidth={1.8} />
-          </span>
-          <div>
-            <p className="eyebrow">Área interna</p>
-            <h2>Avaliações de desempenho</h2>
-          </div>
-        </div>
-        <p className="muted">
-          Registre avaliações, acompanhe ciclos autorizados e consulte indicadores conforme o seu
-          perfil.
-        </p>
-        <dl className="auth-about-panel__highlights">
-          <div>
-            <dt>Acesso por perfil</dt>
-            <dd>As opções disponíveis respeitam as permissões da sua conta.</dd>
-          </div>
-          <div>
-            <dt>Ambiente corporativo</dt>
-            <dd>Informações e rotinas reunidas em um único lugar.</dd>
-          </div>
-        </dl>
-        <p className="auth-about-panel__note">
-          A disponibilidade de cada recurso é verificada após o login.
-        </p>
-      </aside>
-    </AuthPageFrame>
+    </FilingDesk>
   )
 }

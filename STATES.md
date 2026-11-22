@@ -1,5 +1,11 @@
 # Estado atual — Avaliação de Desempenho e Competências
 
+## Fichário de avaliações aprovado em 22/11/2026
+
+O responsável escolheu a proposta 05, aprovou a capa com competências e feedback e autorizou publicar a versão com fundo texturizado. O login mantém o formulário e a recuperação existentes. As abas e as marcas da capa começam animadas, com um comando de pausa. O olho riscado indica senha oculta. A preferência de movimento reduzido do sistema evita deslocamentos.
+
+O Edge conferiu a tela em oito larguras entre 320 e 1440 pixels. As treze animações pararam no ponto corrente após o clique. A digitação, a visibilidade da senha, o envio do acesso e a recuperação foram exercitados com a API simulada. A revisão das páginas percorreu 14 rotas e variações da sessão de demonstração, incluindo cinco seções administrativas, indicadores, lista e detalhe das avaliações. O teste confirmou o download de Excel com filtros e o alinhamento dos avisos. Evidências locais em `outputs/fichario-animado` e nos relatórios `filing-qa.json` e `rotas.json` da prévia.
+
 ## Prévia do redesign da Avaliação em 22/11/2026
 
 A branch local `design/astryx-avaliacao` aplica a versão do Astryx usada pelo Dashboard à navegação, aos cabeçalhos, à lista de avaliações e aos controles das telas de autenticação, indicadores e administração. Os fundos gerais são neutros. Os filtros, estados vazios e linhas alternadas usam detalhes verdes. O menu recolhido conserva a marca compacta. O comando Atualizar fica no cabeçalho.
@@ -482,6 +488,8 @@ Validação local: `iniciar-prod.bat --check` confirmou JDK, configuração exte
 Registro da preparação anterior à ativação: naquele momento o acesso ao PM2 retornava `EPERM`, o dump ainda continha as portas antigas e a troca das rotas remotas precisava ser coordenada. O estado operacional observado depois da execução pelo usuário está na seção acima. A ponte local preparada resolve a conexão com o túnel sem alterar a configuração remota; quando as rotas do Cloudflare forem atualizadas diretamente para `38080`/`28081`, as pontes poderão ser removidas com `repair-public-route.ps1 -Remove`.
 
 ## Tarefas pendentes reais
+
+- [x] Integrar a proposta 05 ao login e validar a capa e o fundo com o responsável. Publicação desta revisão autorizada em 22/11/2026.
 
 - [x] **ADC-EXPORT-AVALIACOES-20261028** Excel implementado, validado localmente, commit 33f6e04 enviado e publicação padrão concluída às 15:40 de 28/10; arquivos ativos/publicação conferidos e fotos antes/depois entregues, preservando fontes preexistentes.
 
