@@ -40,7 +40,50 @@ async function main() {
         assert.equal(request.method, 'POST')
         assert.equal(request.headers['x-csrf-token'], 'csrf-synthetic-browser')
         status = mode === 'unavailable' ? 503 : 200
-        body = { authenticated: mode === 'authenticated' }
+        body = { authenticated: mode === 'authenticated' || mode === 'administration' }
+      } else if (request.method === 'GET' && mode === 'administration') {
+        if (route === '/api/v1/auth/me') {
+          body = {
+            id: 'admin-demo',
+            displayName: 'Administrador de demonstração',
+            roles: ['ADMINISTRADOR_PLATAFORMA'],
+            permissions: ['QUESTIONARIOS.GERIR', 'CADASTROS.GERIR', 'USUARIOS.LER'],
+            supremeAdministrator: true,
+          }
+        } else if (route === '/api/v1/administration/password-reset-requests') {
+          body = {
+            items: [
+              {
+                userId: 'conta-demo',
+                displayName: 'Pessoa de demonstração',
+                login: 'conta.demonstrativa.operacional@example.invalid',
+                requestedAt: '2026-11-23T12:00:00Z',
+              },
+            ],
+            page: { limit: 100, totalPages: 1, nextCursor: null },
+          }
+        } else if (route === '/api/v1/administration/users') {
+          body = []
+        } else if (route === '/api/v1/master-data/branches') {
+          body = Array.from({ length: 10 }, (_, i) => ({
+            id: 'filial-' + i,
+            name: 'Filial ' + i,
+            active: i !== 0,
+          }))
+        } else if (route === '/api/v1/master-data/areas') {
+          body = Array.from({ length: 40 }, (_, i) => ({
+            id: 'area-' + i,
+            name: i === 0 ? 'ADMINISTRATIVOOPERACIONALPLANEJAMENTOLOGISTICAREGIONAL' : 'Área ' + i,
+            active: i !== 0,
+          }))
+        } else if (
+          route.startsWith('/api/v1/master-data/') ||
+          route === '/api/v1/questionnaire-versions/approved'
+        ) {
+          body = []
+        } else {
+          status = 404
+        }
       } else if (route === '/api/v1/auth/me' && mode === 'authenticated') {
         body = { id: 'synthetic-user', displayName: 'Sessão fictícia retomada', permissions: [] }
       } else if (route === '/api/v1/auth/sessions') {
@@ -58,7 +101,8 @@ async function main() {
       response.end(JSON.stringify(body))
       return
     }
-    const name = route === '/' ? 'index.html' : route.slice(1)
+    const name =
+      route === '/' || route.startsWith('/administracao/') ? 'index.html' : route.slice(1)
     const content = files.get(name)
     if (content !== undefined) {
       const types = {
@@ -180,6 +224,9 @@ async function main() {
     await send('Log.enable')
     await send('Network.enable')
     await send('Network.setBlockedURLs', { urls: ['https://*'] })
+    await send('Emulation.setEmulatedMedia', {
+      features: [{ name: 'prefers-reduced-motion', value: 'no-preference' }],
+    })
     for (const width of [375, 1440]) {
       await send('Emulation.setDeviceMetricsOverride', {
         width,
@@ -233,6 +280,22 @@ async function main() {
         } else {
           assert.deepEqual(errors, [], 'Abertura normal não deve gerar erros no console')
           assert.equal(await evaluate('document.querySelector("[role=alert]") !== null'), false)
+        }
+        if (scenario === 'anonymous') {
+          const coverVisible = await evaluate(
+            "document.querySelector('.filing-cover').getBoundingClientRect().width > 0",
+          )
+          assert.equal(coverVisible, width === 1440)
+          assert.equal(await evaluate("document.querySelectorAll('.filing-back span').length"), 3)
+          for (const [action, expectedMotion] of [
+            ['Pausar animação', 'paused'],
+            ['Retomar animação', 'running'],
+          ]) {
+            await evaluate(`document.querySelector('button[aria-label="${action}"]').click()`)
+            await ready(
+              `getComputedStyle(document.querySelector('.filing-back')).animationPlayState === '${expectedMotion}'`,
+            )
+          }
         }
         if (scenario === 'authenticated') {
           await evaluate(
@@ -350,6 +413,85 @@ async function main() {
             consoleErrors: errors.length,
           }),
         )
+      }
+    }
+    mode = 'administration'
+    for (const [page, selector] of [
+      ['questionarios', '.questionnaire-builder__details-grid textarea'],
+      ['usuarios', '.password-reset-requests__action button'],
+      ['cadastros', '.master-data-quick-grid .administration-users tbody button'],
+    ]) {
+      await send('Page.navigate', { url: origin + '/administracao/' + page })
+      await ready('document.querySelector(' + JSON.stringify(selector) + ') !== null')
+      await evaluate('document.fonts.ready')
+      for (const [width, height] of [
+        [1024, 640],
+        [1366, 768],
+        [1500, 700],
+        [1646, 832],
+        [1920, 1080],
+      ]) {
+        await send('Emulation.setDeviceMetricsOverride', {
+          width,
+          height,
+          deviceScaleFactor: 1,
+          mobile: false,
+        })
+        await ready('document.querySelector(".ev-rail[data-collapsed=false]") !== null')
+        const fits = await evaluate(`(() => {
+          const viewport = document.documentElement;
+          const fields = [...document.querySelectorAll('.questionnaire-builder__details-grid :is(input, select, textarea)')];
+          const tables = [...document.querySelectorAll('.master-data-quick-grid .administration-users, .password-reset-requests .administration-users')];
+          return viewport.scrollWidth <= viewport.clientWidth + 1
+            && fields.every(field => field.getBoundingClientRect().right <= viewport.clientWidth + 1)
+            && tables.every(table => table.scrollWidth <= table.clientWidth + 1)
+            && tables.every(table => [...table.querySelectorAll('td button')].every(button => {
+              const bounds = button.getBoundingClientRect();
+              const cell = button.closest('td').getBoundingClientRect();
+              return bounds.left >= cell.left - 1 && bounds.right <= cell.right + 1;
+            }));
+        })()`)
+        assert.ok(fits, 'Rolagem horizontal com o menu aberto em ' + page + ' a ' + width + 'px')
+      }
+      if (page === 'cadastros') {
+        await evaluate('localStorage.setItem("adc.sidebar.collapsed", "true")')
+        await send('Page.reload')
+        await ready(
+          'document.querySelector(".ev-rail[data-collapsed=true]") !== null && ' +
+            'document.querySelector(".master-data-quick-grid tbody .table-actions button") !== null',
+        )
+        for (const [width, sameRow] of [
+          [1252, true],
+          [1180, false],
+        ]) {
+          await send('Emulation.setDeviceMetricsOverride', {
+            width,
+            height: 900,
+            deviceScaleFactor: 1,
+            mobile: false,
+          })
+          const layout = await evaluate(`(() => {
+            const [branches, areas] = document.querySelector('.master-data-quick-grid').children;
+            const fits = [...document.querySelectorAll('.master-data-quick-grid .administration-users')].every(wrapper => {
+              const rect = wrapper.getBoundingClientRect();
+              const lastColumn = wrapper.querySelector('thead th:last-child').getBoundingClientRect();
+              const inactive = wrapper.querySelector('[aria-label^="Reativar"]').closest('tr');
+              const controls = [...inactive.querySelectorAll('.table-actions button')];
+              const status = inactive.querySelector('[data-label="Situação"] > *').getBoundingClientRect();
+              return wrapper.scrollWidth <= wrapper.clientWidth + 1
+                && lastColumn.right <= rect.right + 1
+                && status.right <= lastColumn.left + 1
+                && controls.length === 3
+                && controls.every(button => {
+                  const bounds = button.getBoundingClientRect();
+                  return bounds.left >= lastColumn.left - 1 && bounds.right <= rect.right + 1;
+                });
+            });
+            return { sameRow: branches.offsetTop === areas.offsetTop, fits };
+          })()`)
+          assert.deepEqual(layout, { sameRow, fits: true }, 'Filiais e Áreas a ' + width + 'px')
+          console.log(JSON.stringify({ scenario: 'master-data-quick-grid', width, ...layout }))
+        }
       }
     }
     mode = 'anonymous'

@@ -1,7 +1,9 @@
-import { Pause } from 'lucide-react'
-import { useState, type ReactNode } from 'react'
+import { Pause, Play } from 'lucide-react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { AuthPageFrame } from './AuthPageFrame'
 import './filing-desk.css'
+
+const motionPreference = '(prefers-reduced-motion: reduce)'
 
 function AboutAccess() {
   return (
@@ -59,8 +61,15 @@ type FilingDeskProps = {
 }
 
 export function FilingDesk({ children, theme, onToggleTheme }: FilingDeskProps) {
-  const [paused, setPaused] = useState(false)
-  const pauseLabel = paused ? 'Animação pausada' : 'Pausar animação'
+  const [paused, setPaused] = useState(() => window.matchMedia?.(motionPreference).matches ?? false)
+  const pauseLabel = paused ? 'Retomar animação' : 'Pausar animação'
+
+  useEffect(() => {
+    const media = window.matchMedia?.(motionPreference)
+    const update = (event: MediaQueryListEvent) => setPaused(event.matches)
+    media?.addEventListener('change', update)
+    return () => media?.removeEventListener('change', update)
+  }, [])
 
   return (
     <AuthPageFrame
@@ -74,11 +83,10 @@ export function FilingDesk({ children, theme, onToggleTheme }: FilingDeskProps) 
           className="filing-pause"
           aria-label={pauseLabel}
           title={pauseLabel}
-          aria-disabled={paused}
-          onClick={() => setPaused(true)}
+          onClick={() => setPaused((wasPaused) => !wasPaused)}
         >
-          <Pause size={15} aria-hidden="true" />
-          <span>{paused ? 'Pausada' : 'Pausar'}</span>
+          {paused ? <Play size={15} aria-hidden="true" /> : <Pause size={15} aria-hidden="true" />}
+          <span>{paused ? 'Retomar' : 'Pausar'}</span>
         </button>
       }
       footerStart={<AboutAccess />}

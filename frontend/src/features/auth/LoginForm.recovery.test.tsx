@@ -23,19 +23,16 @@ describe('Solicitação de recuperação no login', () => {
     expect(screen.getByRole('button', { name: 'Ocultar senha' })).toBeInTheDocument()
     expect(screen.getByText('Acesso restrito à plataforma.')).toBeInTheDocument()
     const pause = screen.getByRole('button', { name: 'Pausar animação' })
-    expect(pause).toHaveAttribute('aria-disabled', 'false')
     fireEvent.click(pause)
-    expect(screen.getByRole('button', { name: 'Animação pausada' })).toHaveAttribute(
-      'aria-disabled',
-      'true',
-    )
+    expect(screen.getByRole('button', { name: 'Retomar animação' })).toBeEnabled()
     expect(screen.getByRole('complementary', { name: 'Sobre esta página' })).toHaveTextContent(
       'Avaliações de desempenho',
     )
 
     fireEvent.click(screen.getByRole('button', { name: 'Solicitar redefinição de senha' }))
     expect(screen.getByRole('heading', { level: 1, name: 'Solicitar redefinição' })).toBeVisible()
-    expect(screen.getByRole('button', { name: 'Animação pausada' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Retomar animação' }))
+    expect(screen.getByRole('button', { name: 'Pausar animação' })).toBeEnabled()
     expect(screen.queryByLabelText('E-mail ou login')).not.toBeInTheDocument()
     expect(screen.getByLabelText('E-mail ou login para recuperação')).toHaveFocus()
     fireEvent.click(screen.getByRole('button', { name: 'Voltar ao acesso' }))
@@ -43,6 +40,30 @@ describe('Solicitação de recuperação no login', () => {
     expect(screen.getByLabelText('E-mail ou login')).toHaveFocus()
     expect(screen.getByLabelText('Senha')).toHaveAttribute('type', 'password')
     expect(screen.getByLabelText('Senha')).toHaveValue('')
+  })
+
+  it('inicia pausado com movimento reduzido e permite retomar e pausar novamente', () => {
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const preference = vi.spyOn(window, 'matchMedia').mockReturnValue({ ...media, matches: true })
+    try {
+      const { container } = render(
+        <LoginForm
+          api={{} as ApiClient}
+          isRestoringSession={false}
+          onAuthenticated={vi.fn()}
+          onToggleTheme={vi.fn()}
+          theme="light"
+        />,
+      )
+      const desk = container.querySelector('.filing-desk')
+      expect(desk).toHaveAttribute('data-paused', 'true')
+      fireEvent.click(screen.getByRole('button', { name: 'Retomar animação' }))
+      expect(desk).toHaveAttribute('data-paused', 'false')
+      fireEvent.click(screen.getByRole('button', { name: 'Pausar animação' }))
+      expect(desk).toHaveAttribute('data-paused', 'true')
+    } finally {
+      preference.mockRestore()
+    }
   })
 
   it('aceita o login, evita envios simultâneos e responde sem revelar se a conta existe', async () => {

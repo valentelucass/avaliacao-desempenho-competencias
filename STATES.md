@@ -1,5 +1,31 @@
 # Estado atual — Avaliação de Desempenho e Competências
 
+## Transição de Filiais e Áreas em 24/11/2026
+
+O Firefox reproduziu a captura a 1252 × 900, no tema claro e com menu recolhido. Na versão instalada, as duas tabelas tinham mínimo de 544 px em cartões com 518 px úteis. Os 26 px de rolagem interna cortavam a coluna Ação. A prévia anterior empilhava os cartões a essa largura.
+
+Filiais e Áreas agora dimensionam cada tabela pela largura do cartão. Situação tem espaço para o filtro e o selo. Ação comporta Editar, Reativar e Excluir na mesma linha. Nome usa o espaço restante e quebra linha quando necessário. A grade mantém os cartões lado a lado a 1252 px com o menu recolhido e os empilha conforme a largura disponível.
+
+Firefox e Edge passaram em 1.048 medições, incluindo a largura da captura, 1 px antes e depois do empilhamento, os temas claro e escuro, o menu aberto e recolhido, duas páginas de filiais e oito de áreas. O teste de regressão do Edge verifica os cartões lado a lado em 1252 px e empilhados em 1180 px, com a coluna Ação inteira e os três botões das linhas desativadas. O build isolado, os 331 testes da interface, o formatter, o lint, o scanner de segredos e a auditoria npm passaram. As capturas comparativas estão em `outputs/cadastros-transicao` no espaço de trabalho da revisão. A publicação está pendente.
+
+## Fichário de login e tabelas por perfil em 23/11/2026
+
+O controle do fichário ficava desabilitado após o primeiro clique. No login e na recuperação, o mesmo botão agora pausa e retoma as folhas e as abas. A preferência de movimento reduzido inicia o fichário pausado e o usuário pode retomar pelo cabeçalho. No celular, a capa lateral desaparece e o cartão central mantém as três abas. A capa completa continua visível no desktop.
+
+A comparação local no Edge usou a interface instalada e a prévia com a mesma API fictícia, 10 filiais e 40 áreas. Com o menu expandido, na primeira página faltavam 9 px a 1500 px e 73 px a 1366 px. Na oitava página, um nome sem espaços aumentava em 186 px a largura da tabela a 1646 px. As células administrativas agora permitem a quebra desses nomes e de logins longos. Na revisão de Cadastros, as 102 medições da prévia passaram, incluindo registros desativados com três ações e as duas posições do menu.
+
+A matriz local percorreu os menus de Administrador técnico, RH, Diretoria, Gestor e Colaborador, além do administrador supremo e do gestor com redefinição delegada. As 905 medições em 106 telas e estados passaram. A lista de solicitações de senha também foi conferida a 1024 px com o menu aberto. O controle do fichário passou nos 12 cenários adicionais com toque emulado, nas orientações retrato e paisagem, nos dois temas e com as duas preferências de movimento. O Edge também verificou a pausa e a retomada por teclado. As capturas e a matriz por perfil estão em `outputs/revisao-perfis` no espaço de trabalho da revisão.
+
+A verificação local `scripts/verify-quality.ps1 -SkipDatabase` passou com build isolado, 331 testes do frontend, 353 testes executados do servidor e os ensaios em navegador. As 21 integrações opcionais do servidor que exigem banco ficaram fora da execução. O teste de restauração de sessão agora percorre Questionários, Cadastros e solicitação de senha com uma sessão administrativa fictícia, filas preenchidas e menu aberto, de 1024 a 1920 px. Publicação pendente.
+
+## Revisão de rolagem horizontal em 23/11/2026
+
+Com o menu lateral expandido, o formulário de Questionários ocupava 1599 px em uma janela de 1366 px e 1602 px em uma janela de 1500 px. O formulário passou a distribuir os campos pela largura disponível. Em Cadastros, as listas de filiais e áreas ficam lado a lado quando há espaço para todas as ações. A tabela de configuração de ciclos, o resumo por competência, a ficha da conta e a troca de senha também se ajustam a larguras menores.
+
+Na primeira rodada, o teste de restauração de sessão no Edge abriu Questionários e Cadastros com uma sessão fictícia de RH com permissões adicionais e mediu as duas páginas com o menu expandido em 1366, 1500 e 1920 px. A verificação local `scripts/verify-quality.ps1 -SkipDatabase` passou, incluindo o build isolado, os 330 testes do frontend e a impressão em uma página A4.
+
+Na prévia local, 45 telas e estados foram verificados em 15 resoluções, de 320 × 700 a 1920 × 1080. As 675 medições passaram com a barra vertical do navegador habilitada, incluindo 1500 × 560, 1500 × 700 e 1366 × 768. O painel lateral do Codex também foi conferido nas duas resoluções principais com o menu expandido.
+
 ## Marca, tema e saída da conta em 22/11/2026
 
 O ajuste solicitado aplica preto à marca Rodogarcia no tema claro e troca o tema imediatamente. A ação Sair passou para a extremidade direita do cabeçalho autenticado, depois do seletor de tema, com o ícone e o botão discreto usados pelo Dashboard. O celular usa o ícone com nome acessível, seguindo o WMS. A ação continua ligada ao encerramento de sessão existente.
@@ -510,6 +536,12 @@ Validação local: `iniciar-prod.bat --check` confirmou JDK, configuração exte
 Registro da preparação anterior à ativação: naquele momento o acesso ao PM2 retornava `EPERM`, o dump ainda continha as portas antigas e a troca das rotas remotas precisava ser coordenada. O estado operacional observado depois da execução pelo usuário está na seção acima. A ponte local preparada resolve a conexão com o túnel sem alterar a configuração remota; quando as rotas do Cloudflare forem atualizadas diretamente para `38080`/`28081`, as pontes poderão ser removidas com `repair-public-route.ps1 -Remove`.
 
 ## Tarefas pendentes reais
+
+- [x] Reproduzir e corrigir a rolagem dentro das tabelas de Filiais e Áreas na largura imediatamente anterior ao empilhamento, incluindo menu recolhido e as três ações de registros desativados. Validação local no Firefox e no Edge concluída em 24/11/2026.
+
+- [x] Conferir a largura das telas por perfil, incluindo Cadastros com listas paginadas e registros desativados, e validar a pausa reversível e a apresentação móvel do fichário de login. Validação local no Edge concluída em 23/11/2026.
+
+- [x] Revisar a rolagem horizontal nas telas da Avaliação, com foco nas janelas de 1500 e 1366 px e no espaço ocupado pelo menu lateral. Validação local concluída em 23/11/2026.
 
 - [x] Integrar a proposta 05 ao login e validar a capa e o fundo com o responsável. Publicação desta revisão autorizada em 22/11/2026.
 

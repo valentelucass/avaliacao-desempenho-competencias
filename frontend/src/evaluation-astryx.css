@@ -610,6 +610,7 @@ html[data-astryx-theme='neutral'][data-theme='light'] {
     font-size: 12px;
     font-weight: 650;
     color: var(--ev-muted);
+    white-space: normal;
   }
   .ev-table td {
     font-size: 13px;

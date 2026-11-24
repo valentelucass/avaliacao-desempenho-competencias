@@ -69,12 +69,8 @@
   font: 600 13px/1 var(--font-family-body);
   cursor: pointer;
 }
-.filing-pause:hover:not([aria-disabled='true']) {
+.filing-pause:hover {
   background: var(--sheet);
-}
-.filing-pause[aria-disabled='true'] {
-  color: var(--file-muted);
-  cursor: default;
 }
 .filing-pause:focus-visible,
 .filing-about summary:focus-visible {
@@ -651,67 +647,14 @@
     width: clamp(45px, 7vw, 78px);
   }
 }
-@media (max-width: 600px) {
+@media (max-width: 48rem), (max-width: 64rem) and (pointer: coarse) {
   .filing-desk {
-    --file-width: calc(100% - 22px);
-    width: min(100%, 30rem);
-    padding: 16px 0 17px;
+    --file-width: 36rem;
+    width: min(100%, var(--file-width));
+    padding: 0;
   }
   .filing-cover {
-    inset: 14px 0 8px;
-    width: 100%;
-  }
-  .filing-leaf {
-    width: 47%;
-    top: 5px;
-    bottom: 5px;
-    --tilt: 1.6deg;
-    --loose: 0.35deg;
-  }
-  .filing-leaf--feedback {
-    --tilt: -1.6deg;
-    --loose: -0.35deg;
-  }
-  .filing-leaf::before {
-    inset: 5px;
-  }
-  .filing-pleats {
-    width: 18px;
-    background-size: 12px 100%;
-  }
-  .filing-imprint,
-  .filing-leaf--feedback .filing-imprint {
-    inset: 11px 10% auto;
-    height: 25px;
-    display: flex;
-    gap: 5px;
-    align-items: center;
-    justify-content: flex-start;
-  }
-  .filing-leaf--feedback .filing-imprint {
-    justify-content: flex-end;
-  }
-  .filing-compass {
-    width: 21px;
-    flex: 0 0 auto;
-  }
-  .filing-compass::before {
-    box-shadow: none;
-  }
-  .filing-print-label {
-    font-size: 12px;
-  }
-  .filing-annotation {
-    width: 22px;
-    height: 16px;
-    padding: 2px 0 0;
-    gap: 2px;
-  }
-  .filing-annotation::before {
     display: none;
-  }
-  .filing-folder {
-    margin-top: 31px;
   }
 }
 @media (max-width: 600px) {
@@ -781,20 +724,5 @@
   }
   .filing-pause {
     width: 34px;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .filing-back {
-    animation: none;
-    transform: rotate(var(--angle));
-  }
-  .filing-leaf {
-    animation: none;
-    transform: rotate(var(--tilt));
-  }
-  .filing-compass::after,
-  .filing-annotation i,
-  .filing-annotation i:last-child::after {
-    animation: none;
   }
 }
