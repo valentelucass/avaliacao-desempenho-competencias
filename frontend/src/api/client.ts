@@ -16,6 +16,8 @@ import type {
   ApprovedQuestionnaireVersion,
   ApiProblem,
   AssessmentDetail,
+  AssessmentCoveragePage,
+  AssessmentCoverageRequest,
   AssessmentCreationCycleOption,
   AssessmentCreationType,
   AssessmentListRequest,
@@ -42,6 +44,7 @@ import type {
   EvaluationCycleAdministrationConfiguration,
   ExtendEvaluationCycleClosingInput,
   IndicatorExport,
+  IndicatorDashboard,
   AssessmentExport,
   AssessmentExportRequest,
   IndicatorFilterOptions,
@@ -198,6 +201,7 @@ export interface ApiClient {
     input: ExtendEvaluationCycleClosingInput,
   ): Promise<void>
   listAssessments(request?: AssessmentListRequest): Promise<Page<AssessmentSummary>>
+  listAssessmentCoverage(request: AssessmentCoverageRequest): Promise<AssessmentCoveragePage>
   exportAssessments(request: AssessmentExportRequest): Promise<AssessmentExport>
   listAssessmentCreationCycleOptions(
     type: AssessmentCreationType,
@@ -224,6 +228,7 @@ export interface ApiClient {
     input: CompleteFeedbackInput,
   ): Promise<AssessmentDetail>
   getIndicatorFilterOptions(cycleId: string): Promise<IndicatorFilterOptions>
+  getIndicatorDashboard(cycleId: string): Promise<IndicatorDashboard>
   getIndicators(query: IndicatorQuery): Promise<IndicatorResponse>
   exportIndicators(query: IndicatorQuery): Promise<IndicatorExport | IndicatorResponse>
 }
@@ -895,6 +900,17 @@ export class HttpApiClient implements ApiClient {
     })
   }
 
+  listAssessmentCoverage(request: AssessmentCoverageRequest): Promise<AssessmentCoveragePage> {
+    const parameters = new URLSearchParams({
+      cycleId: request.cycleId,
+      status: request.status,
+      page: String(request.page),
+      limit: String(request.limit),
+    })
+    if (request.evaluatedName) parameters.set('evaluatedName', request.evaluatedName)
+    return this.request<AssessmentCoveragePage>('/assessments/coverage?' + parameters.toString())
+  }
+
   listAssessments(request: AssessmentListRequest = {}): Promise<Page<AssessmentSummary>> {
     const parameters = new URLSearchParams()
     if (request.limit !== undefined) {
@@ -1029,6 +1045,12 @@ export class HttpApiClient implements ApiClient {
         headers: { 'Idempotency-Key': crypto.randomUUID() },
         requiresCsrf: true,
       },
+    )
+  }
+
+  getIndicatorDashboard(cycleId: string): Promise<IndicatorDashboard> {
+    return this.request<IndicatorDashboard>(
+      '/indicators/dashboard?cycleId=' + encodeURIComponent(cycleId),
     )
   }
 

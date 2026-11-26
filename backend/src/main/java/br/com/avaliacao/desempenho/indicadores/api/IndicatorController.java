@@ -43,7 +43,7 @@ import org.springframework.web.bind.annotation.RestController;
 @ConditionalOnProperty(prefix = "app.indicators", name = "enabled", havingValue = "true")
 public class IndicatorController {
 
-  private static final String READ_INDICATORS =
+  static final String READ_INDICATORS =
       "hasAnyAuthority('PERMISSION:INDICADORES.VISUALIZAR', '" + SUPREME_REVIEW_AUTHORITY + "')";
 
   private final IndicatorRequestApplicationService indicatorService;
@@ -119,7 +119,7 @@ public class IndicatorController {
     return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(insufficient);
   }
 
-  private static IndicatorExecutionContext executionContext(
+  static IndicatorExecutionContext executionContext(
       AuthenticatedPrincipal principal, HttpServletRequest request) {
     AuthenticatedPrincipal authenticatedPrincipal =
         Objects.requireNonNull(principal, "principal autenticado não foi resolvido");

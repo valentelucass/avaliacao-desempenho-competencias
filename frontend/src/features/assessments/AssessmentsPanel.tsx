@@ -13,7 +13,7 @@ import {
   TableRow,
 } from '@astryxdesign/core/Table'
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
-import { CheckCircle2, ClipboardList, Plus, RefreshCw, Send } from 'lucide-react'
+import { CheckCircle2, ClipboardList, ListChecks, Plus, RefreshCw, Send } from 'lucide-react'
 import type { FormEvent, ReactNode } from 'react'
 import { isAuthenticationError } from '../../api/client'
 import type { ApiClient } from '../../api/client'
@@ -35,6 +35,7 @@ import { AssessmentEditor } from './AssessmentEditor'
 import { IndividualAssessmentSummary } from './IndividualAssessmentSummary'
 import { AssessmentListFilters, type AssessmentFilters } from './AssessmentListFilters'
 import { AssessmentExportButton } from './AssessmentExportButton'
+import { AssessmentCoveragePanel } from './AssessmentCoveragePanel'
 
 type AssessmentsPanelProps = {
   api: ApiClient
@@ -49,6 +50,7 @@ type AssessmentsPanelProps = {
   isAdministrativeView: boolean
   canUseAdministrativeFilters: boolean
   canExportAssessments?: boolean
+  canTrackCoverage?: boolean
   canPrintAssessment?: boolean
   journey?: 'EQUIPE' | 'AUTOAVALIACAO'
   assessmentId?: string
@@ -110,6 +112,7 @@ export function AssessmentsPanel({
   isAdministrativeView,
   canUseAdministrativeFilters,
   canExportAssessments = false,
+  canTrackCoverage = false,
   canPrintAssessment = true,
   journey,
   assessmentId,
@@ -179,6 +182,9 @@ export function AssessmentsPanel({
   const managerCreationCardRef = useRef<HTMLElement>(null)
   const selfCreationCardRef = useRef<HTMLElement>(null)
 
+  const [showCoverage, setShowCoverage] = useState(false)
+  const [coverageRevision, setCoverageRevision] = useState(0)
+  const coverageActive = canTrackCoverage && showCoverage
   const assessmentMetrics = assessmentPage.totals
 
   const loadAssessments = useCallback(
@@ -730,8 +736,11 @@ export function AssessmentsPanel({
         variant="secondary"
         className="ev-refresh"
         icon={<RefreshCw size={16} aria-hidden="true" />}
-        isDisabled={isLoading}
-        onClick={refreshAssessments}
+        isDisabled={!coverageActive && isLoading}
+        onClick={() => {
+          if (coverageActive) setCoverageRevision((revision) => revision + 1)
+          else refreshAssessments()
+        }}
       />
     </div>
   )
@@ -739,7 +748,7 @@ export function AssessmentsPanel({
     <section aria-labelledby="assessments-title" className="ev-assessments">
       {headerHost ? createPortal(heading, headerHost) : heading}
 
-      {(!isLoading || assessmentPage.items.length > 0) && !error ? (
+      {!coverageActive && (!isLoading || assessmentPage.items.length > 0) && !error ? (
         <dl className="ev-metrics" aria-label="Resumo de avaliações">
           <Metric
             label="Total"
@@ -768,12 +777,12 @@ export function AssessmentsPanel({
         </dl>
       ) : null}
 
-      {!isLoading && !error && assessmentMetrics?.total === null ? (
+      {!coverageActive && !isLoading && !error && assessmentMetrics?.total === null ? (
         <p className="muted" role="status">
           Não há dados suficientes para preservar a confidencialidade dos totais.
         </p>
       ) : null}
-      {canUseAdministrativeFilters ? (
+      {canUseAdministrativeFilters && !coverageActive ? (
         <section className="ev-create-region" aria-labelledby="individual-filter-title">
           <Card padding={4} className="ev-create-card">
             <div className="assessment-creation-card__header">
@@ -1215,122 +1224,154 @@ export function AssessmentsPanel({
         </div>
       ) : null}
 
-      <AssessmentListFilters
-        onApply={setListFilters}
-        appliedFilters={listFilters}
-        exportAction={
-          canExportAssessments ? (
-            <AssessmentExportButton
-              api={api}
-              filters={{
-                ...listFilters,
-                cycleId: administrativeCycleId || undefined,
-                collaboratorId: administrativeCollaboratorId || undefined,
-              }}
-              disabled={isLoading || !!error}
-              onSessionExpired={onSessionExpired}
-            />
-          ) : undefined
-        }
-      />
+      {coverageActive ? (
+        <AssessmentCoveragePanel
+          api={api}
+          refreshRevision={coverageRevision}
+          onClose={() => setShowCoverage(false)}
+          onSelectAssessment={onSelectAssessment}
+          onSessionExpired={onSessionExpired}
+        />
+      ) : (
+        <>
+          <AssessmentListFilters
+            onApply={setListFilters}
+            appliedFilters={listFilters}
+            coverageAction={
+              canTrackCoverage ? (
+                <ActionButton
+                  type="button"
+                  label="Acompanhar início"
+                  size="sm"
+                  variant="secondary"
+                  icon={<ListChecks size={16} aria-hidden="true" />}
+                  onClick={() => setShowCoverage(true)}
+                />
+              ) : undefined
+            }
+            exportAction={
+              canExportAssessments ? (
+                <AssessmentExportButton
+                  api={api}
+                  filters={{
+                    ...listFilters,
+                    cycleId: administrativeCycleId || undefined,
+                    collaboratorId: administrativeCollaboratorId || undefined,
+                  }}
+                  disabled={isLoading || !!error}
+                  onSessionExpired={onSessionExpired}
+                />
+              ) : undefined
+            }
+          />
 
-      {isLoading && assessmentPage.items.length === 0 ? (
-        <FeedbackMessage kind="info">Carregando avaliações…</FeedbackMessage>
-      ) : null}
-      {error ? (
-        <FeedbackMessage kind="error" onDismiss={() => setError(undefined)}>
-          {error}
-        </FeedbackMessage>
-      ) : null}
+          {isLoading && assessmentPage.items.length === 0 ? (
+            <FeedbackMessage kind="info">Carregando avaliações…</FeedbackMessage>
+          ) : null}
+          {error ? (
+            <FeedbackMessage kind="error" onDismiss={() => setError(undefined)}>
+              {error}
+            </FeedbackMessage>
+          ) : null}
 
-      {!isLoading && !error && assessmentPage.items.length === 0 ? (
-        <EmptyState
-          title={hasListFilters ? 'Nenhuma avaliação encontrada' : 'Nenhuma avaliação disponível'}
-        >
-          {hasListFilters
-            ? 'Nenhuma avaliação autorizada corresponde aos filtros. Ajuste os campos ou limpe os filtros para consultar novamente.'
-            : 'Não há avaliações no seu escopo neste momento. A disponibilidade depende do perfil, dos vínculos ativos, do ciclo e do questionário atribuídos pelo servidor.'}
-        </EmptyState>
-      ) : null}
+          {!isLoading && !error && assessmentPage.items.length === 0 ? (
+            <EmptyState
+              title={
+                hasListFilters ? 'Nenhuma avaliação encontrada' : 'Nenhuma avaliação disponível'
+              }
+            >
+              {hasListFilters
+                ? 'Nenhuma avaliação autorizada corresponde aos filtros. Ajuste os campos ou limpe os filtros para consultar novamente.'
+                : 'Não há avaliações no seu escopo neste momento. A disponibilidade depende do perfil, dos vínculos ativos, do ciclo e do questionário atribuídos pelo servidor.'}
+            </EmptyState>
+          ) : null}
 
-      {assessmentPage.items.length > 0 && (
-        <Card padding={0} className="ev-table-card">
-          <Table aria-label="Lista de avaliações" className="ev-table" aria-busy={isLoading}>
-            <TableHeader>
-              <TableRow isHeaderRow>
-                <TableHeaderCell scope="col">Colaborador avaliado</TableHeaderCell>
-                <TableHeaderCell scope="col">Status da avaliação</TableHeaderCell>
-                <TableHeaderCell scope="col">Tipo</TableHeaderCell>
-                <TableHeaderCell scope="col">Feedback</TableHeaderCell>
-                <TableHeaderCell scope="col">
-                  <span className="visually-hidden">Ações</span>
-                </TableHeaderCell>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {assessmentPage.items.map((assessment) => (
-                <TableRow key={assessment.id}>
-                  <TableCell className="ev-person">
-                    <strong title={assessment.evaluated.displayName}>
-                      {assessment.evaluated.displayName}
-                    </strong>
-                    <span className="visually-hidden" id={`assessment-${assessment.id}-summary`}>
-                      {`${formatAssessmentType(assessment.type)}. Situação: ${formatAssessmentStatus(assessment.status)}.${assessment.feedbackStatus === 'NAO_APLICAVEL' ? '' : ` Feedback ${formatFeedbackStatus(assessment.feedbackStatus)}.`}`}
-                    </span>
-                  </TableCell>
-                  <TableCell className="ev-status">
-                    <Badge
-                      label={formatAssessmentStatus(assessment.status)}
-                      aria-label={`Situação: ${formatAssessmentStatus(assessment.status)}`}
-                      variant={assessmentTone[assessment.status] ?? 'neutral'}
-                      className="dashboard-status-badge"
-                    />
-                  </TableCell>
-                  <TableCell className="ev-type">{formatAssessmentType(assessment.type)}</TableCell>
-                  <TableCell className="ev-feedback">
-                    {assessment.feedbackStatus === 'NAO_APLICAVEL'
-                      ? 'Não aplicável'
-                      : assessment.feedbackStatus === 'CONCLUIDO'
-                        ? 'Concluído'
-                        : 'Pendente'}
-                  </TableCell>
-                  <TableCell className="ev-row-actions">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      label="Abrir avaliação"
-                      aria-describedby={`assessment-${assessment.id}-summary`}
-                      onClick={() => onSelectAssessment(assessment.id)}
-                    />
-                    {canUseAdministrativeFilters &&
-                      administrativeCycleId &&
-                      administrativeCollaboratorId &&
-                      (assessment.status === 'ENVIADA' || assessment.status === 'PUBLICADA') && (
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          label="Pré-visualizar"
-                          onClick={() => setPreviewedAssessmentId(assessment.id)}
+          {assessmentPage.items.length > 0 && (
+            <Card padding={0} className="ev-table-card">
+              <Table aria-label="Lista de avaliações" className="ev-table" aria-busy={isLoading}>
+                <TableHeader>
+                  <TableRow isHeaderRow>
+                    <TableHeaderCell scope="col">Colaborador avaliado</TableHeaderCell>
+                    <TableHeaderCell scope="col">Status da avaliação</TableHeaderCell>
+                    <TableHeaderCell scope="col">Tipo</TableHeaderCell>
+                    <TableHeaderCell scope="col">Feedback</TableHeaderCell>
+                    <TableHeaderCell scope="col">
+                      <span className="visually-hidden">Ações</span>
+                    </TableHeaderCell>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {assessmentPage.items.map((assessment) => (
+                    <TableRow key={assessment.id}>
+                      <TableCell className="ev-person">
+                        <strong title={assessment.evaluated.displayName}>
+                          {assessment.evaluated.displayName}
+                        </strong>
+                        <span
+                          className="visually-hidden"
+                          id={`assessment-${assessment.id}-summary`}
+                        >
+                          {`${formatAssessmentType(assessment.type)}. Situação: ${formatAssessmentStatus(assessment.status)}.${assessment.feedbackStatus === 'NAO_APLICAVEL' ? '' : ` Feedback ${formatFeedbackStatus(assessment.feedbackStatus)}.`}`}
+                        </span>
+                      </TableCell>
+                      <TableCell className="ev-status">
+                        <Badge
+                          label={formatAssessmentStatus(assessment.status)}
+                          aria-label={`Situação: ${formatAssessmentStatus(assessment.status)}`}
+                          variant={assessmentTone[assessment.status] ?? 'neutral'}
+                          className="dashboard-status-badge"
                         />
-                      )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Card>
+                      </TableCell>
+                      <TableCell className="ev-type">
+                        {formatAssessmentType(assessment.type)}
+                      </TableCell>
+                      <TableCell className="ev-feedback">
+                        {assessment.feedbackStatus === 'NAO_APLICAVEL'
+                          ? 'Não aplicável'
+                          : assessment.feedbackStatus === 'CONCLUIDO'
+                            ? 'Concluído'
+                            : 'Pendente'}
+                      </TableCell>
+                      <TableCell className="ev-row-actions">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          label="Abrir avaliação"
+                          aria-describedby={`assessment-${assessment.id}-summary`}
+                          onClick={() => onSelectAssessment(assessment.id)}
+                        />
+                        {canUseAdministrativeFilters &&
+                          administrativeCycleId &&
+                          administrativeCollaboratorId &&
+                          (assessment.status === 'ENVIADA' ||
+                            assessment.status === 'PUBLICADA') && (
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              label="Pré-visualizar"
+                              onClick={() => setPreviewedAssessmentId(assessment.id)}
+                            />
+                          )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Card>
+          )}
+          <Pagination
+            currentPage={pageNumber}
+            hasNextPage={assessmentPage.page.nextCursor !== null}
+            itemCountOnPage={assessmentPage.items.length}
+            itemLabel="avaliações"
+            isLoading={isLoading}
+            onNextPage={goToNextPage}
+            onPreviousPage={goToPreviousPage}
+            showItemCount={false}
+            totalPages={assessmentPage.page.totalPages}
+          />
+        </>
       )}
-      <Pagination
-        currentPage={pageNumber}
-        hasNextPage={assessmentPage.page.nextCursor !== null}
-        itemCountOnPage={assessmentPage.items.length}
-        itemLabel="avaliações"
-        isLoading={isLoading}
-        onNextPage={goToNextPage}
-        onPreviousPage={goToPreviousPage}
-        showItemCount={false}
-        totalPages={assessmentPage.page.totalPages}
-      />
     </section>
   )
 }

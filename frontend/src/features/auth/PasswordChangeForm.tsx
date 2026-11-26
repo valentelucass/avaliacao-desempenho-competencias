@@ -6,6 +6,7 @@ import { isAuthenticationError } from '../../api/client'
 import type { ApiClient } from '../../api/client'
 import { FeedbackMessage } from '../../ui/Feedback'
 import { safeErrorMessage } from '../../ui/safeErrorMessage'
+import { useAccessibleDialog } from '../../ui/useAccessibleDialog'
 import { AuthPageFrame } from './AuthPageFrame'
 
 type PasswordChangeFormProps = {
@@ -32,12 +33,24 @@ export function PasswordChangeForm({
   const confirmationId = useId()
   const errorId = useId()
   const heading = useRef<HTMLHeadingElement>(null)
-  useEffect(() => heading.current?.focus(), [])
+  const dialogRef = useRef<HTMLElement>(null)
+  const isDialog = onCancel !== undefined
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmation, setConfirmation] = useState('')
   const [error, setError] = useState<string>()
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  useAccessibleDialog({
+    dialogRef,
+    isOpen: isDialog,
+    onRequestClose: () => onCancel?.(),
+    canDismiss: !isSubmitting,
+  })
+
+  useEffect(() => {
+    if (!isDialog) heading.current?.focus()
+  }, [isDialog])
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -86,98 +99,92 @@ export function PasswordChangeForm({
     }
   }
 
-  return (
-    <AuthPageFrame labelledBy="password-change-title" onToggleTheme={onToggleTheme} theme={theme}>
-      <Card
-        padding={4}
-        className="card login-card"
-        onKeyDown={(event) => {
-          if (event.key === 'Escape' && onCancel && !isSubmitting) {
-            event.preventDefault()
-            onCancel()
-          }
-        }}
-      >
-        <h1 id="password-change-title" ref={heading} tabIndex={-1}>
-          {onCancel ? 'Alterar minha senha' : 'Troca de senha obrigatória'}
-        </h1>
-        <p className="summary">
-          {onCancel
-            ? 'Defina uma nova senha pessoal.'
-            : 'Antes de acessar o sistema, defina uma nova senha.'}{' '}
-          Ao concluir, você precisará entrar novamente.
-        </p>
+  const Title = isDialog ? 'h2' : 'h1'
+  const submit = (
+    <ActionButton
+      size="sm"
+      variant="primary"
+      label={isSubmitting ? 'Alterando…' : 'Alterar senha'}
+      type="submit"
+      disabled={isSubmitting}
+    />
+  )
+  const content = (
+    <>
+      <Title id="password-change-title" ref={heading} data-dialog-initial-focus tabIndex={-1}>
+        {isDialog ? 'Alterar minha senha' : 'Troca de senha obrigatória'}
+      </Title>
+      <p id="password-change-summary" className="summary">
+        {onCancel
+          ? 'Defina uma nova senha pessoal.'
+          : 'Antes de acessar o sistema, defina uma nova senha.'}{' '}
+        Ao concluir, você precisará entrar novamente.
+      </p>
 
-        <form className="stack-form" onSubmit={handleSubmit} noValidate aria-busy={isSubmitting}>
+      <form className="stack-form" onSubmit={handleSubmit} noValidate aria-busy={isSubmitting}>
+        <input
+          aria-hidden="true"
+          autoComplete="username"
+          hidden
+          name="username"
+          readOnly
+          tabIndex={-1}
+          type="text"
+          value={username ?? ''}
+        />
+        {error ? (
+          <FeedbackMessage id={errorId} kind="error" onDismiss={() => setError(undefined)}>
+            {error}
+          </FeedbackMessage>
+        ) : null}
+
+        <div className="field">
+          <label htmlFor={currentPasswordId}>Senha atual</label>
           <input
-            aria-hidden="true"
-            autoComplete="username"
-            hidden
-            name="username"
-            readOnly
-            tabIndex={-1}
-            type="text"
-            value={username ?? ''}
-          />
-          {error ? (
-            <FeedbackMessage id={errorId} kind="error" onDismiss={() => setError(undefined)}>
-              {error}
-            </FeedbackMessage>
-          ) : null}
-
-          <div className="field">
-            <label htmlFor={currentPasswordId}>Senha atual</label>
-            <input
-              id={currentPasswordId}
-              aria-describedby={error ? errorId : undefined}
-              name="current-password"
-              type="password"
-              autoComplete="current-password"
-              value={currentPassword}
-              onChange={(event) => setCurrentPassword(event.target.value)}
-              disabled={isSubmitting}
-              required
-            />
-          </div>
-
-          <div className="field">
-            <label htmlFor={newPasswordId}>Nova senha</label>
-            <input
-              id={newPasswordId}
-              aria-describedby={error ? errorId : undefined}
-              name="new-password"
-              type="password"
-              autoComplete="new-password"
-              value={newPassword}
-              onChange={(event) => setNewPassword(event.target.value)}
-              disabled={isSubmitting}
-              required
-            />
-          </div>
-
-          <div className="field">
-            <label htmlFor={confirmationId}>Confirmar nova senha</label>
-            <input
-              id={confirmationId}
-              aria-describedby={error ? errorId : undefined}
-              name="confirm-new-password"
-              type="password"
-              autoComplete="new-password"
-              value={confirmation}
-              onChange={(event) => setConfirmation(event.target.value)}
-              disabled={isSubmitting}
-              required
-            />
-          </div>
-
-          <ActionButton
-            size="sm"
-            variant="primary"
-            label={isSubmitting ? 'Alterando…' : 'Alterar senha'}
-            type="submit"
+            id={currentPasswordId}
+            aria-describedby={error ? errorId : undefined}
+            name="current-password"
+            type="password"
+            autoComplete="current-password"
+            value={currentPassword}
+            onChange={(event) => setCurrentPassword(event.target.value)}
             disabled={isSubmitting}
+            required
           />
-          {onCancel ? (
+        </div>
+
+        <div className="field">
+          <label htmlFor={newPasswordId}>Nova senha</label>
+          <input
+            id={newPasswordId}
+            aria-describedby={error ? errorId : undefined}
+            name="new-password"
+            type="password"
+            autoComplete="new-password"
+            value={newPassword}
+            onChange={(event) => setNewPassword(event.target.value)}
+            disabled={isSubmitting}
+            required
+          />
+        </div>
+
+        <div className="field">
+          <label htmlFor={confirmationId}>Confirmar nova senha</label>
+          <input
+            id={confirmationId}
+            aria-describedby={error ? errorId : undefined}
+            name="confirm-new-password"
+            type="password"
+            autoComplete="new-password"
+            value={confirmation}
+            onChange={(event) => setConfirmation(event.target.value)}
+            disabled={isSubmitting}
+            required
+          />
+        </div>
+
+        {onCancel ? (
+          <div className="password-change-dialog__actions">
             <ActionButton
               size="sm"
               variant="secondary"
@@ -186,8 +193,42 @@ export function PasswordChangeForm({
               disabled={isSubmitting}
               onClick={onCancel}
             />
-          ) : null}
-        </form>
+            {submit}
+          </div>
+        ) : (
+          submit
+        )}
+      </form>
+    </>
+  )
+
+  if (isDialog) {
+    return (
+      <div
+        className="account-dialog-backdrop"
+        onClick={(event) => {
+          if (event.target === event.currentTarget && !isSubmitting) onCancel?.()
+        }}
+      >
+        <section
+          ref={dialogRef}
+          className="card account-dialog password-change-dialog"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="password-change-title"
+          aria-describedby="password-change-summary"
+          tabIndex={-1}
+        >
+          {content}
+        </section>
+      </div>
+    )
+  }
+
+  return (
+    <AuthPageFrame labelledBy="password-change-title" onToggleTheme={onToggleTheme} theme={theme}>
+      <Card padding={4} className="card login-card">
+        {content}
       </Card>
     </AuthPageFrame>
   )

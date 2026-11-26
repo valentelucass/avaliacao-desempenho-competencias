@@ -214,6 +214,15 @@ public class ApiSecurityConfiguration {
                         "PERMISSION:VINCULOS_DIRETORIA_GERENCIA.GERIR")
                     .requestMatchers("/api/v1/questionnaire-versions/**")
                     .hasAuthority("PERMISSION:QUESTIONARIOS.GERIR")
+                    .requestMatchers(HttpMethod.GET, "/api/v1/evaluation-cycles")
+                    .hasAnyAuthority(
+                        "PERMISSION:CICLOS.GERIR",
+                        "PERMISSION:AVALIACOES.AVALIAR_VINCULADOS",
+                        "PERMISSION:AVALIACOES.AVALIAR_GERENCIAS_VINCULADAS",
+                        "PERMISSION:AVALIACOES.VISUALIZAR_TODAS",
+                        "PERMISSION:AUTOAVALIACOES.PREENCHER_PROPRIA",
+                        "PERMISSION:INDICADORES.VISUALIZAR",
+                        SUPREME_REVIEW_AUTHORITY)
                     .requestMatchers("/api/v1/evaluation-cycles/**")
                     .hasAnyAuthority(
                         "PERMISSION:CICLOS.GERIR",
@@ -224,12 +233,16 @@ public class ApiSecurityConfiguration {
                     .requestMatchers(
                         HttpMethod.GET,
                         "/api/v1/assessments",
+                        "/api/v1/assessments/coverage",
                         "/api/v1/assessments/{assessmentId:[a-fA-F0-9-]+}")
                     .hasAnyAuthority(ASSESSMENT_READ_AUTHORITIES)
                     .requestMatchers("/api/v1/assessments/**")
                     .hasAnyAuthority(ASSESSMENT_AUTHORITIES)
                     .requestMatchers(
-                        HttpMethod.GET, "/api/v1/indicators", "/api/v1/indicators/options")
+                        HttpMethod.GET,
+                        "/api/v1/indicators",
+                        "/api/v1/indicators/options",
+                        "/api/v1/indicators/dashboard")
                     .hasAnyAuthority(
                         "PERMISSION:INDICADORES.VISUALIZAR",
                         "PERMISSION:DADOS.EXPORTAR",

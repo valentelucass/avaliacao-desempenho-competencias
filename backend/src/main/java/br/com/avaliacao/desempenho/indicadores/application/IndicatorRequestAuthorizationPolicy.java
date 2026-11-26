@@ -22,7 +22,8 @@ public final class IndicatorRequestAuthorizationPolicy {
     IndicatorExecutionContext safeContext =
         Objects.requireNonNull(context, "contexto não pode ser nulo");
     if ((operation == IndicatorAuditRecord.Operation.QUERY
-            || operation == IndicatorAuditRecord.Operation.OPTIONS)
+            || operation == IndicatorAuditRecord.Operation.OPTIONS
+            || operation == IndicatorAuditRecord.Operation.DASHBOARD)
         && safeContext.hasPermission(AuthorizedUser.SUPREME_REVIEW)) {
       return;
     }

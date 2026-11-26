@@ -30,7 +30,10 @@ public final class EvaluationCycleReadService {
   public EvaluationCycleReadRepository.EvaluationCyclePage list(
       EvaluationCycleReadAccessContext actor, int limit, UUID cursor) {
     requireValidLimit(limit);
-    EvaluationCycleReadScope scope = resolveScope(actor);
+    EvaluationCycleReadScope scope =
+        authorizationPolicy
+            .listScopeFor(actor)
+            .orElseThrow(EvaluationCycleReadForbiddenException::new);
     return repository.listAccessible(actor.userId(), scope, limit, cursor);
   }
 

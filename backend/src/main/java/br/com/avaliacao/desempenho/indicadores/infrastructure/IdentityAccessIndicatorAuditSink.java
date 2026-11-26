@@ -40,6 +40,7 @@ public final class IdentityAccessIndicatorAuditSink implements IndicatorAuditSin
       case QUERY -> "INDICADORES.CONSULTAR";
       case EXPORT -> "INDICADORES.EXPORTAR";
       case OPTIONS -> "INDICADORES.OPCOES";
+      case DASHBOARD -> "INDICADORES.CONSULTAR_PAINEL";
     };
   }
 
@@ -53,8 +54,8 @@ public final class IdentityAccessIndicatorAuditSink implements IndicatorAuditSin
   }
 
   private static String reducedDetail(IndicatorAuditRecord record) {
-    if (record.operation() == IndicatorAuditRecord.Operation.OPTIONS) {
-      return "policy=" + POLICY_VERSION + ";operation=OPTIONS";
+    if (record.query() == null) {
+      return "policy=" + POLICY_VERSION + ";operation=" + record.operation().name();
     }
     IndicatorQuery query = record.query();
     return "policy="

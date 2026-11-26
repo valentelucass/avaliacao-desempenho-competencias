@@ -1,5 +1,7 @@
 package br.com.avaliacao.desempenho.ciclosavaliacao.api;
 
+import static br.com.avaliacao.desempenho.identidadeacesso.domain.model.AuthorizedUser.SUPREME_REVIEW_AUTHORITY;
+
 import br.com.avaliacao.desempenho.ciclosavaliacao.api.dto.AppliedQuestionnaireResponse;
 import br.com.avaliacao.desempenho.ciclosavaliacao.api.dto.EvaluationCycleListResponse;
 import br.com.avaliacao.desempenho.ciclosavaliacao.api.dto.EvaluationCycleResponseMapper;
@@ -46,7 +48,10 @@ public class EvaluationCycleController {
           + "'PERMISSION:AVALIACOES.AVALIAR_VINCULADOS',"
           + "'PERMISSION:AVALIACOES.AVALIAR_GERENCIAS_VINCULADAS',"
           + "'PERMISSION:AUTOAVALIACOES.PREENCHER_PROPRIA',"
-          + "'PERMISSION:INDICADORES.VISUALIZAR')")
+          + "'PERMISSION:INDICADORES.VISUALIZAR',"
+          + "'PERMISSION:AVALIACOES.VISUALIZAR_TODAS','"
+          + SUPREME_REVIEW_AUTHORITY
+          + "')")
   public EvaluationCycleListResponse list(
       @AuthenticationPrincipal AuthenticatedPrincipal principal,
       @RequestParam(defaultValue = "20") @Min(1) @Max(100) int limit,

@@ -3,7 +3,7 @@ import { Button } from '@astryxdesign/core/Button'
 import { MobileNav } from '@astryxdesign/core/MobileNav'
 import { SideNav, SideNavItem, SideNavSection } from '@astryxdesign/core/SideNav'
 import { KeyRound, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
-import { type ReactNode, useEffect, useState, useSyncExternalStore } from 'react'
+import { type ReactNode, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 
 type MenuItem = {
   label: string
@@ -54,6 +54,7 @@ export function EvaluationNavigation({
 }) {
   const desktop = useSyncExternalStore(subscribe, isDesktop, () => false)
   const [collapsed, setCollapsed] = useState(initialCollapse)
+  const mobileDrawer = useRef<HTMLDialogElement>(null)
   const compact = desktop && collapsed
   useEffect(() => {
     if (desktop && open) onOpenChange(false)
@@ -67,6 +68,18 @@ export function EvaluationNavigation({
       /* A escolha dura nesta visita. */
     }
   }
+  function openPasswordChange() {
+    const drawer = mobileDrawer.current
+    if (!drawer?.open) {
+      onPassword()
+      return
+    }
+
+    // O diálogo móvel permanece na camada superior durante a animação de saída.
+    drawer.addEventListener('close', onPassword, { once: true })
+    onOpenChange(false)
+  }
+
   const brand = (
     <a
       className="ev-brand"
@@ -114,7 +127,7 @@ export function EvaluationNavigation({
         isIconOnly={compact}
         icon={<KeyRound size={16} aria-hidden="true" />}
         isDisabled={signingOut}
-        onClick={onPassword}
+        onClick={openPasswordChange}
       />
       {desktop && (
         <Button
@@ -136,11 +149,10 @@ export function EvaluationNavigation({
       >
         <Avatar name={displayName} size="sm" />
         {!compact && (
-          <div>
+          <div className="ev-profile__identity">
             <strong>{displayName}</strong>
-            <small>
-              {profile} {help}
-            </small>
+            {help}
+            <small>{profile}</small>
           </div>
         )}
       </div>
@@ -161,6 +173,7 @@ export function EvaluationNavigation({
     </aside>
   ) : (
     <MobileNav
+      ref={mobileDrawer}
       label="Menu de módulos"
       id="workspace-sidebar"
       side="start"

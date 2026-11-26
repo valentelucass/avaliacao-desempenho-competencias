@@ -186,6 +186,16 @@ function WorkspaceApp({ api = defaultApiClient }: AppProps) {
     setNotice('Senha alterada. Entre novamente com a nova senha para continuar.')
   }, [])
 
+  function dismissPasswordChange() {
+    setVoluntaryPasswordChange(false)
+    requestAnimationFrame(() => {
+      if (document.activeElement !== document.body) return
+      const menu = menuButtonRef.current
+      const target = menu?.getClientRects().length ? menu : workspaceRef.current
+      target?.focus({ preventScroll: true })
+    })
+  }
+
   async function signOut() {
     setIsSigningOut(true)
     setStartupError(undefined)
@@ -227,7 +237,7 @@ function WorkspaceApp({ api = defaultApiClient }: AppProps) {
     )
   }
 
-  if (user.passwordChangeRequired || voluntaryPasswordChange) {
+  if (user.passwordChangeRequired) {
     return (
       <PasswordChangeForm
         api={api}
@@ -236,18 +246,6 @@ function WorkspaceApp({ api = defaultApiClient }: AppProps) {
         onToggleTheme={() => setTheme((current) => (current === 'light' ? 'dark' : 'light'))}
         theme={theme}
         username={passwordChangeUsername}
-        onCancel={
-          user.passwordChangeRequired
-            ? undefined
-            : () => {
-                setVoluntaryPasswordChange(false)
-                requestAnimationFrame(() => {
-                  const trigger = menuButtonRef.current
-                  if (trigger?.getClientRects().length) trigger.focus()
-                  else workspaceRef.current?.focus({ preventScroll: true })
-                })
-              }
-        }
       />
     )
   }
@@ -539,6 +537,7 @@ function WorkspaceApp({ api = defaultApiClient }: AppProps) {
                     canReopenAssessments={canReopenAssessments}
                     canRecordFeedback={canRecordAssessmentFeedback}
                     canExportAssessments={canExportAssessments}
+                    canTrackCoverage={canViewAllAssessments}
                     canPrintAssessment={!isSupremeReview}
                     isAdministrativeView={canViewAdministration && canViewAllAssessments}
                     canUseAdministrativeFilters={
@@ -594,6 +593,16 @@ function WorkspaceApp({ api = defaultApiClient }: AppProps) {
           </div>
         </footer>
       </div>
+      {voluntaryPasswordChange && (
+        <PasswordChangeForm
+          api={api}
+          onChanged={handlePasswordChanged}
+          onSessionExpired={handleSessionExpired}
+          onToggleTheme={() => setTheme((current) => (current === 'light' ? 'dark' : 'light'))}
+          theme={theme}
+          onCancel={dismissPasswordChange}
+        />
+      )}
     </div>
   )
 }

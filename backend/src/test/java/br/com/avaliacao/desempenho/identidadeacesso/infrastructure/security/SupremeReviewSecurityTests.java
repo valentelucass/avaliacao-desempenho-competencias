@@ -9,7 +9,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import br.com.avaliacao.desempenho.avaliacoes.api.AssessmentController;
+import br.com.avaliacao.desempenho.avaliacoes.api.AssessmentCoverageController;
 import br.com.avaliacao.desempenho.avaliacoes.application.AssessmentApplicationService;
+import br.com.avaliacao.desempenho.avaliacoes.application.AssessmentCoverageRepository;
+import br.com.avaliacao.desempenho.avaliacoes.application.AssessmentCoverageService;
 import br.com.avaliacao.desempenho.avaliacoes.application.AssessmentRepository;
 import br.com.avaliacao.desempenho.avaliacoes.domain.model.AssessmentAccessContext;
 import br.com.avaliacao.desempenho.avaliacoes.domain.model.AssessmentAuthorizationPolicy;
@@ -19,9 +22,11 @@ import br.com.avaliacao.desempenho.identidadeacesso.application.IdentityAccessRe
 import br.com.avaliacao.desempenho.identidadeacesso.domain.model.AuthorizedUser;
 import br.com.avaliacao.desempenho.identidadeacesso.infrastructure.persistence.SqlIdentityAccessRepository;
 import br.com.avaliacao.desempenho.indicadores.api.IndicatorController;
+import br.com.avaliacao.desempenho.indicadores.api.IndicatorDashboardController;
 import br.com.avaliacao.desempenho.indicadores.api.dto.IndicatorExportResponseMapper;
 import br.com.avaliacao.desempenho.indicadores.api.dto.IndicatorFilterOptionsResponseMapper;
 import br.com.avaliacao.desempenho.indicadores.api.dto.IndicatorResponseMapper;
+import br.com.avaliacao.desempenho.indicadores.application.IndicatorDashboardService;
 import br.com.avaliacao.desempenho.indicadores.application.IndicatorFilterOptionsRequestApplicationService;
 import br.com.avaliacao.desempenho.indicadores.application.IndicatorRequestApplicationService;
 import br.com.avaliacao.desempenho.indicadores.domain.model.IndicatorFilterOptions;
@@ -118,6 +123,18 @@ class SupremeReviewSecurityTests {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.availability").value("INSUFFICIENT_DATA"))
         .andExpect(jsonPath("$.averageScore").doesNotExist());
+    mvc.perform(get(INDICATORS + "/dashboard").param("cycleId", CYCLE.toString()).cookie(selected))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.metrics.averagePercent").doesNotExist())
+        .andExpect(jsonPath("$.byBranch").isArray());
+    mvc.perform(
+            get(ASSESSMENTS + "/coverage")
+                .param("cycleId", CYCLE.toString())
+                .param("status", "PENDENTE")
+                .cookie(selected))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.items[0].displayName").value("Cobertura fictícia"))
+        .andExpect(jsonPath("$.items[0].assessmentId").doesNotExist());
     var review =
         new AssessmentAccessContext(
             Account.SELECTED.id,
@@ -140,7 +157,12 @@ class SupremeReviewSecurityTests {
       Cookie session = cookie(denied);
       for (String route :
           List.of(
-              ASSESSMENTS, ASSESSMENTS + "/" + ASSESSMENT, INDICATORS, INDICATORS + "/options")) {
+              ASSESSMENTS,
+              ASSESSMENTS + "/" + ASSESSMENT,
+              ASSESSMENTS + "/coverage",
+              INDICATORS,
+              INDICATORS + "/options",
+              INDICATORS + "/dashboard")) {
         mvc.perform(get(route).cookie(session)).andExpect(status().isForbidden());
       }
     }
@@ -268,6 +290,24 @@ class SupremeReviewSecurityTests {
     @Bean
     AssessmentController assessmentController(AssessmentRepository repository) {
       return new AssessmentController(new AssessmentApplicationService(repository));
+    }
+
+    @Bean
+    AssessmentCoverageController coverageController() {
+      AssessmentCoverageRepository repository =
+          (cycleId, status, name, page, limit) ->
+              new AssessmentCoverageRepository.Page(
+                  List.of(
+                      new AssessmentCoverageRepository.Entry(
+                          ASSESSMENT, "Cobertura fictícia", null)),
+                  false);
+      return new AssessmentCoverageController(new AssessmentCoverageService(repository));
+    }
+
+    @Bean
+    IndicatorDashboardController dashboardController() {
+      return new IndicatorDashboardController(
+          new IndicatorDashboardService(ignored -> List.of(), ignored -> {}, ignored -> {}));
     }
 
     @Bean

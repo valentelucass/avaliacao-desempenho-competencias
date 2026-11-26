@@ -22,10 +22,12 @@ export function AssessmentListFilters({
   onApply,
   appliedFilters,
   exportAction,
+  coverageAction,
 }: {
   onApply: (filters: AssessmentFilters) => void
   appliedFilters: AssessmentFilters
   exportAction?: ReactNode
+  coverageAction?: ReactNode
 }) {
   const id = useId()
   const [draft, setDraft] = useState<AssessmentFilters>(appliedFilters)
@@ -123,6 +125,7 @@ export function AssessmentListFilters({
               onApply({})
             }}
           />
+          {coverageAction}
           {exportAction}
         </div>
       </Card>

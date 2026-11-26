@@ -521,6 +521,26 @@ export interface IndicatorQuery {
   competencyId?: string
 }
 
+export interface IndicatorDashboard {
+  metrics: {
+    collaborators: number | null
+    assessments: number | null
+    managers: number | null
+    managerSelfAssessments: number | null
+    averagePercent: number | null
+    finalizedPercent: number | null
+    feedbackPercent: number | null
+  }
+  byBranch: readonly IndicatorDashboardPoint[]
+  byArea: readonly IndicatorDashboardPoint[]
+  byItem: readonly IndicatorDashboardPoint[]
+}
+
+export interface IndicatorDashboardPoint {
+  label: string
+  averagePercent: number
+}
+
 export interface IndicatorFilterOption {
   id: string
   label: string
@@ -595,6 +615,21 @@ export interface AssessmentListRequest extends PageRequest {
   status?: 'RASCUNHO' | 'ENVIADA' | 'PUBLICADA'
   feedbackStatus?: AssessmentSummary['feedbackStatus']
 }
+export type AssessmentStartStatus = 'INICIADA' | 'PENDENTE'
+
+export interface AssessmentCoverageRequest {
+  cycleId: string
+  status: AssessmentStartStatus
+  evaluatedName?: string
+  page: number
+  limit: number
+}
+
+export interface AssessmentCoveragePage {
+  items: readonly { collaboratorId: string; displayName: string; assessmentId: string | null }[]
+  hasNextPage: boolean
+}
+
 export type SpreadsheetImportKind =
   'collaborators' | 'assignments' | 'allocations' | 'manager-assignments'
 export type SpreadsheetImportPreview = {

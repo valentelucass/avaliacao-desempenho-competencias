@@ -1,5 +1,7 @@
 package br.com.avaliacao.desempenho.ciclosavaliacao.domain.model;
 
+import br.com.avaliacao.desempenho.identidadeacesso.domain.model.AuthorizedUser;
+import br.com.avaliacao.desempenho.identidadeacesso.domain.model.PlatformPermission;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -14,6 +16,14 @@ public final class EvaluationCycleReadAuthorizationPolicy {
   public static final String EVALUATE_LINKED = "AVALIACOES.AVALIAR_VINCULADOS";
   public static final String EVALUATE_LINKED_MANAGERS = "AVALIACOES.AVALIAR_GERENCIAS_VINCULADAS";
   public static final String FILL_OWN_SELF_ASSESSMENT = "AUTOAVALIACOES.PREENCHER_PROPRIA";
+
+  public Optional<EvaluationCycleReadScope> listScopeFor(EvaluationCycleReadAccessContext actor) {
+    if (actor.has(PlatformPermission.ASSESSMENTS_VIEW_ALL.code())
+        || actor.has(AuthorizedUser.SUPREME_REVIEW)) {
+      return Optional.of(new EvaluationCycleReadScope(true, false, false, false));
+    }
+    return scopeFor(actor);
+  }
 
   public Optional<EvaluationCycleReadScope> scopeFor(EvaluationCycleReadAccessContext actor) {
     EvaluationCycleReadAccessContext access =

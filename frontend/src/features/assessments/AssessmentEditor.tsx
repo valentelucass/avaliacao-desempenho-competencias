@@ -662,9 +662,11 @@ export function AssessmentEditor({
         !(assessment.status === 'ENVIADA' && canPublishAssessment) &&
         !(assessment.status === 'PUBLICADA' && canReopenAssessment) &&
         !canCompleteFeedback ? (
-          <FeedbackMessage kind="info">
-            Esta avaliação está disponível somente para consulta com as permissões atuais.
-          </FeedbackMessage>
+          <div className="assessment-editor__read-only">
+            <FeedbackMessage kind="info">
+              Esta avaliação está disponível somente para consulta com as permissões atuais.
+            </FeedbackMessage>
+          </div>
         ) : null}
       </form>
     </section>

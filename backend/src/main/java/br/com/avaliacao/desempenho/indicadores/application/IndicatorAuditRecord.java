@@ -18,10 +18,11 @@ public record IndicatorAuditRecord(
     Objects.requireNonNull(operation, "operação não pode ser nula");
     Objects.requireNonNull(outcome, "resultado não pode ser nulo");
     Objects.requireNonNull(cycleId, "ciclo não pode ser nulo");
-    if (operation == Operation.OPTIONS && query != null) {
-      throw new IllegalArgumentException("opções de filtro não aceitam uma consulta agregada");
+    boolean usesMetricFilters = operation == Operation.QUERY || operation == Operation.EXPORT;
+    if (!usesMetricFilters && query != null) {
+      throw new IllegalArgumentException("operação não aceita filtros de métrica");
     }
-    if (operation != Operation.OPTIONS && query == null) {
+    if (usesMetricFilters && query == null) {
       throw new IllegalArgumentException("consulta não pode ser nula");
     }
     if (query != null && !cycleId.equals(query.cycleId())) {
@@ -56,7 +57,8 @@ public record IndicatorAuditRecord(
   public enum Operation {
     QUERY,
     EXPORT,
-    OPTIONS
+    OPTIONS,
+    DASHBOARD
   }
 
   public enum Outcome {

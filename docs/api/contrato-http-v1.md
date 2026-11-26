@@ -225,6 +225,28 @@ A cópia individual é gerada exclusivamente pela caixa de impressão local do n
 
 ## Indicadores e exportação
 
+### Acompanhamento do início
+
+`GET /api/v1/assessments/coverage` exige `cycleId` e `status` (`PENDENTE` ou `INICIADA`). Aceita `evaluatedName` (até 160 caracteres, busca literal sem caixa ou acentos), `page` (base 1) e `limit` (de 1 a 100, padrão 12). Retorna `{ items: [{ collaboratorId, displayName, assessmentId }], hasNextPage }`. O identificador da avaliação fica vazio para pendentes. Quando há duas avaliações iniciadas da mesma pessoa, o atalho usa a atualização mais recente.
+
+A população é formada pelas atribuições de questionário vigentes no ciclo aberto ou na data em que o ciclo foi encerrado. Cada colaborador aparece uma vez. Há início quando existe avaliação de gestor ou Diretoria nesse mesmo ciclo, inclusive em rascunho. O acesso nominal exige a permissão global de consulta de avaliações ou a capacidade de consulta suprema configurada. Esses perfis podem consultar o catálogo de ciclos para selecionar o período.
+
+### Painel por ciclo
+
+`GET /api/v1/indicators/dashboard?cycleId=…` segue a autorização, a auditoria e o limite de requisições da consulta de indicadores. A resposta traz `metrics` e as séries `byBranch`, `byArea` e `byItem`, com pontos `{ label, averagePercent }`. A confidencialidade é aplicada no servidor. Métricas indisponíveis têm valor nulo. Séries omitem recortes pequenos e protegem a diferença em relação à média geral.
+
+| Campo | Base |
+| --- | --- |
+| `collaborators` | Colaboradores distintos com questionário atribuído no ciclo, na mesma base do acompanhamento. |
+| `assessments` | Avaliações existentes no ciclo em rascunho, enviadas ou publicadas. |
+| `managers` | Autores distintos de avaliações do tipo gestor. |
+| `managerSelfAssessments` | Autoavaliações de pessoas com papel `GESTOR` na criação. |
+| `averagePercent` | Média da nota oficial das avaliações de gestor publicadas, expressa sobre 120 pontos. |
+| `finalizedPercent` | Avaliações publicadas sobre todas as avaliações que já existem no ciclo. |
+| `feedbackPercent` | Feedbacks concluídos sobre avaliações publicadas do gestor ou da Diretoria. |
+
+Filial e área usam a lotação histórica da versão publicada. Quando a dimensão está ausente ou é ambígua, ela só aparece sob a identificação de lotação indefinida se a amostra do grupo for suficiente. Os itens são as competências do questionário, com média por colaborador antes da média do grupo. A nota oficial, a consulta detalhada e os contratos de exportação seguem disponíveis.
+
 ### Excel da listagem de avaliações individuais
 
 `POST /api/v1/assessments/exports` recebe JSON com os filtros opcionais `cycleId`, `collaboratorId`, `evaluatedName`, `managerName`, `status` e `feedbackStatus`, com os mesmos tipos, limites e semântica de `GET /assessments`. Não aceita cursor/limite ou autoridade enviados pelo cliente. Exige sessão, CSRF, permissões efetivas `AVALIACOES.VISUALIZAR_TODAS` e `DADOS.EXPORTAR`, papel `GERENCIA_RH` ou `DIRETORIA` e ausência do papel técnico `ADMINISTRADOR_PLATAFORMA`. Revalida a conta ativa e reutiliza o escopo SQL da lista. Não concede novas permissões.

@@ -33,14 +33,27 @@ describe('App', () => {
       renderWithExistingSession(api)
       fireEvent.click(await screen.findByRole('button', { name: 'Abrir menu' }))
       fireEvent.click(screen.getByRole('button', { name: 'Alterar minha senha' }))
-      expect(await screen.findByRole('heading', { name: 'Alterar minha senha' })).toHaveFocus()
+      const dialog = await screen.findByRole('dialog', { name: 'Alterar minha senha' })
+      expect(within(dialog).getByRole('heading', { name: 'Alterar minha senha' })).toHaveFocus()
+      expect(dialog).toHaveAttribute('aria-modal', 'true')
+      expect(document.querySelector('.ev-stage')).toHaveAttribute('aria-hidden', 'true')
       fireEvent.change(screen.getByLabelText('Senha atual'), {
         target: { value: crypto.randomUUID() },
       })
       fireEvent.keyDown(screen.getByLabelText('Senha atual'), { key: 'Escape' })
+      expect(screen.queryByRole('dialog', { name: 'Alterar minha senha' })).not.toBeInTheDocument()
+      expect(document.querySelector('.ev-stage')).not.toHaveAttribute('aria-hidden')
       fireEvent.click(await screen.findByRole('button', { name: 'Abrir menu' }))
       fireEvent.click(screen.getByRole('button', { name: 'Alterar minha senha' }))
-      expect(screen.getByLabelText('Senha atual')).toHaveValue('')
+      const reopened = await screen.findByRole('dialog', { name: 'Alterar minha senha' })
+      expect(within(reopened).getByLabelText('Senha atual')).toHaveValue('')
+      fireEvent.click(within(reopened).getByLabelText('Senha atual'))
+      expect(reopened).toBeVisible()
+      fireEvent.click(reopened.parentElement!)
+      expect(screen.queryByRole('dialog', { name: 'Alterar minha senha' })).not.toBeInTheDocument()
+      fireEvent.click(await screen.findByRole('button', { name: 'Abrir menu' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Alterar minha senha' }))
+      await screen.findByRole('dialog', { name: 'Alterar minha senha' })
       const current = crypto.randomUUID(),
         next = crypto.randomUUID()
       fireEvent.change(screen.getByLabelText('Senha atual'), { target: { value: current } })
@@ -219,7 +232,8 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Abrir menu' }))
     expect(screen.getByText('Perfil: Administrador supremo')).toBeVisible()
     fireEvent.click(screen.getByRole('link', { name: 'Indicadores' }))
-    const cycle = await screen.findByLabelText('Ciclo de avaliação')
+    fireEvent.click(await screen.findByText('Consulta detalhada de indicadores'))
+    const cycle = screen.getByLabelText('Ciclo de avaliação')
     await waitFor(() => expect(cycle).toBeEnabled())
     fireEvent.change(cycle, { target: { value: detail.cycle.id } })
     const query = screen.getByRole('button', { name: 'Consultar indicadores' })
@@ -563,6 +577,130 @@ describe('App', () => {
     ).not.toBeInTheDocument()
   })
 
+  it('confere os sete indicadores, os três gráficos e a troca de ciclo', async () => {
+    const dashboard = {
+      metrics: {
+        collaborators: 18,
+        assessments: 22,
+        managers: 2,
+        managerSelfAssessments: 5,
+        averagePercent: 87.2,
+        finalizedPercent: 72.7,
+        feedbackPercent: 57.1,
+      },
+      byBranch: [{ label: 'Matriz de teste', averagePercent: 100 }],
+      byArea: [{ label: 'Operações', averagePercent: 96.4 }],
+      byItem: [{ label: 'Comunicação', averagePercent: 83.3 }],
+    }
+    const api = createApi({
+      currentUser: vi.fn().mockResolvedValue({
+        id: 'rh-test',
+        displayName: 'RH de teste',
+        roles: ['GERENCIA_RH'],
+        permissions: ['INDICADORES.VISUALIZAR'],
+      }),
+      listAllCycles: vi.fn().mockResolvedValue([
+        { id: 'previous', name: 'Ciclo anterior', status: 'ENCERRADO' },
+        { id: 'current', name: 'Ciclo atual', status: 'ABERTO', windowStatus: 'VIGENTE' },
+        { id: 'future', name: 'Ciclo planejado', status: 'RASCUNHO' },
+      ]),
+      getIndicatorDashboard: vi
+        .fn()
+        .mockResolvedValueOnce(dashboard)
+        .mockResolvedValue({
+          metrics: {
+            collaborators: null,
+            assessments: null,
+            managers: null,
+            managerSelfAssessments: null,
+            averagePercent: null,
+            finalizedPercent: null,
+            feedbackPercent: null,
+          },
+          byBranch: [],
+          byArea: [],
+          byItem: [],
+        }),
+    })
+
+    renderWithExistingSession(api, '/indicadores')
+    expect(await screen.findByText('Matriz de teste')).toBeVisible()
+    expect(screen.getByText('Operações')).toBeVisible()
+    expect(screen.getByText('Comunicação')).toBeVisible()
+    for (const label of ['18', '22', '2', '5', '87,2%', '72,7%', '57,1%']) {
+      expect(screen.getByText(label)).toBeVisible()
+    }
+    const select = screen.getByLabelText('Ciclo do painel')
+    expect(select).toHaveValue('current')
+    expect(select).not.toHaveTextContent('Ciclo planejado')
+    fireEvent.change(select, { target: { value: 'previous' } })
+    expect(
+      await screen.findByText(
+        'Dados insuficientes para preservar a confidencialidade neste ciclo.',
+      ),
+    ).toBeVisible()
+    expect(screen.queryByText('Matriz de teste')).toBeNull()
+    expect(api.getIndicatorDashboard).toHaveBeenLastCalledWith('previous')
+  })
+
+  it('encontra pendentes e abre somente uma avaliação já iniciada', async () => {
+    const detail = sampleAssessment()
+    const api = createApi({
+      currentUser: vi.fn().mockResolvedValue({
+        id: 'rh-test',
+        displayName: 'RH de teste',
+        roles: ['GERENCIA_RH'],
+        permissions: ['AVALIACOES.VISUALIZAR_TODAS'],
+      }),
+      listAllCycles: vi
+        .fn()
+        .mockResolvedValue([{ id: 'cycle-sample', name: 'Ciclo demonstrativo', status: 'ABERTO' }]),
+      listAssessmentCoverage: vi
+        .fn()
+        .mockResolvedValueOnce({
+          items: [
+            { collaboratorId: 'one', displayName: 'Pessoa sem rascunho', assessmentId: null },
+          ],
+          hasNextPage: false,
+        })
+        .mockResolvedValue({
+          items: [
+            { collaboratorId: 'two', displayName: 'Pessoa com rascunho', assessmentId: detail.id },
+          ],
+          hasNextPage: false,
+        }),
+      getAssessment: vi.fn().mockResolvedValue(detail),
+    })
+    renderWithExistingSession(api, '/avaliacoes')
+    fireEvent.click(await screen.findByRole('button', { name: 'Acompanhar início' }))
+    expect(await screen.findByText('Pessoa sem rascunho')).toBeVisible()
+    expect(screen.queryByRole('button', { name: 'Abrir avaliação' })).toBeNull()
+    expect(api.listAssessmentCoverage).toHaveBeenLastCalledWith({
+      cycleId: 'cycle-sample',
+      status: 'PENDENTE',
+      evaluatedName: undefined,
+      page: 1,
+      limit: 12,
+    })
+    fireEvent.change(screen.getByLabelText('Início da avaliação'), {
+      target: { value: 'INICIADA' },
+    })
+    fireEvent.change(screen.getByLabelText('Nome do colaborador'), {
+      target: { value: ' rascunho ' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Aplicar filtros' }))
+    expect(await screen.findByText('Pessoa com rascunho')).toBeVisible()
+    expect(api.listAssessmentCoverage).toHaveBeenLastCalledWith({
+      cycleId: 'cycle-sample',
+      status: 'INICIADA',
+      evaluatedName: 'rascunho',
+      page: 1,
+      limit: 12,
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Abrir avaliação' }))
+    await waitFor(() => expect(api.getAssessment).toHaveBeenCalledWith(detail.id))
+  })
+
   it('oculta métricas e CSV para dados insuficientes', async () => {
     const api = createApi({
       currentUser: vi.fn().mockResolvedValue({
@@ -578,7 +716,10 @@ describe('App', () => {
 
     const { container } = renderWithExistingSession(api, '/indicadores')
 
-    await screen.findByRole('option', { name: 'Ciclo 2024' })
+    fireEvent.click(await screen.findByText('Consulta detalhada de indicadores'))
+    await waitFor(() =>
+      expect(screen.getByLabelText('Ciclo de avaliação')).toHaveTextContent('Ciclo 2024'),
+    )
     const cycle = screen.getByLabelText('Ciclo de avaliação')
     fireEvent.change(cycle, { target: { value: 'cycle-2024' } })
     await waitFor(() => expect(api.getIndicatorFilterOptions).toHaveBeenCalledWith('cycle-2024'))
@@ -1284,7 +1425,10 @@ describe('App', () => {
 
     renderWithExistingSession(api, '/indicadores')
 
-    await screen.findByRole('option', { name: 'Ciclo 2024' })
+    fireEvent.click(await screen.findByText('Consulta detalhada de indicadores'))
+    await waitFor(() =>
+      expect(screen.getByLabelText('Ciclo de avaliação')).toHaveTextContent('Ciclo 2024'),
+    )
     fireEvent.change(screen.getByLabelText('Ciclo de avaliação'), {
       target: { value: 'cycle-2024' },
     })
@@ -1323,7 +1467,10 @@ describe('App', () => {
 
     renderWithExistingSession(api, '/indicadores')
 
-    await screen.findByRole('option', { name: 'Ciclo 2024' })
+    fireEvent.click(await screen.findByText('Consulta detalhada de indicadores'))
+    await waitFor(() =>
+      expect(screen.getByLabelText('Ciclo de avaliação')).toHaveTextContent('Ciclo 2024'),
+    )
     fireEvent.change(screen.getByLabelText('Ciclo de avaliação'), {
       target: { value: 'cycle-2024' },
     })
@@ -1379,7 +1526,10 @@ describe('App', () => {
 
     renderWithExistingSession(api, '/indicadores')
 
-    await screen.findByRole('option', { name: 'Ciclo 2024' })
+    fireEvent.click(await screen.findByText('Consulta detalhada de indicadores'))
+    await waitFor(() =>
+      expect(screen.getByLabelText('Ciclo de avaliação')).toHaveTextContent('Ciclo 2024'),
+    )
     fireEvent.change(screen.getByLabelText('Ciclo de avaliação'), {
       target: { value: 'cycle-2024' },
     })
@@ -1754,6 +1904,7 @@ function createApi(overrides: Partial<ApiClient> = {}): ApiClient {
     listCycles,
     listAllCycles,
     listAssessments: vi.fn().mockResolvedValue([]),
+    listAssessmentCoverage: vi.fn().mockResolvedValue({ items: [], hasNextPage: false }),
     listAssessmentCreationCycleOptions: vi.fn().mockResolvedValue([]),
     listManagerAssessmentCreationOptions: vi.fn().mockResolvedValue([]),
     listDirectorAssessmentCreationOptions: vi.fn().mockResolvedValue([]),
@@ -1777,6 +1928,20 @@ function createApi(overrides: Partial<ApiClient> = {}): ApiClient {
       areas: [],
       managers: [],
       competencies: [],
+    }),
+    getIndicatorDashboard: vi.fn().mockResolvedValue({
+      metrics: {
+        collaborators: null,
+        assessments: null,
+        managers: null,
+        managerSelfAssessments: null,
+        averagePercent: null,
+        finalizedPercent: null,
+        feedbackPercent: null,
+      },
+      byBranch: [],
+      byArea: [],
+      byItem: [],
     }),
     getIndicators: vi.fn<(query: IndicatorQuery) => Promise<IndicatorResponse>>(),
     exportIndicators:

@@ -3,11 +3,12 @@ import { WorkspacePageHeader } from '../../ui/WorkspacePageHeader'
 import { ActionButton } from '../../ui/ActionButton'
 import { useEffect, useId, useState } from 'react'
 import type { CSSProperties, FormEvent } from 'react'
-import { BarChart3, Download, Filter } from 'lucide-react'
+import { BarChart3, Download, Filter, RefreshCw } from 'lucide-react'
 import { isAuthenticationError } from '../../api/client'
 import type { ApiClient } from '../../api/client'
 import type {
   AvailableIndicatorResponse,
+  EvaluationCycle,
   IndicatorExport,
   IndicatorFilterOption,
   IndicatorFilterOptions,
@@ -21,6 +22,8 @@ import { ContextHelp } from '../../ui/ContextHelp'
 import { Pagination } from '../../ui/Pagination'
 import { safeErrorMessage, safeLoadErrorMessage } from '../../ui/safeErrorMessage'
 import { useTableQuery } from '../../ui/useTableQuery'
+import { isReportingCycle, useReportingCycles } from '../../ui/useReportingCycles'
+import { IndicatorDashboard } from './IndicatorDashboard'
 
 type IndicatorsPanelProps = {
   api: ApiClient
@@ -53,13 +56,74 @@ const emptyFilterOptions: IndicatorFilterOptions = {
   competencies: [],
 }
 
-export function IndicatorsPanel({ api, canExport, onSessionExpired }: IndicatorsPanelProps) {
+export function IndicatorsPanel(props: IndicatorsPanelProps) {
+  const { api, onSessionExpired } = props
+  const { cycles, error, isLoading } = useReportingCycles(api, onSessionExpired)
+  const [refreshRevision, setRefreshRevision] = useState(0)
+
+  return (
+    <section aria-labelledby="indicators-title">
+      <WorkspacePageHeader
+        id="indicators-title"
+        title="Indicadores de avaliação"
+        group="Dados agregados"
+        actions={
+          <ActionButton
+            type="button"
+            variant="secondary"
+            size="sm"
+            label="Atualizar"
+            icon={<RefreshCw aria-hidden="true" size={16} />}
+            disabled={isLoading}
+            onClick={() => setRefreshRevision((current) => current + 1)}
+          />
+        }
+        help={
+          <ContextHelp title="Por que alguns indicadores não aparecem">
+            <p>
+              A plataforma exige pelo menos cinco colaboradores distintos por grupo para preservar a
+              confidencialidade.
+            </p>
+            <p className="context-help__note">
+              As médias usam avaliações de gestor publicadas. O painel exibe a nota como percentual
+              de 120 pontos. O feedback se aplica às avaliações publicadas do gestor ou da
+              Diretoria.
+            </p>
+          </ContextHelp>
+        }
+      />
+      {isLoading ? <FeedbackMessage kind="info">Carregando ciclos…</FeedbackMessage> : null}
+      {error ? <FeedbackMessage kind="error">{error}</FeedbackMessage> : null}
+      {!isLoading && !error && (
+        <IndicatorDashboard
+          api={api}
+          cycles={cycles.filter(isReportingCycle)}
+          refreshRevision={refreshRevision}
+          onSessionExpired={onSessionExpired}
+        />
+      )}
+      <details className="indicator-details">
+        <summary>Consulta detalhada de indicadores</summary>
+        <div className="indicator-details__body">
+          <IndicatorDetails {...props} cycles={cycles} isLoadingCycles={isLoading} />
+        </div>
+      </details>
+    </section>
+  )
+}
+
+function IndicatorDetails({
+  api,
+  canExport,
+  onSessionExpired,
+  cycles,
+  isLoadingCycles,
+}: IndicatorsPanelProps & { cycles: readonly EvaluationCycle[]; isLoadingCycles: boolean }) {
   const cycleId = useId()
   const metricId = useId()
   const dimensionId = useId()
   const dimensionValueId = useId()
   const competencyId = useId()
-  const [cycles, setCycles] = useState<readonly { id: string; name: string }[]>([])
   const [selectedCycleId, setSelectedCycleId] = useState('')
   const [metric, setMetric] = useState<IndicatorMetric>('FINAL_SCORE_AVERAGE')
   const [populationDimension, setPopulationDimension] = useState<PopulationDimension>()
@@ -69,40 +133,9 @@ export function IndicatorsPanel({ api, canExport, onSessionExpired }: Indicators
   const [indicator, setIndicator] = useState<IndicatorResponse>()
   const [error, setError] = useState<string>()
   const [status, setStatus] = useState<string>()
-  const [isLoadingCycles, setIsLoadingCycles] = useState(true)
   const [isLoadingFilterOptions, setIsLoadingFilterOptions] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
-
-  useEffect(() => {
-    let isCurrent = true
-
-    async function loadCycles() {
-      try {
-        const availableCycles = await api.listAllCycles()
-        if (isCurrent) {
-          setCycles(availableCycles)
-        }
-      } catch (requestError) {
-        if (isAuthenticationError(requestError)) {
-          onSessionExpired()
-          return
-        }
-        if (isCurrent) {
-          setError(safeLoadErrorMessage(requestError, 'os ciclos'))
-        }
-      } finally {
-        if (isCurrent) {
-          setIsLoadingCycles(false)
-        }
-      }
-    }
-
-    void loadCycles()
-    return () => {
-      isCurrent = false
-    }
-  }, [api, onSessionExpired])
 
   useEffect(() => {
     if (!selectedCycleId) {
@@ -252,29 +285,7 @@ export function IndicatorsPanel({ api, canExport, onSessionExpired }: Indicators
   const populationOptions = optionsForPopulationDimension(filterOptions, populationDimension)
 
   return (
-    <section aria-labelledby="indicators-title">
-      <WorkspacePageHeader
-        id="indicators-title"
-        title="Indicadores de avaliação"
-        group="Dados agregados"
-        help={
-          <ContextHelp title="Por que alguns indicadores não aparecem">
-            <p>
-              Para preservar a confidencialidade, a plataforma só exibe um indicador quando o grupo
-              filtrado reúne pelo menos cinco colaboradores distintos.
-            </p>
-            <p className="context-help__note">
-              A mesma proteção vale para médias, totais, classificações, gráficos e exportações.
-            </p>
-          </ContextHelp>
-        }
-      >
-        <p className="ev-page-description">
-          Somente grupos confidenciais são exibidos. Nenhuma contagem ou resultado individual é
-          apresentado.
-        </p>
-      </WorkspacePageHeader>
-
+    <>
       <form
         className="card filter-panel stack-form"
         onSubmit={handleSubmit}
@@ -496,7 +507,7 @@ export function IndicatorsPanel({ api, canExport, onSessionExpired }: Indicators
       </form>
 
       {indicator && isAvailable(indicator) ? <AvailableIndicators indicator={indicator} /> : null}
-    </section>
+    </>
   )
 }
 

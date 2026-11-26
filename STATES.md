@@ -1,5 +1,27 @@
 # Estado atual — Avaliação de Desempenho e Competências
 
+## Troca pessoal de senha no menu em 26/11/2026
+
+A troca voluntária abre um diálogo sobre a área autenticada com o fundo desfocado. O menu móvel conclui o fechamento antes de entregar o foco ao diálogo. Cancelar, Escape e clique fora fecham o modal com o formulário disponível. Durante o envio, o diálogo aguarda a resposta. O retorno ao login após troca bem-sucedida e o fluxo obrigatório antes de acessar a área autenticada foram testados.
+
+O Edge confirmou foco, navegação por Tab, clique fora, cancelamento, reabertura com campos vazios e envio único com dados fictícios a 1.500 e 390 px. O cenário obrigatório confirmou a indisponibilidade da área autenticada até a troca. O recibo e a captura estão em outputs/publicacao-indicadores-20261126 no espaço de trabalho da revisão.
+
+## Acabamento visual da revisão em 26/11/2026
+
+A faixa da média detalhada ganhou cantos arredondados e espaço interno. O rodapé da área autenticada agora ocupa a largura da página e alinha o conteúdo ao workspace. O menu lateral alinha nome, perfil e ajuda em duas linhas. As ações nos cabeçalhos de avaliações e ciclos aparecem sem a borda superior. A resposta selecionada tem fundo e contorno verdes, e o aviso de consulta usa um verde suave nos dois temas.
+
+Foram aprovados o build isolado, Prettier, Oxlint, os 334 testes de interface e 28 verificações no Edge em 14 cenários. O navegador verificou de 320 a 2.560 px nos temas claro e escuro, com menu aberto e recolhido. As capturas e medidas estão em `outputs/ajustes-visuais-avaliacao`. A prévia dos Indicadores está disponível localmente com dados de demonstração e expira após 20 minutos de inatividade. A produção consultada nesta revisão ainda servia o painel anterior.
+
+## Painel por ciclo e acompanhamento do início em 26/11/2026
+
+Em Avaliações individuais, a opção Acompanhar início consulta colaboradores com questionário atribuído no ciclo e oferece os filtros Pendente e Iniciada. A existência de uma avaliação de gestor ou Diretoria define o início, incluindo rascunhos. Uma autoavaliação isolada mantém a pendência de avaliação por outra pessoa. O ciclo encerrado usa a atribuição vigente no momento do encerramento.
+
+Indicadores recebeu sete cartões e as séries de filial, área e competência no layout do DASH. A média usa as avaliações de gestor publicadas e é expressa em percentual da nota máxima de 120. As taxas usam os totais de avaliações cadastradas e de feedbacks aplicáveis, respectivamente. As autoavaliações são contadas quando o autor tinha papel de gestor na criação. Cada métrica ou série aplica o limite de cinco colaboradores distintos. A consulta detalhada, o CSV e o Excel seguem acessíveis conforme as permissões existentes.
+
+O SQL Server de desenvolvimento validou a consulta sobre o schema real e executou as mesmas consultas com dados inteiramente fictícios. A conferência independente obteve 18 colaboradores previstos, 16 iniciados e 2 pendentes. Os sete cartões resultaram em 18 colaboradores, 22 avaliações, 2 gestores avaliadores, 5 autoavaliações de gestores, média de 87,2%, 72,7% finalizadas e 57,1% de feedback realizado. Foram exercitados ciclo anterior, atribuição revogada, rascunho, autoavaliação isolada, vínculo histórico, recorte pequeno, busca literal e busca sem acento. O ambiente recusou o login integrado do ensaio JDBC opcional. As mesmas consultas parametrizadas foram conferidas em modo somente leitura no DEV pelo cliente SQL aprovado da VM.
+
+O Edge validou 19 cenários a 1.500, 1.252, 390 e 320 px, em claro e escuro, incluindo grupos pequenos, paginação, perfis autorizados, filtro por nome, troca de ciclo e ausência de rolagem horizontal. O gate local de qualidade aprovou o build, 334 testes da interface, 358 testes Java executados, os cenários existentes no Edge e as auditorias de dependências. A suíte padrão ignorou 24 testes opcionais. A conferência SQL separada está no recibo de desenvolvimento. As capturas e os recibos estão em `outputs/indicadores-e-cobertura` no espaço de trabalho da revisão. A prévia foi encerrada após as capturas. A publicação do painel e do filtro foi solicitada em 26/11/2026 e segue o gate oficial.
+
 ## Consulta das telas pelo supremo selecionado em 26/11/2026
 
 Foi preparada a solicitação de consulta para um único login de administrador supremo. O servidor compara o login normalizado da sessão com a propriedade opcional `app.security.supreme-review.login`. A consulta exige a conta ativa, o marcador supremo, o papel Administrador de Plataforma e a senha pessoal atualizada. A configuração vazia mantém a capacidade suspensa.
@@ -550,6 +572,8 @@ Validação local: `iniciar-prod.bat --check` confirmou JDK, configuração exte
 Registro da preparação anterior à ativação: naquele momento o acesso ao PM2 retornava `EPERM`, o dump ainda continha as portas antigas e a troca das rotas remotas precisava ser coordenada. O estado operacional observado depois da execução pelo usuário está na seção acima. A ponte local preparada resolve a conexão com o túnel sem alterar a configuração remota; quando as rotas do Cloudflare forem atualizadas diretamente para `38080`/`28081`, as pontes poderão ser removidas com `repair-public-route.ps1 -Remove`.
 
 ## Tarefas pendentes reais
+
+- [x] Conferir o acabamento visual da média detalhada, do rodapé, do perfil no menu, dos cabeçalhos e das respostas no checkout de revisão. Validação local concluída em 26/11/2026.
 
 - [x] Validar em ambiente local a consulta de Avaliações individuais e Indicadores para um único login de administrador supremo e entregar capturas para revisão. Testes concluídos em 26/11/2026.
 

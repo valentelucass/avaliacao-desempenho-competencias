@@ -107,36 +107,37 @@ public final class SqlServerIndicatorAggregationRepository implements IndicatorA
     return arguments.toArray();
   }
 
+  static final String PUBLISHED_MANAGER_POPULATION_SQL =
+      """
+      SELECT a.avaliacao_id,
+             a.colaborador_id,
+             a.avaliador_usuario_id,
+             va.versao_avaliacao_id,
+             cq.versao_questionario_id,
+             va.criada_em_utc AS versao_publicada_em_utc,
+             resultado.nota_final,
+             resultado.classificacao
+      FROM dbo.avaliacao AS a
+      INNER JOIN dbo.ciclo_questionario AS cq
+          ON cq.ciclo_questionario_id = a.ciclo_questionario_id
+         AND cq.ciclo_avaliacao_id = a.ciclo_avaliacao_id
+      INNER JOIN dbo.versao_avaliacao AS va
+          ON va.avaliacao_id = a.avaliacao_id
+         AND va.numero = a.versao_atual_numero
+         AND va.situacao = 'PUBLICADA'
+      INNER JOIN dbo.resultado_avaliacao AS resultado
+          ON resultado.avaliacao_id = a.avaliacao_id
+         AND resultado.versao_avaliacao_id = va.versao_avaliacao_id
+      WHERE a.ciclo_avaliacao_id = ?
+        AND a.tipo_avaliacao = 'GESTOR'
+        AND a.situacao = 'PUBLICADA'
+      """;
+
   private static String populationCte(IndicatorAggregateCriteria criteria) {
-    return """
-        WITH population AS (
-            SELECT a.avaliacao_id,
-                   a.colaborador_id,
-                   a.avaliador_usuario_id,
-                   va.versao_avaliacao_id,
-                   cq.versao_questionario_id,
-                   va.criada_em_utc AS versao_publicada_em_utc,
-                   resultado.nota_final,
-                   resultado.classificacao
-            FROM dbo.avaliacao AS a
-            INNER JOIN dbo.ciclo_questionario AS cq
-                ON cq.ciclo_questionario_id = a.ciclo_questionario_id
-               AND cq.ciclo_avaliacao_id = a.ciclo_avaliacao_id
-            INNER JOIN dbo.versao_avaliacao AS va
-                ON va.avaliacao_id = a.avaliacao_id
-               AND va.numero = a.versao_atual_numero
-               AND va.situacao = 'PUBLICADA'
-            INNER JOIN dbo.resultado_avaliacao AS resultado
-                ON resultado.avaliacao_id = a.avaliacao_id
-               AND resultado.versao_avaliacao_id = va.versao_avaliacao_id
-            WHERE a.ciclo_avaliacao_id = ?
-              AND a.tipo_avaliacao = 'GESTOR'
-              AND a.situacao = 'PUBLICADA'
-        """
+    return "WITH population AS (\n"
+        + PUBLISHED_MANAGER_POPULATION_SQL
         + populationPredicate(criteria)
-        + """
-            )
-        """;
+        + "\n)\n";
   }
 
   private static String populationPredicate(IndicatorAggregateCriteria criteria) {
