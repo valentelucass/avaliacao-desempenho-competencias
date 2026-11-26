@@ -6,6 +6,8 @@ O campo Comentário opcional passou a ocupar a largura do formulário abaixo da 
 
 O Edge reproduziu o desalinhamento no build anterior e confirmou a correção em seis cenários, entre 320 e 1.500 px, nos dois temas e com quantidade par e ímpar de competências. O cenário editável salvou um comentário fictício, conferiu a leitura do valor salvo e salvou novamente com o campo vazio. Build isolado, formatação, lint e dois testes direcionados passaram. As capturas estão em `outputs/comentario-opcional` no espaço de trabalho da revisão.
 
+O commit `c2ec549` foi enviado aos dois repositórios e publicado no release `720a2dc2741a407aa041f2253a7001d2` às 18h35 de Brasília. O domínio serviu os artefatos aprovados e o Edge confirmou o alinhamento no pacote publicado, com a tela identificada como **Build 26/11/2026, 18:29:49 (Brasília)**. O gate aprovou os 338 testes de interface, os 364 testes Java executados e a impressão A4 no Edge. A suíte Java deixou 25 testes opcionais fora da execução. O banco de produção foi validado em modo somente leitura.
+
 ## Gestor responsável e Excel no acompanhamento do início em 26/11/2026
 
 O acompanhamento recebeu uma coluna e um filtro de gestor responsável. O filtro aceita parte do nome, sem distinção de caixa ou acentos, e combina com ciclo, situação e nome do colaborador. O responsável vem do vínculo vigente na consulta ou, para ciclos encerrados, do vínculo válido no encerramento. A tela e a planilha identificam a ausência de vínculo como Sem gestor vinculado.
