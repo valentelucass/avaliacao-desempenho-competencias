@@ -1,5 +1,11 @@
 # Estado atual — Avaliação de Desempenho e Competências
 
+## Organização do feedback registrado em 26/11/2026
+
+O detalhe da avaliação publicada apresenta o feedback registrado em um cartão. Data e registro ficam lado a lado quando há espaço e empilham em telas estreitas. O texto usa peso regular e preserva os parágrafos e as quebras. A data continua no formato brasileiro e inclui o valor semântico em HTML.
+
+O Edge comparou o build anterior com o candidato e validou a exibição em cinco larguras entre 320 e 1.500 px. Foram conferidos os dois temas, a quebra de um trecho longo, a troca do formulário para o registro após conclusão com dados fictícios e o estado de autoavaliação. Build isolado, Prettier, Oxlint e três testes direcionados passaram. As capturas estão em `outputs/feedback-avaliacao` no espaço de trabalho da revisão.
+
 ## Alinhamento do comentário opcional em 26/11/2026
 
 O campo Comentário opcional passou a ocupar a largura do formulário abaixo da última competência. O campo usa a mesma superfície dos cartões e tem uma caixa de texto com três linhas iniciais. A edição e o envio seguem o fluxo existente do formulário.

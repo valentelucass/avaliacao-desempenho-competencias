@@ -578,7 +578,7 @@ export function AssessmentEditor({
 
         {assessment.status === 'PUBLICADA' ? (
           <section
-            className="assessment-editor__feedback"
+            className={`assessment-editor__feedback${assessment.feedback ? ' card' : ''}`}
             aria-labelledby="assessment-feedback-title"
           >
             <div>
@@ -604,14 +604,18 @@ export function AssessmentEditor({
                 <div>
                   <dt>Data do feedback</dt>
                   <dd>
-                    {new Intl.DateTimeFormat('pt-BR', { timeZone: 'UTC' }).format(
-                      new Date(`${assessment.feedback.feedbackDate}T00:00:00Z`),
-                    )}
+                    <time dateTime={assessment.feedback.feedbackDate}>
+                      {new Intl.DateTimeFormat('pt-BR', { timeZone: 'UTC' }).format(
+                        new Date(`${assessment.feedback.feedbackDate}T00:00:00Z`),
+                      )}
+                    </time>
                   </dd>
                 </div>
                 <div>
                   <dt>Registro</dt>
-                  <dd>{assessment.feedback.comment}</dd>
+                  <dd className="assessment-editor__feedback-comment">
+                    {assessment.feedback.comment}
+                  </dd>
                 </div>
               </dl>
             ) : null}
