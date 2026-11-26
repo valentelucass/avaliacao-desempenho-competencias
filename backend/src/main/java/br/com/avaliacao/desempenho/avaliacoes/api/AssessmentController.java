@@ -1,5 +1,7 @@
 package br.com.avaliacao.desempenho.avaliacoes.api;
 
+import static br.com.avaliacao.desempenho.identidadeacesso.domain.model.AuthorizedUser.SUPREME_REVIEW_AUTHORITY;
+
 import br.com.avaliacao.desempenho.avaliacoes.api.dto.AssessmentCreationCycleOptionsResponse;
 import br.com.avaliacao.desempenho.avaliacoes.api.dto.AssessmentCreationOptionsResponse;
 import br.com.avaliacao.desempenho.avaliacoes.api.dto.AssessmentDetailResponse;
@@ -13,9 +15,11 @@ import br.com.avaliacao.desempenho.avaliacoes.api.dto.SaveAssessmentDraftRequest
 import br.com.avaliacao.desempenho.avaliacoes.application.AssessmentApplicationService;
 import br.com.avaliacao.desempenho.avaliacoes.application.AssessmentRepository;
 import br.com.avaliacao.desempenho.avaliacoes.domain.model.AssessmentAccessContext;
+import br.com.avaliacao.desempenho.avaliacoes.domain.model.AssessmentAuthorizationPolicy;
 import br.com.avaliacao.desempenho.avaliacoes.domain.model.AssessmentStatus;
 import br.com.avaliacao.desempenho.avaliacoes.domain.model.AssessmentType;
 import br.com.avaliacao.desempenho.avaliacoes.domain.model.FeedbackStatus;
+import br.com.avaliacao.desempenho.identidadeacesso.domain.model.AuthorizedUser;
 import br.com.avaliacao.desempenho.identidadeacesso.infrastructure.persistence.ConditionalOnSqlServerPersistence;
 import br.com.avaliacao.desempenho.identidadeacesso.infrastructure.security.AuthenticatedPrincipal;
 import br.com.avaliacao.desempenho.identidadeacesso.infrastructure.security.RequestCorrelationFilter;
@@ -28,6 +32,7 @@ import java.time.Instant;
 import java.util.Base64;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpHeaders;
@@ -54,6 +59,15 @@ import org.springframework.web.bind.annotation.RestController;
 @ConditionalOnProperty(prefix = "app.assessments", name = "enabled", havingValue = "true")
 public class AssessmentController {
 
+  private static final String EXISTING_ASSESSMENT_READ =
+      "hasAnyAuthority("
+          + "'PERMISSION:AVALIACOES.VISUALIZAR_PROPRIAS_RESPOSTAS',"
+          + "'PERMISSION:AVALIACOES.AVALIAR_GERENCIAS_VINCULADAS',"
+          + "'PERMISSION:AVALIACOES.VISUALIZAR_TODAS',"
+          + "'PERMISSION:AUTOAVALIACOES.VISUALIZAR_PROPRIA')";
+  private static final String ASSESSMENT_READ =
+      EXISTING_ASSESSMENT_READ + " or hasAuthority('" + SUPREME_REVIEW_AUTHORITY + "')";
+
   private final AssessmentApplicationService service;
   private final AssessmentResponseMapper responseMapper = new AssessmentResponseMapper();
 
@@ -62,12 +76,7 @@ public class AssessmentController {
   }
 
   @GetMapping
-  @PreAuthorize(
-      "hasAnyAuthority("
-          + "'PERMISSION:AVALIACOES.VISUALIZAR_PROPRIAS_RESPOSTAS',"
-          + "'PERMISSION:AVALIACOES.AVALIAR_GERENCIAS_VINCULADAS',"
-          + "'PERMISSION:AVALIACOES.VISUALIZAR_TODAS',"
-          + "'PERMISSION:AUTOAVALIACOES.VISUALIZAR_PROPRIA')")
+  @PreAuthorize(ASSESSMENT_READ)
   public AssessmentPageResponse list(
       @RequestParam(defaultValue = "12")
           @jakarta.validation.constraints.Min(1)
@@ -83,7 +92,7 @@ public class AssessmentController {
       @AuthenticationPrincipal AuthenticatedPrincipal principal) {
     AssessmentRepository.AssessmentPageView page =
         service.list(
-            accessFor(principal),
+            readAccessFor(principal),
             new AssessmentRepository.AssessmentListFilter(
                 cycleId, collaboratorId, evaluatedName, managerName, status, feedbackStatus),
             limit,
@@ -153,24 +162,14 @@ public class AssessmentController {
   }
 
   @GetMapping("/{assessmentId}")
-  @PreAuthorize(
-      "hasAnyAuthority("
-          + "'PERMISSION:AVALIACOES.VISUALIZAR_PROPRIAS_RESPOSTAS',"
-          + "'PERMISSION:AVALIACOES.AVALIAR_GERENCIAS_VINCULADAS',"
-          + "'PERMISSION:AVALIACOES.VISUALIZAR_TODAS',"
-          + "'PERMISSION:AUTOAVALIACOES.VISUALIZAR_PROPRIA')")
+  @PreAuthorize(ASSESSMENT_READ)
   public ResponseEntity<AssessmentDetailResponse> get(
       @PathVariable UUID assessmentId, @AuthenticationPrincipal AuthenticatedPrincipal principal) {
-    return response(service.get(assessmentId, accessFor(principal)));
+    return response(service.get(assessmentId, readAccessFor(principal)));
   }
 
   @PostMapping("/{assessmentId}/print-events")
-  @PreAuthorize(
-      "hasAnyAuthority("
-          + "'PERMISSION:AVALIACOES.VISUALIZAR_PROPRIAS_RESPOSTAS',"
-          + "'PERMISSION:AVALIACOES.AVALIAR_GERENCIAS_VINCULADAS',"
-          + "'PERMISSION:AVALIACOES.VISUALIZAR_TODAS',"
-          + "'PERMISSION:AUTOAVALIACOES.VISUALIZAR_PROPRIA')")
+  @PreAuthorize(EXISTING_ASSESSMENT_READ)
   public ResponseEntity<Void> recordPrint(
       @PathVariable UUID assessmentId,
       @AuthenticationPrincipal AuthenticatedPrincipal principal,
@@ -339,6 +338,15 @@ public class AssessmentController {
         authenticated.userId(),
         authenticated.user().permissions(),
         authenticated.user().roleCodes());
+  }
+
+  private static AssessmentAccessContext readAccessFor(AuthenticatedPrincipal principal) {
+    AssessmentAccessContext access = accessFor(principal);
+    if (!access.has(AuthorizedUser.SUPREME_REVIEW)) {
+      return access;
+    }
+    return new AssessmentAccessContext(
+        access.userId(), Set.of(AssessmentAuthorizationPolicy.VIEW_ALL), access.roleCodes());
   }
 
   private static String quotedEtag(String revision) {

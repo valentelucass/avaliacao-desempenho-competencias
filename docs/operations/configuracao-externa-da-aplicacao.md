@@ -102,6 +102,12 @@ app.indicators.enabled=true
 
 As origens permitidas por CORS são configuração separada e precisam corresponder exatamente à SPA publicada. Não usar origem curinga com credenciais.
 
+### Consulta das telas de negócio por uma conta suprema
+
+A propriedade opcional `app.security.supreme-review.login` seleciona um único login na configuração externa do servidor. Cadastre o valor somente no arquivo de configuração protegido do ambiente de destino. O servidor usa a mesma normalização do formulário de acesso e exige sessão ativa, troca de senha concluída, condição de administrador supremo e papel Administrador de Plataforma.
+
+Quando a propriedade está vazia, a consulta especial fica desabilitada. Quando configurada, abre a lista e os detalhes de Avaliações individuais e a consulta de Indicadores para essa conta. A leitura adicional é resolvida a cada requisição autenticada e independe de concessões pelo cadastro. Exportação, impressão e operações sobre as avaliações exigem as autorizações próprias. A disponibilidade dos indicadores continua sujeita aos filtros de privacidade.
+
 ## Sequência operacional segura
 
 Nos alvos canônicos, a identidade SQL dedicada já passou pelo validador de mínimo privilégio e o TLS foi comprovado com cadeia/nome do certificado validados. Os passos abaixo continuam obrigatórios para um alvo novo ou sempre que identidade, certificado ou permissões forem substituídos.

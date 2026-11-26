@@ -252,15 +252,18 @@ function WorkspaceApp({ api = defaultApiClient }: AppProps) {
     )
   }
 
-  const canViewAssessments = hasAnyPermission(user, [
-    'AVALIACOES.AVALIAR_VINCULADOS',
-    'AVALIACOES.AVALIAR_GERENCIAS_VINCULADAS',
-    'AVALIACOES.VISUALIZAR_PROPRIAS_RESPOSTAS',
-    'AVALIACOES.VISUALIZAR_TODAS',
-    'AUTOAVALIACOES.PREENCHER_PROPRIA',
-    'AUTOAVALIACOES.ENVIAR_PROPRIA',
-    'AUTOAVALIACOES.VISUALIZAR_PROPRIA',
-  ])
+  const isSupremeReview = hasAnyPermission(user, ['SUPREMO.CONSULTAR'])
+  const canViewAssessments =
+    isSupremeReview ||
+    hasAnyPermission(user, [
+      'AVALIACOES.AVALIAR_VINCULADOS',
+      'AVALIACOES.AVALIAR_GERENCIAS_VINCULADAS',
+      'AVALIACOES.VISUALIZAR_PROPRIAS_RESPOSTAS',
+      'AVALIACOES.VISUALIZAR_TODAS',
+      'AUTOAVALIACOES.PREENCHER_PROPRIA',
+      'AUTOAVALIACOES.ENVIAR_PROPRIA',
+      'AUTOAVALIACOES.VISUALIZAR_PROPRIA',
+    ])
   const canCreateSelfAssessment = hasAnyPermission(user, ['AUTOAVALIACOES.PREENCHER_PROPRIA'])
   const canSubmitSelfAssessment = hasAnyPermission(user, ['AUTOAVALIACOES.ENVIAR_PROPRIA'])
   const canCreateManagerAssessment = hasAnyPermission(user, ['AVALIACOES.AVALIAR_VINCULADOS'])
@@ -278,10 +281,11 @@ function WorkspaceApp({ api = defaultApiClient }: AppProps) {
   const canRecordAssessmentFeedback = hasAnyPermission(user, [
     'AVALIACOES.REGISTRAR_FEEDBACK_PROPRIO',
   ])
-  const canViewAllAssessments = hasAnyPermission(user, ['AVALIACOES.VISUALIZAR_TODAS'])
+  const canViewAllAssessments =
+    isSupremeReview || hasAnyPermission(user, ['AVALIACOES.VISUALIZAR_TODAS'])
   const canUseAdministrativeAssessmentFilters = hasAnyPermission(user, ['CADASTROS.GERIR'])
-  const canViewIndicators = hasAnyPermission(user, ['INDICADORES.VISUALIZAR'])
-  const canExportIndicators = hasAnyPermission(user, ['DADOS.EXPORTAR'])
+  const canViewIndicators = isSupremeReview || hasAnyPermission(user, ['INDICADORES.VISUALIZAR'])
+  const canExportIndicators = !isSupremeReview && hasAnyPermission(user, ['DADOS.EXPORTAR'])
   const canExportAssessments =
     canViewAllAssessments &&
     canExportIndicators &&
@@ -535,6 +539,7 @@ function WorkspaceApp({ api = defaultApiClient }: AppProps) {
                     canReopenAssessments={canReopenAssessments}
                     canRecordFeedback={canRecordAssessmentFeedback}
                     canExportAssessments={canExportAssessments}
+                    canPrintAssessment={!isSupremeReview}
                     isAdministrativeView={canViewAdministration && canViewAllAssessments}
                     canUseAdministrativeFilters={
                       canViewAdministration &&
@@ -658,14 +663,13 @@ function WorkspaceRouteState({
 }
 
 function profileDescription(user: CurrentUser): string {
+  if (user.supremeAdministrator) return 'Perfil: Administrador supremo'
+
   const labels = (user.roles ?? [])
     .map((role) => profileLabels[role])
     .filter((label): label is string => Boolean(label))
 
   if (labels.length === 0) {
-    if (user.supremeAdministrator) {
-      return 'Perfil: Administrador técnico'
-    }
     return 'Perfil: acesso configurado'
   }
 
@@ -762,7 +766,7 @@ function profileCapabilities(user: CurrentUser): readonly ProfileCapability[] {
       description: 'consultar avaliações feitas por esta conta como avaliadora.',
     })
   }
-  if (hasAnyPermission(user, ['AVALIACOES.VISUALIZAR_TODAS'])) {
+  if (hasAnyPermission(user, ['AVALIACOES.VISUALIZAR_TODAS', 'SUPREMO.CONSULTAR'])) {
     capabilities.push({
       label: 'Avaliações individuais',
       description: 'consultar avaliações dentro do escopo administrativo autorizado.',
@@ -780,7 +784,7 @@ function profileCapabilities(user: CurrentUser): readonly ProfileCapability[] {
       description: 'registrar o feedback das avaliações feitas por esta conta.',
     })
   }
-  if (hasAnyPermission(user, ['INDICADORES.VISUALIZAR'])) {
+  if (hasAnyPermission(user, ['INDICADORES.VISUALIZAR', 'SUPREMO.CONSULTAR'])) {
     capabilities.push({
       label: 'Indicadores',
       description: 'consultar resultados agregados que atendam à regra de confidencialidade.',

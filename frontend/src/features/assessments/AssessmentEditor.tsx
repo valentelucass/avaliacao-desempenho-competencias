@@ -21,6 +21,7 @@ type AssessmentEditorProps = {
   canPublish: boolean
   canReopen: boolean
   canRecordFeedback: boolean
+  canPrint?: boolean
   onBack: () => void
   onChanged: () => void
   onSessionExpired: () => void
@@ -36,6 +37,7 @@ export function AssessmentEditor({
   canPublish,
   canReopen,
   canRecordFeedback,
+  canPrint = true,
   onBack,
   onChanged,
   onSessionExpired,
@@ -345,15 +347,17 @@ export function AssessmentEditor({
           <>
             {' '}
             <div className="action-row print-hidden">
-              <ActionButton
-                size="sm"
-                variant="secondary"
-                label={isPrinting ? 'Registrando impressão…' : 'Imprimir / PDF'}
-                icon={<Printer aria-hidden="true" size={17} strokeWidth={2} />}
-                type="button"
-                disabled={isPrinting || !hasPrintableSummary}
-                onClick={printAssessment}
-              />
+              {canPrint ? (
+                <ActionButton
+                  size="sm"
+                  variant="secondary"
+                  label={isPrinting ? 'Registrando impressão…' : 'Imprimir / PDF'}
+                  icon={<Printer aria-hidden="true" size={17} strokeWidth={2} />}
+                  type="button"
+                  disabled={isPrinting || !hasPrintableSummary}
+                  onClick={printAssessment}
+                />
+              ) : null}
               <ActionButton
                 size="sm"
                 variant="secondary"
@@ -368,7 +372,7 @@ export function AssessmentEditor({
         <p className="ev-page-description">Ciclo: {assessment.cycle.name}</p>
       </WorkspacePageHeader>
 
-      {!hasPrintableSummary ? (
+      {canPrint && !hasPrintableSummary ? (
         <p className="field-hint assessment-editor__print-hint">
           A impressão com gráfico e resumo fica disponível após o envio da avaliação.
         </p>

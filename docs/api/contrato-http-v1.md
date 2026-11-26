@@ -241,6 +241,8 @@ O botão Exportar Excel aparece para os perfis autorizados à direita das açõe
 | `GET /indicators`                        | Requer `cycleId` e `metric`; aceita no máximo uma de `branchId`, `areaId`, `managerUserId`; `competencyId` é obrigatório somente para `COMPETENCY_SCORE_AVERAGE`. |
 | `POST /indicators/exports`               | Recebe o mesmo filtro em JSON e retorna CSV UTF-8 agregado ou o corpo seguro de indisponibilidade.                                                                |
 
+A conta suprema selecionada na [configuração externa](../operations/configuracao-externa-da-aplicacao.md#consulta-das-telas-de-negócio-por-uma-conta-suprema) também pode consultar `GET /assessments`, `GET /assessments/{id}`, `GET /indicators` e `GET /indicators/options`. Para essa consulta, `GET /auth/me` inclui `SUPREMO.CONSULTAR` nas permissões efetivas da sessão. Essa capacidade é resolvida pelo servidor e só vale nas rotas de leitura indicadas.
+
 As métricas são `FINAL_SCORE_AVERAGE`, `COMPETENCY_SCORE_AVERAGE` e `CLASSIFICATION_DISTRIBUTION`. A população contém somente avaliações de gestor publicadas. Filtro de colaborador sempre produz `DADOS_INSUFICIENTES`; grupos menores que cinco não revelam média, contagem, percentual, faixa, gráfico ou identificador. A resposta segura é:
 
 ```json

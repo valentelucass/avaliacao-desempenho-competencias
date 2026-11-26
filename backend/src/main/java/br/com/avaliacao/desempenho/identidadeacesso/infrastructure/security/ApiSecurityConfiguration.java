@@ -1,12 +1,16 @@
 package br.com.avaliacao.desempenho.identidadeacesso.infrastructure.security;
 
+import static br.com.avaliacao.desempenho.identidadeacesso.domain.model.AuthorizedUser.SUPREME_REVIEW_AUTHORITY;
+
 import br.com.avaliacao.desempenho.identidadeacesso.application.IdentityAccessRepository;
 import br.com.avaliacao.desempenho.identidadeacesso.application.LoginRateLimiter;
 import br.com.avaliacao.desempenho.identidadeacesso.domain.model.AuditEvent;
 import br.com.avaliacao.desempenho.identidadeacesso.infrastructure.persistence.ConditionalOnSqlServerPersistence;
 import java.time.Clock;
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Stream;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -45,6 +49,23 @@ import tools.jackson.databind.ObjectMapper;
   AuthenticationSecurityProperties.class
 })
 public class ApiSecurityConfiguration {
+
+  private static final String[] ASSESSMENT_AUTHORITIES = {
+    "PERMISSION:AVALIACOES.AVALIAR_VINCULADOS",
+    "PERMISSION:AVALIACOES.AVALIAR_GERENCIAS_VINCULADAS",
+    "PERMISSION:AVALIACOES.VISUALIZAR_PROPRIAS_RESPOSTAS",
+    "PERMISSION:AVALIACOES.VISUALIZAR_TODAS",
+    "PERMISSION:AVALIACOES.PUBLICAR",
+    "PERMISSION:AVALIACOES.REABRIR",
+    "PERMISSION:AVALIACOES.REGISTRAR_FEEDBACK_PROPRIO",
+    "PERMISSION:AUTOAVALIACOES.PREENCHER_PROPRIA",
+    "PERMISSION:AUTOAVALIACOES.ENVIAR_PROPRIA",
+    "PERMISSION:AUTOAVALIACOES.VISUALIZAR_PROPRIA"
+  };
+
+  private static final String[] ASSESSMENT_READ_AUTHORITIES =
+      Stream.concat(Arrays.stream(ASSESSMENT_AUTHORITIES), Stream.of(SUPREME_REVIEW_AUTHORITY))
+          .toArray(String[]::new);
 
   @Bean
   SecurityFilterChain securityFilterChain(
@@ -200,18 +221,19 @@ public class ApiSecurityConfiguration {
                         "PERMISSION:AVALIACOES.AVALIAR_GERENCIAS_VINCULADAS",
                         "PERMISSION:AUTOAVALIACOES.PREENCHER_PROPRIA",
                         "PERMISSION:INDICADORES.VISUALIZAR")
+                    .requestMatchers(
+                        HttpMethod.GET,
+                        "/api/v1/assessments",
+                        "/api/v1/assessments/{assessmentId:[a-fA-F0-9-]+}")
+                    .hasAnyAuthority(ASSESSMENT_READ_AUTHORITIES)
                     .requestMatchers("/api/v1/assessments/**")
+                    .hasAnyAuthority(ASSESSMENT_AUTHORITIES)
+                    .requestMatchers(
+                        HttpMethod.GET, "/api/v1/indicators", "/api/v1/indicators/options")
                     .hasAnyAuthority(
-                        "PERMISSION:AVALIACOES.AVALIAR_VINCULADOS",
-                        "PERMISSION:AVALIACOES.AVALIAR_GERENCIAS_VINCULADAS",
-                        "PERMISSION:AVALIACOES.VISUALIZAR_PROPRIAS_RESPOSTAS",
-                        "PERMISSION:AVALIACOES.VISUALIZAR_TODAS",
-                        "PERMISSION:AVALIACOES.PUBLICAR",
-                        "PERMISSION:AVALIACOES.REABRIR",
-                        "PERMISSION:AVALIACOES.REGISTRAR_FEEDBACK_PROPRIO",
-                        "PERMISSION:AUTOAVALIACOES.PREENCHER_PROPRIA",
-                        "PERMISSION:AUTOAVALIACOES.ENVIAR_PROPRIA",
-                        "PERMISSION:AUTOAVALIACOES.VISUALIZAR_PROPRIA")
+                        "PERMISSION:INDICADORES.VISUALIZAR",
+                        "PERMISSION:DADOS.EXPORTAR",
+                        SUPREME_REVIEW_AUTHORITY)
                     .requestMatchers("/api/v1/indicators/**")
                     .hasAnyAuthority(
                         "PERMISSION:INDICADORES.VISUALIZAR", "PERMISSION:DADOS.EXPORTAR")

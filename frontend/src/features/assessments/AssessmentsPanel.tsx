@@ -49,6 +49,7 @@ type AssessmentsPanelProps = {
   isAdministrativeView: boolean
   canUseAdministrativeFilters: boolean
   canExportAssessments?: boolean
+  canPrintAssessment?: boolean
   journey?: 'EQUIPE' | 'AUTOAVALIACAO'
   assessmentId?: string
   onExitEditor: () => void
@@ -109,6 +110,7 @@ export function AssessmentsPanel({
   isAdministrativeView,
   canUseAdministrativeFilters,
   canExportAssessments = false,
+  canPrintAssessment = true,
   journey,
   assessmentId,
   onExitEditor,
@@ -680,6 +682,7 @@ export function AssessmentsPanel({
         canReopen={canReopenAssessments}
         canRecordFeedback={canRecordFeedback}
         canSubmitSelfAssessment={canSubmitSelfAssessment}
+        canPrint={canPrintAssessment}
         onBack={onExitEditor}
         onChanged={refreshAssessments}
         onSessionExpired={onSessionExpired}

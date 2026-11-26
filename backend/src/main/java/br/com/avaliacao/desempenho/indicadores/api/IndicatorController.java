@@ -1,5 +1,7 @@
 package br.com.avaliacao.desempenho.indicadores.api;
 
+import static br.com.avaliacao.desempenho.identidadeacesso.domain.model.AuthorizedUser.SUPREME_REVIEW_AUTHORITY;
+
 import br.com.avaliacao.desempenho.identidadeacesso.infrastructure.persistence.ConditionalOnSqlServerPersistence;
 import br.com.avaliacao.desempenho.identidadeacesso.infrastructure.security.AuthenticatedPrincipal;
 import br.com.avaliacao.desempenho.identidadeacesso.infrastructure.security.RequestCorrelationFilter;
@@ -41,6 +43,9 @@ import org.springframework.web.bind.annotation.RestController;
 @ConditionalOnProperty(prefix = "app.indicators", name = "enabled", havingValue = "true")
 public class IndicatorController {
 
+  private static final String READ_INDICATORS =
+      "hasAnyAuthority('PERMISSION:INDICADORES.VISUALIZAR', '" + SUPREME_REVIEW_AUTHORITY + "')";
+
   private final IndicatorRequestApplicationService indicatorService;
   private final GetIndicatorFilterOptionsUseCase filterOptionsService;
   private final IndicatorResponseMapper responseMapper;
@@ -65,7 +70,7 @@ public class IndicatorController {
   }
 
   @GetMapping
-  @PreAuthorize("hasAuthority('PERMISSION:INDICADORES.VISUALIZAR')")
+  @PreAuthorize(READ_INDICATORS)
   public IndicatorResponse get(
       @Valid @ModelAttribute GetIndicatorsRequest request,
       @AuthenticationPrincipal AuthenticatedPrincipal principal,
@@ -75,7 +80,7 @@ public class IndicatorController {
   }
 
   @GetMapping("/options")
-  @PreAuthorize("hasAuthority('PERMISSION:INDICADORES.VISUALIZAR')")
+  @PreAuthorize(READ_INDICATORS)
   public IndicatorFilterOptionsResponse options(
       @RequestParam UUID cycleId,
       @AuthenticationPrincipal AuthenticatedPrincipal principal,

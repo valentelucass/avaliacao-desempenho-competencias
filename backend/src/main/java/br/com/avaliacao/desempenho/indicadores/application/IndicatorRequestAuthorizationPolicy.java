@@ -1,5 +1,6 @@
 package br.com.avaliacao.desempenho.indicadores.application;
 
+import br.com.avaliacao.desempenho.identidadeacesso.domain.model.AuthorizedUser;
 import br.com.avaliacao.desempenho.identidadeacesso.domain.model.IndicatorRolePolicy;
 import br.com.avaliacao.desempenho.identidadeacesso.domain.model.PlatformPermission;
 import java.util.Objects;
@@ -20,6 +21,11 @@ public final class IndicatorRequestAuthorizationPolicy {
   public void require(IndicatorAuditRecord.Operation operation, IndicatorExecutionContext context) {
     IndicatorExecutionContext safeContext =
         Objects.requireNonNull(context, "contexto não pode ser nulo");
+    if ((operation == IndicatorAuditRecord.Operation.QUERY
+            || operation == IndicatorAuditRecord.Operation.OPTIONS)
+        && safeContext.hasPermission(AuthorizedUser.SUPREME_REVIEW)) {
+      return;
+    }
     if (!rolePolicy.hasEligibleRole(safeContext.roleCodes())
         || !safeContext.hasPermission(PlatformPermission.INDICATORS_VIEW.code())
         || (operation == IndicatorAuditRecord.Operation.EXPORT

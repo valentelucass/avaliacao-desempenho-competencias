@@ -191,6 +191,47 @@ describe('App', () => {
     },
   )
 
+  it('abre avaliações e indicadores para o supremo selecionado em modo de consulta', async () => {
+    const detail = sampleAssessment()
+    const api = createApi({
+      currentUser: vi.fn().mockResolvedValue({
+        id: 'supremo-de-demonstracao',
+        displayName: 'Supremo de demonstração',
+        roles: ['ADMINISTRADOR_PLATAFORMA'],
+        supremeAdministrator: true,
+        permissions: ['USUARIOS.LER', 'SUPREMO.CONSULTAR'],
+      }),
+      listAssessments: vi.fn().mockResolvedValue([detail]),
+      getAssessment: vi.fn().mockResolvedValue(detail),
+      listCycles: vi.fn().mockResolvedValue([detail.cycle]),
+      getIndicators: vi.fn().mockResolvedValue({ availability: 'DADOS_INSUFICIENTES' }),
+    })
+    renderWithExistingSession(api, '/avaliacoes')
+    expect(await screen.findByRole('heading', { name: 'Avaliações individuais' })).toBeVisible()
+    expect(screen.queryByRole('button', { name: 'Exportar Excel' })).toBeNull()
+    expect(api.listAssessmentCreationCycleOptions).not.toHaveBeenCalled()
+    fireEvent.click(await screen.findByRole('button', { name: 'Abrir avaliação' }))
+    for (const option of await screen.findAllByRole('radio')) expect(option).toBeDisabled()
+    expect(
+      screen.queryByRole('button', { name: /Imprimir|Salvar rascunho|Enviar avaliação/ }),
+    ).toBeNull()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Abrir menu' }))
+    expect(screen.getByText('Perfil: Administrador supremo')).toBeVisible()
+    fireEvent.click(screen.getByRole('link', { name: 'Indicadores' }))
+    const cycle = await screen.findByLabelText('Ciclo de avaliação')
+    await waitFor(() => expect(cycle).toBeEnabled())
+    fireEvent.change(cycle, { target: { value: detail.cycle.id } })
+    const query = screen.getByRole('button', { name: 'Consultar indicadores' })
+    await waitFor(() => expect(query).toBeEnabled())
+    fireEvent.click(query)
+    expect(
+      await screen.findByText('Dados insuficientes para preservar a confidencialidade.'),
+    ).toBeVisible()
+    expect(api.getIndicators).toHaveBeenCalledOnce()
+    expect(screen.queryByRole('button', { name: 'Exportar CSV agregado' })).toBeNull()
+  })
+
   it('abre o login com o cliente HTTP real sem consultar rotas que exigem sessão', async () => {
     const fetchMock = vi.fn((url: string) => {
       const body = url.endsWith('/auth/csrf')

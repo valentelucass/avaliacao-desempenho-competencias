@@ -7,7 +7,9 @@ import br.com.avaliacao.desempenho.identidadeacesso.domain.model.AuthenticationS
 import br.com.avaliacao.desempenho.identidadeacesso.domain.model.AuthorizedUser;
 import br.com.avaliacao.desempenho.identidadeacesso.domain.model.EffectivePermissionPolicy;
 import br.com.avaliacao.desempenho.identidadeacesso.domain.model.LocalCredentialAccount;
+import br.com.avaliacao.desempenho.identidadeacesso.domain.model.LoginNormalizer;
 import br.com.avaliacao.desempenho.identidadeacesso.domain.model.PermissionEffect;
+import br.com.avaliacao.desempenho.identidadeacesso.domain.model.PlatformRole;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
@@ -18,6 +20,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -36,9 +40,18 @@ public class SqlIdentityAccessRepository implements IdentityAccessRepository {
       """;
 
   private final JdbcTemplate jdbcTemplate;
+  private final String supremeReviewLogin;
 
-  public SqlIdentityAccessRepository(JdbcTemplate jdbcTemplate) {
+  @Autowired
+  public SqlIdentityAccessRepository(
+      JdbcTemplate jdbcTemplate,
+      @Value("${app.security.supreme-review.login:}") String supremeReviewLogin) {
     this.jdbcTemplate = jdbcTemplate;
+    this.supremeReviewLogin = LoginNormalizer.normalize(supremeReviewLogin);
+  }
+
+  SqlIdentityAccessRepository(JdbcTemplate jdbcTemplate) {
+    this(jdbcTemplate, "");
   }
 
   @Override
@@ -64,7 +77,8 @@ public class SqlIdentityAccessRepository implements IdentityAccessRepository {
     Optional<AuthorizedUser> user =
         jdbcTemplate.query(
             """
-            SELECT u.usuario_id, u.nome_exibicao, u.administrador_supremo, c.senha_deve_ser_trocada
+            SELECT u.usuario_id, u.nome_exibicao, u.login_normalizado,
+                   u.administrador_supremo, c.senha_deve_ser_trocada
             FROM dbo.sessao_autenticacao AS s
             INNER JOIN dbo.usuario AS u ON u.usuario_id = s.usuario_id
             INNER JOIN dbo.credencial_local AS c ON c.usuario_id = u.usuario_id
@@ -76,26 +90,37 @@ public class SqlIdentityAccessRepository implements IdentityAccessRepository {
               AND u.situacao = 'ATIVO' AND u.excluido_logicamente = 0
               AND (c.bloqueada_ate_utc IS NULL OR c.bloqueada_ate_utc <= ?)
             """,
-            resultSet -> {
-              if (!resultSet.next()) {
-                return Optional.empty();
-              }
-              UUID resolvedUserId = resultSet.getObject("usuario_id", UUID.class);
-              return Optional.of(
-                  new AuthorizedUser(
-                      resolvedUserId,
-                      resultSet.getString("nome_exibicao"),
-                      resultSet.getBoolean("senha_deve_ser_trocada"),
-                      resultSet.getBoolean("administrador_supremo"),
-                      effectivePermissions(resolvedUserId),
-                      effectiveRoleCodes(resolvedUserId)));
-            },
+            resultSet ->
+                resultSet.next() ? Optional.of(mapAuthorizedUser(resultSet)) : Optional.empty(),
             sessionId,
             userId,
             accessTokenId,
             timestamp(now),
             timestamp(now));
     return user;
+  }
+
+  private AuthorizedUser mapAuthorizedUser(ResultSet row) throws SQLException {
+    UUID userId = row.getObject("usuario_id", UUID.class);
+    boolean requiresPasswordChange = row.getBoolean("senha_deve_ser_trocada");
+    boolean supreme = row.getBoolean("administrador_supremo");
+    Set<String> roles = effectiveRoleCodes(userId);
+    Set<String> permissions = new LinkedHashSet<>(effectivePermissions(userId));
+    permissions.remove(AuthorizedUser.SUPREME_REVIEW);
+    if (supreme
+        && !requiresPasswordChange
+        && roles.contains(PlatformRole.ADMINISTRADOR_PLATAFORMA.name())
+        && !supremeReviewLogin.isEmpty()
+        && supremeReviewLogin.equals(row.getString("login_normalizado"))) {
+      permissions.add(AuthorizedUser.SUPREME_REVIEW);
+    }
+    return new AuthorizedUser(
+        userId,
+        row.getString("nome_exibicao"),
+        requiresPasswordChange,
+        supreme,
+        permissions,
+        roles);
   }
 
   @Override

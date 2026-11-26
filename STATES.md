@@ -1,5 +1,15 @@
 # Estado atual — Avaliação de Desempenho e Competências
 
+## Consulta das telas pelo supremo selecionado em 26/11/2026
+
+Foi preparada a solicitação de consulta para um único login de administrador supremo. O servidor compara o login normalizado da sessão com a propriedade opcional `app.security.supreme-review.login`. A consulta exige a conta ativa, o marcador supremo, o papel Administrador de Plataforma e a senha pessoal atualizada. A configuração vazia mantém a capacidade suspensa.
+
+A conta selecionada ganha acesso à lista e ao detalhe de Avaliações individuais e à consulta de Indicadores. Operações sobre as avaliações e os comandos de exportação e impressão seguem permissões próprias. A conta de contingência e o administrador técnico tiveram a consulta adicional recusada por URL direta. As regras de privacidade dos indicadores foram exercitadas na API.
+
+Com dados fictícios, o Edge abriu os oito módulos e o detalhe da avaliação com a conta escolhida e conferiu o menu do celular. Também foram comparados os menus de RH, Diretoria, Gestor, Colaborador, administrador técnico e outro supremo. O teste Spring percorreu a revalidação da sessão, o repositório de identidade com dados simulados, os filtros de segurança e os endpoints. Passaram os 332 testes da interface, 356 testes executados do servidor e o gate local em `scripts/verify-quality.ps1 -SkipDatabase`. As 21 integrações opcionais com banco ficaram fora da execução.
+
+As capturas e a matriz estão em `outputs/consulta-suprema-20261126` no espaço de trabalho da revisão. A prévia de teste foi encerrada após as capturas. A configuração da conta real e a publicação ficam pendentes da revisão.
+
 ## Transição de Filiais e Áreas em 24/11/2026
 
 O Firefox reproduziu a captura a 1252 × 900, no tema claro e com menu recolhido. Na versão instalada, as duas tabelas tinham mínimo de 544 px em cartões com 518 px úteis. Os 26 px de rolagem interna cortavam a coluna Ação. A prévia anterior empilhava os cartões a essa largura.
@@ -540,6 +550,8 @@ Validação local: `iniciar-prod.bat --check` confirmou JDK, configuração exte
 Registro da preparação anterior à ativação: naquele momento o acesso ao PM2 retornava `EPERM`, o dump ainda continha as portas antigas e a troca das rotas remotas precisava ser coordenada. O estado operacional observado depois da execução pelo usuário está na seção acima. A ponte local preparada resolve a conexão com o túnel sem alterar a configuração remota; quando as rotas do Cloudflare forem atualizadas diretamente para `38080`/`28081`, as pontes poderão ser removidas com `repair-public-route.ps1 -Remove`.
 
 ## Tarefas pendentes reais
+
+- [x] Validar em ambiente local a consulta de Avaliações individuais e Indicadores para um único login de administrador supremo e entregar capturas para revisão. Testes concluídos em 26/11/2026.
 
 - [x] Reproduzir e corrigir a rolagem dentro das tabelas de Filiais e Áreas na largura imediatamente anterior ao empilhamento, incluindo menu recolhido e as três ações de registros desativados. Validação local no Firefox e no Edge concluída em 24/11/2026.
 
