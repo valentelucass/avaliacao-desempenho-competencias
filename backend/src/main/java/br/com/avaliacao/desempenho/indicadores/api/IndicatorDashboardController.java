@@ -6,6 +6,7 @@ import br.com.avaliacao.desempenho.indicadores.application.IndicatorDashboardSer
 import br.com.avaliacao.desempenho.indicadores.domain.model.IndicatorDashboard;
 import jakarta.servlet.http.HttpServletRequest;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -35,6 +36,8 @@ public class IndicatorDashboardController {
     IndicatorDashboard dashboard =
         service.get(IndicatorController.executionContext(principal, request), cycleId);
     var metrics = dashboard.metrics();
+    var comparison = dashboard.comparison();
+    var changes = comparison.changes();
     return new DashboardResponse(
         new MetricsResponse(
             metrics.collaborators(),
@@ -46,7 +49,32 @@ public class IndicatorDashboardController {
             metrics.feedbackPercent()),
         map(dashboard.byBranch()),
         map(dashboard.byArea()),
-        map(dashboard.byItem()));
+        map(dashboard.byItem()),
+        new ComparisonResponse(
+            map(comparison.current()),
+            map(comparison.previous()),
+            new ChangesResponse(
+                changes.collaborators(),
+                changes.assessments(),
+                changes.managers(),
+                changes.managerSelfAssessments(),
+                changes.averagePercent(),
+                changes.finalizedPercent(),
+                changes.feedbackPercent())),
+        dashboard.areaSummary().stream()
+            .map(
+                area ->
+                    new AreaSummaryResponse(
+                        area.label(),
+                        area.collaborators(),
+                        area.assessments(),
+                        area.averagePercent(),
+                        area.finalizedPercent(),
+                        area.feedbackPercent()))
+            .toList(),
+        dashboard.evolution().stream()
+            .map(week -> new WeekAverageResponse(week.weekStart(), week.averagePercent()))
+            .toList());
   }
 
   private static List<PointResponse> map(List<IndicatorDashboard.Point> points) {
@@ -55,11 +83,18 @@ public class IndicatorDashboardController {
         .toList();
   }
 
+  private static PeriodResponse map(IndicatorDashboard.ComparisonPeriod period) {
+    return new PeriodResponse(period.firstDay(), period.lastDay());
+  }
+
   public record DashboardResponse(
       MetricsResponse metrics,
       List<PointResponse> byBranch,
       List<PointResponse> byArea,
-      List<PointResponse> byItem) {}
+      List<PointResponse> byItem,
+      ComparisonResponse comparison,
+      List<AreaSummaryResponse> areaSummary,
+      List<WeekAverageResponse> evolution) {}
 
   public record MetricsResponse(
       Long collaborators,
@@ -71,4 +106,28 @@ public class IndicatorDashboardController {
       BigDecimal feedbackPercent) {}
 
   public record PointResponse(String label, BigDecimal averagePercent) {}
+
+  public record ComparisonResponse(
+      PeriodResponse current, PeriodResponse previous, ChangesResponse changes) {}
+
+  public record PeriodResponse(LocalDate firstDay, LocalDate lastDay) {}
+
+  public record ChangesResponse(
+      BigDecimal collaborators,
+      BigDecimal assessments,
+      BigDecimal managers,
+      BigDecimal managerSelfAssessments,
+      BigDecimal averagePercent,
+      BigDecimal finalizedPercent,
+      BigDecimal feedbackPercent) {}
+
+  public record AreaSummaryResponse(
+      String label,
+      Long collaborators,
+      Long assessments,
+      BigDecimal averagePercent,
+      BigDecimal finalizedPercent,
+      BigDecimal feedbackPercent) {}
+
+  public record WeekAverageResponse(LocalDate weekStart, BigDecimal averagePercent) {}
 }

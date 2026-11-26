@@ -522,18 +522,46 @@ export interface IndicatorQuery {
 }
 
 export interface IndicatorDashboard {
-  metrics: {
-    collaborators: number | null
-    assessments: number | null
-    managers: number | null
-    managerSelfAssessments: number | null
-    averagePercent: number | null
-    finalizedPercent: number | null
-    feedbackPercent: number | null
-  }
+  metrics: IndicatorDashboardMetrics
   byBranch: readonly IndicatorDashboardPoint[]
   byArea: readonly IndicatorDashboardPoint[]
   byItem: readonly IndicatorDashboardPoint[]
+  comparison?: IndicatorDashboardComparison
+  areaSummary?: readonly IndicatorDashboardArea[]
+  evolution?: readonly IndicatorDashboardWeek[]
+}
+
+export interface IndicatorDashboardMetrics {
+  collaborators: number | null
+  assessments: number | null
+  managers: number | null
+  managerSelfAssessments: number | null
+  averagePercent: number | null
+  finalizedPercent: number | null
+  feedbackPercent: number | null
+}
+
+export interface IndicatorDashboardComparison {
+  current: IndicatorDashboardPeriod
+  previous: IndicatorDashboardPeriod
+  changes: IndicatorDashboardMetrics
+}
+
+export interface IndicatorDashboardPeriod {
+  firstDay: string
+  lastDay: string
+}
+
+export interface IndicatorDashboardArea extends Pick<
+  IndicatorDashboardMetrics,
+  'collaborators' | 'assessments' | 'averagePercent' | 'finalizedPercent' | 'feedbackPercent'
+> {
+  label: string
+}
+
+export interface IndicatorDashboardWeek {
+  weekStart: string
+  averagePercent: number
 }
 
 export interface IndicatorDashboardPoint {

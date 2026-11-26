@@ -10,10 +10,13 @@ import br.com.avaliacao.desempenho.avaliacoes.infrastructure.persistence.SqlServ
 import br.com.avaliacao.desempenho.indicadores.domain.model.IndicatorAggregate;
 import br.com.avaliacao.desempenho.indicadores.domain.model.IndicatorAggregateCriteria;
 import br.com.avaliacao.desempenho.indicadores.domain.model.IndicatorDashboard;
+import br.com.avaliacao.desempenho.indicadores.domain.model.IndicatorDashboardPeriods;
 import br.com.avaliacao.desempenho.indicadores.domain.model.IndicatorDashboardPolicy;
 import br.com.avaliacao.desempenho.indicadores.domain.model.IndicatorMetric;
 import br.com.avaliacao.desempenho.indicadores.domain.model.IndicatorPopulationDimension;
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.LocalDate;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
@@ -29,6 +32,8 @@ class IndicatorDashboardReadOnlySqlTests {
   private static final UUID OPEN = id(201);
   private static final UUID CLOSED = id(202);
   private static final UUID UNKNOWN = id(999);
+  private static final IndicatorDashboardPeriods PERIODS =
+      IndicatorDashboardPeriods.at(Instant.parse("2025-07-26T18:00:00Z"));
   private static final String FIXTURE =
       """
       WITH people AS (
@@ -46,7 +51,9 @@ class IndicatorDashboardReadOnlySqlTests {
           FROM people
       ), fixture_atribuicao_questionario_colaborador AS (
           SELECT cycle.ciclo_avaliacao_id, p.collaborator AS colaborador_id,
-                 CONVERT(datetime2, CASE WHEN n=20 THEN '2099-01-01' ELSE '2025-03-01' END) AS atribuido_em_utc,
+                 CONVERT(datetime2, CASE WHEN n=20 THEN '2099-01-01'
+                        WHEN n=18 AND cycle.situacao='ABERTO' THEN '2025-07-02'
+                        ELSE '2025-03-01' END) AS atribuido_em_utc,
                  CASE WHEN n=19 THEN CONVERT(datetime2,'2025-04-01')
                       WHEN cycle.situacao='ENCERRADO' AND n=16 THEN CONVERT(datetime2,'2026-02-01') END AS revogado_em_utc
           FROM fixture_ciclo_avaliacao AS cycle CROSS JOIN people AS p
@@ -70,9 +77,12 @@ class IndicatorDashboardReadOnlySqlTests {
       ), fixture_avaliacao AS (
           SELECT s.*, CONVERT(uniqueidentifier, FORMAT(s.assessment+500,'00000000-0000-0000-0000-000000000000')) AS avaliacao_id,
                  cycle.ciclo_avaliacao_id, p.collaborator AS colaborador_id, s.kind AS tipo_avaliacao,
-                 s.status AS situacao, s.author AS avaliador_usuario_id, 1 AS ciclo_questionario_id,
+                 s.status AS situacao, CONVERT(uniqueidentifier,
+                   FORMAT(s.author,'00000000-0000-0000-0000-000000000000')) AS avaliador_usuario_id,
+                 1 AS ciclo_questionario_id,
                  CASE WHEN s.n=15 THEN 2 ELSE 1 END AS versao_atual_numero,
-                 CONVERT(datetime2,'2025-06-01') AS criada_em_utc,
+                 CONVERT(datetime2, CASE WHEN s.n BETWEEN 7 AND 13 AND s.kind='GESTOR'
+                                        THEN '2025-07-02' ELSE '2025-06-01T03:10:00' END) AS criada_em_utc,
                  CONVERT(datetime2,'2025-07-01') AS atualizada_em_utc
           FROM review_seed AS s
           JOIN people AS p ON p.n=s.n
@@ -82,9 +92,13 @@ class IndicatorDashboardReadOnlySqlTests {
           FROM fixture_ciclo_avaliacao
       ), fixture_versao_avaliacao AS (
           SELECT assessment AS versao_avaliacao_id, avaliacao_id, versao_atual_numero AS numero,
-                 situacao, CONVERT(datetime2, '2025-07-01') AS criada_em_utc
+                 situacao,
+                 CONVERT(datetime2, CASE WHEN cycle_status='ENCERRADO' OR n=15 THEN '2025-07-01'
+                        WHEN n=13 THEN '2025-07-14T03:10:00'
+                        WHEN n BETWEEN 7 AND 12 AND kind='GESTOR' THEN '2025-07-07T03:10:00'
+                        ELSE '2025-06-10' END) AS criada_em_utc
           FROM fixture_avaliacao
-          UNION ALL SELECT 315, avaliacao_id, 1, 'PUBLICADA', CONVERT(datetime2,'2025-06-01')
+          UNION ALL SELECT 315, avaliacao_id, 1, 'PUBLICADA', CONVERT(datetime2,'2025-06-01T03:11:00')
           FROM fixture_avaliacao WHERE assessment=15
       ), fixture_resultado_avaliacao AS (
           SELECT avaliacao_id, assessment AS versao_avaliacao_id, 'DENTRO_EXPECTATIVAS' AS classificacao,
@@ -93,13 +107,17 @@ class IndicatorDashboardReadOnlySqlTests {
           UNION ALL SELECT avaliacao_id, 315, 'REFERENCIA', 120
           FROM fixture_avaliacao WHERE assessment=15
       ), fixture_feedback_avaliacao AS (
-          SELECT assessment AS versao_avaliacao_id, 'CONCLUIDO' AS situacao FROM fixture_avaliacao
+          SELECT assessment AS versao_avaliacao_id, 'CONCLUIDO' AS situacao,
+                 CONVERT(datetime2, CASE WHEN assessment=6 THEN '2025-06-27'
+                        WHEN assessment=7 THEN '2025-07-20' ELSE '2025-06-18' END) AS concluido_em_utc
+          FROM fixture_avaliacao
           WHERE assessment<=7 OR assessment IN (101,117)
-          UNION ALL SELECT 315, 'CONCLUIDO'
+          UNION ALL SELECT 315, 'CONCLUIDO', CONVERT(datetime2,'2025-06-18')
       ), fixture_papel AS (
           SELECT 1 AS papel_id, 'GESTOR' AS codigo
       ), fixture_atribuicao_papel AS (
-          SELECT 110+n AS usuario_id, 1 AS papel_id,
+          SELECT CONVERT(uniqueidentifier, FORMAT(110+n,'00000000-0000-0000-0000-000000000000'))
+                 AS usuario_id, 1 AS papel_id,
                  CONVERT(datetime2, CASE WHEN n=16 THEN '2025-06-02' ELSE '2025-01-01' END) AS concedido_em_utc,
                  CASE WHEN n=5 THEN CONVERT(datetime2,'2025-06-02') END AS revogado_em_utc
           FROM people WHERE n<=5 OR n=16
@@ -150,7 +168,8 @@ class IndicatorDashboardReadOnlySqlTests {
   void crossChecksAllSevenMetricsAndThreeChartsWithIndependentTotals() {
     JdbcTemplate jdbc = fixtureJdbc();
     var repository = new SqlServerIndicatorDashboardRepository(jdbc);
-    var dashboard = new IndicatorDashboardPolicy().publish(repository.aggregate(OPEN));
+    var dashboard =
+        new IndicatorDashboardPolicy().publish(repository.aggregate(OPEN, PERIODS), PERIODS);
     // 15 gestor + 6 auto + 1 Diretoria. Das 22, 13 gestor, 2 auto e 1 Diretoria são publicadas.
     // Feedback: 7 gestor + 1 Diretoria concluídos em 14 avaliações elegíveis.
     assertThat(dashboard.metrics())
@@ -167,6 +186,28 @@ class IndicatorDashboardReadOnlySqlTests {
         .containsExactly(
             new IndicatorDashboard.Point("Qualidade", decimal("100.0")),
             new IndicatorDashboard.Point("Comunicação", decimal("83.3")));
+    // Junho tem 15 avaliações e 10 publicadas até o dia 26. Julho tem 7, todas publicadas.
+    // Em junho o feedback de 6 foi registrado depois do corte; em julho, só o de 7 foi feito.
+    assertThat(dashboard.comparison().changes())
+        .isEqualTo(
+            new IndicatorDashboard.Changes(
+                decimal("5.9"),
+                decimal("-53.3"),
+                decimal("0.0"),
+                null,
+                decimal("-23.8"),
+                decimal("33.3"),
+                decimal("-73.2")));
+    assertThat(dashboard.areaSummary())
+        .containsExactly(
+            new IndicatorDashboard.AreaSummary(
+                "Apoio", 11L, 10L, decimal("76.4"), decimal("70.0"), decimal("14.3")),
+            new IndicatorDashboard.AreaSummary(
+                "Operações", 7L, 12L, decimal("96.4"), decimal("75.0"), decimal("100.0")));
+    // A semana com uma pessoa e a primeira das duas semanas de 6 ficam protegidas.
+    assertThat(dashboard.evolution())
+        .containsExactly(
+            new IndicatorDashboard.WeekAverage(LocalDate.parse("2025-07-07"), decimal("75.0")));
 
     var previous =
         (IndicatorAggregate.AverageScore)
@@ -180,7 +221,10 @@ class IndicatorDashboardReadOnlySqlTests {
                         null));
     assertThat(previous.distinctCollaborators()).isEqualTo(13);
     assertThat(previous.averageScore()).isEqualByComparingTo("104.615384");
-    assertThat(new IndicatorDashboardPolicy().publish(repository.aggregate(CLOSED)).hasData())
+    assertThat(
+            new IndicatorDashboardPolicy()
+                .publish(repository.aggregate(CLOSED, PERIODS), PERIODS)
+                .hasData())
         .isFalse();
   }
 
@@ -214,7 +258,9 @@ class IndicatorDashboardReadOnlySqlTests {
     JdbcTemplate jdbc = devJdbc();
     var dashboard =
         new IndicatorDashboardPolicy()
-            .publish(new SqlServerIndicatorDashboardRepository(jdbc).aggregate(UNKNOWN));
+            .publish(
+                new SqlServerIndicatorDashboardRepository(jdbc).aggregate(UNKNOWN, PERIODS),
+                PERIODS);
     assertThat(dashboard.hasData()).isFalse();
     assertThat(
             new SqlServerAssessmentCoverageRepository(jdbc)

@@ -1,5 +1,13 @@
 # Estado atual — Avaliação de Desempenho e Competências
 
+## Comparação mensal, resumo por área e evolução em 26/11/2026
+
+Os sete cartões preservam os totais do ciclo e exibem a variação entre o mês em curso e o anterior até o mesmo dia e horário de Brasília. Colaboradores usam as atribuições vigentes em cada corte. Avaliações, gestores e autoavaliações usam as avaliações iniciadas no período. As taxas e a média das avaliações iniciadas no mês usam a versão e o feedback que já existiam no respectivo corte. A diferença em contagens é relativa. Nas médias e taxas, a diferença é em pontos percentuais. A interface indica quando falta base para comparar.
+
+O resumo apresenta colaboradores, avaliações, média, finalização e feedback por área, com a linha total do ciclo. A evolução usa a semana de publicação da versão vigente de cada avaliação de gestor e marca as lacunas na série. O botão Ver médias por semana abre a relação em um diálogo. A paginação dos três gráficos usa a mesma altura quando os cartões estão lado a lado. O servidor aplica a confidencialidade às comparações, às áreas e às semanas.
+
+A conferência independente executou a consulta oficial no SQL Server DEV sobre dados fictícios e passou por 21 verificações, incluindo o schema real, o corte de Brasília, uma publicação reaberta, feedback posterior ao corte e as bases das duas áreas. A publicação e a conciliação dos agregados na sessão de produção foram solicitadas. Os recibos da rodada ficam em `outputs/indicadores-mensais` no espaço de trabalho da revisão.
+
 ## Publicação dos indicadores, do acompanhamento e do modal em 26/11/2026
 
 O commit `d5069ad` foi enviado aos dois repositórios Git e publicado no release `95657d97c43d43a0b0e85cc0066ad97f`. O domínio e a origem local serviram os mesmos artefatos aprovados às 15h37 de Brasília. O rodapé no domínio exibiu **Build 26/11/2026, 15:31:51 (Brasília)**. Os 30 arquivos do manifesto, o JAR ativo e a configuração protegida foram conferidos por hash. A validação do SQL Server de produção foi somente leitura.

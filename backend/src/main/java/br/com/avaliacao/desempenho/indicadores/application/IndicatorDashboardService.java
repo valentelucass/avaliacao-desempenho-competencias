@@ -4,8 +4,10 @@ import br.com.avaliacao.desempenho.identidadeacesso.infrastructure.persistence.C
 import br.com.avaliacao.desempenho.indicadores.application.IndicatorAuditRecord.Operation;
 import br.com.avaliacao.desempenho.indicadores.application.IndicatorAuditRecord.Outcome;
 import br.com.avaliacao.desempenho.indicadores.domain.model.IndicatorDashboard;
+import br.com.avaliacao.desempenho.indicadores.domain.model.IndicatorDashboardPeriods;
 import br.com.avaliacao.desempenho.indicadores.domain.model.IndicatorDashboardPolicy;
 import br.com.avaliacao.desempenho.indicadores.domain.port.IndicatorDashboardPort;
+import java.time.Clock;
 import java.util.UUID;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
@@ -18,6 +20,7 @@ public class IndicatorDashboardService {
   private final IndicatorDashboardPort port;
   private final IndicatorRequestLimiter limiter;
   private final IndicatorAuditSink auditSink;
+  private final Clock clock;
   private final IndicatorRequestAuthorizationPolicy authorization =
       new IndicatorRequestAuthorizationPolicy();
   private final IndicatorDashboardPolicy policy = new IndicatorDashboardPolicy();
@@ -36,7 +39,8 @@ public class IndicatorDashboardService {
 
     IndicatorDashboard result;
     try {
-      result = policy.publish(port.aggregate(cycleId));
+      var periods = IndicatorDashboardPeriods.at(clock.instant());
+      result = policy.publish(port.aggregate(cycleId, periods), periods);
     } catch (RuntimeException exception) {
       audit(context, cycleId, Outcome.FAILURE);
       throw exception;
@@ -46,10 +50,14 @@ public class IndicatorDashboardService {
   }
 
   public IndicatorDashboardService(
-      IndicatorDashboardPort port, IndicatorRequestLimiter limiter, IndicatorAuditSink auditSink) {
+      IndicatorDashboardPort port,
+      IndicatorRequestLimiter limiter,
+      IndicatorAuditSink auditSink,
+      Clock clock) {
     this.port = port;
     this.limiter = limiter;
     this.auditSink = auditSink;
+    this.clock = clock;
   }
 
   private void audit(IndicatorExecutionContext context, UUID cycleId, Outcome outcome) {

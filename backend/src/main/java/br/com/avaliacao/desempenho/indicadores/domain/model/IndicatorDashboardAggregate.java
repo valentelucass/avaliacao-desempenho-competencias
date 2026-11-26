@@ -9,7 +9,26 @@ public record IndicatorDashboardAggregate(
     int collaborators,
     long total,
     long eligible,
-    BigDecimal averageScore) {
+    BigDecimal averageScore,
+    Scope scope) {
+
+  public IndicatorDashboardAggregate(
+      Kind kind,
+      String label,
+      int collaborators,
+      long total,
+      long eligible,
+      BigDecimal averageScore) {
+    this(kind, label, collaborators, total, eligible, averageScore, Scope.CYCLE);
+  }
+
+  public enum Scope {
+    CYCLE,
+    AREA,
+    WEEK,
+    CURRENT_MONTH,
+    PREVIOUS_MONTH
+  }
 
   public enum Kind {
     COLLABORATORS,
@@ -20,7 +39,6 @@ public record IndicatorDashboardAggregate(
     FINALIZED,
     FEEDBACK,
     BRANCH,
-    AREA,
     ITEM
   }
 }

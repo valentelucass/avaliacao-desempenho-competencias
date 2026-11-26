@@ -235,6 +235,10 @@ A população é formada pelas atribuições de questionário vigentes no ciclo 
 
 `GET /api/v1/indicators/dashboard?cycleId=…` segue a autorização, a auditoria e o limite de requisições da consulta de indicadores. A resposta traz `metrics` e as séries `byBranch`, `byArea` e `byItem`, com pontos `{ label, averagePercent }`. A confidencialidade é aplicada no servidor. Métricas indisponíveis têm valor nulo. Séries omitem recortes pequenos e protegem a diferença em relação à média geral.
 
+O objeto `comparison` contém os períodos `current` e `previous`, identificados por `firstDay` e `lastDay`, e `changes` com os mesmos campos de `metrics`. Datas seguem o formato ISO. Os cortes dos dois meses usam a mesma data relativa e horário de Brasília. Um mês anterior mais curto entra completo. Colaboradores usam as atribuições vigentes em cada corte, limitadas ao encerramento do ciclo. Os demais campos consideram avaliações iniciadas em cada mês e seus resultados, estado e feedback registrados até o respectivo corte. Mudanças de contagem são percentuais relativas ao mês anterior. Mudanças de médias e taxas são em pontos percentuais. Valores sem base comparável ou suprimidos são nulos.
+
+`areaSummary` traz linhas `{ label, collaborators, assessments, averagePercent, finalizedPercent, feedbackPercent }`. Colaboradores são classificados pela lotação na data de referência do ciclo. Para avaliações, a referência é a data de publicação ou, nas demais situações, a data de criação. A média usa a mesma população do gráfico por área. As células são protegidas por métrica, inclusive contra inferência a partir dos totais do ciclo. `evolution` traz `{ weekStart, averagePercent }` em ordem cronológica. A semana começa na segunda-feira em Brasília e reúne as notas das versões vigentes publicadas por gestores naquele recorte.
+
 | Campo | Base |
 | --- | --- |
 | `collaborators` | Colaboradores distintos com questionário atribuído no ciclo, na mesma base do acompanhamento. |

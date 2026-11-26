@@ -1,8 +1,11 @@
 import { Card } from '@astryxdesign/core/Card'
 import {
+  ArrowDown,
+  ArrowUp,
   BadgeCheck,
   ClipboardList,
   MessageSquareCheck,
+  Minus,
   Star,
   UserRoundCheck,
   UserRoundPen,
@@ -13,22 +16,29 @@ import { isAuthenticationError, type ApiClient } from '../../api/client'
 import type {
   EvaluationCycle,
   IndicatorDashboard as Dashboard,
+  IndicatorDashboardPeriod,
   IndicatorDashboardPoint,
 } from '../../api/contracts'
 import { FeedbackMessage } from '../../ui/Feedback'
 import { Pagination } from '../../ui/Pagination'
 import { safeLoadErrorMessage } from '../../ui/safeErrorMessage'
 import { preferredReportingCycle } from '../../ui/useReportingCycles'
+import { IndicatorAreaSummary, IndicatorEvolution } from './IndicatorDashboardDetails'
+import { decimalFormat, formatPercent, integerFormat } from './indicatorDashboardFormat'
 import './indicator-dashboard.css'
 
-const integerFormat = new Intl.NumberFormat('pt-BR')
-const percentFormat = new Intl.NumberFormat('pt-BR', {
-  style: 'percent',
-  minimumFractionDigits: 1,
-  maximumFractionDigits: 1,
+const periodFormat = new Intl.DateTimeFormat('pt-BR', {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+  timeZone: 'UTC',
 })
 const axisTicks = [100, 75, 50, 25, 0] as const
 const barGrading = ['strong', 'medium', 'bright'] as const
+
+function periodLabel(period: IndicatorDashboardPeriod) {
+  return periodFormat.formatRange(new Date(period.firstDay), new Date(period.lastDay))
+}
 
 type Props = {
   api: ApiClient
@@ -44,6 +54,7 @@ export function IndicatorDashboard({ api, cycles, refreshRevision, onSessionExpi
   const [result, setResult] = useState<{ key: string; dashboard?: Dashboard; error?: string }>()
   const key = JSON.stringify([cycleId, refreshRevision])
   const current = result?.key === key ? result : undefined
+  const comparison = current?.dashboard?.comparison
 
   useEffect(() => {
     if (!cycleId) return undefined
@@ -89,7 +100,15 @@ export function IndicatorDashboard({ api, cycles, refreshRevision, onSessionExpi
             ))}
           </select>
         </div>
-        <p>Os resultados são apresentados somente para grupos com dados suficientes.</p>
+        <div className="indicator-dashboard__context">
+          <p>Totais do ciclo. Os resultados exigem dados suficientes.</p>
+          {comparison && (
+            <p>
+              Variações de <strong>{periodLabel(comparison.current)}</strong> vs.{' '}
+              <strong>{periodLabel(comparison.previous)}</strong>.
+            </p>
+          )}
+        </div>
       </Card>
       {!current && <FeedbackMessage kind="info">Carregando indicadores do ciclo…</FeedbackMessage>}
       {current?.error && <FeedbackMessage kind="error">{current.error}</FeedbackMessage>}
@@ -99,12 +118,15 @@ export function IndicatorDashboard({ api, cycles, refreshRevision, onSessionExpi
 }
 
 function DashboardResults({ dashboard }: { dashboard: Dashboard }) {
-  const { metrics, byBranch, byArea, byItem } = dashboard
+  const { metrics, byBranch, byArea, byItem, areaSummary = [], evolution = [] } = dashboard
+  const changes = dashboard.comparison?.changes
   const hasData =
     Object.values(metrics).some((metric) => metric !== null) ||
     byBranch.length > 0 ||
     byArea.length > 0 ||
-    byItem.length > 0
+    byItem.length > 0 ||
+    areaSummary.length > 0 ||
+    evolution.length > 0
 
   return (
     <>
@@ -120,24 +142,28 @@ function DashboardResults({ dashboard }: { dashboard: Dashboard }) {
         <Metric
           label="Total de colaboradores"
           value={metrics.collaborators}
+          change={changes?.collaborators}
           icon={<Users />}
           detail="Com questionário atribuído"
         />
         <Metric
           label="Total de avaliações"
           value={metrics.assessments}
+          change={changes?.assessments}
           icon={<ClipboardList />}
           detail="Rascunhos, enviadas e publicadas"
         />
         <Metric
           label="Total de gestores avaliadores"
           value={metrics.managers}
+          change={changes?.managers}
           icon={<UserRoundCheck />}
           detail="Gestores com avaliações iniciadas"
         />
         <Metric
           label="Total de autoavaliações"
           value={metrics.managerSelfAssessments}
+          change={changes?.managerSelfAssessments}
           icon={<UserRoundPen />}
           detail="Somente de gestores"
         />
@@ -149,6 +175,7 @@ function DashboardResults({ dashboard }: { dashboard: Dashboard }) {
         <Metric
           label="Média geral das avaliações"
           value={metrics.averagePercent}
+          change={changes?.averagePercent}
           icon={<Star />}
           detail="Notas publicadas pelos gestores · escala de 120"
           percentage
@@ -156,6 +183,7 @@ function DashboardResults({ dashboard }: { dashboard: Dashboard }) {
         <Metric
           label="Avaliações finalizadas"
           value={metrics.finalizedPercent}
+          change={changes?.finalizedPercent}
           icon={<BadgeCheck />}
           detail="Publicadas sobre o total de avaliações"
           percentage
@@ -163,6 +191,7 @@ function DashboardResults({ dashboard }: { dashboard: Dashboard }) {
         <Metric
           label="Feedbacks realizados"
           value={metrics.feedbackPercent}
+          change={changes?.feedbackPercent}
           icon={<MessageSquareCheck />}
           detail="Concluídos entre os feedbacks aplicáveis"
           percentage
@@ -181,6 +210,10 @@ function DashboardResults({ dashboard }: { dashboard: Dashboard }) {
         />
         <ScoreChart title="Média geral por item da avaliação" points={byItem} horizontal />
       </div>
+      <div className="indicator-dashboard__details-grid">
+        <IndicatorAreaSummary areas={areaSummary} totals={metrics} />
+        <IndicatorEvolution weeks={evolution} reference={metrics.averagePercent} />
+      </div>
     </>
   )
 }
@@ -188,12 +221,14 @@ function DashboardResults({ dashboard }: { dashboard: Dashboard }) {
 function Metric({
   label,
   value,
+  change,
   icon,
   detail,
   percentage = false,
 }: {
   label: string
   value: number | null
+  change: number | null | undefined
   icon: ReactNode
   detail: string
   percentage?: boolean
@@ -215,8 +250,31 @@ function Metric({
           integerFormat.format(value)
         )}
       </dd>
+      <dd className="indicator-dashboard__metric-change">
+        <MetricChange change={change} isRate={percentage === true} />
+      </dd>
       <dd className="indicator-dashboard__metric-detail">{detail}</dd>
     </Card>
+  )
+}
+
+function MetricChange({ change, isRate }: { change: number | null | undefined; isRate: boolean }) {
+  if (change == null)
+    return <span className="indicator-dashboard__change-context">Sem base para comparar</span>
+
+  const direction = change > 0 ? 'up' : change < 0 ? 'down' : 'flat'
+  const Icon = direction === 'up' ? ArrowUp : direction === 'down' ? ArrowDown : Minus
+  const value = isRate ? decimalFormat.format(change) + ' p.p.' : formatPercent(change)
+
+  return (
+    <>
+      <span className="indicator-dashboard__change-value" data-direction={direction}>
+        <Icon size={14} aria-hidden="true" />
+        {direction === 'up' && <span className="visually-hidden">Aumento de </span>}
+        {value}
+      </span>{' '}
+      <span className="indicator-dashboard__change-context">vs. mês anterior</span>
+    </>
   )
 }
 
@@ -309,25 +367,25 @@ function ScoreChart({
                 <span aria-hidden="true" /> Média geral · {formatPercent(reference)}
               </p>
             )}
-            <Pagination
-              currentPage={page}
-              hasNextPage={page * pageSize < points.length}
-              itemCountOnPage={pointsOnPage.length}
-              itemLabel={title.toLowerCase()}
-              totalPages={Math.ceil(points.length / pageSize)}
-              onNextPage={() => setPage((previous) => previous + 1)}
-              onPreviousPage={() => setPage((previous) => previous - 1)}
-              showItemCount={false}
-            />
+            {points.length > pageSize && (
+              <div className="indicator-dashboard__chart-footer">
+                <Pagination
+                  currentPage={page}
+                  hasNextPage={page * pageSize < points.length}
+                  itemCountOnPage={pointsOnPage.length}
+                  itemLabel={title.toLowerCase()}
+                  totalPages={Math.ceil(points.length / pageSize)}
+                  onNextPage={() => setPage((previous) => previous + 1)}
+                  onPreviousPage={() => setPage((previous) => previous - 1)}
+                  showItemCount={false}
+                />
+              </div>
+            )}
           </>
         )}
       </section>
     </Card>
   )
-}
-
-function formatPercent(value: number) {
-  return percentFormat.format(value / 100)
 }
 
 function scoreStyle(percentage: number): CSSProperties {

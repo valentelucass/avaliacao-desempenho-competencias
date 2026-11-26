@@ -307,7 +307,8 @@ class SupremeReviewSecurityTests {
     @Bean
     IndicatorDashboardController dashboardController() {
       return new IndicatorDashboardController(
-          new IndicatorDashboardService(ignored -> List.of(), ignored -> {}, ignored -> {}));
+          new IndicatorDashboardService(
+              (ignored, periods) -> List.of(), ignored -> {}, ignored -> {}, Clock.systemUTC()));
     }
 
     @Bean
