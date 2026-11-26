@@ -1,5 +1,11 @@
 # Estado atual — Avaliação de Desempenho e Competências
 
+## Publicação dos indicadores, do acompanhamento e do modal em 26/11/2026
+
+O commit `d5069ad` foi enviado aos dois repositórios Git e publicado no release `95657d97c43d43a0b0e85cc0066ad97f`. O domínio e a origem local serviram os mesmos artefatos aprovados às 15h37 de Brasília. O rodapé no domínio exibiu **Build 26/11/2026, 15:31:51 (Brasília)**. Os 30 arquivos do manifesto, o JAR ativo e a configuração protegida foram conferidos por hash. A validação do SQL Server de produção foi somente leitura.
+
+O publicador concluiu o gate com 334 testes de interface aprovados, 358 testes Java executados e 24 opcionais ignorados. A API pública respondeu ao CSRF e exigiu autenticação para a sessão, o painel e o acompanhamento. O Edge carregou a interface publicada com respostas fictícias da API e confirmou os sete indicadores, os três gráficos, os estados Pendente e Iniciada e o fechamento do diálogo de senha por clique fora. O ensaio anterior cobriu também o celular e a troca obrigatória. Os recibos e as capturas estão em `outputs/publicacao-indicadores-20261126` no espaço de trabalho da revisão.
+
 ## Troca pessoal de senha no menu em 26/11/2026
 
 A troca voluntária abre um diálogo sobre a área autenticada com o fundo desfocado. O menu móvel conclui o fechamento antes de entregar o foco ao diálogo. Cancelar, Escape e clique fora fecham o modal com o formulário disponível. Durante o envio, o diálogo aguarda a resposta. O retorno ao login após troca bem-sucedida e o fluxo obrigatório antes de acessar a área autenticada foram testados.
@@ -10,7 +16,7 @@ O Edge confirmou foco, navegação por Tab, clique fora, cancelamento, reabertur
 
 A faixa da média detalhada ganhou cantos arredondados e espaço interno. O rodapé da área autenticada agora ocupa a largura da página e alinha o conteúdo ao workspace. O menu lateral alinha nome, perfil e ajuda em duas linhas. As ações nos cabeçalhos de avaliações e ciclos aparecem sem a borda superior. A resposta selecionada tem fundo e contorno verdes, e o aviso de consulta usa um verde suave nos dois temas.
 
-Foram aprovados o build isolado, Prettier, Oxlint, os 334 testes de interface e 28 verificações no Edge em 14 cenários. O navegador verificou de 320 a 2.560 px nos temas claro e escuro, com menu aberto e recolhido. As capturas e medidas estão em `outputs/ajustes-visuais-avaliacao`. A prévia dos Indicadores está disponível localmente com dados de demonstração e expira após 20 minutos de inatividade. A produção consultada nesta revisão ainda servia o painel anterior.
+Foram aprovados o build isolado, Prettier, Oxlint, os 334 testes de interface e 28 verificações no Edge em 14 cenários. O navegador verificou de 320 a 2.560 px nos temas claro e escuro, com menu aberto e recolhido. As capturas e medidas estão em `outputs/ajustes-visuais-avaliacao`. A prévia local dos Indicadores usa dados de demonstração e expira após 20 minutos de inatividade.
 
 ## Painel por ciclo e acompanhamento do início em 26/11/2026
 
@@ -20,7 +26,7 @@ Indicadores recebeu sete cartões e as séries de filial, área e competência n
 
 O SQL Server de desenvolvimento validou a consulta sobre o schema real e executou as mesmas consultas com dados inteiramente fictícios. A conferência independente obteve 18 colaboradores previstos, 16 iniciados e 2 pendentes. Os sete cartões resultaram em 18 colaboradores, 22 avaliações, 2 gestores avaliadores, 5 autoavaliações de gestores, média de 87,2%, 72,7% finalizadas e 57,1% de feedback realizado. Foram exercitados ciclo anterior, atribuição revogada, rascunho, autoavaliação isolada, vínculo histórico, recorte pequeno, busca literal e busca sem acento. O ambiente recusou o login integrado do ensaio JDBC opcional. As mesmas consultas parametrizadas foram conferidas em modo somente leitura no DEV pelo cliente SQL aprovado da VM.
 
-O Edge validou 19 cenários a 1.500, 1.252, 390 e 320 px, em claro e escuro, incluindo grupos pequenos, paginação, perfis autorizados, filtro por nome, troca de ciclo e ausência de rolagem horizontal. O gate local de qualidade aprovou o build, 334 testes da interface, 358 testes Java executados, os cenários existentes no Edge e as auditorias de dependências. A suíte padrão ignorou 24 testes opcionais. A conferência SQL separada está no recibo de desenvolvimento. As capturas e os recibos estão em `outputs/indicadores-e-cobertura` no espaço de trabalho da revisão. A prévia foi encerrada após as capturas. A publicação do painel e do filtro foi solicitada em 26/11/2026 e segue o gate oficial.
+O Edge validou 19 cenários a 1.500, 1.252, 390 e 320 px, em claro e escuro, incluindo grupos pequenos, paginação, perfis autorizados, filtro por nome, troca de ciclo e ausência de rolagem horizontal. A conferência SQL separada está no recibo de desenvolvimento. As capturas e os recibos estão em `outputs/indicadores-e-cobertura` no espaço de trabalho da revisão.
 
 ## Consulta das telas pelo supremo selecionado em 26/11/2026
 
