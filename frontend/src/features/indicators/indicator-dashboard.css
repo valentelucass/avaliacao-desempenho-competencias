@@ -366,6 +366,7 @@
 
 .indicator-area-table {
   width: 100%;
+  min-width: 0;
   border-spacing: 0;
   border-collapse: separate;
   font-size: 0.8125rem;
@@ -538,6 +539,7 @@
 
 .account-dialog.indicator-trend-dialog {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 14px;
   width: min(100%, 31rem);
   max-height: min(85dvh, 42rem);
@@ -555,6 +557,7 @@
 
 .indicator-trend-dialog table {
   width: 100%;
+  min-width: 0;
   border-collapse: collapse;
   font-size: 0.875rem;
 }
@@ -562,6 +565,7 @@
 .indicator-trend-dialog :is(th, td) {
   padding: 9px 6px;
   border-bottom: 1px solid var(--ev-line);
+  overflow-wrap: anywhere;
   text-align: start;
 }
 
