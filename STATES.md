@@ -1,5 +1,11 @@
 # Estado atual — Avaliação de Desempenho e Competências
 
+## Alinhamento do comentário opcional em 26/11/2026
+
+O campo Comentário opcional passou a ocupar a largura do formulário abaixo da última competência. O campo usa a mesma superfície dos cartões e tem uma caixa de texto com três linhas iniciais. A edição e o envio seguem o fluxo existente do formulário.
+
+O Edge reproduziu o desalinhamento no build anterior e confirmou a correção em seis cenários, entre 320 e 1.500 px, nos dois temas e com quantidade par e ímpar de competências. O cenário editável salvou um comentário fictício, conferiu a leitura do valor salvo e salvou novamente com o campo vazio. Build isolado, formatação, lint e dois testes direcionados passaram. As capturas estão em `outputs/comentario-opcional` no espaço de trabalho da revisão.
+
 ## Gestor responsável e Excel no acompanhamento do início em 26/11/2026
 
 O acompanhamento recebeu uma coluna e um filtro de gestor responsável. O filtro aceita parte do nome, sem distinção de caixa ou acentos, e combina com ciclo, situação e nome do colaborador. O responsável vem do vínculo vigente na consulta ou, para ciclos encerrados, do vínculo válido no encerramento. A tela e a planilha identificam a ausência de vínculo como Sem gestor vinculado.

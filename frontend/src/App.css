@@ -4735,10 +4735,6 @@ thead th {
     grid-column: 1 / -1;
   }
 
-  .assessment-editor .stack-form > .assessment-editor__narrative-fields {
-    grid-column: 2;
-  }
-
   .assessment-editor .result-card {
     align-items: center;
     column-gap: 1.35rem;
@@ -4767,13 +4763,9 @@ thead th {
   }
 }
 
-.assessment-editor__narrative-fields {
-  display: grid;
-  gap: 1.1rem;
-}
-
-.assessment-editor__narrative-field textarea {
+.assessment-editor__comment textarea {
   max-height: min(12rem, 40svh);
+  min-height: 5.25rem;
 }
 
 .assessment-editor__administrative-action,

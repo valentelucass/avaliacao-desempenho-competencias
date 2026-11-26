@@ -456,17 +456,15 @@ export function AssessmentEditor({
           </fieldset>
         ))}
 
-        <div className="assessment-editor__narrative-fields">
-          <div className="field assessment-editor__narrative-field">
-            <label htmlFor="assessment-comment">Comentário opcional</label>
-            <textarea
-              id="assessment-comment"
-              value={comment}
-              onChange={(event) => setComment(event.target.value)}
-              disabled={!canEditDraft || isSaving}
-              rows={4}
-            />
-          </div>
+        <div className="card field assessment-editor__comment">
+          <label htmlFor="assessment-comment">Comentário opcional</label>
+          <textarea
+            id="assessment-comment"
+            value={comment}
+            onChange={(event) => setComment(event.target.value)}
+            disabled={!canEditDraft || isSaving}
+            rows={3}
+          />
         </div>
 
         <div className="assessment-editor__print-sheet">
