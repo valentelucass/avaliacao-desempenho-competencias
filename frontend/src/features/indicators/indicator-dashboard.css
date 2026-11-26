@@ -351,12 +351,16 @@
 }
 
 .indicator-dashboard__details-grid {
+  --detail-footer-height: 44px;
   display: grid;
   grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
+  align-items: stretch;
   gap: 12px;
 }
 
 .indicator-dashboard__detail-card {
+  display: flex;
+  flex-direction: column;
   min-width: 0;
 }
 
@@ -377,7 +381,7 @@
 
 .indicator-area-table th,
 .indicator-area-table td {
-  padding: 8px;
+  padding: 6px 8px;
   border-bottom: 1px solid var(--ev-line);
   text-align: end;
   overflow-wrap: anywhere;
@@ -416,8 +420,19 @@
   display: none;
 }
 
+.indicator-area-table:has(+ .pagination) {
+  margin-block-end: 10px;
+}
+
+.indicator-dashboard__detail-card > .pagination {
+  margin-block-start: auto;
+}
+
 .indicator-trend {
   --trend-color: light-dark(#166541, #88d8a8);
+  display: flex;
+  flex: 1 0 auto;
+  flex-direction: column;
   margin: 0;
 }
 
@@ -428,6 +443,7 @@
 
 .indicator-trend__graph {
   display: grid;
+  flex: 1 0 auto;
   grid-template-columns: 2.75rem minmax(0, 1fr);
   min-height: 9.25rem;
   margin: 18px 5px 28px 0;
@@ -529,12 +545,18 @@
   transform: translateX(-100%);
 }
 
+.indicator-dashboard__detail-card > .pagination,
+.indicator-trend__action {
+  align-items: center;
+  min-height: var(--detail-footer-height);
+  padding-block-start: 6px;
+  border-top: 1px solid var(--ev-line);
+}
+
 .indicator-trend__action {
   display: flex;
   justify-content: flex-end;
   margin-block-start: 10px;
-  padding-block-start: 8px;
-  border-top: 1px solid var(--ev-line);
 }
 
 .account-dialog.indicator-trend-dialog {
