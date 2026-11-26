@@ -6,6 +6,8 @@ O detalhe da avaliação publicada apresenta o feedback registrado em um cartão
 
 O Edge comparou o build anterior com o candidato e validou a exibição em cinco larguras entre 320 e 1.500 px. Foram conferidos os dois temas, a quebra de um trecho longo, a troca do formulário para o registro após conclusão com dados fictícios e o estado de autoavaliação. Build isolado, Prettier, Oxlint e três testes direcionados passaram. As capturas estão em `outputs/feedback-avaliacao` no espaço de trabalho da revisão.
 
+O commit `d0c8baa` foi enviado aos dois repositórios e publicado no release `04ce051678b04a15bb71d2ae65b43633` às 20h51 de Brasília. O domínio serviu os artefatos aprovados, e o cartão foi conferido no Edge com o pacote publicado e dados fictícios no **Build 26/11/2026, 20:45:49 (Brasília)**. O gate aprovou os 338 testes de interface, os 364 testes Java executados e os ensaios de navegador. Outros 25 testes Java opcionais ficaram fora da execução. O banco de produção foi validado em modo somente leitura.
+
 ## Alinhamento do comentário opcional em 26/11/2026
 
 O campo Comentário opcional passou a ocupar a largura do formulário abaixo da última competência. O campo usa a mesma superfície dos cartões e tem uma caixa de texto com três linhas iniciais. A edição e o envio seguem o fluxo existente do formulário.
