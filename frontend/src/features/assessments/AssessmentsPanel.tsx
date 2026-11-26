@@ -1227,6 +1227,7 @@ export function AssessmentsPanel({
       {coverageActive ? (
         <AssessmentCoveragePanel
           api={api}
+          canExport={canExportAssessments}
           refreshRevision={coverageRevision}
           onClose={() => setShowCoverage(false)}
           onSelectAssessment={onSelectAssessment}
@@ -1252,12 +1253,13 @@ export function AssessmentsPanel({
             exportAction={
               canExportAssessments ? (
                 <AssessmentExportButton
-                  api={api}
-                  filters={{
-                    ...listFilters,
-                    cycleId: administrativeCycleId || undefined,
-                    collaboratorId: administrativeCollaboratorId || undefined,
-                  }}
+                  requestExport={() =>
+                    api.exportAssessments({
+                      ...listFilters,
+                      cycleId: administrativeCycleId || undefined,
+                      collaboratorId: administrativeCollaboratorId || undefined,
+                    })
+                  }
                   disabled={isLoading || !!error}
                   onSessionExpired={onSessionExpired}
                 />

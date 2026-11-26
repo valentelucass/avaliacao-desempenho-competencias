@@ -16,6 +16,7 @@ import type {
   ApprovedQuestionnaireVersion,
   ApiProblem,
   AssessmentDetail,
+  AssessmentCoverageFilter,
   AssessmentCoveragePage,
   AssessmentCoverageRequest,
   AssessmentCreationCycleOption,
@@ -202,6 +203,7 @@ export interface ApiClient {
   ): Promise<void>
   listAssessments(request?: AssessmentListRequest): Promise<Page<AssessmentSummary>>
   listAssessmentCoverage(request: AssessmentCoverageRequest): Promise<AssessmentCoveragePage>
+  exportAssessmentCoverage(filters: AssessmentCoverageFilter): Promise<AssessmentExport>
   exportAssessments(request: AssessmentExportRequest): Promise<AssessmentExport>
   listAssessmentCreationCycleOptions(
     type: AssessmentCreationType,
@@ -908,6 +910,7 @@ export class HttpApiClient implements ApiClient {
       limit: String(request.limit),
     })
     if (request.evaluatedName) parameters.set('evaluatedName', request.evaluatedName)
+    if (request.managerName) parameters.set('managerName', request.managerName)
     return this.request<AssessmentCoveragePage>('/assessments/coverage?' + parameters.toString())
   }
 
@@ -1065,9 +1068,25 @@ export class HttpApiClient implements ApiClient {
   }
 
   async exportAssessments(request: AssessmentExportRequest): Promise<AssessmentExport> {
-    const response = await this.sendWithRecovery('/assessments/exports', {
+    return this.exportAssessmentSheet('/assessments/exports', request, 'avaliacoes-desempenho.xlsx')
+  }
+
+  async exportAssessmentCoverage(filters: AssessmentCoverageFilter): Promise<AssessmentExport> {
+    return this.exportAssessmentSheet(
+      '/assessments/exports/coverage',
+      filters,
+      'acompanhamento-do-inicio.xlsx',
+    )
+  }
+
+  private async exportAssessmentSheet(
+    path: string,
+    body: AssessmentCoverageFilter | AssessmentExportRequest,
+    filename: string,
+  ): Promise<AssessmentExport> {
+    const response = await this.sendWithRecovery(path, {
       method: 'POST',
-      body: request,
+      body,
       requiresCsrf: true,
       headers: { Accept: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' },
     })
@@ -1079,7 +1098,7 @@ export class HttpApiClient implements ApiClient {
     ) {
       throw new ApiError({ status: 502, code: 'EXPORT_FAILED' })
     }
-    return { filename: 'avaliacoes-desempenho.xlsx', content: await response.blob() }
+    return { filename, content: await response.blob() }
   }
 
   async exportIndicators(query: IndicatorQuery): Promise<IndicatorExport | IndicatorResponse> {

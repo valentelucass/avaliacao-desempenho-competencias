@@ -1,22 +1,21 @@
 import { ActionButton } from '../../ui/ActionButton'
 import { useState } from 'react'
 import { FileSpreadsheet } from 'lucide-react'
-import type { ApiClient } from '../../api/client'
 import { isAuthenticationError } from '../../api/client'
-import type { AssessmentExportRequest } from '../../api/contracts'
+import type { AssessmentExport } from '../../api/contracts'
 import { FeedbackMessage } from '../../ui/Feedback'
 import { safeErrorMessage } from '../../ui/safeErrorMessage'
 
 export function AssessmentExportButton({
-  api,
-  filters,
+  requestExport,
   disabled,
   onSessionExpired,
+  tooltip = 'Exportar todas as avaliações autorizadas que atendem aos filtros aplicados',
 }: {
-  api: ApiClient
-  filters: AssessmentExportRequest
+  requestExport: () => Promise<AssessmentExport>
   disabled: boolean
   onSessionExpired: () => void
+  tooltip?: string
 }) {
   const [isExporting, setIsExporting] = useState(false)
   const [error, setError] = useState<string>()
@@ -27,7 +26,7 @@ export function AssessmentExportButton({
     setError(undefined)
     setNotice(undefined)
     try {
-      const result = await api.exportAssessments(filters)
+      const result = await requestExport()
       const url = URL.createObjectURL(result.content)
       const anchor = document.createElement('a')
       anchor.href = url
@@ -58,7 +57,7 @@ export function AssessmentExportButton({
         onClick={exportFile}
         disabled={disabled || isExporting}
         aria-busy={isExporting}
-        tooltip="Exportar todas as avaliações autorizadas que atendem aos filtros aplicados"
+        tooltip={tooltip}
         icon={<FileSpreadsheet size={16} aria-hidden="true" />}
         label={isExporting ? 'Exportando…' : 'Exportar Excel'}
       />

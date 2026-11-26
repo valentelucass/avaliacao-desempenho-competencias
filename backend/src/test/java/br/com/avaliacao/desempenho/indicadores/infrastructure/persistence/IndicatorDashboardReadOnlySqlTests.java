@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
 import br.com.avaliacao.desempenho.avaliacoes.application.AssessmentCoverageRepository.Entry;
+import br.com.avaliacao.desempenho.avaliacoes.application.AssessmentCoverageRepository.Filter;
 import br.com.avaliacao.desempenho.avaliacoes.infrastructure.persistence.SqlServerAssessmentCoverageRepository;
 import br.com.avaliacao.desempenho.indicadores.domain.model.IndicatorAggregate;
 import br.com.avaliacao.desempenho.indicadores.domain.model.IndicatorAggregateCriteria;
@@ -49,6 +50,26 @@ class IndicatorDashboardReadOnlySqlTests {
                  CASE n WHEN 16 THEN N'Ana de Teste %' WHEN 18 THEN N'Ítalo Unidade B'
                         ELSE N'Pessoa fictícia ' + FORMAT(n,'00') END AS nome_exibicao
           FROM people
+      ), fixture_usuario AS (
+          SELECT CONVERT(uniqueidentifier, FORMAT(person,'00000000-0000-0000-0000-000000000000'))
+                   AS usuario_id, name AS nome_exibicao
+          FROM (VALUES (701, N'Marina Gestão'), (702, N'João de Plantão')) AS managers(person, name)
+      ), fixture_vinculo_gestor_colaborador AS (
+          SELECT link AS vinculo_gestor_colaborador_id, p.collaborator AS colaborador_id,
+                 CONVERT(uniqueidentifier, FORMAT(manager,'00000000-0000-0000-0000-000000000000'))
+                   AS gestor_usuario_id,
+                 CONVERT(date, starts_on) AS inicio_vigencia, CONVERT(date, ends_on) AS fim_vigencia,
+                 CONVERT(datetime2, created_at) AS criado_em_utc,
+                 CONVERT(datetime2, ended_at) AS revogado_em_utc
+          FROM (VALUES
+              (1,16,702,'2025-01-01','2025-12-31','2025-01-01','2026-01-01T00:30:00'),
+              (2,16,701,NULL,NULL,'2026-01-01T03:10:00',NULL),
+              (3,18,701,'2099-01-01',NULL,'2025-06-01',NULL),
+              (4,1,701,NULL,NULL,'2025-01-01',NULL),
+              (5,14,701,NULL,NULL,'2025-01-01',NULL),
+              (6,17,701,NULL,NULL,'2025-01-01',NULL)
+          ) AS links(link, person, manager, starts_on, ends_on, created_at, ended_at)
+          JOIN people AS p ON p.n = links.person
       ), fixture_atribuicao_questionario_colaborador AS (
           SELECT cycle.ciclo_avaliacao_id, p.collaborator AS colaborador_id,
                  CONVERT(datetime2, CASE WHEN n=20 THEN '2099-01-01'
@@ -231,26 +252,44 @@ class IndicatorDashboardReadOnlySqlTests {
   @Test
   void findsUnstartedAcrossPagesAndIgnoresSelfAssessmentsAndOtherCycles() {
     var coverage = new SqlServerAssessmentCoverageRepository(fixtureJdbc());
-    var first = coverage.list(OPEN, PENDENTE, null, 1, 1);
-    var second = coverage.list(OPEN, PENDENTE, null, 2, 1);
-    assertThat(first.items()).containsExactly(new Entry(id(316), "Ana de Teste %", null));
+    var pending = new Filter(OPEN, PENDENTE, null, null);
+    var first = coverage.list(pending, 1, 1);
+    var second = coverage.list(pending, 2, 1);
+    assertThat(first.items())
+        .containsExactly(new Entry(id(316), "Ana de Teste %", "Marina Gestão", null));
     assertThat(first.hasNextPage()).isTrue();
-    assertThat(second.items()).containsExactly(new Entry(id(318), "Ítalo Unidade B", null));
+    assertThat(second.items()).containsExactly(new Entry(id(318), "Ítalo Unidade B", null, null));
     assertThat(second.hasNextPage()).isFalse();
-    assertThat(coverage.list(OPEN, PENDENTE, "italo", 1, 12).items())
+    assertThat(coverage.list(new Filter(OPEN, PENDENTE, "italo", null), 1, 12).items())
         .containsExactlyElementsOf(second.items());
-    assertThat(coverage.list(OPEN, PENDENTE, "%", 1, 12).items())
+    assertThat(coverage.list(new Filter(OPEN, PENDENTE, "%", null), 1, 12).items())
         .containsExactlyElementsOf(first.items());
 
-    var started = coverage.list(OPEN, INICIADA, null, 1, 25);
+    var started = coverage.list(new Filter(OPEN, INICIADA, null, null), 1, 25);
     assertThat(started.items()).hasSize(16);
     assertThat(started.items()).extracting(Entry::collaboratorId).contains(id(314), id(317));
     assertThat(started.items()).extracting(Entry::assessmentId).doesNotContainNull();
-    assertThat(coverage.list(CLOSED, PENDENTE, null, 1, 12).items())
-        .containsExactlyElementsOf(first.items());
-    assertThat(coverage.list(CLOSED, INICIADA, null, 1, 12).items())
+    assertThat(coverage.list(new Filter(CLOSED, PENDENTE, null, null), 1, 12).items())
+        .containsExactly(new Entry(id(316), "Ana de Teste %", "João de Plantão", null));
+    assertThat(coverage.list(new Filter(CLOSED, INICIADA, null, null), 1, 12).items())
         .extracting(Entry::collaboratorId)
         .containsExactly(id(318));
+  }
+
+  @Test
+  void usesTheSameFiltersForListAndExcelBeyondTheVisiblePage() {
+    var coverage = new SqlServerAssessmentCoverageRepository(fixtureJdbc());
+    var filter = new Filter(OPEN, INICIADA, null, "marina gestao");
+    assertThat(coverage.list(filter, 1, 1).hasNextPage()).isTrue();
+    assertThat(coverage.listForExport(filter, 50_001))
+        .extracting(Entry::collaboratorId)
+        .containsExactly(id(301), id(314), id(317));
+    assertThat(coverage.listForExport(new Filter(OPEN, PENDENTE, "%", "GESTAO"), 50_001))
+        .containsExactly(new Entry(id(316), "Ana de Teste %", "Marina Gestão", null));
+    assertThat(coverage.listForExport(new Filter(OPEN, INICIADA, null, "marina%"), 50_001))
+        .isEmpty();
+    assertThat(coverage.listForExport(new Filter(CLOSED, PENDENTE, null, "plantao"), 50_001))
+        .containsExactly(new Entry(id(316), "Ana de Teste %", "João de Plantão", null));
   }
 
   @Test
@@ -264,7 +303,7 @@ class IndicatorDashboardReadOnlySqlTests {
     assertThat(dashboard.hasData()).isFalse();
     assertThat(
             new SqlServerAssessmentCoverageRepository(jdbc)
-                .list(UNKNOWN, PENDENTE, null, 1, 12)
+                .list(new Filter(UNKNOWN, PENDENTE, null, null), 1, 12)
                 .items())
         .isEmpty();
   }

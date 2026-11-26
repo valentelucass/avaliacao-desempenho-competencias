@@ -659,13 +659,23 @@ describe('App', () => {
         .fn()
         .mockResolvedValueOnce({
           items: [
-            { collaboratorId: 'one', displayName: 'Pessoa sem rascunho', assessmentId: null },
+            {
+              collaboratorId: 'one',
+              displayName: 'Pessoa sem rascunho',
+              managerName: null,
+              assessmentId: null,
+            },
           ],
           hasNextPage: false,
         })
         .mockResolvedValue({
           items: [
-            { collaboratorId: 'two', displayName: 'Pessoa com rascunho', assessmentId: detail.id },
+            {
+              collaboratorId: 'two',
+              displayName: 'Pessoa com rascunho',
+              managerName: 'Gestora de teste',
+              assessmentId: detail.id,
+            },
           ],
           hasNextPage: false,
         }),
@@ -674,11 +684,14 @@ describe('App', () => {
     renderWithExistingSession(api, '/avaliacoes')
     fireEvent.click(await screen.findByRole('button', { name: 'Acompanhar início' }))
     expect(await screen.findByText('Pessoa sem rascunho')).toBeVisible()
+    expect(screen.getByText('Sem gestor vinculado')).toBeVisible()
     expect(screen.queryByRole('button', { name: 'Abrir avaliação' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Exportar Excel' })).toBeNull()
     expect(api.listAssessmentCoverage).toHaveBeenLastCalledWith({
       cycleId: 'cycle-sample',
       status: 'PENDENTE',
       evaluatedName: undefined,
+      managerName: undefined,
       page: 1,
       limit: 12,
     })
@@ -688,12 +701,18 @@ describe('App', () => {
     fireEvent.change(screen.getByLabelText('Nome do colaborador'), {
       target: { value: ' rascunho ' },
     })
+    fireEvent.change(screen.getByLabelText('Gestor responsável'), {
+      target: { value: ' Gestora ' },
+    })
     fireEvent.click(screen.getByRole('button', { name: 'Aplicar filtros' }))
     expect(await screen.findByText('Pessoa com rascunho')).toBeVisible()
+    expect(screen.getByRole('columnheader', { name: 'Gestor responsável' })).toBeVisible()
+    expect(screen.getByText('Gestora de teste')).toBeVisible()
     expect(api.listAssessmentCoverage).toHaveBeenLastCalledWith({
       cycleId: 'cycle-sample',
       status: 'INICIADA',
       evaluatedName: 'rascunho',
+      managerName: 'Gestora',
       page: 1,
       limit: 12,
     })

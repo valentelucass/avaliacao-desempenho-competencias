@@ -645,16 +645,25 @@ export interface AssessmentListRequest extends PageRequest {
 }
 export type AssessmentStartStatus = 'INICIADA' | 'PENDENTE'
 
-export interface AssessmentCoverageRequest {
+export interface AssessmentCoverageFilter {
   cycleId: string
   status: AssessmentStartStatus
   evaluatedName?: string
+  managerName?: string
+}
+
+export interface AssessmentCoverageRequest extends AssessmentCoverageFilter {
   page: number
   limit: number
 }
 
 export interface AssessmentCoveragePage {
-  items: readonly { collaboratorId: string; displayName: string; assessmentId: string | null }[]
+  items: readonly {
+    collaboratorId: string
+    displayName: string
+    managerName: string | null
+    assessmentId: string | null
+  }[]
   hasNextPage: boolean
 }
 

@@ -1,11 +1,13 @@
 package br.com.avaliacao.desempenho.avaliacoes.infrastructure.files;
 
+import br.com.avaliacao.desempenho.avaliacoes.application.AssessmentCoverageRepository.Entry;
 import br.com.avaliacao.desempenho.avaliacoes.application.AssessmentExportRepository.ExportRow;
 import br.com.avaliacao.desempenho.avaliacoes.application.AssessmentWorkbookWriter;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.function.Function;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 import javax.xml.stream.XMLOutputFactory;
@@ -22,6 +24,55 @@ public final class AssessmentXlsxWriter implements AssessmentWorkbookWriter {
 
   @Override
   public byte[] write(List<ExportRow> rows) {
+    return writeSheet(
+        "Avaliações",
+        List.of("Gestor", "Colaborador avaliado", "Status da Avaliação", "Status do Feedback"),
+        new int[] {38, 42, 25, 25},
+        rows,
+        AssessmentXlsxWriter::assessmentCells);
+  }
+
+  @Override
+  public byte[] writeCoverage(List<Entry> rows) {
+    return writeSheet(
+        "Acompanhamento do início",
+        List.of("Colaborador", "Gestor responsável", "Início da avaliação"),
+        new int[] {42, 42, 24},
+        rows,
+        entry ->
+            List.of(
+                entry.displayName(),
+                entry.managerName() == null ? "Sem gestor vinculado" : entry.managerName(),
+                entry.assessmentId() == null ? "Pendente" : "Iniciada"));
+  }
+
+  private static List<String> assessmentCells(ExportRow value) {
+    String status =
+        switch (value.assessmentStatus()) {
+          case RASCUNHO -> "Rascunho";
+          case ENVIADA -> "Enviada";
+          case PUBLICADA -> "Publicada";
+        };
+    String feedback =
+        switch (value.feedbackStatus()) {
+          case PENDENTE -> "Pendente";
+          case CONCLUIDO -> "Concluído";
+          case NAO_APLICAVEL -> "Não aplicável";
+        };
+    return List.of(
+        value.managerName() == null ? "Não se aplica" : value.managerName(),
+        value.evaluatedName(),
+        status,
+        feedback);
+  }
+
+  private static <Row> byte[] writeSheet(
+      String sheetName,
+      List<String> headings,
+      int[] widths,
+      List<Row> rows,
+      Function<Row, List<String>> cells) {
+    String range = "A1:" + (char) ('A' + headings.size() - 1) + (rows.size() + 1);
     try (var bytes = new ByteArrayOutputStream();
         var zip = new ZipOutputStream(bytes, StandardCharsets.UTF_8)) {
       entry(
@@ -52,9 +103,10 @@ public final class AssessmentXlsxWriter implements AssessmentWorkbookWriter {
           """
           <?xml version="1.0" encoding="UTF-8"?>
           <workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-            <sheets><sheet name="Avaliações" sheetId="1" r:id="rId1"/></sheets>
+            <sheets><sheet name="%s" sheetId="1" r:id="rId1"/></sheets>
           </workbook>
-          """);
+          """
+              .formatted(sheetName));
       entry(
           zip,
           "xl/_rels/workbook.xml.rels",
@@ -85,7 +137,7 @@ public final class AssessmentXlsxWriter implements AssessmentWorkbookWriter {
       xml.writeStartElement("worksheet");
       xml.writeDefaultNamespace(NS);
       xml.writeEmptyElement("dimension");
-      xml.writeAttribute("ref", "A1:D" + (rows.size() + 1));
+      xml.writeAttribute("ref", range);
       xml.writeStartElement("sheetViews");
       xml.writeStartElement("sheetView");
       xml.writeAttribute("workbookViewId", "0");
@@ -97,8 +149,7 @@ public final class AssessmentXlsxWriter implements AssessmentWorkbookWriter {
       xml.writeEndElement();
       xml.writeEndElement();
       xml.writeStartElement("cols");
-      int[] widths = {38, 42, 25, 25};
-      for (int col = 0; col < 4; col++) {
+      for (int col = 0; col < widths.length; col++) {
         xml.writeEmptyElement("col");
         xml.writeAttribute("min", String.valueOf(col + 1));
         xml.writeAttribute("max", String.valueOf(col + 1));
@@ -107,39 +158,15 @@ public final class AssessmentXlsxWriter implements AssessmentWorkbookWriter {
       }
       xml.writeEndElement();
       xml.writeStartElement("sheetData");
-      row(
-          xml,
-          1,
-          1,
-          List.of("Gestor", "Colaborador avaliado", "Status da Avaliação", "Status do Feedback"));
+      row(xml, 1, 1, headings);
       int number = 2;
-      for (ExportRow value : rows) {
-        String status =
-            switch (value.assessmentStatus()) {
-              case RASCUNHO -> "Rascunho";
-              case ENVIADA -> "Enviada";
-              case PUBLICADA -> "Publicada";
-            };
-        String feedback =
-            switch (value.feedbackStatus()) {
-              case PENDENTE -> "Pendente";
-              case CONCLUIDO -> "Concluído";
-              case NAO_APLICAVEL -> "Não aplicável";
-            };
-        row(
-            xml,
-            number,
-            number % 2 == 0 ? 2 : 3,
-            List.of(
-                value.managerName() == null ? "Não se aplica" : value.managerName(),
-                value.evaluatedName(),
-                status,
-                feedback));
+      for (Row value : rows) {
+        row(xml, number, number % 2 == 0 ? 2 : 3, cells.apply(value));
         number++;
       }
       xml.writeEndElement();
       xml.writeEmptyElement("autoFilter");
-      xml.writeAttribute("ref", "A1:D" + (rows.size() + 1));
+      xml.writeAttribute("ref", range);
       xml.writeEndElement();
       xml.writeEndDocument();
       xml.flush();
@@ -159,7 +186,7 @@ public final class AssessmentXlsxWriter implements AssessmentWorkbookWriter {
       xml.writeAttribute("ht", "30");
       xml.writeAttribute("customHeight", "1");
     }
-    for (int col = 0; col < 4; col++) {
+    for (int col = 0; col < values.size(); col++) {
       xml.writeStartElement("c");
       xml.writeAttribute("r", String.valueOf((char) ('A' + col)) + number);
       xml.writeAttribute("s", String.valueOf(style));

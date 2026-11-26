@@ -13,11 +13,12 @@ import org.junit.jupiter.api.Test;
 
 class AssessmentExportServiceTests {
   private final AssessmentExportRepository repository = mock(AssessmentExportRepository.class);
+  private final AssessmentCoverageRepository coverage = mock(AssessmentCoverageRepository.class);
   private final AssessmentWorkbookWriter writer = mock(AssessmentWorkbookWriter.class);
   private final IdentityAccessRepository audit = mock(IdentityAccessRepository.class);
   private final AssessmentExportService service =
       new AssessmentExportService(
-          repository, writer, audit, Clock.fixed(Instant.EPOCH, ZoneOffset.UTC));
+          repository, coverage, writer, audit, Clock.fixed(Instant.EPOCH, ZoneOffset.UTC));
   private final Set<String> permissions = Set.of("DADOS.EXPORTAR", "AVALIACOES.VISUALIZAR_TODAS");
 
   private AssessmentAccessContext actor(Set<String> roles, Set<String> grants) {
@@ -87,5 +88,43 @@ class AssessmentExportServiceTests {
         .isInstanceOf(AssessmentExportTooLargeException.class);
     verifyNoInteractions(writer);
     verify(audit).writeAudit(argThat(event -> event.result() == AuditEvent.AuditResult.DENIED));
+  }
+
+  @Test
+  void sharesExportAuthorizationAndAuditsTheCoverageCycle() {
+    var cycleId = UUID.randomUUID();
+    var filter =
+        new AssessmentCoverageRepository.Filter(
+            cycleId, AssessmentCoverageRepository.StartStatus.PENDENTE, "  Ana ", " João ");
+    assertThat(filter.evaluatedName()).isEqualTo("Ana");
+    assertThat(filter.managerName()).isEqualTo("João");
+    assertThatThrownBy(
+            () ->
+                service.exportCoverage(
+                    actor(Set.of("ADMINISTRADOR_PLATAFORMA"), permissions),
+                    filter,
+                    "coverage-denied"))
+        .isInstanceOf(AssessmentForbiddenException.class);
+    verifyNoInteractions(coverage, writer);
+
+    var rows =
+        List.of(
+            new AssessmentCoverageRepository.Entry(
+                UUID.randomUUID(), "Ana de Teste", "João de Teste", null));
+    when(coverage.listForExport(filter, 50_001)).thenReturn(rows);
+    when(writer.writeCoverage(rows)).thenReturn(new byte[] {80, 75});
+    assertThat(
+            service.exportCoverage(
+                actor(Set.of("GERENCIA_RH"), permissions), filter, "coverage-ok"))
+        .isEqualTo(new byte[] {80, 75});
+    verify(coverage).listForExport(filter, 50_001);
+    verify(audit)
+        .writeAudit(
+            argThat(
+                event ->
+                    "CICLO_AVALIACAO".equals(event.resourceType())
+                        && cycleId.equals(event.resourceId())
+                        && event.result() == AuditEvent.AuditResult.SUCCESS
+                        && event.reducedDetail() == null));
   }
 }

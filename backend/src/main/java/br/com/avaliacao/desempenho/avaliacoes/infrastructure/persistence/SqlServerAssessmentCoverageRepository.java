@@ -18,10 +18,24 @@ public class SqlServerAssessmentCoverageRepository implements AssessmentCoverage
   private static final String SELECT_COVERAGE =
       CYCLE_AND_EXPECTED_COLLABORATORS
           + """
-          SELECT collaborator.colaborador_id, collaborator.nome_exibicao, started.avaliacao_id
+          SELECT collaborator.colaborador_id, collaborator.nome_exibicao, responsible.manager_name,
+                 started.avaliacao_id
           FROM expected
           CROSS JOIN cycle_scope AS cycle
           JOIN dbo.colaborador AS collaborator ON collaborator.colaborador_id = expected.colaborador_id
+          CROSS APPLY (VALUES (CONVERT(date, cycle.reference_at
+              AT TIME ZONE 'UTC' AT TIME ZONE 'E. South America Standard Time'))) AS reference(local_date)
+          OUTER APPLY (
+              SELECT TOP (1) manager.nome_exibicao AS manager_name
+              FROM dbo.vinculo_gestor_colaborador AS link
+              JOIN dbo.usuario AS manager ON manager.usuario_id = link.gestor_usuario_id
+              WHERE link.colaborador_id = collaborator.colaborador_id
+                AND link.criado_em_utc <= cycle.reference_at
+                AND (link.revogado_em_utc IS NULL OR link.revogado_em_utc > cycle.reference_at)
+                AND (link.inicio_vigencia IS NULL OR link.inicio_vigencia <= reference.local_date)
+                AND (link.fim_vigencia IS NULL OR link.fim_vigencia >= reference.local_date)
+              ORDER BY link.criado_em_utc DESC, link.vinculo_gestor_colaborador_id DESC
+          ) AS responsible
           OUTER APPLY (
               SELECT TOP (1) assessment.avaliacao_id
               FROM dbo.avaliacao AS assessment
@@ -31,6 +45,7 @@ public class SqlServerAssessmentCoverageRepository implements AssessmentCoverage
               ORDER BY assessment.atualizada_em_utc DESC, assessment.avaliacao_id DESC
           ) AS started
           WHERE (? IS NULL OR CHARINDEX(?, collaborator.nome_exibicao COLLATE Latin1_General_100_CI_AI) > 0)
+            AND (? IS NULL OR CHARINDEX(?, responsible.manager_name COLLATE Latin1_General_100_CI_AI) > 0)
             AND CASE WHEN started.avaliacao_id IS NULL THEN 'PENDENTE' ELSE 'INICIADA' END = ?
           ORDER BY collaborator.nome_exibicao, collaborator.colaborador_id
           OFFSET ? ROWS FETCH NEXT ? ROWS ONLY
@@ -43,22 +58,33 @@ public class SqlServerAssessmentCoverageRepository implements AssessmentCoverage
   }
 
   @Override
-  public Page list(UUID cycleId, StartStatus status, String name, int page, int limit) {
-    List<Entry> rows =
-        jdbcTemplate.query(
-            SELECT_COVERAGE,
-            (row, index) ->
-                new Entry(
-                    row.getObject("colaborador_id", UUID.class),
-                    row.getString("nome_exibicao"),
-                    row.getObject("avaliacao_id", UUID.class)),
-            cycleId,
-            name,
-            name,
-            status.name(),
-            (page - 1L) * limit,
-            limit + 1);
+  public Page list(Filter filter, int page, int limit) {
+    List<Entry> rows = select(filter, (page - 1L) * limit, limit + 1);
     return new Page(
         List.copyOf(rows.subList(0, Math.min(rows.size(), limit))), rows.size() > limit);
+  }
+
+  @Override
+  public List<Entry> listForExport(Filter filter, int limit) {
+    return select(filter, 0L, limit);
+  }
+
+  private List<Entry> select(Filter filter, long offset, int limit) {
+    return jdbcTemplate.query(
+        SELECT_COVERAGE,
+        (row, index) ->
+            new Entry(
+                row.getObject("colaborador_id", UUID.class),
+                row.getString("nome_exibicao"),
+                row.getString("manager_name"),
+                row.getObject("avaliacao_id", UUID.class)),
+        filter.cycleId(),
+        filter.evaluatedName(),
+        filter.evaluatedName(),
+        filter.managerName(),
+        filter.managerName(),
+        filter.status().name(),
+        offset,
+        limit);
   }
 }

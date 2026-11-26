@@ -227,9 +227,13 @@ A cópia individual é gerada exclusivamente pela caixa de impressão local do n
 
 ### Acompanhamento do início
 
-`GET /api/v1/assessments/coverage` exige `cycleId` e `status` (`PENDENTE` ou `INICIADA`). Aceita `evaluatedName` (até 160 caracteres, busca literal sem caixa ou acentos), `page` (base 1) e `limit` (de 1 a 100, padrão 12). Retorna `{ items: [{ collaboratorId, displayName, assessmentId }], hasNextPage }`. O identificador da avaliação fica vazio para pendentes. Quando há duas avaliações iniciadas da mesma pessoa, o atalho usa a atualização mais recente.
+`GET /api/v1/assessments/coverage` exige `cycleId` e `status` (`PENDENTE` ou `INICIADA`). Aceita `evaluatedName` e `managerName`, ambos com até 160 caracteres e busca literal insensível a caixa e acentos. Os filtros podem ser combinados. A paginação recebe `page` (base 1) e `limit` (de 1 a 100, padrão 12). A resposta tem o formato `{ items: [{ collaboratorId, displayName, managerName, assessmentId }], hasNextPage }`. O identificador da avaliação fica vazio para pendentes. Quando há duas avaliações iniciadas da mesma pessoa, o atalho usa a atualização mais recente.
 
 A população é formada pelas atribuições de questionário vigentes no ciclo aberto ou na data em que o ciclo foi encerrado. Cada colaborador aparece uma vez. Há início quando existe avaliação de gestor ou Diretoria nesse mesmo ciclo, inclusive em rascunho. O acesso nominal exige a permissão global de consulta de avaliações ou a capacidade de consulta suprema configurada. Esses perfis podem consultar o catálogo de ciclos para selecionar o período.
+
+O gestor responsável segue o vínculo gestor–colaborador válido na consulta do ciclo aberto ou no instante de encerramento do ciclo encerrado. A data de vigência do vínculo usa o horário de Brasília. O campo `managerName` é nulo quando não existe vínculo válido.
+
+`POST /api/v1/assessments/exports/coverage` recebe `cycleId`, `status`, `evaluatedName` e `managerName` e aplica o mesmo recorte da listagem à relação completa. A resposta é `acompanhamento-do-inicio.xlsx`, com as colunas Colaborador, Gestor responsável e Início da avaliação. A sessão, o CSRF, a autorização de RH ou Diretoria, a auditoria, o limite de 50.000 linhas e o limite de requisições seguem as regras da exportação de avaliações. A resposta usa `Cache-Control: no-store`.
 
 ### Painel por ciclo
 

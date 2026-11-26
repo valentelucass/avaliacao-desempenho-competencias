@@ -160,6 +160,8 @@ Manter logs estruturados, correlação por requisição e monitoramento básico 
 
 ## 8. Entrega e sincronização de estado
 
+Conforme orientação do responsável em 26/11/2026, publique em produção as alterações solicitadas para este projeto depois de validar localmente e passar pelo gate oficial. Confirme o build servido pelo domínio após a implantação. Se o usuário solicitar revisão prévia ou adiamento, siga a sequência indicada por ele.
+
 Uma mudança só pode ser marcada como concluída quando houver evidência executada e registrada: testes, validação de contrato, migration, revisão, implantação ou aceite de negócio, conforme aplicável.
 
 Mudanças arquiteturais relevantes exigem ADR em docs/adr/; regras de negócio exigem origem, exemplo, testes afetados e responsável conhecido ou pendente.

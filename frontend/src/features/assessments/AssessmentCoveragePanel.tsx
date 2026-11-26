@@ -3,7 +3,11 @@ import { Card } from '@astryxdesign/core/Card'
 import { Filter, ListChecks } from 'lucide-react'
 import { useEffect, useId, useState } from 'react'
 import { isAuthenticationError, type ApiClient } from '../../api/client'
-import type { AssessmentCoveragePage, AssessmentStartStatus } from '../../api/contracts'
+import type {
+  AssessmentCoverageFilter,
+  AssessmentCoveragePage,
+  AssessmentStartStatus,
+} from '../../api/contracts'
 import { ActionButton } from '../../ui/ActionButton'
 import { EmptyState } from '../../ui/EmptyState'
 import { FeedbackMessage } from '../../ui/Feedback'
@@ -14,12 +18,14 @@ import {
   preferredReportingCycle,
   useReportingCycles,
 } from '../../ui/useReportingCycles'
+import { AssessmentExportButton } from './AssessmentExportButton'
 import './assessment-coverage.css'
 
 const pageSize = 12
 
 type Props = {
   api: ApiClient
+  canExport: boolean
   refreshRevision: number
   onClose: () => void
   onSelectAssessment: (assessmentId: string) => void
@@ -28,6 +34,7 @@ type Props = {
 
 export function AssessmentCoveragePanel({
   api,
+  canExport,
   refreshRevision,
   onClose,
   onSelectAssessment,
@@ -39,13 +46,16 @@ export function AssessmentCoveragePanel({
   const [selectedCycleId, setSelectedCycleId] = useState('')
   const [status, setStatus] = useState<AssessmentStartStatus>('PENDENTE')
   const [name, setName] = useState('')
+  const [managerName, setManagerName] = useState('')
   const [filters, setFilters] = useState<{
     status: AssessmentStartStatus
     name: string
+    managerName: string
     page: number
   }>({
     status: 'PENDENTE',
     name: '',
+    managerName: '',
     page: 1,
   })
   const cycleId = selectedCycleId || preferredReportingCycle(cycles)
@@ -67,6 +77,7 @@ export function AssessmentCoveragePanel({
         cycleId,
         status: filters.status,
         evaluatedName: filters.name || undefined,
+        managerName: filters.managerName || undefined,
         page: filters.page,
         limit: pageSize,
       })
@@ -87,6 +98,13 @@ export function AssessmentCoveragePanel({
 
   const error = available.error ?? current?.error
   const data = current?.data
+  const showAction = filters.status === 'INICIADA'
+  const exportFilter: AssessmentCoverageFilter = {
+    cycleId,
+    status: filters.status,
+    evaluatedName: filters.name || undefined,
+    managerName: filters.managerName || undefined,
+  }
 
   return (
     <section className="assessment-coverage" aria-labelledby={id + '-title'}>
@@ -113,7 +131,7 @@ export function AssessmentCoveragePanel({
           onSubmit={(event) => {
             event.preventDefault()
             setResult(undefined)
-            setFilters({ status, name: name.trim(), page: 1 })
+            setFilters({ status, name: name.trim(), managerName: managerName.trim(), page: 1 })
           }}
         >
           <div className="field">
@@ -159,14 +177,35 @@ export function AssessmentCoveragePanel({
               onChange={(event) => setName(event.target.value)}
             />
           </div>
-          <ActionButton
-            type="submit"
-            variant="primary"
-            size="sm"
-            icon={<Filter size={16} aria-hidden="true" />}
-            label="Aplicar filtros"
-            disabled={!cycleId}
-          />
+          <div className="field">
+            <label htmlFor={id + '-manager'}>Gestor responsável</label>
+            <input
+              id={id + '-manager'}
+              type="search"
+              maxLength={160}
+              placeholder="Digite parte do nome"
+              value={managerName}
+              onChange={(event) => setManagerName(event.target.value)}
+            />
+          </div>
+          <div className="assessment-coverage__actions">
+            <ActionButton
+              type="submit"
+              variant="primary"
+              size="sm"
+              icon={<Filter size={16} aria-hidden="true" />}
+              label="Aplicar filtros"
+              disabled={!cycleId}
+            />
+            {canExport && (
+              <AssessmentExportButton
+                requestExport={() => api.exportAssessmentCoverage(exportFilter)}
+                disabled={!cycleId || isLoading || Boolean(error)}
+                onSessionExpired={onSessionExpired}
+                tooltip="Exportar todos os colaboradores que atendem aos filtros aplicados"
+              />
+            )}
+          </div>
         </form>
       </Card>
 
@@ -175,36 +214,68 @@ export function AssessmentCoveragePanel({
       {!isLoading && !error && (!data || data.items.length === 0) && (
         <EmptyState title={cycleId ? 'Nenhum colaborador encontrado' : 'Nenhum ciclo disponível'}>
           {cycleId
-            ? 'Nenhum colaborador corresponde à situação e ao nome pesquisados neste ciclo.'
+            ? 'Nenhum colaborador corresponde aos filtros aplicados neste ciclo.'
             : 'O acompanhamento fica disponível para ciclos abertos ou encerrados.'}
         </EmptyState>
       )}
 
       {data && data.items.length > 0 && (
         <Card className="assessment-coverage__results" padding={0}>
-          <ul aria-label="Colaboradores por status de início">
-            {data.items.map((item) => (
-              <li key={item.collaboratorId}>
-                <strong>{item.displayName}</strong>
-                <Badge
-                  className="dashboard-status-badge"
-                  variant={item.assessmentId ? 'success' : 'warning'}
-                  label={item.assessmentId ? 'Iniciada' : 'Pendente'}
-                />
-                {item.assessmentId && (
-                  <ActionButton
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    label="Abrir avaliação"
-                    onClick={() => {
-                      if (item.assessmentId) onSelectAssessment(item.assessmentId)
-                    }}
-                  />
+          <table aria-label="Colaboradores por status de início" role="table">
+            <thead role="rowgroup">
+              <tr role="row">
+                <th role="columnheader" scope="col">
+                  Colaborador
+                </th>
+                <th role="columnheader" scope="col">
+                  Gestor responsável
+                </th>
+                <th role="columnheader" scope="col" className="assessment-coverage__status">
+                  Início da avaliação
+                </th>
+                {showAction && (
+                  <th role="columnheader" scope="col" className="assessment-coverage__row-action">
+                    Ação
+                  </th>
                 )}
-              </li>
-            ))}
-          </ul>
+              </tr>
+            </thead>
+            <tbody role="rowgroup">
+              {data.items.map(({ collaboratorId, displayName, managerName, assessmentId }) => (
+                <tr key={collaboratorId} role="row">
+                  <th role="rowheader" scope="row">
+                    {displayName}
+                  </th>
+                  <td role="cell" className="assessment-coverage__manager">
+                    <span className="assessment-coverage__mobile-label" aria-hidden="true">
+                      Gestor responsável
+                    </span>
+                    <span>{managerName ?? 'Sem gestor vinculado'}</span>
+                  </td>
+                  <td role="cell" className="assessment-coverage__status">
+                    <Badge
+                      className="dashboard-status-badge"
+                      variant={assessmentId ? 'success' : 'warning'}
+                      label={assessmentId ? 'Iniciada' : 'Pendente'}
+                    />
+                  </td>
+                  {showAction && (
+                    <td role="cell" className="assessment-coverage__row-action">
+                      {assessmentId && (
+                        <ActionButton
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          label="Abrir avaliação"
+                          onClick={() => onSelectAssessment(assessmentId)}
+                        />
+                      )}
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </Card>
       )}
       <Pagination

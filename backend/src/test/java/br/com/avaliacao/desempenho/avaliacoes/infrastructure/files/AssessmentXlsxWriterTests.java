@@ -2,6 +2,7 @@ package br.com.avaliacao.desempenho.avaliacoes.infrastructure.files;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import br.com.avaliacao.desempenho.avaliacoes.application.AssessmentCoverageRepository.Entry;
 import br.com.avaliacao.desempenho.avaliacoes.application.AssessmentExportRepository.ExportRow;
 import br.com.avaliacao.desempenho.avaliacoes.domain.model.AssessmentStatus;
 import br.com.avaliacao.desempenho.avaliacoes.domain.model.FeedbackStatus;
@@ -66,6 +67,33 @@ class AssessmentXlsxWriterTests {
     assertThat(unzip(new AssessmentXlsxWriter().write(List.of())).get("xl/worksheets/sheet1.xml"))
         .contains("A1:D1")
         .doesNotContain("r=\"A2\"");
+  }
+
+  @Test
+  void exportsCoverageWithOnlyTheThreeVisibleColumnsAndLiteralManagerNames() throws Exception {
+    var collaborator = UUID.randomUUID();
+    var assessment = UUID.randomUUID();
+    var parts =
+        unzip(
+            new AssessmentXlsxWriter()
+                .writeCoverage(
+                    List.of(
+                        new Entry(collaborator, "Pessoa de teste", "=1+1", null),
+                        new Entry(UUID.randomUUID(), "Outra pessoa", null, assessment))));
+    assertThat(parts.get("xl/workbook.xml")).contains("Acompanhamento do início");
+    String sheet = parts.get("xl/worksheets/sheet1.xml");
+    assertThat(sheet)
+        .contains(
+            "Colaborador",
+            "Gestor responsável",
+            "Início da avaliação",
+            "=1+1",
+            "Sem gestor vinculado",
+            "Pendente",
+            "Iniciada",
+            "autoFilter ref=\"A1:C3\"")
+        .doesNotContain(collaborator.toString(), assessment.toString(), "<f>", "r=\"D1\"");
+    assertThat(sheet.split("t=\"inlineStr\"", -1)).hasSize(10);
   }
 
   static Map<String, String> unzip(byte[] content) throws Exception {

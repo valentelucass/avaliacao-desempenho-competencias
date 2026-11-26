@@ -294,13 +294,14 @@ class SupremeReviewSecurityTests {
 
     @Bean
     AssessmentCoverageController coverageController() {
-      AssessmentCoverageRepository repository =
-          (cycleId, status, name, page, limit) ->
+      var repository = mock(AssessmentCoverageRepository.class);
+      when(repository.list(any(), anyInt(), anyInt()))
+          .thenReturn(
               new AssessmentCoverageRepository.Page(
                   List.of(
                       new AssessmentCoverageRepository.Entry(
-                          ASSESSMENT, "Cobertura fictícia", null)),
-                  false);
+                          ASSESSMENT, "Cobertura fictícia", "Gestora fictícia", null)),
+                  false));
       return new AssessmentCoverageController(new AssessmentCoverageService(repository));
     }
 

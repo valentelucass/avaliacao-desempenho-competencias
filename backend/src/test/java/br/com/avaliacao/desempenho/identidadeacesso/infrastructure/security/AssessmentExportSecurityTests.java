@@ -32,13 +32,15 @@ import org.springframework.web.context.WebApplicationContext;
 class AssessmentExportSecurityTests {
   @Autowired WebApplicationContext web;
   @Autowired AssessmentExportRepository repository;
+  @Autowired AssessmentCoverageRepository coverage;
   MockMvc mvc;
   static final String URL = "/api/v1/assessments/exports";
 
   @BeforeEach
   void setup() {
-    reset(repository);
+    reset(repository, coverage);
     when(repository.listForExport(any(), any(), anyInt())).thenReturn(List.of());
+    when(coverage.listForExport(any(), anyInt())).thenReturn(List.of());
     mvc = MockMvcBuilders.webAppContextSetup(web).apply(springSecurity()).build();
   }
 
@@ -125,11 +127,75 @@ class AssessmentExportSecurityTests {
     verifyNoInteractions(repository);
   }
 
+  @Test
+  void coverageUsesTheAppliedFiltersAndProtectsTheDownload() throws Exception {
+    UUID cycle = UUID.randomUUID();
+    String filter =
+        "{\"cycleId\":\"%s\",\"status\":\"PENDENTE\",\"managerName\":\"  João \"}".formatted(cycle);
+    String url = URL + "/coverage";
+    mvc.perform(post(url).with(csrf()).contentType("application/json").content(filter))
+        .andExpect(status().isUnauthorized());
+    mvc.perform(
+            post(url)
+                .with(actor("GERENCIA_RH", grants()))
+                .contentType("application/json")
+                .content(filter))
+        .andExpect(status().isForbidden());
+    mvc.perform(
+            post(url)
+                .with(actor("GERENCIA_RH", Set.of("AVALIACOES.VISUALIZAR_TODAS")))
+                .with(csrf())
+                .contentType("application/json")
+                .content(filter))
+        .andExpect(status().isForbidden());
+    mvc.perform(
+            post(url)
+                .with(actor("ADMINISTRADOR_PLATAFORMA", grants()))
+                .with(csrf())
+                .contentType("application/json")
+                .content(filter))
+        .andExpect(status().isForbidden());
+    mvc.perform(
+            post(url)
+                .with(actor("GERENCIA_RH", grants()))
+                .with(csrf())
+                .contentType("application/json")
+                .content("{\"status\":\"PENDENTE\"}"))
+        .andExpect(status().is(422));
+    verifyNoInteractions(coverage);
+
+    mvc.perform(
+            post(url)
+                .with(actor("GERENCIA_RH", grants()))
+                .with(csrf())
+                .contentType("application/json")
+                .content(filter))
+        .andExpect(status().isOk())
+        .andExpect(content().contentType(AssessmentExportController.XLSX))
+        .andExpect(
+            header()
+                .string(
+                    "Content-Disposition",
+                    "attachment; filename=\"acompanhamento-do-inicio.xlsx\""))
+        .andExpect(header().string("Cache-Control", "no-store"));
+    verify(coverage)
+        .listForExport(
+            new AssessmentCoverageRepository.Filter(
+                cycle, AssessmentCoverageRepository.StartStatus.PENDENTE, null, "João"),
+            50_001);
+    verifyNoInteractions(repository);
+  }
+
   @TestConfiguration
   static class Config {
     @Bean
     AssessmentExportRepository exportRepository() {
       return mock(AssessmentExportRepository.class);
+    }
+
+    @Bean
+    AssessmentCoverageRepository coverageRepository() {
+      return mock(AssessmentCoverageRepository.class);
     }
 
     @Bean
@@ -139,9 +205,11 @@ class AssessmentExportSecurityTests {
 
     @Bean
     AssessmentExportService exportService(
-        AssessmentExportRepository repository, IdentityAccessRepository audit) {
+        AssessmentExportRepository repository,
+        AssessmentCoverageRepository coverage,
+        IdentityAccessRepository audit) {
       return new AssessmentExportService(
-          repository, new AssessmentXlsxWriter(), audit, Clock.systemUTC());
+          repository, coverage, new AssessmentXlsxWriter(), audit, Clock.systemUTC());
     }
 
     @Bean
