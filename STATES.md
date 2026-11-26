@@ -8,6 +8,10 @@ Exportar Excel usa os filtros aplicados e inclui a relação completa, com Colab
 
 A validação local executou 13 conferências no SQL Server DEV sobre massa fictícia, incluindo histórico de gestor com virada de dia em Brasília. O Edge cobriu cinco cenários entre 320 e 1.500 px e baixou um arquivo com os 14 colaboradores filtrados, embora a tela mostre até 12 por página. Foram conferidos o conteúdo do XLSX, os 338 testes da interface, os 364 testes Java executados e os builds isolados. A suíte Java deixou 25 testes opcionais fora da execução. As capturas e os recibos estão em `outputs/acompanhamento-excel` no espaço de trabalho da revisão.
 
+O commit `24dc679` foi enviado aos dois repositórios e publicado no release `5886156eae2e4a359eb0eddd22e53762` às 18h00 de Brasília. O domínio exibiu **Build 26/11/2026, 17:55:01 (Brasília)**. O gate oficial aprovou os 338 testes de interface, os 364 testes Java executados e as verificações do Edge. O publicador conferiu os artefatos servidos, o JAR ativo e a configuração protegida. O SQL Server de produção foi validado em modo somente leitura.
+
+Na sessão autenticada de Administrador supremo, a tela publicada mostrou a coluna e o filtro de gestor responsável. A busca sem correspondência exibiu a mensagem esperada e limpar a busca restaurou as 12 linhas da página. O Excel foi validado no ambiente local com dados fictícios. O recibo da publicação está em `outputs/publicacao-cobertura-excel-20261126` no espaço de trabalho da revisão.
+
 ## Comparação mensal, resumo por área e evolução em 26/11/2026
 
 Os sete cartões preservam os totais do ciclo e exibem a variação entre o mês em curso e o anterior até o mesmo dia e horário de Brasília. Colaboradores usam as atribuições vigentes em cada corte. Avaliações, gestores e autoavaliações usam as avaliações iniciadas no período. As taxas e a média das avaliações iniciadas no mês usam a versão e o feedback que já existiam no respectivo corte. A diferença em contagens é relativa. Nas médias e taxas, a diferença é em pontos percentuais. A interface indica quando falta base para comparar.
